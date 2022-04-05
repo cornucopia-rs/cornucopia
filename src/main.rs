@@ -56,7 +56,7 @@ async fn main() -> Result<(), Error> {
         } => {
             if let Err(e) = generation(migrations_path, queries_path, destination).await {
                 container::cleanup()?;
-                return Err(e)
+                return Err(e);
             }
             Ok(())
         }
