@@ -10,7 +10,7 @@
 
 <div align="center">
   <!-- Github Actions -->
-  <img src="https://img.shields.io/github/workflow/status/louisgariepy/cornucopia/Cornucopia?style=flat-square" alt="actions status" />
+  <img src="https://img.shields.io/github/workflow/status/LouisGariepy/cornucopia/ci" alt="actions status" />
   <!-- Version -->
   <a href="https://crates.io/crates/cornucopia">
     <img src="https://img.shields.io/crates/v/cornucopia.svg?style=flat-square"
@@ -185,7 +185,7 @@ Cornucopia actually generates two versions of your queries, one that accepts a r
 
 ## Supported types
 | PostgrsQL type                         | Rust type               |
-|----------------------------------------|-------------------------|
+| -------------------------------------- | ----------------------- |
 | bool, boolean                          | bool                    |
 | char, character                        | i8                      |
 | smallint, int2, smallserial, serial2   | i16                     |
@@ -207,14 +207,8 @@ Cornucopia actually generates two versions of your queries, one that accepts a r
 
 ## License
 
-Licensed under either of
+Licensed under the [MIT license](http://opensource.org/licenses/MIT).
 
--   Apache License, Version 2.0
-    ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
--   MIT license
-    ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
-
-at your option.
 
 ## Contribution
 
