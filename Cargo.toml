@@ -2,7 +2,11 @@
 name = "cornucopia"
 version = "0.1.0"
 edition = "2021"
-
+license = "LICENSE.txt"
+description = "Generate type checked  Rust from your SQL"
+homepage = "https://github.com/LouisGariepy/cornucopia"
+repository = "https://github.com/LouisGariepy/cornucopia"
+readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
