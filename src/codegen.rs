@@ -40,7 +40,8 @@ pub fn generate_query_struct(query: &PreparedQuery) -> Result<Option<String>, Er
         let struct_name = query.name.to_upper_camel_case();
 
         Ok(Some(format!(
-            r#"pub struct {struct_name} {{{fields_string}}}"#
+            r#"#[derive(Debug, Clone, PartialEq)]
+pub struct {struct_name} {{{fields_string}}}"#
         )))
     } else {
         Ok(None)
@@ -62,11 +63,14 @@ pub fn generate_query_quantified_ret_ty(query: &PreparedQuery, ret_ty: &str) -> 
 pub fn generate_query_params(query: &PreparedQuery) -> Result<String, Error> {
     let mut param_strings = Vec::new();
     for param in &query.params {
-        let param_string = format!(
-            "{} : {}",
-            param.name,
-            pg_type::to_equivalent_rust_string(&param.ty)?
-        );
+        let rs_ty = pg_type::to_equivalent_rust_string(&param.ty)?;
+        let rs_ty_borrowed = if &pg_type::to_equivalent_rust_string(&param.ty)? == "String" {
+            String::from("&str")
+        } else {
+            format!("&{}", rs_ty)
+        };
+
+        let param_string = format!("{} : {}", param.name, rs_ty_borrowed);
         param_strings.push(param_string);
     }
     Ok(param_strings.join(","))
