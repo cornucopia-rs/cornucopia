@@ -6,3 +6,6 @@ CREATE TABLE BookAuthor (
     FOREIGN KEY (BookId) REFERENCES Book (Id)
 );
 
+INSERT INTO BookAuthor (AuthorId, BookId)
+    VALUES (1, 1), (1, 2), (2, 3), (2, 4);
+

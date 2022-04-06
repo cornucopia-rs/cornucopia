@@ -1,13 +1,20 @@
 -- Write your migration SQL here
 CREATE TABLE Author (
-    Id SERIAL NOT NULL,
-    Name VARCHAR(70) NOT NULL,
-    Country VARCHAR(100) NOT NULL,
-    PRIMARY KEY(Id)
+    Id serial NOT NULL,
+    Name varchar(70) NOT NULL,
+    Country varchar(100) NOT NULL,
+    PRIMARY KEY (Id)
 );
 
+INSERT INTO Author (Name, Country)
+    VALUES ('Agatha Christie', 'United Kingdom'), ('John Ronald Reuel Tolkien', 'United Kingdom');
+
 CREATE TABLE Book (
-    Id SERIAL NOT NULL,
-    Title VARCHAR(50) NOT NULL,
-    PRIMARY KEY(Id)
+    Id serial NOT NULL,
+    Title varchar(50) NOT NULL,
+    PRIMARY KEY (Id)
 );
+
+INSERT INTO Book (Title)
+    VALUES ('Murder on the Orient Express'), ('Death on the Nile'), ('The Hobbit'), ('The Silmarillion');
+
