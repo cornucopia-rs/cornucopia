@@ -37,7 +37,7 @@
 
 <br />
 
-Cornucopia is a small CLI utility resting on `tokio-postgres` and designed to facilitate PostgresQL workflows in Rust.
+Cornucopia is a small CLI utility resting on `tokio-postgres` and designed to facilitate PostgreSQL workflows in Rust.
 
 Cornucopia aims to get out of your way, transpiling your queries to Rust on demand without requiring you to maintain a live database connection. Each query is prepared against your schema, ensuring that the statement is valid SQL. These prepared statements are then be used to generate properly typed rust code for this query. Keep reading for more info, or take a look at the examples folder for a quickstart 🚀
 
@@ -137,9 +137,9 @@ The name of the generated function. Has to be a valid Rust identifier.
 #### Params
 The parameters of the prepared statement, separated by commas, with an optional trailing comma. 
 
-The order in which parameters are given corresponds to the parameter number (e.g. the first parameter is `$1` in the statement). **Every PostgresQL parameter `$i` must have a corresponding parameter in the meta parameter list** . If the parameter type is ambiguous, you can specify it using the syntax `<IDENT> : <TYPE>` where `<TYPE>` is a PostgresQL type [supported by cornycopia](#supported-types). These are called override parameters. Otherwise, a parameter consists simply of an identifier: the type is inferred from the prepared statements. These are called inferred parameters. **Override parameters must come before inferred parameters**. Again, we can sum this up as
+The order in which parameters are given corresponds to the parameter number (e.g. the first parameter is `$1` in the statement). **Every PostgreSQL parameter `$i` must have a corresponding parameter in the meta parameter list** . If the parameter type is ambiguous, you can specify it using the syntax `<IDENT> : <TYPE>` where `<TYPE>` is a PostgreSQL type [supported by cornycopia](#supported-types). These are called override parameters. Otherwise, a parameter consists simply of an identifier: the type is inferred from the prepared statements. These are called inferred parameters. **Override parameters must come before inferred parameters**. Again, we can sum this up as
 
-`<PARAMS> = <OVERRIDE>?, <INFERRED>?` where `<OVERRIDE> = <IDENT> : <TYPE>` and `<INFERRED> = <IDENT>`.
+`<PARAMS> = <OVERRIDE>, <INFERRED>` where `<OVERRIDE> = <IDENT> : <TYPE>` and `<INFERRED> = <IDENT>`.
 
 #### Return type
 There are two kinds of returns, implicit and explicit. 
