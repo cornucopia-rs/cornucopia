@@ -1,6 +1,6 @@
+use crate::read_migrations::read_migrations;
 use deadpool_postgres::Object;
 use error::Error;
-use crate::read_migrations::read_migrations;
 
 pub async fn run_migrations(client: &Object, path: &str) -> Result<(), Error> {
     create_migration_table(client).await?;
