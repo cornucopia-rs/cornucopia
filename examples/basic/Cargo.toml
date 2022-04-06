@@ -1,0 +1,17 @@
+[package]
+edition = "2021"
+name = "cornucopia-example-basic"
+version = "0.1.0"
+
+[dependencies]
+tokio = { version = "1.17.0", features = ["full"] }
+deadpool-postgres = { version = "0.10.2", features = ["serde"] }
+tokio-postgres = { version = "0.7.5", features = [
+    "with-serde_json-1",
+    "with-time-0_3",
+    "with-uuid-0_8",
+] }
+serde = { version = "1.0.136", features = ["derive"] }
+serde_json = "1.0.79"
+time = "0.3.9"
+uuid = "0.8.2"

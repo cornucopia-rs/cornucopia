@@ -145,6 +145,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "cornucopia-example-basic"
+version = "0.1.0"
+dependencies = [
+ "deadpool-postgres",
+ "serde",
+ "serde_json",
+ "time",
+ "tokio",
+ "tokio-postgres",
+ "uuid",
+]
+
+[[package]]
 name = "cpufeatures"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
