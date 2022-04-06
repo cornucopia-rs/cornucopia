@@ -14,19 +14,19 @@ pub enum Action {
         #[clap(subcommand)]
         action: MigrationAction,
         /// Folder containing the migrations
-        #[clap(short, long, default_value = "src/migrations")]
+        #[clap(short, long, default_value = "migrations")]
         migrations_path: String,
     },
     /// Generate Rust modules from queries
     Generation {
         /// Folder containing the migrations
-        #[clap(short, long, default_value = "src/migrations")]
+        #[clap(short, long, default_value = "migrations/")]
         migrations_path: String,
         /// Folder containing the queries
-        #[clap(short, long, default_value = "src/queries")]
+        #[clap(short, long, default_value = "queries/")]
         queries_path: String,
         /// Destination folder for generated modules
-        #[clap(short, long, default_value = "src/rust_gen.rs")]
+        #[clap(short, long, default_value = "src/cornucopia.rs")]
         destination: String,
     },
 }
