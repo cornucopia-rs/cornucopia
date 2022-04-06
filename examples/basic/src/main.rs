@@ -23,10 +23,13 @@ pub async fn main() {
     let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
     let client = pool.get().await.unwrap();
 
-    println!("{:?}",authors(&client).await.unwrap());
-    println!("{:?}",books(&client).await.unwrap());
-    println!("{:?}",books_from_author_id(&client, &0).await.unwrap());
+    println!("{:?}", authors(&client).await.unwrap());
+    println!("{:?}", books(&client).await.unwrap());
+    println!("{:?}", books_from_author_id(&client, &0).await.unwrap());
     println!("{:?}", author_name_by_id(&client, &1).await.unwrap());
     println!("{:?}", author_name_by_id_opt(&client, &-1).await.unwrap());
-    println!("{:?}", author_name_starting_with(&client, "Jo").await.unwrap());
+    println!(
+        "{:?}",
+        author_name_starting_with(&client, "Jo").await.unwrap()
+    );
 }
