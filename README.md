@@ -29,7 +29,7 @@
       Install
     </a>
     <span> | </span>
-    <a href="example/README.md">
+    <a href="examples/basic/README.md">
       Example
     </a>
   </h4>
