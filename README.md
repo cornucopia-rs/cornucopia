@@ -29,8 +29,8 @@
       Installation
     </a>
     <span> | </span>
-    <a href="#cheatsheet">
-      Cheatsheet
+    <a href="example/README.md">
+      Example
     </a>
   </h4>
 </div>
@@ -48,7 +48,7 @@ Cornucopia aims to get out of your way, transpiling your queries to Rust on dema
 The CLI spawns a `postgres` container when it has  to generate Rust modules. Thus, you need to have a working `docker`. Note that **on Linux non-sudo users need to be in the docker group**. Read the official [installation](https://docs.docker.com/get-docker/) and [post-installation](https://docs.docker.com/engine/install/linux-postinstall/) steps.
 
 ### Dependencies
-Cornucopia will generate queries powered by the `tokio` runtime through `tokio-postgres` and `deadpool-postgres`, so you will need add the latest version of these to your dependencies. The code block below shows and example of these dependencies with every feature that `cornucopia` supports.
+Cornucopia will generate queries powered by the `tokio` runtime through `tokio-postgres` and `deadpool-postgres`, so you will need add the latest version of these to your dependencies. You might need more dependencies depending on which features you inted to use, The code block below shows an example of what your dependencies might look like with every feature that `cornucopia` supports:
 ```toml
 # Cargo.toml
 [dependencies]
@@ -64,7 +64,7 @@ serde_json = "1.0.79"
 time = "0.3.9"
 uuid = "0.8.2"
 ```
-You can omit `tokio-postgres` feature flags for `json`, `time` and `uuid` if you don't need them.
+You can omit `tokio-postgres` feature flags for `json`, `time` and `uuid` and their corresponding crates if you don't need them.
 
 ### Cornucopia CLI
 Aside from the dependencies, you will need the lightweight `cornucopia` cli to generate your Rust modules. This can be done via a simple `cargo install cornucopia` which will pull the latest binary and install it in your `cargo` path.
@@ -127,7 +127,7 @@ Note that comments that do not start with `--!` are simply ignored by `cornucopi
 
 So, what else can we do with those annotations? The grammar can be summed up as:
 
-```<NAME> (<PARAMS>?) <RETURN_TYPE>? <QUANTIFIER>?```
+```<NAME> (<PARAMS>) <RETURN_TYPE> <QUANTIFIER>```
 
 In the next sections we'll explore a bit more what these options mean and what you can do with them. The regexp-esque notation used in this section to describe the grammar is for illustrative purposes only, The full grammar is available in the `grammar.pest` file.
 
