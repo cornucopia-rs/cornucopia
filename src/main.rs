@@ -1,23 +1,11 @@
-mod cli;
-mod codegen;
-mod container;
-mod parse;
-mod parse_file;
-mod pg_type;
-mod pool;
-mod prepare_queries;
-mod read_migrations;
-mod read_queries;
-mod run_migrations;
-mod sanitize;
-
-use crate::codegen::generate;
-use crate::prepare_queries::prepare_modules;
 use clap::{Result, StructOpt};
-use cli::{Action, Args, MigrationAction};
-use error::Error;
-use pool::{cli_pool, create_pool};
-use run_migrations::run_migrations;
+use cornucopia::cli::{Action, Args, MigrationAction};
+use cornucopia::codegen::generate;
+use cornucopia::container;
+use cornucopia::error::Error;
+use cornucopia::pool::{cli_pool, create_pool};
+use cornucopia::prepare_queries::prepare_modules;
+use cornucopia::run_migrations::run_migrations;
 use std::path::Path;
 use time::OffsetDateTime;
 
@@ -76,24 +64,4 @@ pub async fn generation(
     container::cleanup()?;
 
     Ok(())
-}
-
-pub mod error {
-    use crate::codegen::error::Error as CodegenError;
-    use crate::container::error::Error as ContainerError;
-    use crate::prepare_queries::error::Error as PrepareQueriesError;
-    use crate::run_migrations::error::Error as MigrationError;
-    use thiserror::Error as ThisError;
-
-    #[derive(Debug, ThisError)]
-    #[error("the program encountered an unexpected error")]
-    pub enum Error {
-        ContainerError(#[from] ContainerError),
-        Codegen(#[from] CodegenError),
-        PrepareQueries(#[from] PrepareQueriesError),
-        NewMigration(#[from] std::io::Error),
-        Migration(#[from] MigrationError),
-        PoolCreation(#[from] deadpool_postgres::CreatePoolError),
-        Pool(#[from] deadpool_postgres::PoolError),
-    }
 }
