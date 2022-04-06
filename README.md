@@ -25,8 +25,8 @@
 
 <div align="center">
   <h4>
-    <a href="#installation">
-      Installation
+    <a href="#install">
+      Install
     </a>
     <span> | </span>
     <a href="example/README.md">
@@ -39,11 +39,11 @@
 
 Cornucopia is a small CLI utility resting on `tokio-postgres` and designed to facilitate PostgresQL workflows in Rust.
 
-Cornucopia aims to get out of your way, transpiling your queries to Rust on demand without requiring you to maintain a live database connection. Each query is prepared against your schema, ensuring that the statement is valid SQL. These prepared statements are then be used to generate properly typed rust code for this query. Keep reading for a quickstart 🚀
+Cornucopia aims to get out of your way, transpiling your queries to Rust on demand without requiring you to maintain a live database connection. Each query is prepared against your schema, ensuring that the statement is valid SQL. These prepared statements are then be used to generate properly typed rust code for this query. Keep reading for more info, or take a look at the examples folder for a quickstart 🚀
 
 ---
 
-## Installation
+## Install
 ### Docker
 The CLI spawns a `postgres` container when it has  to generate Rust modules. Thus, you need to have a working `docker`. Note that **on Linux non-sudo users need to be in the docker group**. Read the official [installation](https://docs.docker.com/get-docker/) and [post-installation](https://docs.docker.com/engine/install/linux-postinstall/) steps.
 
