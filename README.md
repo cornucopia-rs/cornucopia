@@ -121,7 +121,7 @@ pub async fn authors(client: &Client) -> Result<Vec<(i32, String, String)>, Erro
 Not bad! The generated function uses prepared statements, a statement cache, and strong typing (Notice how the returned rows' types have been inferred!). This is only a taste of what you can achieve, but should be fairly representative of what's going on under the hood.
 
 ### Meta query syntax
-As you may have noticed from the previous section, this little comment `--! authors()*` is doing a lot of heavy-lifting for us. It tells `cornucopia` to generate a function name `authors` which takes no parameters. Since there is no specified return, cornucopia lets Postgres infer the types itself, which it is usually pretty good at. Then, there's the asterisk `*` which signals that this query will return zero or more results. That's how we ended up with a `Vec` in the generated query in the [section above](#generated-modules).
+As you may have noticed from the previous section, this little comment `--! authors()*` is doing a lot of heavy-lifting for us. It tells `cornucopia` to generate a function named `authors` which takes no parameters. Since there is no specified return, cornucopia lets PostgreSQL infer the types itself, which it is usually pretty good at. Then, there's the asterisk `*` which signals that this query will return zero or more results. That's how we ended up with a `Vec` return in the generated query in the [section above](#generated-modules).
 
 Note that comments that do not start with `--!` are simply ignored by `cornucopia`, so feel free to use them as you usually would.
 
@@ -129,7 +129,7 @@ So, what else can we do with those annotations? The grammar can be summed up as:
 
 ```<NAME> (<PARAMS>) <RETURN_TYPE> <QUANTIFIER>```
 
-In the next sections we'll explore a bit more what these options mean and what you can do with them. The regexp-esque notation used in this section to describe the grammar is for illustrative purposes only, The full grammar is available in the `grammar.pest` file.
+In the next sections we'll explore a bit more what these options mean and what you can do with them. The regexp-esque notation used in this section to describe the grammar is for illustrative purposes only, The full grammar is available in the `grammar.pest` file. Its very straightforward, so taking a look at the examples should also give you a good idea.
 
 #### Name
 The name of the generated function. Has to be a valid Rust identifier.
@@ -137,7 +137,7 @@ The name of the generated function. Has to be a valid Rust identifier.
 #### Params
 The parameters of the prepared statement, separated by commas, with an optional trailing comma. 
 
-The order in which parameters are given corresponds to the parameter number (e.g. the first parameter is `$1` in the statement). **Every PostgreSQL parameter `$i` must have a corresponding parameter in the meta parameter list** . If the parameter type is ambiguous, you can specify it using the syntax `<IDENT> : <TYPE>` where `<TYPE>` is a PostgreSQL type [supported by cornycopia](#supported-types). These are called override parameters. Otherwise, a parameter consists simply of an identifier: the type is inferred from the prepared statements. These are called inferred parameters. **Override parameters must come before inferred parameters**. Again, we can sum this up as
+The order in which parameters are given corresponds to the parameter number (e.g. the first parameter is `$1` in the statement). **Every PostgreSQL parameter `$i` must have a corresponding parameter in the meta parameter list** . If the parameter type is ambiguous, you can specify it using the syntax `<IDENT> : <TYPE>` where `<TYPE>` is a PostgreSQL type [supported by cornucopia](#supported-types). These are called override parameters. Otherwise, a parameter consists simply of an identifier: the type is inferred from the prepared statements. These are called inferred parameters. **Override parameters must come before inferred parameters**. Again, we can sum this up as
 
 `<PARAMS> = <OVERRIDE>, <INFERRED>` where `<OVERRIDE> = <IDENT> : <TYPE>` and `<INFERRED> = <IDENT>`.
 
@@ -154,9 +154,7 @@ Implicit returns are further categorized into void, scalar, and tuple types depe
 * A query returning a `TEXT` and a `INTEGER` would result in `(String, i32)`
 
 ##### Explicit return
-Explicit returns give a name to the returned columns. The column types are inferred using prepared statements. To make a return explicit, list the returned column names inside brackets, in the same order as they are returned in the statement, separated by commas, with an optional trailing comma. **There must be exactly as many names in the explicit return the as there are returned columns**.
-
-Each query that has an explicit return will generate a Rust `struct` to hold the query data. For example, this query
+Explicit returns give a name to the returned columns. The column types are inferred using prepared statements. To make a return explicit, list the returned column names inside curly brackets, in the same order as they are returned in the statement, separated by commas, with an optional trailing comma. **There must be exactly as many names in the explicit return the as there are returned columns**. Each query that has an explicit return will generate a Rust `struct` to hold the query data. For example, this query
 ```sql
 --! example_query() {name, country} *
 SELECT Name, Country FROM Authors;
@@ -184,25 +182,25 @@ The quantifier indicates the expected number of rows to be returned by a query. 
 Cornucopia actually generates two versions of your queries, one that accepts a regular client, while the other version (named with a `*_tx` suffix) accepts a transaction.
 
 ## Supported types
-| PostgrsQL type                                 | Rust type                 |
-| ---------------------------------------------- | ------------------------- |
-| `bool`, `boolean`                              | `bool`                    |
-| `char`, `character`                            | `i8`                      |
-| `smallint`, `int2`, `smallserial`, `serial2`   | `i16`                     |
-| `int`, `int4`, `serial`, `serial4`             | `i32`                     |
-| `bigint`, `int8`, `bigserial`, `serial8`       | `i64`                     |
-| `real`, `float4`                               | `f32`                     |
-| `double precision`, `float8`                   | `f64`                     |
-| `text`                                         | `String`                  |
-| `varchar`                                      | `String`                  |
-| `bytea`                                        | `Vec<u8>`                 |
-| `timestamp without time zone`, `timestamp`     | `time::PrimitiveDateTime` |
-| `timestamp with time zone`, `timestamptz`      | `time::OffsetDateTime`    |
-| `date`                                         | `time::Date`              |
-| `time`                                         | `time::Time`              |
-| `json`                                         | `serde_json::Value`       |
-| `jsonb`                                        | `serde_json::Value`       |
-| `uuid`                                         | `uuid::Uuid`              |
+| PostgrsQL type                               | Rust type                 |
+| -------------------------------------------- | ------------------------- |
+| `bool`, `boolean`                            | `bool`                    |
+| `char`, `character`                          | `i8`                      |
+| `smallint`, `int2`, `smallserial`, `serial2` | `i16`                     |
+| `int`, `int4`, `serial`, `serial4`           | `i32`                     |
+| `bigint`, `int8`, `bigserial`, `serial8`     | `i64`                     |
+| `real`, `float4`                             | `f32`                     |
+| `double precision`, `float8`                 | `f64`                     |
+| `text`                                       | `String`                  |
+| `varchar`                                    | `String`                  |
+| `bytea`                                      | `Vec<u8>`                 |
+| `timestamp without time zone`, `timestamp`   | `time::PrimitiveDateTime` |
+| `timestamp with time zone`, `timestamptz`    | `time::OffsetDateTime`    |
+| `date`                                       | `time::Date`              |
+| `time`                                       | `time::Time`              |
+| `json`                                       | `serde_json::Value`       |
+| `jsonb`                                      | `serde_json::Value`       |
+| `uuid`                                       | `uuid::Uuid`              |
 
 
 ## License
