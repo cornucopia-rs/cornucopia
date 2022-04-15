@@ -1,3 +1,20 @@
+pub mod types {
+
+    pub mod public {
+        use once_cell::sync::Lazy;
+        use postgres_types::{FromSql, Kind, Oid, ToSql, Type};
+
+        pub const CUSTOM_COMPOSITE_TYPE: Lazy<Type> =
+            Lazy::new(|| Type::new(String::from("asd"), 2, Kind::Simple, String::from("asdasd")));
+
+        #[derive(Debug, ToSql, FromSql)]
+        #[postgres(name = "custom_composite_type")]
+        pub struct CustomCompositeType {
+            pub such_cool: i32,
+            pub wow: String,
+        }
+    }
+}
 pub mod module_1 {
     use deadpool_postgres::{Client, Transaction};
     use tokio_postgres::{error::Error, types::Type};
@@ -412,6 +429,43 @@ Author.Name LIKE CONCAT($1, '%');
                 )
             })
             .collect::<Vec<(i32, String, i32, String)>>();
+        Ok(return_value)
+    }
+
+    pub async fn return_custom_type(
+        client: &Client,
+    ) -> Result<super::types::public::CustomCompositeType, Error> {
+        let stmt = client
+            .prepare_typed_cached(
+                "SELECT
+*
+FROM
+CustomTable;
+",
+                &[],
+            )
+            .await?;
+        let res = client.query_one(&stmt, &[]).await?;
+
+        let return_value: super::types::public::CustomCompositeType = res.get(0);
+        Ok(return_value)
+    }
+    pub async fn return_custom_type_tx<'a>(
+        client: &Transaction<'a>,
+    ) -> Result<super::types::public::CustomCompositeType, Error> {
+        let stmt = client
+            .prepare_typed_cached(
+                "SELECT
+*
+FROM
+CustomTable;
+",
+                &[],
+            )
+            .await?;
+        let res = client.query_one(&stmt, &[]).await?;
+
+        let return_value: super::types::public::CustomCompositeType = res.get(0);
         Ok(return_value)
     }
 }

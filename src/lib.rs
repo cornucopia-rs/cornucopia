@@ -6,6 +6,7 @@ pub mod container;
 #[allow(unused_imports)]
 pub mod cornucopia_gen;
 pub mod error;
+pub mod pg_type;
 pub mod pool;
 pub mod prepare_queries;
 pub mod read_migrations;
@@ -14,5 +15,4 @@ pub mod run_migrations;
 
 mod parse;
 mod parse_file;
-mod pg_type;
 mod sanitize;

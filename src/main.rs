@@ -2,11 +2,13 @@ use clap::{Result, StructOpt};
 use cornucopia::cli::{Action, Args, MigrationAction};
 use cornucopia::codegen::generate;
 use cornucopia::container;
-use cornucopia::error::Error;
+use cornucopia::error::{Error, FmtError};
+use cornucopia::pg_type::TypeRegistrar;
 use cornucopia::pool::{cli_pool, create_pool};
 use cornucopia::prepare_queries::prepare_modules;
 use cornucopia::run_migrations::run_migrations;
 use std::path::Path;
+use std::process::Command;
 use time::OffsetDateTime;
 
 #[tokio::main]
@@ -42,16 +44,36 @@ async fn main() -> Result<(), Error> {
             queries_path,
             destination,
         } => {
-            if let Err(e) = generation(migrations_path, queries_path, destination).await {
+            let mut type_registrar = TypeRegistrar::default();
+            if let Err(e) = generation(
+                &mut type_registrar,
+                migrations_path,
+                queries_path,
+                destination,
+            )
+            .await
+            {
                 container::cleanup()?;
                 return Err(e);
             }
+
+            format_project()?;
+
             Ok(())
         }
     }
 }
 
+pub fn format_project() -> Result<(), FmtError> {
+    if Command::new("cargo").arg("fmt").spawn()?.wait()?.success() {
+        Ok(())
+    } else {
+        Err(FmtError::RustFmt)
+    }
+}
+
 pub async fn generation(
+    type_registrar: &mut TypeRegistrar,
     migrations_path: String,
     queries_path: String,
     destination: String,
@@ -59,8 +81,8 @@ pub async fn generation(
     container::setup()?;
     let client = cli_pool()?.get().await?;
     run_migrations(&client, &migrations_path).await?;
-    let modules = prepare_modules(&client, &queries_path).await?;
-    generate(modules, &destination)?;
+    let modules = prepare_modules(type_registrar, &client, &queries_path).await?;
+    generate(type_registrar, modules, &destination)?;
     container::cleanup()?;
 
     Ok(())

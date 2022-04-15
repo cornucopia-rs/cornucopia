@@ -1,9 +1,8 @@
 use error::Error;
 use pest::{iterators::Pair, Parser};
 use pest_derive::Parser as Pest;
-use tokio_postgres::types::Type;
 
-use crate::pg_type::from_str;
+use crate::pg_type::TypeRegistrar;
 
 #[derive(Pest)]
 #[grammar = "../grammar.pest"]
@@ -25,14 +24,6 @@ pub struct ParsedQueryMeta {
 }
 
 #[derive(Debug)]
-pub enum Quantifier {
-    ZeroOrMore,
-    ZeroOrOne,
-    One,
-}
-
-#[derive(Debug)]
-
 struct UntypedParam {
     name: String,
 }
@@ -47,17 +38,40 @@ impl UntypedParam {
 }
 
 #[derive(Debug)]
-pub struct TypedParam {
+pub struct Type {
+    pub schema: String,
     pub name: String,
-    pub ty: Type,
+}
+#[derive(Debug)]
+pub struct TypedParam {
+    name: String,
+    ty: Type,
 }
 
 impl TypedParam {
-    fn from_pair(pair: Pair<Rule>) -> Result<Self, Error> {
+    fn from_pair(type_registrar: &TypeRegistrar, pair: Pair<Rule>) -> Result<Self, Error> {
         let mut pairs = pair.into_inner();
+        let s1 = pairs.next().unwrap().as_str().to_string();
+        let s2 = pairs.next().unwrap().as_str().to_string().to_lowercase();
+        let (name, ty_schema, ty_name) =
+            if let Some(s3) = pairs.next().map(|s| s.as_str().to_string().to_lowercase()) {
+                (s1, s2, s3)
+            } else {
+                let schema = if type_registrar.base_type(&s2).is_some() {
+                    String::from("pg_catalog")
+                } else {
+                    //TODO
+                    String::from("public")
+                };
+                (s1, schema, s2)
+            };
+
         Ok(Self {
-            name: pairs.next().unwrap().as_str().to_string(),
-            ty: from_str(pairs.next().unwrap().as_str())?,
+            name,
+            ty: Type {
+                schema: ty_schema,
+                name: ty_name,
+            },
         })
     }
 }
@@ -68,7 +82,17 @@ pub enum ReturnType {
     Explicit { field_names: Vec<String> },
 }
 
-pub fn parse_query_meta(meta: &str) -> Result<ParsedQueryMeta, Error> {
+#[derive(Debug)]
+pub enum Quantifier {
+    ZeroOrMore,
+    ZeroOrOne,
+    One,
+}
+
+pub fn parse_query_meta(
+    type_registrar: &TypeRegistrar,
+    meta: &str,
+) -> Result<ParsedQueryMeta, Error> {
     // Get top level tokens
     let mut parser_inner = CornucopiaParser::parse(Rule::parser, meta)?
         .next()
@@ -80,7 +104,7 @@ pub fn parse_query_meta(meta: &str) -> Result<ParsedQueryMeta, Error> {
     let name = name_tokens.as_str().to_string();
     // Parse params
     let param_tokens = parser_inner.next().unwrap();
-    let (params, override_types) = parse_params(param_tokens)?;
+    let (params, override_types) = parse_params(type_registrar, param_tokens)?;
     // Parse return
     let return_tokens = parser_inner.next().unwrap();
     let ret = parse_return(return_tokens);
@@ -97,24 +121,27 @@ pub fn parse_query_meta(meta: &str) -> Result<ParsedQueryMeta, Error> {
     })
 }
 
-fn parse_params(pair: Pair<Rule>) -> Result<(Vec<String>, Vec<Type>), Error> {
+fn parse_params(
+    type_registrar: &TypeRegistrar,
+    pair: Pair<Rule>,
+) -> Result<(Vec<String>, Vec<Type>), Error> {
     let mut override_types = Vec::new();
-    let mut params = Vec::new();
+    let mut param_names = Vec::new();
     for pair in pair.into_inner() {
         let rule = pair.as_rule();
         if let Rule::override_params = rule {
             for pair in pair.into_inner() {
-                let TypedParam { name, ty } = TypedParam::from_pair(pair)?;
-                params.push(name);
+                let TypedParam { name, ty } = TypedParam::from_pair(type_registrar, pair)?;
+                param_names.push(name);
                 override_types.push(ty)
             }
         } else if let Rule::inferred_params = rule {
             for pair in pair.into_inner() {
-                params.push(UntypedParam::from_pair(pair).name);
+                param_names.push(UntypedParam::from_pair(pair).name);
             }
         }
     }
-    Ok((params, override_types))
+    Ok((param_names, override_types))
 }
 
 fn parse_return(pair: Pair<Rule>) -> ReturnType {

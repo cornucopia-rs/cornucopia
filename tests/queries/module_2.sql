@@ -48,3 +48,10 @@ FROM
     INNER JOIN Book ON Book.Id = BookAuthor.BookId
 WHERE
     Author.Name LIKE CONCAT($1, '%');
+
+--! return_custom_type()
+SELECT
+    *
+FROM
+    CustomTable;
+

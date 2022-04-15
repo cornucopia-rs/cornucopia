@@ -48,7 +48,7 @@ fn wait_until_postgres_started(max_retries: u64, ms_per_retry: u64) -> Result<()
     let mut nb_retries = 0;
     while !is_postgres_healthy()? {
         if nb_retries >= max_retries {
-            panic!()
+            return Err(Error::MaxNbRetries);
         };
         std::thread::sleep(std::time::Duration::from_millis(ms_per_retry));
         nb_retries += 1;
@@ -85,9 +85,15 @@ pub mod error {
     #[derive(Debug, ThisError)]
     #[error("Error encountered while running docker command. Please check that docker is installed, and that the daemon is running. If you are a Linux user, please check that you are in the `docker` group")]
     pub enum Error {
+        #[error("couldn't start database container")]
         RunContainer(std::io::Error),
+        #[error("encountered error while probing database container health")]
         HealthCheck(std::io::Error),
+        #[error("couldn't stop database container")]
         StopContainer(std::io::Error),
+        #[error("couldn't clean up database container")]
         RemoveContainer(std::io::Error),
+        #[error("max number of retries reached while waiting for database container to start")]
+        MaxNbRetries,
     }
 }

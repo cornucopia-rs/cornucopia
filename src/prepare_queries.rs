@@ -1,9 +1,12 @@
 use crate::parse::ParsedQuery;
 use crate::parse::Quantifier;
 use crate::parse::ReturnType;
-use crate::parse::TypedParam;
+use crate::pg_type::CornucopiaField;
+use crate::pg_type::CornucopiaType;
+use crate::pg_type::TypeRegistrar;
 use deadpool_postgres::{Client, Object};
 use error::Error;
+use postgres_types::Kind;
 use tokio_postgres::types::Type;
 
 use super::read_queries::{read_queries, Module};
@@ -11,8 +14,8 @@ use super::read_queries::{read_queries, Module};
 #[derive(Debug)]
 pub struct PreparedQuery {
     pub name: String,
-    pub override_types: Vec<Type>,
-    pub params: Vec<TypedParam>,
+    pub override_types: Vec<CornucopiaType>,
+    pub params: Vec<CornucopiaField>,
     pub ret: RustReturnType,
     pub quantifier: Quantifier,
     pub sql: String,
@@ -24,18 +27,34 @@ pub struct PreparedModule {
     pub queries: Vec<PreparedQuery>,
 }
 
-pub async fn prepare_modules(client: &Object, path: &str) -> Result<Vec<PreparedModule>, Error> {
+#[derive(Debug)]
+pub enum RustReturnType {
+    Void,
+    Scalar(CornucopiaType),
+    Tuple(Vec<CornucopiaType>),
+    Struct(Vec<CornucopiaField>),
+}
+
+pub async fn prepare_modules(
+    type_registrar: &mut TypeRegistrar,
+    client: &Object,
+    path: &str,
+) -> Result<Vec<PreparedModule>, Error> {
     let mut prepared_modules = Vec::new();
-    for module in read_queries(path)? {
-        prepared_modules.push(prepare_module(client, module).await?);
+    for module in read_queries(type_registrar, path)? {
+        prepared_modules.push(prepare_module(client, module, type_registrar).await?);
     }
     Ok(prepared_modules)
 }
 
-async fn prepare_module(client: &Object, module: Module) -> Result<PreparedModule, Error> {
+async fn prepare_module(
+    client: &Object,
+    module: Module,
+    type_registrar: &mut TypeRegistrar,
+) -> Result<PreparedModule, Error> {
     let mut queries = Vec::new();
     for query in module.queries {
-        queries.push(prepare_query(client, query).await?);
+        queries.push(prepare_query(client, query, type_registrar).await?);
     }
     Ok(PreparedModule {
         name: module.name,
@@ -43,37 +62,63 @@ async fn prepare_module(client: &Object, module: Module) -> Result<PreparedModul
     })
 }
 
-async fn prepare_query(client: &Client, query: ParsedQuery) -> Result<PreparedQuery, Error> {
+async fn prepare_query(
+    client: &Client,
+    query: ParsedQuery,
+    type_registrar: &mut TypeRegistrar,
+) -> Result<PreparedQuery, Error> {
+    let mut override_types = Vec::new();
+    for override_type in query.meta.override_types {
+        let override_type = type_registrar
+            .register(client, override_type.schema, override_type.name)
+            .await?;
+        override_types.push(override_type);
+    }
+    let override_pg_types = override_types
+        .iter()
+        .map(|t| t.pg_ty.clone())
+        .collect::<Vec<Type>>();
     let stmt = client
-        .prepare_typed(&query.sql, &query.meta.override_types)
+        .prepare_typed(&query.sql, override_pg_types.as_slice())
         .await?;
+
+    let mut param_types = Vec::new();
+    for param in stmt.params() {
+        let param_type = type_registrar.register_type(client, param).await?;
+        param_types.push(param_type);
+    }
+
     let params = query
         .meta
         .params
         .into_iter()
-        .zip(stmt.params().iter().cloned())
-        .map(|(name, ty)| TypedParam { name, ty })
-        .collect::<Vec<TypedParam>>();
+        .zip(param_types)
+        .map(|(name, ty)| CornucopiaField { name, ty })
+        .collect::<Vec<CornucopiaField>>();
 
     let ret = {
-        let mut return_types = stmt
-            .columns()
-            .iter()
-            .map(|c| c.type_().clone())
-            .collect::<Vec<Type>>();
+        let mut return_types = Vec::new();
+        for column in stmt.columns() {
+            let ty = type_registrar.register_type(client, column.type_()).await?;
+            return_types.push(ty);
+        }
+
         match query.meta.ret {
             ReturnType::Implicit => match return_types.len() {
                 0 => RustReturnType::Void,
-                // ![unwrap] This is ok because we just checked that we do have one element.
-                1 => RustReturnType::Scalar(return_types.pop().unwrap()),
+                1 => RustReturnType::Scalar(
+                    return_types
+                        .pop()
+                        .expect("moving out the single return type found"),
+                ),
                 _ => RustReturnType::Tuple(return_types),
             },
             ReturnType::Explicit { field_names } => {
                 let fields = field_names
                     .into_iter()
                     .zip(return_types)
-                    .map(|(name, ty)| TypedParam { name, ty })
-                    .collect::<Vec<TypedParam>>();
+                    .map(|(name, ty)| CornucopiaField { name, ty })
+                    .collect::<Vec<CornucopiaField>>();
                 RustReturnType::Struct(fields)
             }
         }
@@ -81,32 +126,24 @@ async fn prepare_query(client: &Client, query: ParsedQuery) -> Result<PreparedQu
 
     Ok(PreparedQuery {
         name: query.meta.name,
-        override_types: query.meta.override_types,
+        override_types,
         params,
         ret,
         quantifier: query.meta.quantifier,
         sql: query.sql,
     })
 }
-#[derive(Debug)]
-pub enum RustReturnType {
-    Void,
-    Scalar(Type),
-    Tuple(Vec<Type>),
-    Struct(Vec<TypedParam>),
-}
 
 pub mod error {
+    use crate::pg_type::error::Error as PostgresTypeError;
     use crate::read_queries::error::Error as ReadQueriesError;
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError)]
+    #[error("encountered error while preparing queries")]
     pub enum Error {
-        #[error("")]
         Db(#[from] tokio_postgres::Error),
-        #[error("")]
         Pool(#[from] deadpool_postgres::PoolError),
-        #[error("")]
         ReadQueries(#[from] ReadQueriesError),
         #[error(
             "invalid number of parameters in {module}::{name}. Expected {expected}, got {actual}"
@@ -117,7 +154,10 @@ pub mod error {
             expected: usize,
             actual: usize,
         },
-        #[error("Cannot parse '{ty}' into postgres type")]
-        UnrecognizedType { ty: String },
+        PostgresType(#[from] PostgresTypeError),
     }
+}
+
+pub struct Allo {
+    pub bob: std::sync::Arc<Vec<String>>,
 }

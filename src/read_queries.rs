@@ -1,5 +1,6 @@
 use crate::parse::ParsedQuery;
 use crate::parse_file::parse_file;
+use crate::pg_type::TypeRegistrar;
 use error::Error;
 
 #[derive(Debug)]
@@ -8,7 +9,7 @@ pub struct Module {
     pub queries: Vec<ParsedQuery>,
 }
 
-pub fn read_queries(path: &str) -> Result<Vec<Module>, Error> {
+pub fn read_queries(type_registrar: &TypeRegistrar, path: &str) -> Result<Vec<Module>, Error> {
     let mut modules = Vec::new();
     for entry_result in std::fs::read_dir(path)? {
         let entry = entry_result?;
@@ -19,12 +20,16 @@ pub fn read_queries(path: &str) -> Result<Vec<Module>, Error> {
             .map(|extension| extension == "sql")
             .unwrap_or_default()
         {
-            // ![unwrap] We just checked that this is a file with an extension
-            let module_name = path.file_stem().unwrap().to_str().unwrap().to_string();
+            let module_name = path
+                .file_stem()
+                .expect("is a file")
+                .to_str()
+                .expect("file stem is valid utf8")
+                .to_string();
 
             let module = Module {
                 name: module_name,
-                queries: parse_file(&path)?,
+                queries: parse_file(type_registrar, &path)?,
             };
 
             modules.push(module);
