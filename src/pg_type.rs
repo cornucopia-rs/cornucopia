@@ -23,7 +23,11 @@ impl CornucopiaType {
         Self {
             kind,
 
-            rust_ty_usage_path: format!("super::types::{}::{}", pg_ty.schema(), rust_ty_name),
+            rust_ty_usage_path: format!(
+                "super::super::types::{}::{}",
+                pg_ty.schema(),
+                rust_ty_name
+            ),
             rust_ty_definition_path: format!("super::{}::{}", pg_ty.schema(), rust_ty_name),
             rust_ty_name,
             pg_ty,
