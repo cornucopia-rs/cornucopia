@@ -182,7 +182,7 @@ The quantifier indicates the expected number of rows to be returned by a query. 
 * `?` results in `Option<T>`
 
 ### Transactions
-Cornucopia actually generates two versions of your queries, one that accepts a regular client, while the other version (named with a `*_tx` suffix) accepts a transaction.
+Cornucopia actually generates two versions of your queries, one that accepts a regular client (located inside the `queries`), while the other version accepts a transaction (located inside the `transactions`).
 
 ## Supported types
 | PostgrsQL type                               | Rust type                 |

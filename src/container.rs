@@ -55,6 +55,10 @@ fn wait_until_postgres_started(max_retries: u64, ms_per_retry: u64) -> Result<()
         };
         std::thread::sleep(std::time::Duration::from_millis(ms_per_retry));
         nb_retries += 1;
+
+        if nb_retries % 10 == 0 {
+            println!("Container startup slower than expected ({nb_retries} retries out of {max_retries})")
+        }
     }
     Ok(())
 }

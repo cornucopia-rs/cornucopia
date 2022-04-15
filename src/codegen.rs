@@ -11,20 +11,30 @@ use crate::{
 
 use super::prepare_queries::PreparedModule;
 
-pub(crate) fn generate_query(query: &PreparedQuery) -> Result<String, Error> {
+pub(crate) fn generate_query(
+    module_name: &str,
+    query: &PreparedQuery,
+) -> Result<(String, String), Error> {
     let name = &query.name;
     let query_struct = generate_query_struct(query)?.unwrap_or_default();
     let params = generate_query_params(query)?;
     let ret_ty = generate_query_ret_ty(query)?;
-    let ret = generate_query_quantified_ret_ty(query, &ret_ty);
+    let ret_ty = if let RustReturnType::Struct(_) = query.ret {
+        format!("super::super::queries::{module_name}::{ret_ty}")
+    } else {
+        ret_ty
+    };
 
+    let ret = generate_query_quantified_ret_ty(query, &ret_ty);
     let body = generate_query_body(query, ret_ty)?;
-    Ok(format!(
-        r#"{query_struct}
-pub async fn {name}(client:&Client, {params}) -> Result<{ret},Error> {{{body}}}
-pub async fn {name}_tx<'a>(client:&Transaction<'a>, {params}) -> Result<{ret}, Error> {{{body}}}
-"#
-    ))
+    let query_string = format!(
+        "{query_struct}
+    pub async fn {name}(client:&Client, {params}) -> Result<{ret},Error> {{{body}}}"
+    );
+
+    let transaction_string = format!("pub async fn {name}<'a>(client:&Transaction<'a>, {params}) -> Result<{ret}, Error> {{{body}}}");
+
+    Ok((query_string, transaction_string))
 }
 
 pub(crate) fn generate_custom_type(ty: &CornucopiaType) -> String {
@@ -151,16 +161,16 @@ pub(crate) fn generate_query_params(query: &PreparedQuery) -> Result<String, Err
 
 pub(crate) fn generate_query_ret_ty(query: &PreparedQuery) -> Result<String, Error> {
     Ok(match &query.ret {
-        crate::prepare_queries::RustReturnType::Void => String::from("()"),
-        crate::prepare_queries::RustReturnType::Scalar(ty) => ty.rust_ty_usage_path.clone(),
-        crate::prepare_queries::RustReturnType::Tuple(tys) => {
+        RustReturnType::Void => String::from("()"),
+        RustReturnType::Scalar(ty) => ty.rust_ty_usage_path.clone(),
+        RustReturnType::Tuple(tys) => {
             let mut tys_string = Vec::new();
             for ty in tys {
                 tys_string.push(ty.rust_ty_usage_path.clone())
             }
             format!("({})", tys_string.join(","))
         }
-        crate::prepare_queries::RustReturnType::Struct(_) => query.name.to_upper_camel_case(),
+        RustReturnType::Struct(_) => query.name.to_upper_camel_case(),
     })
 }
 
@@ -277,30 +287,48 @@ pub(crate) fn generate(
     modules: Vec<PreparedModule>,
     destination: &str,
 ) -> Result<(), Error> {
-    let imports = r#"use deadpool_postgres::{Client, Transaction};
+    let query_imports = r#"use deadpool_postgres::Client;
 use tokio_postgres::{error::Error};"#;
+    let transaction_imports = r#"use deadpool_postgres::Transaction;
+    use tokio_postgres::{error::Error};"#;
 
     let type_modules = generate_type_modules(type_registrar);
 
     let mut query_modules = Vec::new();
+    let mut transaction_modules = Vec::new();
     for module in modules {
         let mut query_strings = Vec::new();
+        let mut transaction_strings = Vec::new();
         for query in module.queries {
-            query_strings.push(generate_query(&query)?)
+            let (query_string, transaction_string) = generate_query(&module.name, &query)?;
+            query_strings.push(query_string);
+            transaction_strings.push(transaction_string)
         }
         let queries_string = query_strings.join("\n\n");
+        let transactions_string = transaction_strings.join("\n\n");
         let module_name = module.name;
 
         query_modules.push(format!(
             r#"pub mod {module_name} {{
-{imports}
+{query_imports}
 
 {queries_string}
 }}"#
         ));
+        transaction_modules.push(format!(
+            r#"pub mod {module_name} {{
+{transaction_imports}
+
+{transactions_string}
+}}"#
+        ));
     }
 
-    let generated_modules = format!("{type_modules} {}", query_modules.join("\n\n"));
+    let generated_modules = format!(
+        "{type_modules} \n pub mod queries {{ {} }} \n pub mod transactions {{ {} }}",
+        query_modules.join("\n\n"),
+        transaction_modules.join("\n\n")
+    );
 
     std::fs::write(destination, generated_modules)?;
 
