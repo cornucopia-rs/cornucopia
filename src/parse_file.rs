@@ -20,7 +20,7 @@ where
     Ok(io::BufReader::new(file).lines())
 }
 
-pub fn parse_file<P>(path: P) -> Result<Vec<ParsedQuery>, Error>
+pub(crate) fn parse_file<P>(path: P) -> Result<Vec<ParsedQuery>, Error>
 where
     P: AsRef<Path>,
 {
@@ -35,7 +35,7 @@ where
         .collect()
 }
 
-pub mod error {
+pub(crate) mod error {
     use crate::parse::error::Error as ParserError;
     use crate::sanitize::error::Error as SanitizeError;
     use thiserror::Error as ThisError;

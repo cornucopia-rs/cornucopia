@@ -6,7 +6,6 @@ pub struct Migration {
     pub timestamp: i64,
     pub sql: String,
 }
-
 pub fn read_migrations(path: &str) -> Result<Vec<Migration>, Error> {
     let mut migrations = Vec::new();
     for entry_result in std::fs::read_dir(path)? {

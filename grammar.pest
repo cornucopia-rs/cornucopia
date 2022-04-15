@@ -1,34 +1,31 @@
+// Symbols
+dot = _{"."}
 underscore = _{"_"}
 colon = _{":"}
 comma = _{","}
 start_param_list = _{"("}
-end_param_list = _{")" | ")"}
+end_param_list = _{")"}
 start_ret_struct = _{"{"}
-end_ret_struct = _{"}" |"}"}
+end_ret_struct = _{"}"}
 
+// Postgres identifiers
 lowercase_letter = _{'a'..'z'}
 uppercase_letter = _{'A'..'Z'}
-letter = _{(lowercase_letter) | (uppercase_letter)}
+letter = _{ lowercase_letter | uppercase_letter }
 digit = _{'0'..'9'}
+postgres_alpha = _{ letter | digit | underscore }
+ident = { (underscore | letter) ~ postgres_alpha* }
 
-postgres_alpha = _{ (letter) | (digit) | (underscore) }
-postgres_ident = { ((underscore) | (letter)) ~ (postgres_alpha)* }
-
-typed_column = { postgres_ident ~ colon ~ postgres_ident }
-untyped_column = { postgres_ident }
-
-override_params = { typed_column ~ (comma ~ typed_column)* }
-inferred_params = { untyped_column ~ (comma ~ untyped_column)* }
-
+// Query parameters
 parameter_list = {
 	start_param_list
-    ~ ((override_params ~ comma ~ inferred_params)
-    	| (override_params)
-    	| (inferred_params))?
+    ~ (ident ~ (comma ~ ident)*)?
     ~ (comma)?
     ~ end_param_list
 }
 
+// Query return
+inferred_params = { ident ~ (comma ~ ident)* }
 implicit_return = { "" }
 struct_return = {
 	start_ret_struct
@@ -38,15 +35,16 @@ struct_return = {
 }
 return_type = _{(struct_return) | (implicit_return)}
 
+// Query quantifier
 zero_or_more = {"*"}
 zero_or_one = {"?"}
 one = {""}
-
 quantifier = {zero_or_more | zero_or_one | one}
 
+// Parser
 parser = {
     SOI 
-	~ postgres_ident 
+	~ ident 
     ~ parameter_list 
     ~ return_type
     ~ quantifier

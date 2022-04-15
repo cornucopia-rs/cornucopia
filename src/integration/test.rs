@@ -1,11 +1,13 @@
 use error::Error;
 
-use cornucopia::cornucopia_gen;
+use crate::integration::cornucopia_gen::types::public::SpongebobCharacter;
+
+use super::cornucopia_gen;
 use deadpool_postgres::Client;
 
-async fn setup() -> Result<Client, cornucopia::error::Error> {
-    use cornucopia::run_migrations::run_migrations;
-    use cornucopia::{container, pool::cli_pool};
+async fn setup() -> Result<Client, crate::error::Error> {
+    use crate::run_migrations::run_migrations;
+    use crate::{container, pool::cli_pool};
 
     container::setup()?;
     let pool = cli_pool()?;
@@ -15,8 +17,8 @@ async fn setup() -> Result<Client, cornucopia::error::Error> {
     Ok(client)
 }
 
-async fn teardown() -> Result<(), cornucopia::error::Error> {
-    use cornucopia::container;
+async fn teardown() -> Result<(), crate::error::Error> {
+    use crate::container;
     container::cleanup()?;
     Ok(())
 }
@@ -54,28 +56,10 @@ async fn insert_books_test(client: &Client) -> Result<(), Error> {
         insert_book_one, insert_book_zero_or_more, insert_book_zero_or_one,
     };
 
-    let i1 = insert_book_one(&client).await?;
-    let i2 = insert_book_zero_or_more(&client).await?;
-    let i3 = insert_book_zero_or_one(&client).await?;
+    let _ = insert_book_one(client).await?;
+    let _ = insert_book_zero_or_more(client).await?;
+    let _ = insert_book_zero_or_one(client).await?;
 
-    if () != i1 {
-        return Err(Error::IntegrationError {
-            expected: format!("{:?}", ()),
-            actual: format!("{:?}", i1),
-        });
-    };
-    if () != i2 {
-        return Err(Error::IntegrationError {
-            expected: format!("{:?}", ()),
-            actual: format!("{:?}", i2),
-        });
-    };
-    if () != i3 {
-        return Err(Error::IntegrationError {
-            expected: format!("{:?}", ()),
-            actual: format!("{:?}", i3),
-        });
-    };
     Ok(())
 }
 
@@ -94,10 +78,10 @@ async fn authors_test(client: &Client) -> Result<(), Error> {
             String::from("United Kingdom"),
         ),
     ];
-    let actual = authors(&client).await?;
+    let actual = authors(client).await?;
 
     if !actual.iter().all(|item| expected.contains(item)) {
-        return Err(Error::IntegrationError {
+        return Err(Error::Integration {
             expected: format!("{:?}", expected),
             actual: format!("{:?}", actual),
         });
@@ -124,10 +108,10 @@ async fn books_test(client: &Client) -> Result<(), Error> {
         },
     ];
 
-    let actual = books(&client).await?;
+    let actual = books(client).await?;
 
     if !actual.iter().all(|item| expected.contains(item)) {
-        return Err(Error::IntegrationError {
+        return Err(Error::Integration {
             expected: format!("{:?}", expected),
             actual: format!("{:?}", actual),
         });
@@ -143,10 +127,10 @@ async fn books_from_author_id_test(client: &Client) -> Result<(), Error> {
         String::from("Death on the Nile"),
         String::from("Murder on the Orient Express"),
     ];
-    let actual = books_from_author_id(&client, &0).await?;
+    let actual = books_from_author_id(client, &0).await?;
 
     if !actual.iter().all(|item| expected.contains(item)) {
-        return Err(Error::IntegrationError {
+        return Err(Error::Integration {
             expected: format!("{:?}", expected),
             actual: format!("{:?}", actual),
         });
@@ -161,7 +145,7 @@ async fn author_name_by_id_test(client: &Client) -> Result<(), Error> {
     let actual = author_name_by_id(client, &1).await?;
 
     if expected != actual {
-        return Err(Error::IntegrationError {
+        return Err(Error::Integration {
             expected: format!("{:?}", expected),
             actual: format!("{:?}", actual),
         });
@@ -175,7 +159,7 @@ async fn author_name_by_id_opt_test(client: &Client) -> Result<(), Error> {
     let actual = author_name_by_id_opt(client, &-1).await?;
 
     if expected != actual {
-        return Err(Error::IntegrationError {
+        return Err(Error::Integration {
             expected: format!("{:?}", expected),
             actual: format!("{:?}", actual),
         });
@@ -202,7 +186,7 @@ async fn author_name_starting_with_test(client: &Client) -> Result<(), Error> {
     let actual = author_name_starting_with(client, "Jo").await?;
 
     if !actual.iter().all(|item| expected.contains(item)) {
-        return Err(Error::IntegrationError {
+        return Err(Error::Integration {
             expected: format!("{:?}", expected),
             actual: format!("{:?}", actual),
         });
@@ -211,19 +195,58 @@ async fn author_name_starting_with_test(client: &Client) -> Result<(), Error> {
     Ok(())
 }
 
+async fn return_custom_type(client: &Client) -> Result<(), Error> {
+    use cornucopia_gen::module_2::return_custom_type;
+    use cornucopia_gen::types::public::CustomComposite;
+
+    let expected = CustomComposite {
+        wow: String::from("Impressive"),
+        such_cool: 42,
+        nice: SpongebobCharacter::Patrick,
+    };
+    let actual = return_custom_type(client).await?;
+
+    if expected.wow == actual.wow
+        && expected.such_cool == actual.such_cool
+        && expected.nice == actual.nice
+    {
+        return Err(Error::Integration {
+            expected: format!("{expected:?}"),
+            actual: format!("{actual:?}"),
+        });
+    }
+
+    Ok(())
+}
+
+async fn select_where_custom_type(client: &Client) -> Result<(), Error> {
+    use cornucopia_gen::module_2::select_where_custom_type;
+
+    let actual = select_where_custom_type(client, &SpongebobCharacter::Patrick).await?;
+    let expected = SpongebobCharacter::Bob;
+    if expected != actual {
+        return Err(Error::Integration {
+            expected: format!("{expected:?}"),
+            actual: format!("{actual:?}"),
+        });
+    }
+
+    Ok(())
+}
+
 mod error {
-    use cornucopia::error::Error as CornucopiaError;
+    use crate::error::Error as CornucopiaError;
     use thiserror::Error as ThisError;
     use tokio_postgres::Error as DbError;
     #[derive(Debug, ThisError)]
     #[error("error occured during integration testing")]
     pub enum Error {
         #[error("expected {expected}, got {actual}")]
-        IntegrationError {
+        Integration {
             expected: String,
             actual: String,
         },
-        DbError(#[from] DbError),
-        CornucopiaError(#[from] CornucopiaError),
+        Db(#[from] DbError),
+        Cornucopia(#[from] CornucopiaError),
     }
 }

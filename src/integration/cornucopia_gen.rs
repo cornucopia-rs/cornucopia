@@ -1,84 +1,102 @@
+pub mod types {
+
+    pub mod public {
+        use postgres_types::{FromSql, ToSql};
+
+        #[derive(Debug, ToSql, FromSql)]
+        #[postgres(name = "spongebob_character")]
+        #[derive(Clone, Copy, PartialEq, Eq)]
+        pub enum SpongebobCharacter {
+            Bob,
+            Patrick,
+            Squidward,
+        }
+
+        #[derive(Debug, ToSql, FromSql)]
+        #[postgres(name = "custom_composite")]
+        #[derive(Clone)]
+        pub struct CustomComposite {
+            pub such_cool: i32,
+            pub wow: String,
+            pub nice: super::public::SpongebobCharacter,
+        }
+    }
+}
 pub mod module_1 {
     use deadpool_postgres::{Client, Transaction};
-    use tokio_postgres::{error::Error, types::Type};
+    use tokio_postgres::error::Error;
 
     pub async fn insert_book_one(client: &Client) -> Result<(), Error> {
         let stmt = client
-            .prepare_typed_cached(
+            .prepare_cached(
                 "INSERT INTO Book (title)
 VALUES ('bob');
 ",
-                &[],
             )
             .await?;
-        let res = client.execute(&stmt, &[]).await?;
+        let _ = client.execute(&stmt, &[]).await?;
 
         Ok(())
     }
     pub async fn insert_book_one_tx<'a>(client: &Transaction<'a>) -> Result<(), Error> {
         let stmt = client
-            .prepare_typed_cached(
+            .prepare_cached(
                 "INSERT INTO Book (title)
 VALUES ('bob');
 ",
-                &[],
             )
             .await?;
-        let res = client.execute(&stmt, &[]).await?;
+        let _ = client.execute(&stmt, &[]).await?;
 
         Ok(())
     }
 
     pub async fn insert_book_zero_or_one(client: &Client) -> Result<(), Error> {
         let stmt = client
-            .prepare_typed_cached(
+            .prepare_cached(
                 "INSERT INTO Book (title)
 VALUES ('alice');
 ",
-                &[],
             )
             .await?;
-        let res = client.execute(&stmt, &[]).await?;
+        let _ = client.execute(&stmt, &[]).await?;
 
         Ok(())
     }
     pub async fn insert_book_zero_or_one_tx<'a>(client: &Transaction<'a>) -> Result<(), Error> {
         let stmt = client
-            .prepare_typed_cached(
+            .prepare_cached(
                 "INSERT INTO Book (title)
 VALUES ('alice');
 ",
-                &[],
             )
             .await?;
-        let res = client.execute(&stmt, &[]).await?;
+        let _ = client.execute(&stmt, &[]).await?;
 
         Ok(())
     }
 
     pub async fn insert_book_zero_or_more(client: &Client) -> Result<(), Error> {
         let stmt = client
-            .prepare_typed_cached(
+            .prepare_cached(
                 "INSERT INTO Book (title)
 VALUES ('carl');
 ",
-                &[],
             )
             .await?;
-        let res = client.execute(&stmt, &[]).await?;
+        let _ = client.execute(&stmt, &[]).await?;
 
         Ok(())
     }
     pub async fn insert_book_zero_or_more_tx<'a>(client: &Transaction<'a>) -> Result<(), Error> {
         let stmt = client
-            .prepare_typed_cached(
+            .prepare_cached(
                 "INSERT INTO Book (title)
 VALUES ('carl');
 ",
-                &[],
             )
             .await?;
-        let res = client.execute(&stmt, &[]).await?;
+        let _ = client.execute(&stmt, &[]).await?;
 
         Ok(())
     }
@@ -86,17 +104,16 @@ VALUES ('carl');
 
 pub mod module_2 {
     use deadpool_postgres::{Client, Transaction};
-    use tokio_postgres::{error::Error, types::Type};
+    use tokio_postgres::error::Error;
 
     pub async fn authors(client: &Client) -> Result<Vec<(i32, String, String)>, Error> {
         let stmt = client
-            .prepare_typed_cached(
+            .prepare_cached(
                 "SELECT
 *
 FROM
 Author;
 ",
-                &[],
             )
             .await?;
         let res = client.query(&stmt, &[]).await?;
@@ -116,13 +133,12 @@ Author;
         client: &Transaction<'a>,
     ) -> Result<Vec<(i32, String, String)>, Error> {
         let stmt = client
-            .prepare_typed_cached(
+            .prepare_cached(
                 "SELECT
 *
 FROM
 Author;
 ",
-                &[],
             )
             .await?;
         let res = client.query(&stmt, &[]).await?;
@@ -145,13 +161,12 @@ Author;
     }
     pub async fn books(client: &Client) -> Result<Vec<Books>, Error> {
         let stmt = client
-            .prepare_typed_cached(
+            .prepare_cached(
                 "SELECT
 Title
 FROM
 Book;
 ",
-                &[],
             )
             .await?;
         let res = client.query(&stmt, &[]).await?;
@@ -169,13 +184,12 @@ Book;
     }
     pub async fn books_tx<'a>(client: &Transaction<'a>) -> Result<Vec<Books>, Error> {
         let stmt = client
-            .prepare_typed_cached(
+            .prepare_cached(
                 "SELECT
 Title
 FROM
 Book;
 ",
-                &[],
             )
             .await?;
         let res = client.query(&stmt, &[]).await?;
@@ -194,7 +208,7 @@ Book;
 
     pub async fn books_from_author_id(client: &Client, id: &i32) -> Result<Vec<String>, Error> {
         let stmt = client
-            .prepare_typed_cached(
+            .prepare_cached(
                 "SELECT
 Book.Title
 FROM
@@ -204,7 +218,6 @@ INNER JOIN Book ON Book.Id = BookAuthor.BookId
 WHERE
 Author.Id = $1;
 ",
-                &[],
             )
             .await?;
         let res = client.query(&stmt, &[&id]).await?;
@@ -223,7 +236,7 @@ Author.Id = $1;
         id: &i32,
     ) -> Result<Vec<String>, Error> {
         let stmt = client
-            .prepare_typed_cached(
+            .prepare_cached(
                 "SELECT
 Book.Title
 FROM
@@ -233,7 +246,6 @@ INNER JOIN Book ON Book.Id = BookAuthor.BookId
 WHERE
 Author.Id = $1;
 ",
-                &[],
             )
             .await?;
         let res = client.query(&stmt, &[&id]).await?;
@@ -250,7 +262,7 @@ Author.Id = $1;
 
     pub async fn author_name_by_id_opt(client: &Client, id: &i32) -> Result<Option<String>, Error> {
         let stmt = client
-            .prepare_typed_cached(
+            .prepare_cached(
                 "SELECT
 Author.Name
 FROM
@@ -258,7 +270,6 @@ Author
 WHERE
 Author.Id = $1;
 ",
-                &[],
             )
             .await?;
         let res = client.query_opt(&stmt, &[&id]).await?;
@@ -274,7 +285,7 @@ Author.Id = $1;
         id: &i32,
     ) -> Result<Option<String>, Error> {
         let stmt = client
-            .prepare_typed_cached(
+            .prepare_cached(
                 "SELECT
 Author.Name
 FROM
@@ -282,7 +293,6 @@ Author
 WHERE
 Author.Id = $1;
 ",
-                &[],
             )
             .await?;
         let res = client.query_opt(&stmt, &[&id]).await?;
@@ -296,7 +306,7 @@ Author.Id = $1;
 
     pub async fn author_name_by_id(client: &Client, id: &i32) -> Result<String, Error> {
         let stmt = client
-            .prepare_typed_cached(
+            .prepare_cached(
                 "SELECT
 Author.Name
 FROM
@@ -304,7 +314,6 @@ Author
 WHERE
 Author.Id = $1;
 ",
-                &[],
             )
             .await?;
         let res = client.query_one(&stmt, &[&id]).await?;
@@ -317,7 +326,7 @@ Author.Id = $1;
         id: &i32,
     ) -> Result<String, Error> {
         let stmt = client
-            .prepare_typed_cached(
+            .prepare_cached(
                 "SELECT
 Author.Name
 FROM
@@ -325,7 +334,6 @@ Author
 WHERE
 Author.Id = $1;
 ",
-                &[],
             )
             .await?;
         let res = client.query_one(&stmt, &[&id]).await?;
@@ -339,7 +347,7 @@ Author.Id = $1;
         s: &str,
     ) -> Result<Vec<(i32, String, i32, String)>, Error> {
         let stmt = client
-            .prepare_typed_cached(
+            .prepare_cached(
                 "SELECT
 BookAuthor.AuthorId,
 Author.Name,
@@ -350,9 +358,8 @@ BookAuthor
 INNER JOIN Author ON Author.id = BookAuthor.AuthorId
 INNER JOIN Book ON Book.Id = BookAuthor.BookId
 WHERE
-Author.Name LIKE CONCAT($1, '%');
+Author.Name LIKE CONCAT($1::text, '%');
 ",
-                &[Type::TEXT],
             )
             .await?;
         let res = client.query(&stmt, &[&s]).await?;
@@ -379,7 +386,7 @@ Author.Name LIKE CONCAT($1, '%');
         s: &str,
     ) -> Result<Vec<(i32, String, i32, String)>, Error> {
         let stmt = client
-            .prepare_typed_cached(
+            .prepare_cached(
                 "SELECT
 BookAuthor.AuthorId,
 Author.Name,
@@ -390,9 +397,8 @@ BookAuthor
 INNER JOIN Author ON Author.id = BookAuthor.AuthorId
 INNER JOIN Book ON Book.Id = BookAuthor.BookId
 WHERE
-Author.Name LIKE CONCAT($1, '%');
+Author.Name LIKE CONCAT($1::text, '%');
 ",
-                &[Type::TEXT],
             )
             .await?;
         let res = client.query(&stmt, &[&s]).await?;
@@ -412,6 +418,80 @@ Author.Name LIKE CONCAT($1, '%');
                 )
             })
             .collect::<Vec<(i32, String, i32, String)>>();
+        Ok(return_value)
+    }
+
+    pub async fn return_custom_type(
+        client: &Client,
+    ) -> Result<super::types::public::CustomComposite, Error> {
+        let stmt = client
+            .prepare_cached(
+                "SELECT
+col1
+FROM
+CustomTable;
+",
+            )
+            .await?;
+        let res = client.query_one(&stmt, &[]).await?;
+
+        let return_value: super::types::public::CustomComposite = res.get(0);
+        Ok(return_value)
+    }
+    pub async fn return_custom_type_tx<'a>(
+        client: &Transaction<'a>,
+    ) -> Result<super::types::public::CustomComposite, Error> {
+        let stmt = client
+            .prepare_cached(
+                "SELECT
+col1
+FROM
+CustomTable;
+",
+            )
+            .await?;
+        let res = client.query_one(&stmt, &[]).await?;
+
+        let return_value: super::types::public::CustomComposite = res.get(0);
+        Ok(return_value)
+    }
+
+    pub async fn select_where_custom_type(
+        client: &Client,
+        spongebob_character: &super::types::public::SpongebobCharacter,
+    ) -> Result<super::types::public::SpongebobCharacter, Error> {
+        let stmt = client
+            .prepare_cached(
+                "SELECT
+col2
+FROM
+CustomTable
+WHERE (col1).nice = $1;
+",
+            )
+            .await?;
+        let res = client.query_one(&stmt, &[&spongebob_character]).await?;
+
+        let return_value: super::types::public::SpongebobCharacter = res.get(0);
+        Ok(return_value)
+    }
+    pub async fn select_where_custom_type_tx<'a>(
+        client: &Transaction<'a>,
+        spongebob_character: &super::types::public::SpongebobCharacter,
+    ) -> Result<super::types::public::SpongebobCharacter, Error> {
+        let stmt = client
+            .prepare_cached(
+                "SELECT
+col2
+FROM
+CustomTable
+WHERE (col1).nice = $1;
+",
+            )
+            .await?;
+        let res = client.query_one(&stmt, &[&spongebob_character]).await?;
+
+        let return_value: super::types::public::SpongebobCharacter = res.get(0);
         Ok(return_value)
     }
 }

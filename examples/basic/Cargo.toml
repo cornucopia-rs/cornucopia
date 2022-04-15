@@ -6,6 +6,7 @@ version = "0.1.0"
 [dependencies]
 tokio = { version = "1.17.0", features = ["full"] }
 deadpool-postgres = { version = "0.10.2", features = ["serde"] }
+postgres-types = { version = "0.2.2", features = ["derive"] }
 tokio-postgres = { version = "0.7.5", features = [
     "with-serde_json-1",
     "with-time-0_3",

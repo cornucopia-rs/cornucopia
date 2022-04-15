@@ -1,74 +1,39 @@
 use error::Error;
 use pest::{iterators::Pair, Parser};
 use pest_derive::Parser as Pest;
-use tokio_postgres::types::Type;
-
-use crate::pg_type::from_str;
 
 #[derive(Pest)]
 #[grammar = "../grammar.pest"]
 struct CornucopiaParser;
 
 #[derive(Debug)]
-pub struct ParsedQuery {
-    pub meta: ParsedQueryMeta,
-    pub sql: String,
+pub(crate) struct ParsedQuery {
+    pub(crate) meta: ParsedQueryMeta,
+    pub(crate) sql: String,
 }
 
 #[derive(Debug)]
-pub struct ParsedQueryMeta {
-    pub name: String,
-    pub params: Vec<String>,
-    pub override_types: Vec<Type>,
-    pub ret: ReturnType,
-    pub quantifier: Quantifier,
+pub(crate) struct ParsedQueryMeta {
+    pub(crate) name: String,
+    pub(crate) params: Vec<String>,
+    pub(crate) ret: ReturnType,
+    pub(crate) quantifier: Quantifier,
 }
 
 #[derive(Debug)]
-pub enum Quantifier {
+pub(crate) enum ReturnType {
+    Implicit,
+    Explicit { field_names: Vec<String> },
+}
+
+#[derive(Debug)]
+pub(crate) enum Quantifier {
     ZeroOrMore,
     ZeroOrOne,
     One,
 }
 
-#[derive(Debug)]
-
-struct UntypedParam {
-    name: String,
-}
-
-impl UntypedParam {
-    fn from_pair(pair: Pair<Rule>) -> Self {
-        let mut pairs = pair.into_inner();
-        Self {
-            name: pairs.next().unwrap().as_str().to_string(),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct TypedParam {
-    pub name: String,
-    pub ty: Type,
-}
-
-impl TypedParam {
-    fn from_pair(pair: Pair<Rule>) -> Result<Self, Error> {
-        let mut pairs = pair.into_inner();
-        Ok(Self {
-            name: pairs.next().unwrap().as_str().to_string(),
-            ty: from_str(pairs.next().unwrap().as_str())?,
-        })
-    }
-}
-
-#[derive(Debug)]
-pub enum ReturnType {
-    Implicit,
-    Explicit { field_names: Vec<String> },
-}
-
-pub fn parse_query_meta(meta: &str) -> Result<ParsedQueryMeta, Error> {
+pub(crate) fn parse_query_meta(meta: &str) -> Result<ParsedQueryMeta, Error> {
     // Get top level tokens
     let mut parser_inner = CornucopiaParser::parse(Rule::parser, meta)?
         .next()
@@ -80,7 +45,7 @@ pub fn parse_query_meta(meta: &str) -> Result<ParsedQueryMeta, Error> {
     let name = name_tokens.as_str().to_string();
     // Parse params
     let param_tokens = parser_inner.next().unwrap();
-    let (params, override_types) = parse_params(param_tokens)?;
+    let params = parse_params(param_tokens)?;
     // Parse return
     let return_tokens = parser_inner.next().unwrap();
     let ret = parse_return(return_tokens);
@@ -91,30 +56,17 @@ pub fn parse_query_meta(meta: &str) -> Result<ParsedQueryMeta, Error> {
     Ok(ParsedQueryMeta {
         name,
         params,
-        override_types,
         ret,
         quantifier,
     })
 }
 
-fn parse_params(pair: Pair<Rule>) -> Result<(Vec<String>, Vec<Type>), Error> {
-    let mut override_types = Vec::new();
-    let mut params = Vec::new();
+fn parse_params(pair: Pair<Rule>) -> Result<Vec<String>, Error> {
+    let mut param_names = Vec::new();
     for pair in pair.into_inner() {
-        let rule = pair.as_rule();
-        if let Rule::override_params = rule {
-            for pair in pair.into_inner() {
-                let TypedParam { name, ty } = TypedParam::from_pair(pair)?;
-                params.push(name);
-                override_types.push(ty)
-            }
-        } else if let Rule::inferred_params = rule {
-            for pair in pair.into_inner() {
-                params.push(UntypedParam::from_pair(pair).name);
-            }
-        }
+        param_names.push(pair.as_str().to_string());
     }
-    Ok((params, override_types))
+    Ok(param_names)
 }
 
 fn parse_return(pair: Pair<Rule>) -> ReturnType {
@@ -141,7 +93,7 @@ fn parse_quantifier(pair: Pair<Rule>) -> Quantifier {
     }
 }
 
-pub mod error {
+pub(crate) mod error {
     use crate::{parse::Rule, pg_type::error::UnsupportedPostgresTypeError};
     use thiserror::Error as ThisError;
 
