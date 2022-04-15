@@ -36,7 +36,7 @@ FROM
 WHERE
     Author.Id = $1;
 
---! author_name_starting_with(s: TEXT)*
+--! author_name_starting_with(s)*
 SELECT
     BookAuthor.AuthorId,
     Author.Name,
@@ -47,4 +47,18 @@ FROM
     INNER JOIN Author ON Author.id = BookAuthor.AuthorId
     INNER JOIN Book ON Book.Id = BookAuthor.BookId
 WHERE
-    Author.Name LIKE CONCAT($1, '%');
+    Author.Name LIKE CONCAT($1::text, '%');
+
+--! return_custom_type()
+SELECT
+    col1
+FROM
+    CustomTable;
+
+--! select_where_custom_type(spongebob_character)
+SELECT
+    col2
+FROM
+    CustomTable
+WHERE (col1).nice = $1;
+

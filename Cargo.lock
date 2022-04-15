@@ -145,7 +145,6 @@ dependencies = [
  "clap",
  "deadpool-postgres",
  "heck",
- "once_cell",
  "pest",
  "pest_derive",
  "postgres-types",
@@ -163,6 +162,7 @@ name = "cornucopia-example-basic"
 version = "0.1.0"
 dependencies = [
  "deadpool-postgres",
+ "postgres-types",
  "serde",
  "serde_json",
  "time",

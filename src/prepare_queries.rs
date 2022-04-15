@@ -6,42 +6,39 @@ use crate::pg_type::CornucopiaType;
 use crate::pg_type::TypeRegistrar;
 use deadpool_postgres::{Client, Object};
 use error::Error;
-use postgres_types::Kind;
-use tokio_postgres::types::Type;
 
-use super::read_queries::{read_queries, Module};
+use super::read_queries::Module;
 
 #[derive(Debug)]
-pub struct PreparedQuery {
-    pub name: String,
-    pub override_types: Vec<CornucopiaType>,
-    pub params: Vec<CornucopiaField>,
-    pub ret: RustReturnType,
-    pub quantifier: Quantifier,
-    pub sql: String,
+pub(crate) struct PreparedQuery {
+    pub(crate) name: String,
+    pub(crate) params: Vec<CornucopiaField>,
+    pub(crate) ret: RustReturnType,
+    pub(crate) quantifier: Quantifier,
+    pub(crate) sql: String,
 }
 
 #[derive(Debug)]
-pub struct PreparedModule {
-    pub name: String,
-    pub queries: Vec<PreparedQuery>,
+pub(crate) struct PreparedModule {
+    pub(crate) name: String,
+    pub(crate) queries: Vec<PreparedQuery>,
 }
 
 #[derive(Debug)]
-pub enum RustReturnType {
+pub(crate) enum RustReturnType {
     Void,
     Scalar(CornucopiaType),
     Tuple(Vec<CornucopiaType>),
     Struct(Vec<CornucopiaField>),
 }
 
-pub async fn prepare_modules(
-    type_registrar: &mut TypeRegistrar,
+pub(crate) async fn prepare_modules(
     client: &Object,
-    path: &str,
+    type_registrar: &mut TypeRegistrar,
+    modules: Vec<Module>,
 ) -> Result<Vec<PreparedModule>, Error> {
     let mut prepared_modules = Vec::new();
-    for module in read_queries(type_registrar, path)? {
+    for module in modules {
         prepared_modules.push(prepare_module(client, module, type_registrar).await?);
     }
     Ok(prepared_modules)
@@ -54,7 +51,7 @@ async fn prepare_module(
 ) -> Result<PreparedModule, Error> {
     let mut queries = Vec::new();
     for query in module.queries {
-        queries.push(prepare_query(client, query, type_registrar).await?);
+        queries.push(prepare_query(client, type_registrar, query, &module.name).await?);
     }
     Ok(PreparedModule {
         name: module.name,
@@ -64,28 +61,25 @@ async fn prepare_module(
 
 async fn prepare_query(
     client: &Client,
-    query: ParsedQuery,
     type_registrar: &mut TypeRegistrar,
+    query: ParsedQuery,
+    module: &str,
 ) -> Result<PreparedQuery, Error> {
-    let mut override_types = Vec::new();
-    for override_type in query.meta.override_types {
-        let override_type = type_registrar
-            .register(client, override_type.schema, override_type.name)
-            .await?;
-        override_types.push(override_type);
-    }
-    let override_pg_types = override_types
-        .iter()
-        .map(|t| t.pg_ty.clone())
-        .collect::<Vec<Type>>();
-    let stmt = client
-        .prepare_typed(&query.sql, override_pg_types.as_slice())
-        .await?;
+    let stmt = client.prepare(&query.sql).await?;
 
     let mut param_types = Vec::new();
     for param in stmt.params() {
         let param_type = type_registrar.register_type(client, param).await?;
         param_types.push(param_type);
+    }
+
+    if query.meta.params.len() != param_types.len() {
+        return Err(Error::NbParameters {
+            module: module.to_owned(),
+            name: query.meta.name,
+            expected: query.meta.params.len(),
+            actual: param_types.len(),
+        });
     }
 
     let params = query
@@ -126,7 +120,6 @@ async fn prepare_query(
 
     Ok(PreparedQuery {
         name: query.meta.name,
-        override_types,
         params,
         ret,
         quantifier: query.meta.quantifier,
@@ -134,9 +127,8 @@ async fn prepare_query(
     })
 }
 
-pub mod error {
+pub(crate) mod error {
     use crate::pg_type::error::Error as PostgresTypeError;
-    use crate::read_queries::error::Error as ReadQueriesError;
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError)]
@@ -144,7 +136,6 @@ pub mod error {
     pub enum Error {
         Db(#[from] tokio_postgres::Error),
         Pool(#[from] deadpool_postgres::PoolError),
-        ReadQueries(#[from] ReadQueriesError),
         #[error(
             "invalid number of parameters in {module}::{name}. Expected {expected}, got {actual}"
         )]
@@ -156,8 +147,4 @@ pub mod error {
         },
         PostgresType(#[from] PostgresTypeError),
     }
-}
-
-pub struct Allo {
-    pub bob: std::sync::Arc<Vec<String>>,
 }

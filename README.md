@@ -127,24 +127,25 @@ Note that comments that do not start with `--!` are simply ignored by `cornucopi
 
 So, what else can we do with those annotations? The grammar can be summed up as:
 
-```<NAME> (<PARAMS>) <RETURN_TYPE> <QUANTIFIER>```
+```<NAME> (<PARAMS>) <RETURN> <QUANTIFIER>```
 
 In the next sections we'll explore a bit more what these options mean and what you can do with them. The regexp-esque notation used in this section to describe the grammar is for illustrative purposes only, The full grammar is available in the `grammar.pest` file. Its very straightforward, so taking a look at the examples should also give you a good idea.
 
 #### Name
+```<NAME> = <IDENT>```
 The name of the generated function. Has to be a valid Rust identifier.
 
 #### Params
+`<PARAMS> = <IDENT>,*`.
 The parameters of the prepared statement, separated by commas, with an optional trailing comma. 
 
-The order in which parameters are given corresponds to the parameter number (e.g. the first parameter is `$1` in the statement). **Every PostgreSQL parameter `$i` must have a corresponding parameter in the meta parameter list** . If the parameter type is ambiguous, you can specify it using the syntax `<IDENT> : <TYPE>` where `<TYPE>` is a PostgreSQL type [supported by cornucopia](#supported-types). These are called override parameters. Otherwise, a parameter consists simply of an identifier: the type is inferred from the prepared statements. These are called inferred parameters. **Override parameters must come before inferred parameters**. Again, we can sum this up as
-
-`<PARAMS> = <OVERRIDE>, <INFERRED>` where `<OVERRIDE> = <IDENT> : <TYPE>` and `<INFERRED> = <IDENT>`.
+The order in which parameters are given corresponds to the parameter number (e.g. the first parameter is `$1` in the statement). **Every PostgreSQL parameter `$i` must have a corresponding parameter in the meta parameter list** .
 
 #### Return type
 There are two kinds of returns, implicit and explicit. 
 
 ##### Implicit return
+```<RETURN> = <EMPTY>```.
 Implicit returns don't name the returned columns. The column types are inferred using prepared statements. To make a return implicit, simply omit it (you don't have to write anything).
 
 Implicit returns are further categorized into void, scalar, and tuple types dependenging on the number of columns returned. For example,
@@ -154,6 +155,7 @@ Implicit returns are further categorized into void, scalar, and tuple types depe
 * A query returning a `TEXT` and a `INTEGER` would result in `(String, i32)`
 
 ##### Explicit return
+```<RETURN> = {<IDENT>,*}```
 Explicit returns give a name to the returned columns. The column types are inferred using prepared statements. To make a return explicit, list the returned column names inside curly brackets, in the same order as they are returned in the statement, separated by commas, with an optional trailing comma. **There must be exactly as many names in the explicit return the as there are returned columns**. Each query that has an explicit return will generate a Rust `struct` to hold the query data. For example, this query
 ```sql
 --! example_query() {name, country} *
@@ -172,6 +174,7 @@ pub async fn authors(client: &Client) -> Result<Vec<ExampleQuery>, Error> {
 ```
 
 #### Quantifier
+```<QUANTIFIER> = <EMPTY> | * | ?```
 The quantifier indicates the expected number of rows to be returned by a query. If no quantifier is specified, the it is assumed that only one record is to be returned. Using `*` and `?` (corresponding to the "zero or more" and "zero or one" quantifiers) will wrap the resulting rust type in a `Vec` and `Option` respectively. To sum it up:
 
 * no quantifier results in `T`
@@ -185,7 +188,7 @@ Cornucopia actually generates two versions of your queries, one that accepts a r
 | PostgrsQL type                               | Rust type                 |
 | -------------------------------------------- | ------------------------- |
 | `bool`, `boolean`                            | `bool`                    |
-| `char`, `character`                          | `i8`                      |
+| `"char"`                                     | `i8`                      |
 | `smallint`, `int2`, `smallserial`, `serial2` | `i16`                     |
 | `int`, `int4`, `serial`, `serial4`           | `i32`                     |
 | `bigint`, `int8`, `bigserial`, `serial8`     | `i64`                     |

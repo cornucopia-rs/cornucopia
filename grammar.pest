@@ -14,25 +14,18 @@ uppercase_letter = _{'A'..'Z'}
 letter = _{ lowercase_letter | uppercase_letter }
 digit = _{'0'..'9'}
 postgres_alpha = _{ letter | digit | underscore }
-postgres_ident = { (underscore | letter) ~ postgres_alpha* }
-
-// Columns
-typed_column = { postgres_ident ~ colon ~ postgres_ident ~ (dot ~ postgres_ident)? }
-untyped_column = { postgres_ident }
+ident = { (underscore | letter) ~ postgres_alpha* }
 
 // Query parameters
-override_params = { typed_column ~ (comma ~ typed_column)* }
 parameter_list = {
 	start_param_list
-    ~ ((override_params ~ comma ~ inferred_params)
-    	| (override_params)
-    	| (inferred_params))?
+    ~ (ident ~ (comma ~ ident)*)?
     ~ (comma)?
     ~ end_param_list
 }
 
 // Query return
-inferred_params = { untyped_column ~ (comma ~ untyped_column)* }
+inferred_params = { ident ~ (comma ~ ident)* }
 implicit_return = { "" }
 struct_return = {
 	start_ret_struct
@@ -51,7 +44,7 @@ quantifier = {zero_or_more | zero_or_one | one}
 // Parser
 parser = {
     SOI 
-	~ postgres_ident 
+	~ ident 
     ~ parameter_list 
     ~ return_type
     ~ quantifier

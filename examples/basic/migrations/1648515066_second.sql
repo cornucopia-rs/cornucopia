@@ -1,4 +1,24 @@
 -- Write your migration SQL here
+CREATE TYPE spongebob_character AS enum (
+    'Bob',
+    'Patrick',
+    'Squidward'
+);
+
+CREATE TYPE custom_composite AS (
+    wow text,
+    such_cool integer,
+    nice spongebob_character
+);
+
+CREATE TABLE CustomTable (
+    col1 custom_composite,
+    col2 spongebob_character
+);
+
+INSERT INTO CustomTable (col1, col2)
+    VALUES (ROW('incredible', 42, 'Patrick'), 'Bob');
+
 CREATE TABLE BookAuthor (
     AuthorId int NOT NULL,
     BookId int NOT NULL,

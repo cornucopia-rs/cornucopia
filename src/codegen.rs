@@ -11,7 +11,7 @@ use crate::{
 
 use super::prepare_queries::PreparedModule;
 
-pub fn generate_query(query: &PreparedQuery) -> Result<String, Error> {
+pub(crate) fn generate_query(query: &PreparedQuery) -> Result<String, Error> {
     let name = &query.name;
     let query_struct = generate_query_struct(query)?.unwrap_or_default();
     let params = generate_query_params(query)?;
@@ -27,15 +27,23 @@ pub async fn {name}_tx<'a>(client:&Transaction<'a>, {params}) -> Result<{ret}, E
     ))
 }
 
-pub fn generate_custom_type(ty: &CornucopiaType) -> String {
+pub(crate) fn generate_custom_type(ty: &CornucopiaType) -> String {
     let type_def = match &ty.kind {
         CornucopiaTypeKind::Enum(variants) => {
             let name = &ty.rust_ty_name;
-            format!("pub enum {} {{ {} }}", name, variants.join(","))
+            format!(
+                "#[derive(Clone, Copy, PartialEq, Eq)]\npub enum {} {{ {} }}",
+                name,
+                variants.join(",")
+            )
         }
         CornucopiaTypeKind::Domain(domain_inner_ty) => {
             let name = &domain_inner_ty.rust_ty_name;
-            format!("pub struct {} ({})", ty.pg_ty.schema(), name)
+            format!(
+                "#[derive(Clone)]\npub struct {} ({})",
+                ty.pg_ty.schema(),
+                name
+            )
         }
         CornucopiaTypeKind::Composite(fields) => {
             let fields_str = fields
@@ -45,7 +53,7 @@ pub fn generate_custom_type(ty: &CornucopiaType) -> String {
                 .join(",");
 
             let name = &ty.rust_ty_name;
-            format!("pub struct {} {{ {} }}", name, fields_str)
+            format!("#[derive(Clone)]\npub struct {} {{ {} }}", name, fields_str)
         }
         CornucopiaTypeKind::Base => {
             panic!("got base type while generating custom types. This is a bug")
@@ -53,13 +61,13 @@ pub fn generate_custom_type(ty: &CornucopiaType) -> String {
     };
 
     format!(
-        "#[postgres(name = \"{}\")]\n{}",
+        "#[derive(Debug, ToSql, FromSql)]\n#[postgres(name = \"{}\")]\n{}",
         ty.pg_ty.name(),
         type_def
     )
 }
 
-pub fn generate_type_modules(type_registrar: &TypeRegistrar) -> String {
+pub(crate) fn generate_type_modules(type_registrar: &TypeRegistrar) -> String {
     let mut modules = HashMap::<String, Vec<CornucopiaType>>::new();
     for ((schema, _), ty) in &type_registrar.custom_types {
         match modules.entry(schema.to_owned()) {
@@ -76,13 +84,13 @@ pub fn generate_type_modules(type_registrar: &TypeRegistrar) -> String {
         .map(|(mod_name, tys)| {
             let tys_str = tys
                 .iter()
-                .map(|ty| generate_custom_type(ty))
+                .map(generate_custom_type)
                 .collect::<Vec<String>>()
                 .join("\n\n");
             format!(
                 "
         pub mod {mod_name} {{
-            use postgres_types::{{FromSql, Kind, Oid, ToSql, Type}};
+            use postgres_types::{{FromSql, ToSql}};
 
             {tys_str} 
         }}"
@@ -98,7 +106,7 @@ pub fn generate_type_modules(type_registrar: &TypeRegistrar) -> String {
     )
 }
 
-pub fn generate_query_struct(query: &PreparedQuery) -> Result<Option<String>, Error> {
+pub(crate) fn generate_query_struct(query: &PreparedQuery) -> Result<Option<String>, Error> {
     if let RustReturnType::Struct(fields) = &query.ret {
         let mut field_strings = Vec::new();
         for field in fields {
@@ -119,7 +127,7 @@ pub struct {struct_name} {{{fields_string}}}"#
     }
 }
 
-pub fn generate_query_quantified_ret_ty(query: &PreparedQuery, ret_ty: &str) -> String {
+pub(crate) fn generate_query_quantified_ret_ty(query: &PreparedQuery, ret_ty: &str) -> String {
     if let RustReturnType::Void = query.ret {
         String::from("()")
     } else {
@@ -131,7 +139,7 @@ pub fn generate_query_quantified_ret_ty(query: &PreparedQuery, ret_ty: &str) -> 
     }
 }
 
-pub fn generate_query_params(query: &PreparedQuery) -> Result<String, Error> {
+pub(crate) fn generate_query_params(query: &PreparedQuery) -> Result<String, Error> {
     let mut param_strings = Vec::new();
     for param in &query.params {
         let rs_ty_borrowed = &param.ty.borrowed_rust_ty();
@@ -141,7 +149,7 @@ pub fn generate_query_params(query: &PreparedQuery) -> Result<String, Error> {
     Ok(param_strings.join(","))
 }
 
-pub fn generate_query_ret_ty(query: &PreparedQuery) -> Result<String, Error> {
+pub(crate) fn generate_query_ret_ty(query: &PreparedQuery) -> Result<String, Error> {
     Ok(match &query.ret {
         crate::prepare_queries::RustReturnType::Void => String::from("()"),
         crate::prepare_queries::RustReturnType::Scalar(ty) => ty.rust_ty_usage_path.clone(),
@@ -156,15 +164,8 @@ pub fn generate_query_ret_ty(query: &PreparedQuery) -> Result<String, Error> {
     })
 }
 
-pub fn generate_query_body(query: &PreparedQuery, ret_ty: String) -> Result<String, Error> {
+pub(crate) fn generate_query_body(query: &PreparedQuery, ret_ty: String) -> Result<String, Error> {
     let query_string = format!(r#""{}""#, &query.sql);
-    let override_types = query
-        .override_types
-        .iter()
-        .map(|ty| &ty.custom_pg_ty_path)
-        .cloned()
-        .collect::<Vec<String>>()
-        .join(",");
 
     let query_method = if let RustReturnType::Void = query.ret {
         "execute"
@@ -258,21 +259,26 @@ pub fn generate_query_body(query: &PreparedQuery, ret_ty: String) -> Result<Stri
         }
     };
 
+    let res_var_name = match query.ret {
+        RustReturnType::Void => "_",
+        _ => "res",
+    };
+
     Ok(format!(
-        "let stmt = client.prepare_typed_cached({query_string}, &[{override_types}]).await?;
-let res = client.{query_method}(&stmt, &[{query_param_values}]).await?;
+        "let stmt = client.prepare_cached({query_string}).await?;
+let {res_var_name} = client.{query_method}(&stmt, &[{query_param_values}]).await?;
 
 {ret_value}"
     ))
 }
 
-pub fn generate(
+pub(crate) fn generate(
     type_registrar: &TypeRegistrar,
     modules: Vec<PreparedModule>,
     destination: &str,
 ) -> Result<(), Error> {
     let imports = r#"use deadpool_postgres::{Client, Transaction};
-use tokio_postgres::{types::Type, error::Error};"#;
+use tokio_postgres::{error::Error};"#;
 
     let type_modules = generate_type_modules(type_registrar);
 
@@ -301,7 +307,7 @@ use tokio_postgres::{types::Type, error::Error};"#;
     Ok(())
 }
 
-pub mod error {
+pub(crate) mod error {
     use thiserror::Error as ThisError;
 
     use crate::pg_type::error::UnsupportedPostgresTypeError;

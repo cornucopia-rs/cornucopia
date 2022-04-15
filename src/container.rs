@@ -24,6 +24,8 @@ fn spawn_container() -> Result<(), Error> {
         .arg("-e")
         .arg("POSTGRES_PASSWORD=postgres")
         .arg("postgres")
+        .stderr(Stdio::null())
+        .stdout(Stdio::null())
         .spawn()
         .map_err(Error::RunContainer)?
         .wait()
@@ -36,6 +38,7 @@ fn is_postgres_healthy() -> Result<bool, Error> {
         .arg("exec")
         .arg("cornucopia_postgres")
         .arg("pg_isready")
+        .stderr(Stdio::null())
         .stdout(Stdio::null())
         .spawn()
         .map_err(Error::HealthCheck)?
@@ -60,6 +63,8 @@ fn stop_container() -> Result<(), Error> {
     Command::new("docker")
         .arg("stop")
         .arg("cornucopia_postgres")
+        .stderr(Stdio::null())
+        .stdout(Stdio::null())
         .spawn()
         .map_err(Error::StopContainer)?
         .wait()
@@ -73,6 +78,8 @@ fn remove_container() -> Result<(), Error> {
         .arg("rm")
         .arg("-v")
         .arg("cornucopia_postgres")
+        .stderr(Stdio::null())
+        .stdout(Stdio::null())
         .spawn()
         .map_err(Error::RemoveContainer)?;
 

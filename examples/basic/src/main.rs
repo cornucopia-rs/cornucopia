@@ -1,7 +1,7 @@
 use deadpool_postgres::{Config, Runtime};
 use tokio_postgres::NoTls;
 
-mod cornucopia;
+pub mod cornucopia;
 
 #[tokio::main]
 pub async fn main() {
@@ -13,6 +13,9 @@ pub async fn main() {
     use cornucopia::module_2::authors;
     use cornucopia::module_2::books;
     use cornucopia::module_2::books_from_author_id;
+    use cornucopia::module_2::return_custom_type;
+    use cornucopia::module_2::select_where_custom_type;
+    use cornucopia::types::public::SpongebobCharacter;
 
     let mut cfg = Config::new();
     cfg.user = Some(String::from("postgres"));
@@ -31,5 +34,10 @@ pub async fn main() {
     println!(
         "{:?}",
         author_name_starting_with(&client, "Jo").await.unwrap()
+    );
+    println!("{:?}", return_custom_type(&client).await.unwrap());
+    println!(
+        "{:?}",
+        select_where_custom_type(&client, &SpongebobCharacter::Bob).await
     );
 }

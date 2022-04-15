@@ -13,8 +13,6 @@ use self::error::{Error, UnsupportedPostgresTypeError};
 pub struct CornucopiaType {
     pub pg_ty: Type,
     pub kind: CornucopiaTypeKind,
-    pub custom_pg_ty_path: String,
-    pub custom_pg_ty_name: String,
     pub rust_ty_usage_path: String,
     pub rust_ty_definition_path: String,
     pub rust_ty_name: String,
@@ -22,11 +20,9 @@ pub struct CornucopiaType {
 
 impl CornucopiaType {
     fn new_custom(pg_ty: Type, kind: CornucopiaTypeKind, rust_ty_name: String) -> Self {
-        let custom_pg_ty_name = pg_ty.name().to_uppercase();
         Self {
             kind,
-            custom_pg_ty_path: format!("super::types::{}::{}", pg_ty.schema(), &custom_pg_ty_name),
-            custom_pg_ty_name,
+
             rust_ty_usage_path: format!("super::types::{}::{}", pg_ty.schema(), rust_ty_name),
             rust_ty_definition_path: format!("super::{}::{}", pg_ty.schema(), rust_ty_name),
             rust_ty_name,
@@ -35,11 +31,9 @@ impl CornucopiaType {
     }
 
     fn new_base(pg_ty: Type, rust_ty_name: String) -> Self {
-        let custom_pg_ty_name = pg_ty.name().to_uppercase();
         Self {
             kind: CornucopiaTypeKind::Base,
-            custom_pg_ty_path: format!("Type::{}", &custom_pg_ty_name),
-            custom_pg_ty_name,
+
             rust_ty_usage_path: rust_ty_name.to_owned(),
             rust_ty_definition_path: rust_ty_name.to_owned(),
             rust_ty_name,
@@ -146,7 +140,6 @@ AND pg_namespace.nspname = $2;",
 
         let oid: u32 = row.get(0);
         let typtype: i8 = row.get(1);
-
         Ok((name, oid, typtype as u8 as char, schema))
     }
 
@@ -154,17 +147,19 @@ AND pg_namespace.nspname = $2;",
         client: &Client,
         oid: &u32,
     ) -> Result<Vec<String>, tokio_postgres::Error> {
-        Ok(client
-            .query_one(
+        let x = client
+            .query(
                 "select e.enumlabel
 from pg_type t 
 join pg_enum e on t.oid = e.enumtypid  
-join pg_namespace n ON n.oid = t.typnamespace
 where t.oid = $1;",
                 &[&oid],
             )
             .await?
-            .get(0))
+            .iter()
+            .map(|row| row.get(0))
+            .collect::<Vec<String>>();
+        Ok(x)
     }
 
     async fn domain_base_type(

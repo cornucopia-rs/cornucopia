@@ -1,15 +1,14 @@
 use crate::parse::ParsedQuery;
 use crate::parse_file::parse_file;
-use crate::pg_type::TypeRegistrar;
 use error::Error;
 
 #[derive(Debug)]
-pub struct Module {
-    pub name: String,
-    pub queries: Vec<ParsedQuery>,
+pub(crate) struct Module {
+    pub(crate) name: String,
+    pub(crate) queries: Vec<ParsedQuery>,
 }
 
-pub fn read_queries(type_registrar: &TypeRegistrar, path: &str) -> Result<Vec<Module>, Error> {
+pub(crate) fn read_queries(path: &str) -> Result<Vec<Module>, Error> {
     let mut modules = Vec::new();
     for entry_result in std::fs::read_dir(path)? {
         let entry = entry_result?;
@@ -29,7 +28,7 @@ pub fn read_queries(type_registrar: &TypeRegistrar, path: &str) -> Result<Vec<Mo
 
             let module = Module {
                 name: module_name,
-                queries: parse_file(type_registrar, &path)?,
+                queries: parse_file(&path)?,
             };
 
             modules.push(module);
@@ -40,7 +39,7 @@ pub fn read_queries(type_registrar: &TypeRegistrar, path: &str) -> Result<Vec<Mo
     Ok(modules)
 }
 
-pub mod error {
+pub(crate) mod error {
     use crate::parse_file::error::Error as FileParserError;
     use thiserror::Error as ThisError;
 

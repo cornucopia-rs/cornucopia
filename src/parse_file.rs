@@ -5,8 +5,6 @@ use std::{
     path::Path,
 };
 
-use crate::pg_type::TypeRegistrar;
-
 use super::{
     parse::{parse_query_meta, ParsedQuery},
     sanitize::sanitize,
@@ -22,7 +20,7 @@ where
     Ok(io::BufReader::new(file).lines())
 }
 
-pub fn parse_file<P>(type_registrar: &TypeRegistrar, path: P) -> Result<Vec<ParsedQuery>, Error>
+pub(crate) fn parse_file<P>(path: P) -> Result<Vec<ParsedQuery>, Error>
 where
     P: AsRef<Path>,
 {
@@ -30,14 +28,14 @@ where
         .into_iter()
         .map(|sanitized| {
             Ok(ParsedQuery {
-                meta: parse_query_meta(type_registrar, &sanitized.meta)?,
+                meta: parse_query_meta(&sanitized.meta)?,
                 sql: sanitized.sql,
             })
         })
         .collect()
 }
 
-pub mod error {
+pub(crate) mod error {
     use crate::parse::error::Error as ParserError;
     use crate::sanitize::error::Error as SanitizeError;
     use thiserror::Error as ThisError;
