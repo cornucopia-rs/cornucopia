@@ -20,12 +20,14 @@ tokio-postgres = { version = "0.7.5", features = [
     "with-serde_json-1",
     "with-time-0_3",
     "with-uuid-0_8",
+    "with-eui48-1",
 ] }
 postgres-types = { version = "0.2.2", features = ["derive"] }
 serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.79"
 time = "0.3.9"
 uuid = "0.8.2"
+eui48 = "1.1.0"
 
 thiserror = "1.0.30"
 clap = { version = "3.1.8", features = ["derive"] }
