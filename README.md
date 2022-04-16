@@ -206,6 +206,8 @@ Cornucopia actually generates two versions of your queries, one that accepts a r
 | `json`                                       | `serde_json::Value`       |
 | `jsonb`                                      | `serde_json::Value`       |
 | `uuid`                                       | `uuid::Uuid`              |
+| `inet`                                       | `std::net::IpAddr`        |
+| `macaddr`                                    | `eui48::MacAddress`       |
 
 
 ## License
