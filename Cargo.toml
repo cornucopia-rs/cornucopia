@@ -1,6 +1,6 @@
 [package]
 name = "cornucopia"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 license = "MIT"
 description = "Generate type checked  Rust from your SQL"
@@ -30,7 +30,7 @@ uuid = "0.8.2"
 eui48 = "1.1.0"
 
 thiserror = "1.0.30"
-clap = { version = "3.1.8", features = ["derive"] }
+clap = { version = "3.1.9", features = ["derive"] }
 pest = "2.1.3"
 pest_derive = "2.1.0"
 heck = "0.4.0"
