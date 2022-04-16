@@ -40,6 +40,7 @@ pub fn read_migrations(path: &str) -> Result<Vec<Migration>, Error> {
             continue;
         }
     }
+    migrations.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
     Ok(migrations)
 }
 

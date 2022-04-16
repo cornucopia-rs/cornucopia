@@ -300,6 +300,130 @@ WHERE (col1).nice = $1;
             let return_value: super::super::types::public::SpongebobCharacter = res.get(0);
             Ok(return_value)
         }
+
+        pub async fn select_everything(
+            client: &Client,
+        ) -> Result<
+            (
+                bool,
+                bool,
+                i8,
+                i16,
+                i16,
+                i16,
+                i16,
+                i32,
+                i32,
+                i32,
+                i32,
+                i64,
+                i64,
+                i64,
+                i64,
+                f32,
+                f32,
+                f64,
+                f64,
+                String,
+                String,
+                Vec<u8>,
+                time::PrimitiveDateTime,
+                time::PrimitiveDateTime,
+                time::OffsetDateTime,
+                time::OffsetDateTime,
+                time::Date,
+                time::Time,
+                serde_json::Value,
+                serde_json::Value,
+                uuid::Uuid,
+                std::net::IpAddr,
+                eui48::MacAddress,
+            ),
+            Error,
+        > {
+            let stmt = client
+                .prepare_cached(
+                    "SELECT
+*
+FROM
+Everything;
+",
+                )
+                .await?;
+            let res = client.query_one(&stmt, &[]).await?;
+
+            let return_value = {
+                let return_value_0: bool = res.get(0);
+                let return_value_1: bool = res.get(1);
+                let return_value_2: i8 = res.get(2);
+                let return_value_3: i16 = res.get(3);
+                let return_value_4: i16 = res.get(4);
+                let return_value_5: i16 = res.get(5);
+                let return_value_6: i16 = res.get(6);
+                let return_value_7: i32 = res.get(7);
+                let return_value_8: i32 = res.get(8);
+                let return_value_9: i32 = res.get(9);
+                let return_value_10: i32 = res.get(10);
+                let return_value_11: i64 = res.get(11);
+                let return_value_12: i64 = res.get(12);
+                let return_value_13: i64 = res.get(13);
+                let return_value_14: i64 = res.get(14);
+                let return_value_15: f32 = res.get(15);
+                let return_value_16: f32 = res.get(16);
+                let return_value_17: f64 = res.get(17);
+                let return_value_18: f64 = res.get(18);
+                let return_value_19: String = res.get(19);
+                let return_value_20: String = res.get(20);
+                let return_value_21: Vec<u8> = res.get(21);
+                let return_value_22: time::PrimitiveDateTime = res.get(22);
+                let return_value_23: time::PrimitiveDateTime = res.get(23);
+                let return_value_24: time::OffsetDateTime = res.get(24);
+                let return_value_25: time::OffsetDateTime = res.get(25);
+                let return_value_26: time::Date = res.get(26);
+                let return_value_27: time::Time = res.get(27);
+                let return_value_28: serde_json::Value = res.get(28);
+                let return_value_29: serde_json::Value = res.get(29);
+                let return_value_30: uuid::Uuid = res.get(30);
+                let return_value_31: std::net::IpAddr = res.get(31);
+                let return_value_32: eui48::MacAddress = res.get(32);
+                (
+                    return_value_0,
+                    return_value_1,
+                    return_value_2,
+                    return_value_3,
+                    return_value_4,
+                    return_value_5,
+                    return_value_6,
+                    return_value_7,
+                    return_value_8,
+                    return_value_9,
+                    return_value_10,
+                    return_value_11,
+                    return_value_12,
+                    return_value_13,
+                    return_value_14,
+                    return_value_15,
+                    return_value_16,
+                    return_value_17,
+                    return_value_18,
+                    return_value_19,
+                    return_value_20,
+                    return_value_21,
+                    return_value_22,
+                    return_value_23,
+                    return_value_24,
+                    return_value_25,
+                    return_value_26,
+                    return_value_27,
+                    return_value_28,
+                    return_value_29,
+                    return_value_30,
+                    return_value_31,
+                    return_value_32,
+                )
+            };
+            Ok(return_value)
+        }
     }
 }
 pub mod transactions {
@@ -578,6 +702,130 @@ WHERE (col1).nice = $1;
             let res = client.query_one(&stmt, &[&spongebob_character]).await?;
 
             let return_value: super::super::types::public::SpongebobCharacter = res.get(0);
+            Ok(return_value)
+        }
+
+        pub async fn select_everything<'a>(
+            client: &Transaction<'a>,
+        ) -> Result<
+            (
+                bool,
+                bool,
+                i8,
+                i16,
+                i16,
+                i16,
+                i16,
+                i32,
+                i32,
+                i32,
+                i32,
+                i64,
+                i64,
+                i64,
+                i64,
+                f32,
+                f32,
+                f64,
+                f64,
+                String,
+                String,
+                Vec<u8>,
+                time::PrimitiveDateTime,
+                time::PrimitiveDateTime,
+                time::OffsetDateTime,
+                time::OffsetDateTime,
+                time::Date,
+                time::Time,
+                serde_json::Value,
+                serde_json::Value,
+                uuid::Uuid,
+                std::net::IpAddr,
+                eui48::MacAddress,
+            ),
+            Error,
+        > {
+            let stmt = client
+                .prepare_cached(
+                    "SELECT
+*
+FROM
+Everything;
+",
+                )
+                .await?;
+            let res = client.query_one(&stmt, &[]).await?;
+
+            let return_value = {
+                let return_value_0: bool = res.get(0);
+                let return_value_1: bool = res.get(1);
+                let return_value_2: i8 = res.get(2);
+                let return_value_3: i16 = res.get(3);
+                let return_value_4: i16 = res.get(4);
+                let return_value_5: i16 = res.get(5);
+                let return_value_6: i16 = res.get(6);
+                let return_value_7: i32 = res.get(7);
+                let return_value_8: i32 = res.get(8);
+                let return_value_9: i32 = res.get(9);
+                let return_value_10: i32 = res.get(10);
+                let return_value_11: i64 = res.get(11);
+                let return_value_12: i64 = res.get(12);
+                let return_value_13: i64 = res.get(13);
+                let return_value_14: i64 = res.get(14);
+                let return_value_15: f32 = res.get(15);
+                let return_value_16: f32 = res.get(16);
+                let return_value_17: f64 = res.get(17);
+                let return_value_18: f64 = res.get(18);
+                let return_value_19: String = res.get(19);
+                let return_value_20: String = res.get(20);
+                let return_value_21: Vec<u8> = res.get(21);
+                let return_value_22: time::PrimitiveDateTime = res.get(22);
+                let return_value_23: time::PrimitiveDateTime = res.get(23);
+                let return_value_24: time::OffsetDateTime = res.get(24);
+                let return_value_25: time::OffsetDateTime = res.get(25);
+                let return_value_26: time::Date = res.get(26);
+                let return_value_27: time::Time = res.get(27);
+                let return_value_28: serde_json::Value = res.get(28);
+                let return_value_29: serde_json::Value = res.get(29);
+                let return_value_30: uuid::Uuid = res.get(30);
+                let return_value_31: std::net::IpAddr = res.get(31);
+                let return_value_32: eui48::MacAddress = res.get(32);
+                (
+                    return_value_0,
+                    return_value_1,
+                    return_value_2,
+                    return_value_3,
+                    return_value_4,
+                    return_value_5,
+                    return_value_6,
+                    return_value_7,
+                    return_value_8,
+                    return_value_9,
+                    return_value_10,
+                    return_value_11,
+                    return_value_12,
+                    return_value_13,
+                    return_value_14,
+                    return_value_15,
+                    return_value_16,
+                    return_value_17,
+                    return_value_18,
+                    return_value_19,
+                    return_value_20,
+                    return_value_21,
+                    return_value_22,
+                    return_value_23,
+                    return_value_24,
+                    return_value_25,
+                    return_value_26,
+                    return_value_27,
+                    return_value_28,
+                    return_value_29,
+                    return_value_30,
+                    return_value_31,
+                    return_value_32,
+                )
+            };
             Ok(return_value)
         }
     }

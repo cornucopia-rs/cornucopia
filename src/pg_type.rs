@@ -314,7 +314,7 @@ impl Default for TypeRegistrar {
         TypeRegistrar::from([
             ("bool", Type::BOOL, "bool"),
             ("boolean", Type::BOOL, "bool"),
-            ("\"char\"", Type::CHAR, "i8"),
+            ("char", Type::CHAR, "i8"),
             ("smallint", Type::INT2, "i16"),
             ("int2", Type::INT2, "i16"),
             ("smallserial", Type::INT2, "i16"),
@@ -351,10 +351,11 @@ impl Default for TypeRegistrar {
             ("json", Type::JSON, "serde_json::Value"),
             ("jsonb", Type::JSONB, "serde_json::Value"),
             ("uuid", Type::UUID, "uuid::Uuid"),
+            ("inet", Type::INET, "std::net::IpAddr"),
+            ("macaddr", Type::MACADDR, "eui48::MacAddress"),
         ])
     }
 }
-
 pub mod error {
     use postgres_types::Kind;
     use thiserror::Error as ThisError;
