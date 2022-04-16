@@ -58,7 +58,7 @@ async fn integration() -> Result<(), Error> {
 async fn integration_test() {
     if let Err(e) = integration().await {
         let _ = teardown().await;
-        panic!("{}", e)
+        panic!("{:?}", e)
     }
 }
 
