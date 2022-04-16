@@ -54,17 +54,20 @@ Cornucopia will generate queries powered by the `tokio` runtime through `tokio-p
 [dependencies]
 tokio = { version = "1.17.0", features = ["full"] }
 deadpool-postgres = { version = "0.10.2", features = ["serde"] }
+postgres-types = { version = "0.2.2", features = ["derive"] }
 tokio-postgres = { version = "0.7.5", features = [
     "with-serde_json-1",
     "with-time-0_3",
     "with-uuid-0_8",
+    "with-eui48-1",
 ] }
 serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.79"
 time = "0.3.9"
 uuid = "0.8.2"
+eui48 = "1.1.0"
 ```
-You can omit `tokio-postgres` feature flags for `json`, `time` and `uuid` and their corresponding crates if you don't need them.
+You can omit `tokio-postgres` feature flags for `json`, `time`, `uuid`, `eui48` and their corresponding crates if you don't need them.
 
 ### Cornucopia CLI
 Aside from the dependencies, you will need the lightweight `cornucopia` cli to generate your Rust modules. This can be done via a simple `cargo install cornucopia` which will pull the latest binary and install it in your `cargo` path.
