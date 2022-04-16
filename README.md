@@ -37,18 +37,20 @@
 
 <br />
 
-Cornucopia is a small CLI utility resting on `tokio-postgres` and designed to facilitate PostgreSQL workflows in Rust.
+Cornucopia is a small CLI utility resting on `tokio-postgres` designed to facilitate PostgreSQL workflows in Rust.
 
-Cornucopia aims to get out of your way, transpiling your queries to Rust on demand without requiring you to maintain a live database connection. Each query is prepared against your schema, ensuring that the statement is valid SQL. These prepared statements are then be used to generate properly typed rust code for this query. Keep reading for more info, or take a look at the examples folder for a quickstart 🚀
+Cornucopia aims to get out of your way, **transpiling your PostgreSQL queries to Rust** on demand without requiring you to maintain a live database connection. Each query is prepared against your schema, ensuring that the query statements are valid SQL. These prepared statements are then be used to generate properly type-checked Rust code for this query. 
+
+Keep reading for more info, or take a look at the [basic example](https://github.com/LouisGariepy/cornucopia/tree/main/examples/basic) for a quickstart 🚀.
 
 ---
 
 ## Install
 ### Docker
-The CLI spawns a `postgres` container when it has  to generate Rust modules. Thus, you need to have a working `docker`. Note that **on Linux non-sudo users need to be in the docker group**. Read the official [installation](https://docs.docker.com/get-docker/) and [post-installation](https://docs.docker.com/engine/install/linux-postinstall/) steps.
+Cornucopia spawns a `postgres` container when it generates your Rust modules, so, you,ll need a working `docker` command. Note that **on Linux non-sudo users need to be in the docker group**. For a step-by-step guide, please read the official docker [installation](https://docs.docker.com/get-docker/) and [post-installation](https://docs.docker.com/engine/install/linux-postinstall/) docs.
 
 ### Dependencies
-Cornucopia will generate queries powered by the `tokio` runtime through `tokio-postgres` and `deadpool-postgres`, so you will need add the latest version of these to your dependencies. You might need more dependencies depending on which features you inted to use, The code block below shows an example of what your dependencies might look like with every feature that `cornucopia` supports:
+Cornucopia will generate queries powered by the `tokio` runtime through `tokio-postgres` and `deadpool-postgres`, so you will need add the latest version of these to your `Cargo.toml`. You might need more dependencies depending on which features you intend to use. The code block below shows what your dependencies might look like with every feature that `cornucopia` supports enabled:
 ```toml
 # Cargo.toml
 [dependencies]
@@ -70,10 +72,10 @@ eui48 = "1.1.0"
 You can omit `tokio-postgres` feature flags for `json`, `time`, `uuid`, `eui48` and their corresponding crates if you don't need them.
 
 ### Cornucopia CLI
-Aside from the dependencies, you will need the lightweight `cornucopia` cli to generate your Rust modules. This can be done via a simple `cargo install cornucopia` which will pull the latest binary and install it in your `cargo` path.
+Aside from the dependencies, you will need the `cornucopia` cli to generate your Rust modules. This can be done via a simple `cargo install cornucopia` which will pull the latest binary and install it in your `cargo` path.
 
 ## Concepts
-This section explain a bit more about how cornucopia works. If you just want to get started, take a look at the examples folder.
+This section explain a bit more about how cornucopia works. If you just want to get started, you should take a look at the [basic example](https://github.com/LouisGariepy/cornucopia/tree/main/examples/basic).
 
 Cornucopia is pretty simple to use. Your migrations and queries should each reside in a dedicated folder, and from there the CLI takes care of the rest for you. In the next sections, we'll explore the basic usage, but feel free to explore the CLI's whole interface using the `--help` option at any point.
 
@@ -81,10 +83,10 @@ Cornucopia is pretty simple to use. Your migrations and queries should each resi
 New migrations can be added using the command `cornucopia migration new`. Cornucopia will automatically manage migrations when it generates your Rust modules, but you can also use the command `cornucopia migration run` to run migrations on your production database too if you so desire.
 
 ### Queries
-Each `.sql` file in your query directory will be converted into a Rust module containing functions corresponding to these queries. These functions are fully typed so you know exactly what parameters it takes, and what it returns. Queries are augmented by [special comments](#meta-query-syntax) allowing you you quickly fine-tune them.
+Each `.sql` file in your queries directory will be converted into a Rust module containing functions corresponding to each query. These functions are fully typed, giving you insight into your SQL, and pretty strong guards against runtime errors.
 
 ### Generated modules
-Assuming you have the following migration
+Assume you have the following migration:
 ```sql
 CREATE TABLE Authors (
     Id SERIAL NOT NULL,
@@ -93,7 +95,7 @@ CREATE TABLE Authors (
     PRIMARY KEY(Id)
 );
 ```
-then, the following query
+Then, the following query
 ```sql
 --! authors()*
 SELECT * FROM Authors;
@@ -124,47 +126,49 @@ pub async fn authors(client: &Client) -> Result<Vec<(i32, String, String)>, Erro
 Not bad! The generated function uses prepared statements, a statement cache, and strong typing (Notice how the returned rows' types have been inferred!). This is only a taste of what you can achieve, but should be fairly representative of what's going on under the hood.
 
 ### Meta query syntax
-As you may have noticed from the previous section, this little comment `--! authors()*` is doing a lot of heavy-lifting for us. It tells `cornucopia` to generate a function named `authors` which takes no parameters. Since there is no specified return, cornucopia lets PostgreSQL infer the types itself, which it is usually pretty good at. Then, there's the asterisk `*` which signals that this query will return zero or more results. That's how we ended up with a `Vec` return in the generated query in the [section above](#generated-modules).
+As you may have noticed from the previous section, this little comment `--! authors()*` is doing a lot of heavy-lifting for us. It tells `cornucopia` to generate a function named `authors` with no parameters. Since there is no specified return, cornucopia will automatically infer what's being returned. Then, there's the asterisk `*` which signals that this query will return zero or more results. That's how we ended up with a `Vec` return in the generated query in the [section above](#generated-modules).
 
-Note that comments that do not start with `--!` are simply ignored by `cornucopia`, so feel free to use them as you usually would.
+Note that comments that do not start with `--!` (e.g. `-- This`) are simply ignored by `cornucopia`, so feel free to use them as you usually would.
 
 So, what else can we do with those annotations? The grammar can be summed up as:
-
 ```<NAME> (<PARAMS>) <RETURN> <QUANTIFIER>```
+The full grammar is available in the `grammar.pest` file, but you shouldn't really have to look at it. The syntax is pretty intuitive once you look at it.
 
-In the next sections we'll explore a bit more what these options mean and what you can do with them. The regexp-esque notation used in this section to describe the grammar is for illustrative purposes only, The full grammar is available in the `grammar.pest` file. Its very straightforward, so taking a look at the examples should also give you a good idea.
+The next subsections will explain what each token means. Each section start with examples so you should be able to follow just by skimming through.
 
 #### Name
-```<NAME> = <IDENT>```
-The name of the generated function. Has to be a valid Rust identifier.
+> `helloWorld2`, `informative_query_name`
+
+The name of the generated function. It has to be a valid PostgresQL and Rust identifier.
 
 #### Params
-`<PARAMS> = <IDENT>,*`.
-The parameters of the prepared statement, separated by commas, with an optional trailing comma. 
+> `()`, `(a_nice_param, )`, `(a, b)`
 
-The order in which parameters are given corresponds to the parameter number (e.g. the first parameter is `$1` in the statement). **Every PostgreSQL parameter `$i` must have a corresponding parameter in the meta parameter list** .
+The parameters of the prepared statement, separated by commas (with an optional trailing comma.) 
+
+The order in which parameters are given corresponds to the parameter number (e.g. the first parameter is `$1` in the statement). **Every PostgreSQL parameter `$i` must have a corresponding parameter in the meta parameter list**.
 
 #### Return type
 There are two kinds of returns, implicit and explicit. 
 
 ##### Implicit return
-```<RETURN> = <EMPTY>```.
 Implicit returns don't name the returned columns. The column types are inferred using prepared statements. To make a return implicit, simply omit it (you don't have to write anything).
 
-Implicit returns are further categorized into void, scalar, and tuple types dependenging on the number of columns returned. For example,
+Implicit returns are further categorized into void, scalar, and tuple types depending on the number of columns returned. For example,
 
 * A query returning no column would result in `()`
 * A query returning a single `TEXT` column would result in `String`, 
 * A query returning a `TEXT` and a `INTEGER` would result in `(String, i32)`
 
 ##### Explicit return
-```<RETURN> = {<IDENT><NULLABLE_MARKER>?,*}```
-Explicit returns give a name to the returned columns. The column types are inferred using prepared statements. To make a return explicit, list the returned column names inside curly brackets, in the same order as they are returned in the statement, separated by commas, with an optional trailing comma. Each identifier can also be followed by a nullable marker `?` that indicates the this return column is potentially null (`Option`al in Rust). **There must be exactly as many names in the explicit return the as there are returned columns**. Each query that has an explicit return will generate a Rust `struct` to hold the query data. For example, this query
+> `{}`, `{cool_field, }`, `{a, b?, c}`
+
+Explicit returns give a name to the returned columns. The column types are inferred using prepared statements. To make a return explicit, list the returned column names inside curly brackets, in the same order as they are returned in the statement, separated by commas, with an optional trailing comma. Each identifier can also be followed by an optional nullable marker `?` which indicates that the column is potentially null (`Option`al in Rust). **There must be exactly as many names in the explicit return the as there are returned columns**. Each query that has an explicit return will generate a Rust `struct` to hold the query data. For example, this query
 ```sql
 --! example_query() {name, country} *
 SELECT Name, Country FROM Authors;
 ```
-would result in this struct being generated
+would result in this `struct` and function being generated
 ```rust
 pub struct ExampleQuery {
     pub name: String,
@@ -177,19 +181,21 @@ pub async fn authors(client: &Client) -> Result<Vec<ExampleQuery>, Error> {
 ```
 
 #### Quantifier
-```<QUANTIFIER> = <EMPTY> | * | ?```
+> ` ` (no quantifier), `?`, `*`
+
 The quantifier indicates the expected number of rows to be returned by a query. If no quantifier is specified, the it is assumed that only one record is to be returned. Using `*` and `?` (corresponding to the "zero or more" and "zero or one" quantifiers) will wrap the resulting rust type in a `Vec` and `Option` respectively. To sum it up:
 
-* no quantifier results in `T`
+* ` ` (no quantifier) results in `T`
 * `*` results in `Vec<T>`
 * `?` results in `Option<T>`
 
 Note that explicit returns marks a columns as nullable with `?`, while the `?` quantifier acts on the whole row.
 
 ### Transactions
-Cornucopia actually generates two versions of your queries, one that accepts a regular client (located inside the `queries`), while the other version accepts a transaction (located inside the `transactions`).
+Cornucopia actually generates two versions of your queries, one that accepts a regular client (located inside the `queries` module), while the other version accepts a transaction (located inside the `transactions` module).
 
 ## Supported types
+### Base types
 | PostgrsQL type                               | Rust type                 |
 | -------------------------------------------- | ------------------------- |
 | `bool`, `boolean`                            | `bool`                    |
@@ -212,6 +218,10 @@ Cornucopia actually generates two versions of your queries, one that accepts a r
 | `inet`                                       | `std::net::IpAddr`        |
 | `macaddr`                                    | `eui48::MacAddress`       |
 
+### Custom types
+Cornucopia also supports user-defined `enum`s, `composite`s and `domain`s. Just like base types, custom types will be generated automatically
+by inspecting your database. The only requirement for your custom types is that they be based on other supported types (base or custom).
+Cornucopia is also aware of your types' namespaces (what PostgreSQL calls schemas), so it will correctly handle custom types like `my_schema.my_custom_type`.
 
 ## License
 Licensed under the [MIT license](http://opensource.org/licenses/MIT).
