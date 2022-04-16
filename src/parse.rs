@@ -23,7 +23,13 @@ pub(crate) struct ParsedQueryMeta {
 #[derive(Debug)]
 pub(crate) enum ReturnType {
     Implicit,
-    Explicit { field_names: Vec<String> },
+    Explicit { params: Vec<ExplicitReturnParam> },
+}
+
+#[derive(Debug)]
+pub(crate) struct ExplicitReturnParam {
+    pub(crate) name: String,
+    pub(crate) is_nullable: bool,
 }
 
 #[derive(Debug)]
@@ -73,14 +79,22 @@ fn parse_return(pair: Pair<Rule>) -> ReturnType {
     if let Rule::implicit_return = pair.as_rule() {
         ReturnType::Implicit
     } else {
-        let field_names = pair
+        let params = pair
             .into_inner()
             .next()
             .unwrap()
             .into_inner()
-            .map(|pair| pair.as_str().to_string())
-            .collect::<Vec<String>>();
-        ReturnType::Explicit { field_names }
+            .map(|pair| {
+                let is_nullable = match pair.as_rule() {
+                    Rule::nullable_return_param => true,
+                    Rule::non_nullable_return_param => false,
+                    _ => panic!(),
+                };
+                let name = pair.into_inner().next().unwrap().as_str().to_string();
+                ExplicitReturnParam { name, is_nullable }
+            })
+            .collect::<Vec<ExplicitReturnParam>>();
+        ReturnType::Explicit { params }
     }
 }
 

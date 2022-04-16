@@ -10,7 +10,13 @@ SELECT
 FROM
     Book;
 
---! books_from_author_id(id)*
+--! books_opt_ret_param() {title?}*
+SELECT
+    Title
+FROM
+    Book;
+
+--! books_from_author_id(id,)*
 SELECT
     Book.Title
 FROM

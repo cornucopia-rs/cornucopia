@@ -12,6 +12,9 @@ pub async fn main() {
     use cornucopia::transactions::module_2::books;
     use cornucopia::types::public::SpongebobCharacter;
 
+    // Connection pool configuration
+    // This has nothing to do with cornucopia, please look at
+    // `tokio_postgres` and `deadpool_postgres` for details
     let mut cfg = Config::new();
     cfg.user = Some(String::from("postgres"));
     cfg.password = Some(String::from("postgres"));
@@ -21,6 +24,8 @@ pub async fn main() {
     let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
     let mut client = pool.get().await.unwrap();
 
+    // An example of how transactions work. Pretty easy :)
+    // Just don't forget to `.commit()` when you're done.
     {
         let transaction = client.transaction().await.unwrap();
         println!("{:?}", insert_book_one(&transaction).await.unwrap());
@@ -28,10 +33,14 @@ pub async fn main() {
         transaction.commit().await.unwrap();
     }
 
+    // Regular queries. These queries have been chosen to showcase the
+    // features of cornucopia, including custom types, nullable return columns,
+    // quantifiers, etc. You can compare with the SQL queries in the `queries` folder.
     println!("{:?}", authors(&client).await.unwrap());
+    println!("{:?}", books_opt_ret_param(&client).await.unwrap());
     println!("{:?}", books_from_author_id(&client, &0).await.unwrap());
-    println!("{:?}", author_name_by_id(&client, &1).await.unwrap());
-    println!("{:?}", author_name_by_id_opt(&client, &-1).await.unwrap());
+    println!("{:?}", author_name_by_id(&client, &0).await.unwrap());
+    println!("{:?}", author_name_by_id_opt(&client, &0).await.unwrap());
     println!(
         "{:?}",
         author_name_starting_with(&client, "Jo").await.unwrap()

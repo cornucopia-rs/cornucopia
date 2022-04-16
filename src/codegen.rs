@@ -119,11 +119,13 @@ pub(crate) fn generate_type_modules(type_registrar: &TypeRegistrar) -> String {
 pub(crate) fn generate_query_struct(query: &PreparedQuery) -> Result<Option<String>, Error> {
     if let RustReturnType::Struct(fields) = &query.ret {
         let mut field_strings = Vec::new();
-        for field in fields {
-            field_strings.push(format!(
-                r#"pub {} : {}"#,
-                field.name, field.ty.rust_ty_usage_path,
-            ));
+        for (param, param_ty) in fields {
+            let ty_string = if param.is_nullable {
+                format!("Option<{}>", param_ty.rust_ty_usage_path)
+            } else {
+                param_ty.rust_ty_usage_path.clone()
+            };
+            field_strings.push(format!(r#"pub {} : {}"#, param.name, ty_string));
         }
         let fields_string = field_strings.join(",");
         let struct_name = query.name.to_upper_camel_case();
@@ -238,14 +240,18 @@ pub(crate) fn generate_query_body(query: &PreparedQuery, ret_ty: String) -> Resu
         RustReturnType::Struct(structure) => {
             let mut field_values = Vec::new();
             let mut rust_ret_values = Vec::new();
-            for (i, field) in structure.iter().enumerate() {
-                let rust_ty = &field.ty.rust_ty_usage_path;
+            for (i, (param, param_ty)) in structure.iter().enumerate() {
+                let ty_string = if param.is_nullable {
+                    format!("Option<{}>", param_ty.rust_ty_usage_path)
+                } else {
+                    param_ty.rust_ty_usage_path.clone()
+                };
                 let rust_ret_value_name = format!("return_value_{}", i);
                 rust_ret_values.push(format!(
                     "let {}: {} = res.get({});",
-                    rust_ret_value_name, rust_ty, i
+                    rust_ret_value_name, ty_string, i
                 ));
-                field_values.push(format!("{} : {}", field.name, rust_ret_value_name));
+                field_values.push(format!("{} : {}", param.name, rust_ret_value_name));
             }
 
             let struct_value_string = format!(

@@ -1,3 +1,4 @@
+use crate::parse::ExplicitReturnParam;
 use crate::parse::ParsedQuery;
 use crate::parse::Quantifier;
 use crate::parse::ReturnType;
@@ -29,7 +30,7 @@ pub(crate) enum RustReturnType {
     Void,
     Scalar(CornucopiaType),
     Tuple(Vec<CornucopiaType>),
-    Struct(Vec<CornucopiaField>),
+    Struct(Vec<(ExplicitReturnParam, CornucopiaType)>),
 }
 
 pub(crate) async fn prepare_modules(
@@ -107,12 +108,12 @@ async fn prepare_query(
                 ),
                 _ => RustReturnType::Tuple(return_types),
             },
-            ReturnType::Explicit { field_names } => {
-                let fields = field_names
+            ReturnType::Explicit { params } => {
+                let fields = params
                     .into_iter()
                     .zip(return_types)
-                    .map(|(name, ty)| CornucopiaField { name, ty })
-                    .collect::<Vec<CornucopiaField>>();
+                    .map(|(param, ty)| (param, ty))
+                    .collect::<Vec<(ExplicitReturnParam, CornucopiaType)>>();
                 RustReturnType::Struct(fields)
             }
         }

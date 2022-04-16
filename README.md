@@ -155,8 +155,8 @@ Implicit returns are further categorized into void, scalar, and tuple types depe
 * A query returning a `TEXT` and a `INTEGER` would result in `(String, i32)`
 
 ##### Explicit return
-```<RETURN> = {<IDENT>,*}```
-Explicit returns give a name to the returned columns. The column types are inferred using prepared statements. To make a return explicit, list the returned column names inside curly brackets, in the same order as they are returned in the statement, separated by commas, with an optional trailing comma. **There must be exactly as many names in the explicit return the as there are returned columns**. Each query that has an explicit return will generate a Rust `struct` to hold the query data. For example, this query
+```<RETURN> = {<IDENT><NULLABLE_MARKER>?,*}```
+Explicit returns give a name to the returned columns. The column types are inferred using prepared statements. To make a return explicit, list the returned column names inside curly brackets, in the same order as they are returned in the statement, separated by commas, with an optional trailing comma. Each identifier can also be followed by a nullable marker `?` that indicates the this return column is potentially null (`Option`al in Rust). **There must be exactly as many names in the explicit return the as there are returned columns**. Each query that has an explicit return will generate a Rust `struct` to hold the query data. For example, this query
 ```sql
 --! example_query() {name, country} *
 SELECT Name, Country FROM Authors;
@@ -180,6 +180,8 @@ The quantifier indicates the expected number of rows to be returned by a query. 
 * no quantifier results in `T`
 * `*` results in `Vec<T>`
 * `?` results in `Option<T>`
+
+Note that explicit returns marks a columns as nullable with `?`, while the `?` quantifier acts on the whole row.
 
 ### Transactions
 Cornucopia actually generates two versions of your queries, one that accepts a regular client (located inside the `queries`), while the other version accepts a transaction (located inside the `transactions`).

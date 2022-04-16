@@ -25,7 +25,11 @@ parameter_list = {
 }
 
 // Query return
-inferred_params = { ident ~ (comma ~ ident)* }
+nullable_return_param = {ident ~ nullable_marker}
+non_nullable_return_param = {ident}
+return_param = _{nullable_return_param | non_nullable_return_param }
+nullable_marker = _{"?"}
+inferred_params = { return_param ~ (comma ~ return_param)* }
 implicit_return = { "" }
 struct_return = {
 	start_ret_struct

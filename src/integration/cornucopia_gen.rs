@@ -4,21 +4,21 @@ pub mod types {
         use postgres_types::{FromSql, ToSql};
 
         #[derive(Debug, ToSql, FromSql)]
-        #[postgres(name = "custom_composite")]
-        #[derive(Clone)]
-        pub struct CustomComposite {
-            pub such_cool: i32,
-            pub wow: String,
-            pub nice: super::public::SpongebobCharacter,
-        }
-
-        #[derive(Debug, ToSql, FromSql)]
         #[postgres(name = "spongebob_character")]
         #[derive(Clone, Copy, PartialEq, Eq)]
         pub enum SpongebobCharacter {
             Bob,
             Patrick,
             Squidward,
+        }
+
+        #[derive(Debug, ToSql, FromSql)]
+        #[postgres(name = "custom_composite")]
+        #[derive(Clone)]
+        pub struct CustomComposite {
+            pub such_cool: i32,
+            pub wow: String,
+            pub nice: super::public::SpongebobCharacter,
         }
     }
 }
@@ -122,6 +122,36 @@ Book;
                     }
                 })
                 .collect::<Vec<super::super::queries::module_2::Books>>();
+            Ok(return_value)
+        }
+
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct BooksOptRetParam {
+            pub title: Option<String>,
+        }
+        pub async fn books_opt_ret_param(
+            client: &Client,
+        ) -> Result<Vec<super::super::queries::module_2::BooksOptRetParam>, Error> {
+            let stmt = client
+                .prepare_cached(
+                    "SELECT
+Title
+FROM
+Book;
+",
+                )
+                .await?;
+            let res = client.query(&stmt, &[]).await?;
+
+            let return_value = res
+                .iter()
+                .map(|res| {
+                    let return_value_0: Option<String> = res.get(0);
+                    super::super::queries::module_2::BooksOptRetParam {
+                        title: return_value_0,
+                    }
+                })
+                .collect::<Vec<super::super::queries::module_2::BooksOptRetParam>>();
             Ok(return_value)
         }
 
@@ -370,6 +400,32 @@ Book;
                     }
                 })
                 .collect::<Vec<super::super::queries::module_2::Books>>();
+            Ok(return_value)
+        }
+
+        pub async fn books_opt_ret_param<'a>(
+            client: &Transaction<'a>,
+        ) -> Result<Vec<super::super::queries::module_2::BooksOptRetParam>, Error> {
+            let stmt = client
+                .prepare_cached(
+                    "SELECT
+Title
+FROM
+Book;
+",
+                )
+                .await?;
+            let res = client.query(&stmt, &[]).await?;
+
+            let return_value = res
+                .iter()
+                .map(|res| {
+                    let return_value_0: Option<String> = res.get(0);
+                    super::super::queries::module_2::BooksOptRetParam {
+                        title: return_value_0,
+                    }
+                })
+                .collect::<Vec<super::super::queries::module_2::BooksOptRetParam>>();
             Ok(return_value)
         }
 

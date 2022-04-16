@@ -1,6 +1,9 @@
 use error::Error;
 
-use crate::integration::cornucopia_gen::types::public::SpongebobCharacter;
+use crate::integration::cornucopia_gen::{
+    queries::module_2::{books_opt_ret_param, BooksOptRetParam},
+    types::public::SpongebobCharacter,
+};
 
 use super::cornucopia_gen;
 use deadpool_postgres::Client;
@@ -139,6 +142,34 @@ async fn books_from_author_id_test(client: &Client) -> Result<(), Error> {
     Ok(())
 }
 
+async fn books_opt_ret_param_test(client: &Client) -> Result<(), Error> {
+    let expected = vec![
+        BooksOptRetParam {
+            title: Some(String::from("The Silmarillion")),
+        },
+        BooksOptRetParam {
+            title: Some(String::from("The Hobbit")),
+        },
+        BooksOptRetParam {
+            title: Some(String::from("Murder on the Orient Express")),
+        },
+        BooksOptRetParam {
+            title: Some(String::from("Death on the Nile")),
+        },
+    ];
+
+    let actual = books_opt_ret_param(client).await?;
+
+    if !actual.iter().all(|item| expected.contains(item)) {
+        return Err(Error::Integration {
+            expected: format!("{:?}", expected),
+            actual: format!("{:?}", actual),
+        });
+    };
+
+    Ok(())
+}
+
 async fn author_name_by_id_test(client: &Client) -> Result<(), Error> {
     use cornucopia_gen::queries::module_2::author_name_by_id;
     let expected = String::from("Agatha Christie");
@@ -195,7 +226,7 @@ async fn author_name_starting_with_test(client: &Client) -> Result<(), Error> {
     Ok(())
 }
 
-async fn return_custom_type(client: &Client) -> Result<(), Error> {
+async fn return_custom_type_test(client: &Client) -> Result<(), Error> {
     use cornucopia_gen::queries::module_2::return_custom_type;
     use cornucopia_gen::types::public::CustomComposite;
 
@@ -219,7 +250,7 @@ async fn return_custom_type(client: &Client) -> Result<(), Error> {
     Ok(())
 }
 
-async fn select_where_custom_type(client: &Client) -> Result<(), Error> {
+async fn select_where_custom_type_test(client: &Client) -> Result<(), Error> {
     use cornucopia_gen::queries::module_2::select_where_custom_type;
 
     let actual = select_where_custom_type(client, &SpongebobCharacter::Patrick).await?;
