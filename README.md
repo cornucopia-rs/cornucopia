@@ -183,13 +183,13 @@ pub async fn authors(client: &Client) -> Result<Vec<ExampleQuery>, Error> {
 #### Quantifier
 > ` ` (no quantifier), `?`, `*`
 
-The quantifier indicates the expected number of rows to be returned by a query. If no quantifier is specified, the it is assumed that only one record is to be returned. Using `*` and `?` (corresponding to the "zero or more" and "zero or one" quantifiers) will wrap the resulting rust type in a `Vec` and `Option` respectively. To sum it up:
+The quantifier indicates the expected number of rows returned by a query. If no quantifier is specified, then it is assumed that only one record will be returned. Using `*` and `?` (corresponding to the "zero or more" and "zero or one" quantifiers) will wrap the resulting Rust type in a `Vec` and `Option` respectively. To sum it up:
 
 * ` ` (no quantifier) results in `T`
 * `*` results in `Vec<T>`
 * `?` results in `Option<T>`
 
-Note that explicit returns marks a columns as nullable with `?`, while the `?` quantifier acts on the whole row.
+Note that explicit returns' columns  can be marked as nullable with `?`, while the `?` quantifier acts on the whole row.
 
 ### Transactions
 Cornucopia actually generates two versions of your queries, one that accepts a regular client (located inside the `queries` module), while the other version accepts a transaction (located inside the `transactions` module).
