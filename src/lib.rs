@@ -10,6 +10,7 @@ pub(crate) mod read_migrations;
 pub(crate) mod read_queries;
 pub(crate) mod run_migrations;
 
+mod generic_client;
 mod integration;
 mod parse;
 mod parse_file;
@@ -18,7 +19,7 @@ mod sanitize;
 use clap::{Result, StructOpt};
 use cli::{Action, Args, MigrationAction};
 use codegen::generate;
-pub use error::{Error, FmtError};
+use error::FmtError;
 use pg_type::TypeRegistrar;
 use pool::{cli_pool, create_pool};
 use prepare_queries::prepare_modules;
@@ -27,6 +28,9 @@ use run_migrations::run_migrations;
 use std::path::Path;
 use std::process::Command;
 use time::OffsetDateTime;
+
+pub use error::Error;
+pub use generic_client::GenericClient;
 
 pub async fn run() -> Result<(), Error> {
     let args = Args::parse();
