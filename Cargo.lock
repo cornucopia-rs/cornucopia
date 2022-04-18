@@ -157,9 +157,10 @@ dependencies = [
 
 [[package]]
 name = "cornucopia"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "async-recursion",
+ "async-trait",
  "clap",
  "deadpool-postgres",
  "eui48",
