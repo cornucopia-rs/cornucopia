@@ -43,7 +43,7 @@ pub trait GenericClient {
 #[async_trait]
 impl GenericClient for Transaction<'_> {
     async fn prepare(&self, query: &str) -> Result<Statement, Error> {
-        Transaction::prepare_cached(&self, query).await
+        Transaction::prepare_cached(self, query).await
     }
 
     async fn execute<T>(
