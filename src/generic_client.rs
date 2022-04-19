@@ -1,13 +1,12 @@
+use async_trait::async_trait;
+use deadpool_postgres::{Client, Transaction, ClientWrapper};
+use tokio_postgres::{Client as PgClient, Error, Statement, Transaction as PgTransaction};
+
 // This trait acts as an umbrella for all four of
 // - `tokio_postgres::Client`
 // - `deadpool_postgres::Client`
 // - `tokio_postgres::Transaction`
 // - `deadpool_postgres::Transaction`
-
-use async_trait::async_trait;
-use deadpool_postgres::{Client, Transaction};
-use tokio_postgres::{Client as PgClient, Error, Statement, Transaction as PgTransaction};
-
 #[async_trait]
 pub trait GenericClient {
     async fn prepare(&self, query: &str) -> Result<Statement, Error>;
@@ -44,7 +43,7 @@ pub trait GenericClient {
 #[async_trait]
 impl GenericClient for Transaction<'_> {
     async fn prepare(&self, query: &str) -> Result<Statement, Error> {
-        PgTransaction::prepare(self, query).await
+        Transaction::prepare_cached(&self, query).await
     }
 
     async fn execute<T>(
@@ -146,7 +145,7 @@ impl GenericClient for PgTransaction<'_> {
 #[async_trait]
 impl GenericClient for Client {
     async fn prepare(&self, query: &str) -> Result<Statement, Error> {
-        PgClient::prepare(self, query).await
+        ClientWrapper::prepare_cached(self, query).await
     }
 
     async fn execute<T>(

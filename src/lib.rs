@@ -1,7 +1,6 @@
 pub(crate) mod cli;
 pub(crate) mod codegen;
 pub(crate) mod container;
-
 pub(crate) mod error;
 pub(crate) mod pg_type;
 pub(crate) mod pool;

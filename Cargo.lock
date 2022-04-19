@@ -181,6 +181,7 @@ dependencies = [
 name = "cornucopia-example-basic"
 version = "0.1.0"
 dependencies = [
+ "cornucopia",
  "deadpool-postgres",
  "postgres-types",
  "serde",
