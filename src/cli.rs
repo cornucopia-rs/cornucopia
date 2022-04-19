@@ -10,19 +10,19 @@ pub struct Args {
 #[derive(Debug, Subcommand)]
 pub enum Action {
     /// Create and run migrations
-    Migration {
+    Migrations {
         #[clap(subcommand)]
-        action: MigrationAction,
+        action: MigrationsAction,
         /// Folder containing the migrations
-        #[clap(short, long, default_value = "migrations")]
+        #[clap(short, long, default_value = "migrations/")]
         migrations_path: String,
     },
     /// Generate Rust modules from queries
-    Generation {
+    Generate {
         /// Folder containing the migrations
         #[clap(short, long)]
         podman: bool,
-        /// Folder containing the migrations
+        /// Folder containing the migrations (ignored if using the `live` command)
         #[clap(short, long, default_value = "migrations/")]
         migrations_path: String,
         /// Folder containing the queries
@@ -31,23 +31,29 @@ pub enum Action {
         /// Destination folder for generated modules
         #[clap(short, long, default_value = "src/cornucopia.rs")]
         destination: String,
+        #[clap(subcommand)]
+        action: Option<GenerateLiveAction>,
     },
 }
 
 #[derive(Debug, Subcommand)]
-pub enum MigrationAction {
+pub enum MigrationsAction {
     /// Create a new migration
     New { name: String },
     /// Run all migrations
     Run {
         /// Postgres url to the database
         #[clap(long)]
-        user: String,
-        #[clap(long)]
-        password: String,
-        #[clap(long)]
-        host: String,
-        #[clap(long)]
-        port: u16,
+        url: String,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum GenerateLiveAction {
+    /// Generate your modules against your own db
+    Live {
+        /// Postgres url to the database
+        #[clap(short, long)]
+        url: String,
     },
 }

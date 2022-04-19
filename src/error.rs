@@ -1,5 +1,6 @@
 use crate::codegen::error::Error as CodegenError;
 use crate::container::error::Error as ContainerError;
+use crate::pool::error::Error as PoolBuilderError;
 use crate::prepare_queries::error::Error as PrepareQueriesError;
 use crate::read_queries::error::Error as ReadQueriesError;
 use crate::run_migrations::error::Error as MigrationError;
@@ -17,6 +18,7 @@ pub enum Error {
     Migration(#[from] MigrationError),
     PoolCreation(#[from] CreatePoolError),
     Pool(#[from] deadpool_postgres::PoolError),
+    PoolBuilder(#[from] PoolBuilderError),
     FmtError(#[from] FmtError),
 }
 
