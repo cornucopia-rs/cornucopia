@@ -11,10 +11,7 @@ use crate::{
 
 use super::prepare_queries::PreparedModule;
 
-pub(crate) fn generate_query(
-    module_name: &str,
-    query: &PreparedQuery,
-) -> Result<(String, String), Error> {
+pub(crate) fn generate_query(module_name: &str, query: &PreparedQuery) -> Result<String, Error> {
     let name = &query.name;
     let query_struct = generate_query_struct(query)?.unwrap_or_default();
     let params = generate_query_params(query)?;
@@ -29,12 +26,10 @@ pub(crate) fn generate_query(
     let body = generate_query_body(query, ret_ty)?;
     let query_string = format!(
         "{query_struct}
-    pub async fn {name}(client:&Client, {params}) -> Result<{ret},Error> {{{body}}}"
+    pub async fn {name}<T: GenericClient>(client:&T, {params}) -> Result<{ret},Error> {{{body}}}"
     );
 
-    let transaction_string = format!("pub async fn {name}<'a>(client:&Transaction<'a>, {params}) -> Result<{ret}, Error> {{{body}}}");
-
-    Ok((query_string, transaction_string))
+    Ok(query_string)
 }
 
 pub(crate) fn generate_custom_type(ty: &CornucopiaType) -> String {
@@ -281,7 +276,7 @@ pub(crate) fn generate_query_body(query: &PreparedQuery, ret_ty: String) -> Resu
     };
 
     Ok(format!(
-        "let stmt = client.prepare_cached({query_string}).await?;
+        "let stmt = client.prepare({query_string}).await?;
 let {res_var_name} = client.{query_method}(&stmt, &[{query_param_values}]).await?;
 
 {ret_value}"
@@ -293,25 +288,20 @@ pub(crate) fn generate(
     modules: Vec<PreparedModule>,
     destination: &str,
 ) -> Result<(), Error> {
-    let query_imports = r#"use deadpool_postgres::Client;
-use tokio_postgres::{error::Error};"#;
-    let transaction_imports = r#"use deadpool_postgres::Transaction;
-    use tokio_postgres::{error::Error};"#;
+    let query_imports = r#"
+use cornucopia::GenericClient;
+use tokio_postgres::Error;"#;
 
     let type_modules = generate_type_modules(type_registrar);
 
     let mut query_modules = Vec::new();
-    let mut transaction_modules = Vec::new();
     for module in modules {
         let mut query_strings = Vec::new();
-        let mut transaction_strings = Vec::new();
         for query in module.queries {
-            let (query_string, transaction_string) = generate_query(&module.name, &query)?;
+            let query_string = generate_query(&module.name, &query)?;
             query_strings.push(query_string);
-            transaction_strings.push(transaction_string)
         }
         let queries_string = query_strings.join("\n\n");
-        let transactions_string = transaction_strings.join("\n\n");
         let module_name = module.name;
 
         query_modules.push(format!(
@@ -321,19 +311,11 @@ use tokio_postgres::{error::Error};"#;
 {queries_string}
 }}"#
         ));
-        transaction_modules.push(format!(
-            r#"pub mod {module_name} {{
-{transaction_imports}
-
-{transactions_string}
-}}"#
-        ));
     }
 
     let generated_modules = format!(
-        "{type_modules} \n pub mod queries {{ {} }} \n pub mod transactions {{ {} }}",
+        "{type_modules} \n pub mod queries {{ {} }}",
         query_modules.join("\n\n"),
-        transaction_modules.join("\n\n")
     );
 
     std::fs::write(destination, generated_modules)?;

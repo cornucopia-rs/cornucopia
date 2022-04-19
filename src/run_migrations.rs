@@ -5,7 +5,6 @@ use error::Error;
 pub async fn run_migrations(client: &Object, path: &str) -> Result<(), Error> {
     create_migration_table(client).await?;
     for migration in read_migrations(path)? {
-        println!("{}", migration.name);
         let migration_not_installed =
             !migration_is_installed(client, &migration.timestamp, &migration.name).await?;
         if migration_not_installed {

@@ -192,7 +192,10 @@ The quantifier indicates the expected number of rows returned by a query. If no 
 Note that explicit returns' columns  can be marked as nullable with `?`, while the `?` quantifier acts on the whole row.
 
 ### Transactions
-Cornucopia actually generates two versions of your queries, one that accepts a regular client (located inside the `queries` module), while the other version accepts a transaction (located inside the `transactions` module).
+Generated queries will work with both `Client`s and `Transaction`s.
+
+### Connection pools
+Generated queries will work with both connections from `tokio-postgres` (non-pooled) and `deadpool_postgres` (pooled), using a statement cache when possible.
 
 ## Supported types
 ### Base types
