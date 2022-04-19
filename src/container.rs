@@ -1,20 +1,21 @@
 use error::Error;
 use std::process::{Command, Stdio};
 
-pub fn setup() -> Result<(), Error> {
-    spawn_container()?;
-    wait_until_postgres_started(120, 1000)?;
+pub fn setup(podman: bool) -> Result<(), Error> {
+    spawn_container(podman)?;
+    healthcheck(podman, 120, 1000)?;
     Ok(())
 }
 
-pub fn cleanup() -> Result<(), Error> {
-    stop_container()?;
-    remove_container()?;
+pub fn cleanup(podman: bool) -> Result<(), Error> {
+    stop_container(podman)?;
+    remove_container(podman)?;
     Ok(())
 }
 
-fn spawn_container() -> Result<(), Error> {
-    Command::new("docker")
+fn spawn_container(podman: bool) -> Result<(), Error> {
+    let command = if podman { "podman" } else { "docker" };
+    Command::new(&command)
         .arg("run")
         .arg("-d")
         .arg("--name")
@@ -33,8 +34,9 @@ fn spawn_container() -> Result<(), Error> {
     Ok(())
 }
 
-fn is_postgres_healthy() -> Result<bool, Error> {
-    Ok(Command::new("docker")
+fn is_postgres_healthy(podman: bool) -> Result<bool, Error> {
+    let command = if podman { "podman" } else { "docker" };
+    Ok(Command::new(&command)
         .arg("exec")
         .arg("cornucopia_postgres")
         .arg("pg_isready")
@@ -47,9 +49,9 @@ fn is_postgres_healthy() -> Result<bool, Error> {
         .success())
 }
 
-fn wait_until_postgres_started(max_retries: u64, ms_per_retry: u64) -> Result<(), Error> {
+fn healthcheck(podman: bool, max_retries: u64, ms_per_retry: u64) -> Result<(), Error> {
     let mut nb_retries = 0;
-    while !is_postgres_healthy()? {
+    while !is_postgres_healthy(podman)? {
         if nb_retries >= max_retries {
             return Err(Error::MaxNbRetries);
         };
@@ -63,8 +65,9 @@ fn wait_until_postgres_started(max_retries: u64, ms_per_retry: u64) -> Result<()
     Ok(())
 }
 
-fn stop_container() -> Result<(), Error> {
-    Command::new("docker")
+fn stop_container(podman: bool) -> Result<(), Error> {
+    let command = if podman { "podman" } else { "docker" };
+    Command::new(&command)
         .arg("stop")
         .arg("cornucopia_postgres")
         .stderr(Stdio::null())
@@ -77,8 +80,9 @@ fn stop_container() -> Result<(), Error> {
     Ok(())
 }
 
-fn remove_container() -> Result<(), Error> {
-    Command::new("docker")
+fn remove_container(podman: bool) -> Result<(), Error> {
+    let command = if podman { "podman" } else { "docker" };
+    Command::new(&command)
         .arg("rm")
         .arg("-v")
         .arg("cornucopia_postgres")

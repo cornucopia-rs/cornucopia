@@ -20,6 +20,9 @@ pub enum Action {
     /// Generate Rust modules from queries
     Generation {
         /// Folder containing the migrations
+        #[clap(short, long)]
+        podman: bool,
+        /// Folder containing the migrations
         #[clap(short, long, default_value = "migrations/")]
         migrations_path: String,
         /// Folder containing the queries

@@ -18,7 +18,7 @@ async fn setup() -> Result<Client, crate::error::Error> {
     use crate::run_migrations::run_migrations;
     use crate::{container, pool::cli_pool};
 
-    container::setup()?;
+    container::setup(true)?;
     let pool = cli_pool()?;
     let client = pool.get().await?;
     run_migrations(&client, "src/integration/migrations").await?;
@@ -28,7 +28,7 @@ async fn setup() -> Result<Client, crate::error::Error> {
 
 async fn teardown() -> Result<(), crate::error::Error> {
     use crate::container;
-    container::cleanup()?;
+    container::cleanup(true)?;
     Ok(())
 }
 

@@ -59,6 +59,7 @@ pub async fn run() -> Result<(), Error> {
             }
         },
         Action::Generation {
+            podman,
             migrations_path,
             queries_path,
             destination,
@@ -66,13 +67,14 @@ pub async fn run() -> Result<(), Error> {
             let mut type_registrar = TypeRegistrar::default();
             if let Err(e) = generation(
                 &mut type_registrar,
+                podman,
                 migrations_path,
                 queries_path,
                 destination,
             )
             .await
             {
-                container::cleanup()?;
+                container::cleanup(podman)?;
                 return Err(e);
             }
 
@@ -93,17 +95,18 @@ pub(crate) fn format_project() -> Result<(), FmtError> {
 
 pub(crate) async fn generation(
     type_registrar: &mut TypeRegistrar,
+    podman: bool,
     migrations_path: String,
     queries_path: String,
     destination: String,
 ) -> Result<(), Error> {
     let modules = read_queries(&queries_path)?;
-    container::setup()?;
+    container::setup(podman)?;
     let client = cli_pool()?.get().await?;
     run_migrations(&client, &migrations_path).await?;
     let modules = prepare_modules(&client, type_registrar, modules).await?;
     generate(type_registrar, modules, &destination)?;
-    container::cleanup()?;
+    container::cleanup(podman)?;
 
     Ok(())
 }
