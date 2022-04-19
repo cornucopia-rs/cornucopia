@@ -16,10 +16,10 @@ use deadpool_postgres::Client;
 
 async fn setup() -> Result<Client, crate::error::Error> {
     use crate::run_migrations::run_migrations;
-    use crate::{container, pool::cli_pool};
+    use crate::{container, pool::cornucopia_pool};
 
     container::setup(true)?;
-    let pool = cli_pool()?;
+    let pool = cornucopia_pool()?;
     let client = pool.get().await?;
     run_migrations(&client, "src/integration/migrations").await?;
 

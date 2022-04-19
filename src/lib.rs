@@ -16,11 +16,11 @@ mod parse_file;
 mod sanitize;
 
 use clap::{Result, StructOpt};
-use cli::{Action, Args, MigrationAction};
+use cli::{Action, Args, GenerateLiveAction, MigrationsAction};
 use codegen::generate;
 use error::FmtError;
 use pg_type::TypeRegistrar;
-use pool::{cli_pool, create_pool};
+use pool::{cornucopia_pool, from_url};
 use prepare_queries::prepare_modules;
 use read_queries::read_queries;
 use run_migrations::run_migrations;
@@ -35,50 +35,56 @@ pub async fn run() -> Result<(), Error> {
     let args = Args::parse();
 
     match args.action {
-        Action::Migration {
+        Action::Migrations {
             action,
             migrations_path,
         } => match action {
-            MigrationAction::New { name } => {
+            MigrationsAction::New { name } => {
                 let unix_ts = OffsetDateTime::now_utc().unix_timestamp();
                 let file_path =
                     Path::new(&migrations_path).join(format!("{}_{}.sql", unix_ts, name));
                 std::fs::write(file_path, "-- Write your migration SQL here\n")?;
                 Ok(())
             }
-            MigrationAction::Run {
-                user,
-                password,
-                host,
-                port,
-            } => {
-                let client = create_pool(user, password, host, port)?.get().await?;
+            MigrationsAction::Run { url } => {
+                let client = pool::from_url(&url)?.get().await?;
                 run_migrations(&client, &migrations_path).await?;
 
                 Ok(())
             }
         },
-        Action::Generation {
+        Action::Generate {
+            action,
             podman,
             migrations_path,
             queries_path,
             destination,
         } => {
             let mut type_registrar = TypeRegistrar::default();
-            if let Err(e) = generation(
-                &mut type_registrar,
-                podman,
-                migrations_path,
-                queries_path,
-                destination,
-            )
-            .await
-            {
-                container::cleanup(podman)?;
-                return Err(e);
-            }
+            match action {
+                Some(GenerateLiveAction::Live { url }) => {
+                    let modules = read_queries(&queries_path)?;
+                    let client = from_url(&url)?.get().await?;
+                    let modules = prepare_modules(&client, &mut type_registrar, modules).await?;
+                    generate(&type_registrar, modules, &destination)?;
+                }
+                None => {
+                    if let Err(e) = generate_action(
+                        &mut type_registrar,
+                        podman,
+                        migrations_path,
+                        queries_path,
+                        destination,
+                    )
+                    .await
+                    {
+                        container::cleanup(podman)?;
+                        return Err(e);
+                    }
 
-            format_project()?;
+                    format_project()?;
+                }
+            }
 
             Ok(())
         }
@@ -93,7 +99,7 @@ pub(crate) fn format_project() -> Result<(), FmtError> {
     }
 }
 
-pub(crate) async fn generation(
+pub(crate) async fn generate_action(
     type_registrar: &mut TypeRegistrar,
     podman: bool,
     migrations_path: String,
@@ -102,10 +108,10 @@ pub(crate) async fn generation(
 ) -> Result<(), Error> {
     let modules = read_queries(&queries_path)?;
     container::setup(podman)?;
-    let client = cli_pool()?.get().await?;
+    let client = cornucopia_pool()?.get().await?;
     run_migrations(&client, &migrations_path).await?;
-    let modules = prepare_modules(&client, type_registrar, modules).await?;
-    generate(type_registrar, modules, &destination)?;
+    let prepared_modules = prepare_modules(&client, type_registrar, modules).await?;
+    generate(type_registrar, prepared_modules, &destination)?;
     container::cleanup(podman)?;
 
     Ok(())
