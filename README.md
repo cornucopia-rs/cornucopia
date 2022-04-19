@@ -81,9 +81,11 @@ Aside from the dependencies, you will need the `cornucopia` cli to generate your
 ## Concepts
 This section explain a bit more about how cornucopia works. If you just want to get started, you should take a look at the [basic example](https://github.com/LouisGariepy/cornucopia/tree/main/examples/basic).
 
-Cornucopia is pretty simple to use. Your migrations and queries should each reside in a dedicated folder, and from there the CLI takes care of the rest for you. In the next sections, we'll explore the basic usage, but feel free to explore the CLI's whole interface using the `--help` option at any point.
+Cornucopia is pretty simple to use. Your migrations and queries should each reside in a dedicated folder, and from there the CLI takes care of the rest for you. In the next sections, we'll explore the basic usage, but feel free to explore the CLI's whole interface using the `--help` option at any point. For convenience, this is also available [in this repository](https://github.com/LouisGariepy/cornucopia/blob/main/cli.md).
 
 ### Migrations
+The basic `cornucopia generate` command spins a new container, runs your migrations, generates your queries and cleanups the container. If you want to manage the database and migrations yourself, use the `cornucopia generate live` command to connect to an arbitrary live database. Keep in mind that your queries must still be otherwise compatible with cornucopia (e.g. with regards to [supported types](https://github.com/LouisGariepy/cornucopia#supported-types) and [annotation syntax](https://github.com/LouisGariepy/cornucopia#query-annotation-syntax).
+
 New migrations can be added using the command `cornucopia migration new`. Cornucopia will automatically manage migrations when it generates your Rust modules, but you can also use the command `cornucopia migration run` to run migrations on your production database too if you so desire.
 
 ### Queries
@@ -129,7 +131,7 @@ pub async fn authors(client: &Client) -> Result<Vec<(i32, String, String)>, Erro
 ```
 Not bad! The generated function uses prepared statements, a statement cache, and strong typing (Notice how the returned rows' types have been inferred!). This is only a taste of what you can achieve, but should be fairly representative of what's going on under the hood.
 
-### Meta query syntax
+### Query annotation syntax
 As you may have noticed from the previous section, this little comment `--! authors()*` is doing a lot of heavy-lifting for us. It tells `cornucopia` to generate a function named `authors` with no parameters. Since there is no specified return, cornucopia will automatically infer what's being returned. Then, there's the asterisk `*` which signals that this query will return zero or more results. That's how we ended up with a `Vec` return in the generated query in the [section above](#generated-modules).
 
 Note that comments that do not start with `--!` (e.g. `-- This`) are simply ignored by `cornucopia`, so feel free to use them as you usually would.
@@ -150,7 +152,7 @@ The name of the generated function. It has to be a valid PostgresQL and Rust ide
 
 The parameters of the prepared statement, separated by commas (with an optional trailing comma.) 
 
-The order in which parameters are given corresponds to the parameter number (e.g. the first parameter is `$1` in the statement). **Every PostgreSQL parameter `$i` must have a corresponding parameter in the meta parameter list**.
+The order in which parameters are given corresponds to the parameter number (e.g. the first parameter is `$1` in the statement). **Every PostgreSQL parameter `$i` must have a corresponding parameter in the annotation parameter list**.
 
 #### Return type
 There are two kinds of returns, implicit and explicit. 
