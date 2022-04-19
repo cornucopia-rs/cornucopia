@@ -1,26 +1,39 @@
-use deadpool_postgres::{Config, CreatePoolError, Pool, Runtime};
+use error::Error;
+use std::str::FromStr;
+
+use deadpool_postgres::{Config, Pool, Runtime};
 use tokio_postgres::NoTls;
 
-pub fn cli_pool() -> Result<Pool, CreatePoolError> {
-    create_pool(
-        String::from("postgres"),
-        String::from("postgres"),
-        String::from("127.0.0.1"),
-        5432,
-    )
+pub fn from_url(url: &str) -> Result<Pool, Error> {
+    let config = tokio_postgres::Config::from_str(url)?;
+    let manager = deadpool_postgres::Manager::new(config, tokio_postgres::NoTls);
+    let pool = deadpool_postgres::Pool::builder(manager).build()?;
+    Ok(pool)
 }
 
-pub fn create_pool(
-    user: String,
-    password: String,
-    host: String,
-    port: u16,
-) -> Result<Pool, CreatePoolError> {
+pub fn cornucopia_pool() -> Result<Pool, Error> {
     let mut cfg = Config::new();
-    cfg.user = Some(user);
-    cfg.password = Some(password);
-    cfg.host = Some(host);
-    cfg.port = Some(port);
+    cfg.user = Some(String::from("postgres"));
+    cfg.password = Some(String::from("postgres"));
+    cfg.host = Some(String::from("127.0.0.1"));
+    cfg.port = Some(5432);
     cfg.dbname = Some(String::from("postgres"));
-    cfg.create_pool(Some(Runtime::Tokio1), NoTls)
+    let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls)?;
+    Ok(pool)
+}
+
+pub mod error {
+    use deadpool_postgres::BuildError as PoolBuilderError;
+    use deadpool_postgres::CreatePoolError;
+    use thiserror::Error as ThisError;
+    #[derive(Debug, ThisError)]
+    #[error("An error happened when trying to acquire a connection")]
+    pub enum Error {
+        #[error("Invalid database URL")]
+        PoolBuilder(#[from] PoolBuilderError),
+        #[error("Invalid database URL")]
+        DbUrl(#[from] CreatePoolError),
+        #[error("Invalid database URL")]
+        Db(#[from] tokio_postgres::Error),
+    }
 }
