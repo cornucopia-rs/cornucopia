@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use deadpool_postgres::{Client, Transaction, ClientWrapper};
+use deadpool_postgres::{Client, ClientWrapper, Transaction};
 use tokio_postgres::{Client as PgClient, Error, Statement, Transaction as PgTransaction};
 
 // This trait acts as an umbrella for all four of
