@@ -47,7 +47,11 @@ Keep reading for more info, or take a look at the [basic example](https://github
 
 ## Install
 ### Docker
-Cornucopia spawns a `postgres` container when it generates your Rust modules, so, you,ll need a working `docker` command. Note that **on Linux non-sudo users need to be in the docker group**. For a step-by-step guide, please read the official docker [installation](https://docs.docker.com/get-docker/) and [post-installation](https://docs.docker.com/engine/install/linux-postinstall/) docs.
+Cornucopia spawns a `postgres` container when it generates your Rust modules, so, you'll need a working `docker` or `podman` command. 
+
+Note that to use docker on linux, **non-sudo users need to be in the docker group**. For a step-by-step guide, please read the official docker [installation](https://docs.docker.com/get-docker/) and [post-installation](https://docs.docker.com/engine/install/linux-postinstall/) docs. 
+
+No special installation steps are needed for `podman`, but note that you will need to pass a CLI flag (`-p` or `--podman`) because cornucopia defaults to `docker`.
 
 ### Dependencies
 Cornucopia will generate queries powered by the `tokio` runtime through `tokio-postgres` and `deadpool-postgres`, so you will need add the latest version of these to your `Cargo.toml`. You might need more dependencies depending on which features you intend to use. The code block below shows what your dependencies might look like with every feature that `cornucopia` supports enabled:
