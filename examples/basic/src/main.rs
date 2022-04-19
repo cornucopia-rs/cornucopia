@@ -7,10 +7,9 @@ pub mod cornucopia;
 pub async fn main() {
     // Take a look at the generated `cornucopia.rs` file if you want to
     // see what it looks like under the hood.
-    use cornucopia::queries::module_2::*;
-    use cornucopia::transactions::module_1::insert_book_one;
-    use cornucopia::transactions::module_2::books;
-    use cornucopia::types::public::SpongebobCharacter;
+    use crate::cornucopia::queries::module_1::*;
+    use crate::cornucopia::queries::module_2::*;
+    use crate::cornucopia::types::public::SpongebobCharacter;
 
     // Connection pool configuration
     // This has nothing to do with cornucopia, please look at
