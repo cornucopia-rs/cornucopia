@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 
 /// Command line interface to interact with Cornucopia SQL.
 #[derive(Parser, Debug)]
+#[clap(version)]
 pub struct Args {
     #[clap(subcommand)]
     pub action: Action,
