@@ -27,6 +27,8 @@ fn spawn_container(podman: bool) -> Result<(), RunContainerError> {
         .arg("-e")
         .arg("POSTGRES_PASSWORD=postgres")
         .arg("postgres")
+        .stderr(Stdio::null())
+        .stdout(Stdio::null())
         .status()?
         .success();
 
@@ -73,6 +75,8 @@ fn stop_container(podman: bool) -> Result<(), StopContainerError> {
     let success = Command::new(&command)
         .arg("stop")
         .arg("cornucopia_postgres")
+        .stderr(Stdio::null())
+        .stdout(Stdio::null())
         .status()?
         .success();
 
@@ -89,6 +93,8 @@ fn remove_container(podman: bool) -> Result<(), RemoveContainerError> {
         .arg("rm")
         .arg("-v")
         .arg("cornucopia_postgres")
+        .stderr(Stdio::null())
+        .stdout(Stdio::null())
         .status()?
         .success();
 
