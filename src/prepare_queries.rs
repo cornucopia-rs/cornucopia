@@ -134,7 +134,7 @@ pub(crate) mod error {
 
     #[derive(Debug, ThisError)]
     #[error("encountered error while preparing queries")]
-    pub enum Error {
+    pub(crate) enum Error {
         Db(#[from] tokio_postgres::Error),
         Pool(#[from] deadpool_postgres::PoolError),
         #[error(

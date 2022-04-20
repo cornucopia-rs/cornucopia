@@ -5,14 +5,14 @@ use std::fs::File;
 /// not contain any whitespace whatsoever, and should be stripped
 /// of SQL comments and the meta-token '--!'.
 #[derive(Default)]
-pub struct SanitizedQuery {
-    pub meta: String,
-    pub sql: String,
+pub(crate) struct SanitizedQuery {
+    pub(crate) meta: String,
+    pub(crate) sql: String,
 }
 
 /// This function implements a line-by-line coarse parsing
 /// step by finding each query and its corresponding meta-comment.
-pub fn sanitize(
+pub(crate) fn sanitize(
     lines: std::io::Lines<std::io::BufReader<File>>,
 ) -> Result<Vec<SanitizedQuery>, Error> {
     let mut reader_state = QueryReaderState::Uninit;
@@ -172,12 +172,12 @@ fn sanitize_meta(line: &str) -> String {
     without_whitespace(line).replace("--!", "")
 }
 
-pub mod error {
+pub(crate) mod error {
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError)]
     #[error("sanitizing process encountered an error")]
-    pub enum Error {
+    pub(crate) enum Error {
         #[error("query missing meta-comment. Check that every query has a meta-comment")]
         MissingMeta,
         #[error("meta-comment is missing SQL query. Check that every comment has a query")]

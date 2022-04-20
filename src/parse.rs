@@ -113,7 +113,7 @@ pub(crate) mod error {
 
     #[derive(Debug, ThisError)]
     #[error("error while parsing file")]
-    pub enum Error {
+    pub(crate) enum Error {
         UnsupportedPostgresType(#[from] UnsupportedPostgresTypeError),
         Pest(#[from] pest::error::Error<Rule>),
     }

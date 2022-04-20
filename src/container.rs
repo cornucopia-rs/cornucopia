@@ -3,13 +3,13 @@ use std::process::{Command, Stdio};
 
 use self::error::{RemoveContainerError, RunContainerError, StopContainerError};
 
-pub fn setup(podman: bool) -> Result<(), Error> {
+pub(crate) fn setup(podman: bool) -> Result<(), Error> {
     spawn_container(podman)?;
     healthcheck(podman, 120, 1000)?;
     Ok(())
 }
 
-pub fn cleanup(podman: bool) -> Result<(), Error> {
+pub(crate) fn cleanup(podman: bool) -> Result<(), Error> {
     stop_container(podman)?;
     remove_container(podman)?;
     Ok(())
@@ -105,12 +105,12 @@ fn remove_container(podman: bool) -> Result<(), RemoveContainerError> {
     }
 }
 
-pub mod error {
+pub(crate) mod error {
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError)]
     #[error("Error encountered while running docker command. Please check that docker is installed, and that the daemon is running. If you are a Linux user, please check that you are in the `docker` group")]
-    pub enum Error {
+    pub(crate) enum Error {
         #[error("couldn't start database container")]
         RunContainer(#[from] RunContainerError),
         #[error("encountered error while probing database container health")]
@@ -125,7 +125,7 @@ pub mod error {
 
     #[derive(Debug, ThisError)]
     #[error("couldn't start database container")]
-    pub enum RunContainerError {
+    pub(crate) enum RunContainerError {
         Io(#[from] std::io::Error),
         #[error("command returned with an error status")]
         Status,
@@ -133,7 +133,7 @@ pub mod error {
 
     #[derive(Debug, ThisError)]
     #[error("couldn't stop database container")]
-    pub enum StopContainerError {
+    pub(crate) enum StopContainerError {
         Io(#[from] std::io::Error),
         #[error("command returned with an error status")]
         Status,
@@ -141,7 +141,7 @@ pub mod error {
 
     #[derive(Debug, ThisError)]
     #[error("couldn't clean up database container")]
-    pub enum RemoveContainerError {
+    pub(crate) enum RemoveContainerError {
         Io(#[from] std::io::Error),
         #[error("command returned with an error status")]
         Status,

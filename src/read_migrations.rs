@@ -1,12 +1,12 @@
 use error::Error;
 
 #[derive(Debug)]
-pub struct Migration {
-    pub name: String,
-    pub timestamp: i64,
-    pub sql: String,
+pub(crate) struct Migration {
+    pub(crate) name: String,
+    pub(crate) timestamp: i64,
+    pub(crate) sql: String,
 }
-pub fn read_migrations(path: &str) -> Result<Vec<Migration>, Error> {
+pub(crate) fn read_migrations(path: &str) -> Result<Vec<Migration>, Error> {
     let mut migrations = Vec::new();
     for entry_result in std::fs::read_dir(path)? {
         let entry = entry_result?;
@@ -44,16 +44,14 @@ pub fn read_migrations(path: &str) -> Result<Vec<Migration>, Error> {
     Ok(migrations)
 }
 
-pub mod error {
+pub(crate) mod error {
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError)]
     #[error("error while reading migrations")]
-    pub enum Error {
+    pub(crate) enum Error {
         #[error("file io error")]
         Io(#[from] std::io::Error),
-        #[error("your migration folder must contain only .sql files")]
-        InvalidFile,
         #[error("migrations must be named with this pattern '<timestamp>_<name>' where <timestamp> is a unix timestamp and <name> is a valid identifier")]
         InvalidMigrationFilename,
         #[error("timestamp is not a valid unix timestamp")]

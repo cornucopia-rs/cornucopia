@@ -330,7 +330,7 @@ pub(crate) mod error {
 
     #[derive(Debug, ThisError)]
     #[error("Encountered an error while generating Rust code")]
-    pub enum Error {
+    pub(crate) enum Error {
         UnsupportedPostgresTypeError(#[from] UnsupportedPostgresTypeError),
         #[error("error while attempting to write generated modules")]
         Io(#[from] std::io::Error),

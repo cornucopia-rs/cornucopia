@@ -379,7 +379,7 @@ mod error {
     use tokio_postgres::Error as DbError;
     #[derive(Debug, ThisError)]
     #[error("error occured during integration testing")]
-    pub enum Error {
+    pub(crate) enum Error {
         #[error("expected {expected}, got {actual}")]
         Integration {
             expected: String,

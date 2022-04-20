@@ -2,7 +2,7 @@ use crate::read_migrations::read_migrations;
 use deadpool_postgres::Object;
 use error::Error;
 
-pub async fn run_migrations(client: &Object, path: &str) -> Result<(), Error> {
+pub(crate) async fn run_migrations(client: &Object, path: &str) -> Result<(), Error> {
     create_migration_table(client).await?;
     for migration in read_migrations(path)? {
         let migration_not_installed =
@@ -68,13 +68,13 @@ async fn install_migration(
     Ok(())
 }
 
-pub mod error {
+pub(crate) mod error {
     use super::super::read_migrations::error::Error as MigrationError;
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError)]
     #[error("Encountered an error while running migrations")]
-    pub enum Error {
+    pub(crate) enum Error {
         ReadMigration(#[from] MigrationError),
         Db(#[from] tokio_postgres::Error),
     }

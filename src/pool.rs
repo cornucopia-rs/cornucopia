@@ -4,14 +4,14 @@ use std::str::FromStr;
 use deadpool_postgres::{Config, Pool, Runtime};
 use tokio_postgres::NoTls;
 
-pub fn from_url(url: &str) -> Result<Pool, Error> {
+pub(crate) fn from_url(url: &str) -> Result<Pool, Error> {
     let config = tokio_postgres::Config::from_str(url)?;
     let manager = deadpool_postgres::Manager::new(config, tokio_postgres::NoTls);
     let pool = deadpool_postgres::Pool::builder(manager).build()?;
     Ok(pool)
 }
 
-pub fn cornucopia_pool() -> Result<Pool, Error> {
+pub(crate) fn cornucopia_pool() -> Result<Pool, Error> {
     let mut cfg = Config::new();
     cfg.user = Some(String::from("postgres"));
     cfg.password = Some(String::from("postgres"));
@@ -22,13 +22,13 @@ pub fn cornucopia_pool() -> Result<Pool, Error> {
     Ok(pool)
 }
 
-pub mod error {
+pub(crate) mod error {
     use deadpool_postgres::BuildError as PoolBuilderError;
     use deadpool_postgres::CreatePoolError;
     use thiserror::Error as ThisError;
     #[derive(Debug, ThisError)]
     #[error("An error happened when trying to acquire a connection")]
-    pub enum Error {
+    pub(crate) enum Error {
         #[error("Invalid database URL")]
         PoolBuilder(#[from] PoolBuilderError),
         #[error("Invalid database URL")]

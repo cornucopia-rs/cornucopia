@@ -10,12 +10,12 @@ use self::error::{Error, UnsupportedPostgresTypeError};
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 
-pub struct CornucopiaType {
-    pub pg_ty: Type,
-    pub kind: CornucopiaTypeKind,
-    pub rust_ty_usage_path: String,
-    pub rust_ty_definition_path: String,
-    pub rust_ty_name: String,
+pub(crate) struct CornucopiaType {
+    pub(crate) pg_ty: Type,
+    pub(crate) kind: CornucopiaTypeKind,
+    pub(crate) rust_ty_usage_path: String,
+    pub(crate) rust_ty_definition_path: String,
+    pub(crate) rust_ty_name: String,
 }
 
 impl CornucopiaType {
@@ -45,7 +45,7 @@ impl CornucopiaType {
         }
     }
 
-    pub fn borrowed_rust_ty(&self) -> String {
+    pub(crate) fn borrowed_rust_ty(&self) -> String {
         if self.rust_ty_usage_path == "String" {
             String::from("&str")
         } else {
@@ -55,13 +55,13 @@ impl CornucopiaType {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct CornucopiaField {
-    pub name: String,
-    pub ty: CornucopiaType,
+pub(crate) struct CornucopiaField {
+    pub(crate) name: String,
+    pub(crate) ty: CornucopiaType,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum CornucopiaTypeKind {
+pub(crate) enum CornucopiaTypeKind {
     Base,
     Composite(Vec<CornucopiaField>),
     Domain(Box<CornucopiaType>),
@@ -86,21 +86,21 @@ impl From<&CornucopiaTypeKind> for Kind {
     }
 }
 
-pub struct TypeRegistrar {
-    pub base_types: HashMap<String, CornucopiaType>,
-    pub custom_types: HashMap<(String, String), CornucopiaType>,
+pub(crate) struct TypeRegistrar {
+    pub(crate) base_types: HashMap<String, CornucopiaType>,
+    pub(crate) custom_types: HashMap<(String, String), CornucopiaType>,
 }
 
 impl TypeRegistrar {
-    pub fn base_type(&self, alias: &str) -> Option<&CornucopiaType> {
+    pub(crate) fn base_type(&self, alias: &str) -> Option<&CornucopiaType> {
         self.base_types.get(alias)
     }
 
-    pub fn custom_type(&self, schema: &str, name: &str) -> Option<&CornucopiaType> {
+    pub(crate) fn custom_type(&self, schema: &str, name: &str) -> Option<&CornucopiaType> {
         self.custom_types.get(&(schema.to_owned(), name.to_owned()))
     }
 
-    pub fn get(&self, schema: &str, name: &str) -> Option<&CornucopiaType> {
+    pub(crate) fn get(&self, schema: &str, name: &str) -> Option<&CornucopiaType> {
         if schema == "pg_catalog" {
             self.base_type(name)
         } else {
@@ -269,7 +269,7 @@ INNER JOIN pg_namespace ON pg_namespace.oid = ty.typnamespace
         }
     }
 
-    pub async fn register_type(
+    pub(crate) async fn register_type(
         &mut self,
         client: &Client,
         ty: &Type,
@@ -279,7 +279,7 @@ INNER JOIN pg_namespace ON pg_namespace.oid = ty.typnamespace
     }
 
     #[async_recursion]
-    pub async fn register(
+    pub(crate) async fn register(
         &mut self,
         client: &Client,
         schema: String,
@@ -356,21 +356,18 @@ impl Default for TypeRegistrar {
         ])
     }
 }
-pub mod error {
-    use postgres_types::Kind;
+pub(crate) mod error {
     use thiserror::Error as ThisError;
     #[derive(Debug, ThisError)]
     #[error("encoutered unsupported type `{name}` while parsing queries")]
-    pub struct UnsupportedPostgresTypeError {
-        pub name: String,
+    pub(crate) struct UnsupportedPostgresTypeError {
+        pub(crate) name: String,
     }
 
     #[derive(Debug, ThisError)]
     #[error("encountered error while attempting to discover postgres type")]
-    pub enum Error {
+    pub(crate) enum Error {
         Db(#[from] tokio_postgres::Error),
         UnsupportedPostgresType(#[from] UnsupportedPostgresTypeError),
-        #[error("unsupported postgres type kind {0:?}")]
-        UnsupportedPostgresKindError(Kind),
     }
 }

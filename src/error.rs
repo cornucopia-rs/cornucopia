@@ -9,9 +9,9 @@ use deadpool_postgres::CreatePoolError;
 use thiserror::Error as ThisError;
 #[derive(Debug, ThisError)]
 #[error("the program encountered an unexpected error")]
-pub enum Error {
+pub(crate) enum Error {
     ReadQueries(#[from] ReadQueriesError),
-    ContainerError(#[from] ContainerError),
+    Container(#[from] ContainerError),
     Codegen(#[from] CodegenError),
     PrepareQueries(#[from] PrepareQueriesError),
     NewMigration(#[from] std::io::Error),
@@ -24,7 +24,7 @@ pub enum Error {
 
 #[derive(Debug, ThisError)]
 #[error("`rustfmt` was unable to properly format the generated code. This is probably a bug, and you should report it")]
-pub enum FmtError {
+pub(crate) enum FmtError {
     IO(#[from] std::io::Error),
     #[error("bad code")]
     RustFmt,

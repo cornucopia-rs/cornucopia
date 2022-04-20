@@ -45,7 +45,7 @@ pub(crate) mod error {
 
     #[derive(Debug, ThisError)]
     #[error("error while reading migrations")]
-    pub enum Error {
+    pub(crate) enum Error {
         Io(#[from] std::io::Error),
         Parser(#[from] FileParserError),
     }

@@ -42,7 +42,7 @@ pub(crate) mod error {
 
     #[derive(Debug, ThisError)]
     #[error("error while parsing file")]
-    pub enum Error {
+    pub(crate) enum Error {
         IO(#[from] std::io::Error),
         Sanitize(#[from] SanitizeError),
         Parse(#[from] ParserError),
