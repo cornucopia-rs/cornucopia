@@ -14,7 +14,7 @@ keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 members = ["examples/basic", "cornucopia_client"]
 
 [dependencies]
-cornucopia_client = { path = "cornucopia_client" }
+cornucopia_client = "0.1.0"
 tokio = { version = "1.17.0", features = ["full"] }
 deadpool-postgres = { version = "0.10.2" }
 tokio-postgres = { version = "0.7.5", features = [
