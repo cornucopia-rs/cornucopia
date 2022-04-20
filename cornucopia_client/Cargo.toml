@@ -2,6 +2,13 @@
 name = "cornucopia_client"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+description = "Generic client trait for Cornucopia users"
+homepage = "https://github.com/LouisGariepy/cornucopia"
+repository = "https://github.com/LouisGariepy/cornucopia"
+readme = "README.md"
+categories = ["database"]
+keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
