@@ -11,9 +11,10 @@ categories = ["database"]
 keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 
 [workspace]
-members = ["examples/*"]
+members = ["examples/basic", "cornucopia_client"]
 
 [dependencies]
+cornucopia_client = { path = "cornucopia_client" }
 tokio = { version = "1.17.0", features = ["full"] }
 deadpool-postgres = { version = "0.10.2" }
 tokio-postgres = { version = "0.7.5", features = [

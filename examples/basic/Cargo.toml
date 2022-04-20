@@ -16,4 +16,4 @@ serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.79"
 time = "0.3.9"
 uuid = "0.8.2"
-cornucopia = { path = "../../" }
+cornucopia_client = "0.1.0"

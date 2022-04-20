@@ -25,7 +25,7 @@ pub mod types {
 pub mod queries {
     pub mod module_1 {
 
-        use cornucopia::GenericClient;
+        use cornucopia_client::GenericClient;
         use tokio_postgres::Error;
 
         pub async fn insert_book_one<T: GenericClient>(client: &T) -> Result<(), Error> {
@@ -69,8 +69,7 @@ VALUES ('carl');
     }
 
     pub mod module_2 {
-
-        use cornucopia::GenericClient;
+        use cornucopia_client::GenericClient;
         use tokio_postgres::Error;
 
         pub async fn authors<T: GenericClient>(
