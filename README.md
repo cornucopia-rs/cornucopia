@@ -54,7 +54,7 @@ Note that to use docker on linux, **non-sudo users need to be in the docker grou
 No special installation steps are needed for `podman`, but note that you will need to pass a CLI flag (`-p` or `--podman`) because cornucopia defaults to `docker`.
 
 ### Dependencies
-Cornucopia will generate queries powered by the `tokio` runtime through `tokio-postgres` and `deadpool-postgres`, so you will need add the latest version of these to your `Cargo.toml`. You'll also need the `cornucopia` crate, which has only one item of interest: the `GenericClient` trait. You might need more dependencies depending on which features you intend to use. The code block below shows what your dependencies might look like with every feature that `cornucopia` supports enabled:
+Cornucopia will generate queries powered by the `tokio` runtime through `tokio-postgres` and `deadpool-postgres`, so you will need add the latest version of these to your `Cargo.toml`. You'll also need the `cornucopia_client` crate, which has only one item: the `GenericClient` trait. You might need more dependencies depending on which features you intend to use. The code block below shows what your dependencies might look like with every feature that `cornucopia` supports enabled:
 ```toml
 # Cargo.toml
 [dependencies]
@@ -67,7 +67,7 @@ tokio-postgres = { version = "0.7.5", features = [
     "with-uuid-0_8",
     "with-eui48-1",
 ] }
-cornucopia = "0.4.2"
+cornucopia_client = "0.1.0"
 serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.79"
 time = "0.3.9"
@@ -199,10 +199,10 @@ The quantifier indicates the expected number of rows returned by a query. If no 
 Note that explicit returns' columns  can be marked as nullable with `?`, while the `?` quantifier acts on the whole row.
 
 ### Transactions
-Generated queries will work with both `Client`s and `Transaction`s.
+Generated queries take a `GenericClient` as parameter, which accepts both `Client`s and `Transaction`s.
 
 ### Connection pools
-Generated queries will work with both connections from `tokio-postgres` (non-pooled) and `deadpool_postgres` (pooled), using a statement cache when possible.
+Generated queries take a `GenericClient` as parameter, which accepts both connections from `tokio-postgres` (non-pooled) and `deadpool_postgres` (pooled).
 
 ## Supported types
 ### Base types
