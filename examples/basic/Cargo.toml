@@ -7,13 +7,5 @@ version = "0.1.0"
 tokio = { version = "1.17.0", features = ["full"] }
 deadpool-postgres = { version = "0.10.2", features = ["serde"] }
 postgres-types = { version = "0.2.2", features = ["derive"] }
-tokio-postgres = { version = "0.7.5", features = [
-    "with-serde_json-1",
-    "with-time-0_3",
-    "with-uuid-0_8",
-] }
-serde = { version = "1.0.136", features = ["derive"] }
-serde_json = "1.0.79"
-time = "0.3.9"
-uuid = "0.8.2"
+tokio-postgres = { version = "0.7.5" }
 cornucopia_client = "0.1.0"
