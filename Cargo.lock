@@ -162,7 +162,7 @@ dependencies = [
  "async-recursion",
  "async-trait",
  "clap",
- "cornucopia_client",
+ "cornucopia_client 0.1.0",
  "deadpool-postgres",
  "eui48",
  "heck",
@@ -182,7 +182,7 @@ dependencies = [
 name = "cornucopia-example-basic"
 version = "0.1.0"
 dependencies = [
- "cornucopia_client",
+ "cornucopia_client 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "deadpool-postgres",
  "postgres-types",
  "serde",
@@ -196,6 +196,18 @@ dependencies = [
 [[package]]
 name = "cornucopia_client"
 version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "deadpool-postgres",
+ "tokio",
+ "tokio-postgres",
+]
+
+[[package]]
+name = "cornucopia_client"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "55c80d61fbc0276d93c0b5df6b2d9c1570a55ff183c71e42c7a6f904eecd8780"
 dependencies = [
  "async-trait",
  "deadpool-postgres",
