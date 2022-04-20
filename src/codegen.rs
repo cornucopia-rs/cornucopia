@@ -289,7 +289,7 @@ pub(crate) fn generate(
     destination: &str,
 ) -> Result<(), Error> {
     let query_imports = r#"
-use cornucopia::GenericClient;
+use cornucopia_client::GenericClient;
 use tokio_postgres::Error;"#;
 
     let type_modules = generate_type_modules(type_registrar);
