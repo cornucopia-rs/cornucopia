@@ -160,12 +160,12 @@ pub(crate) async fn generate_action(
     queries_path: &str,
     destination: &str,
 ) -> Result<(), Error> {
-    let modules = read_queries(&queries_path)?;
+    let modules = read_queries(queries_path)?;
     container::setup(podman)?;
     let client = cornucopia_pool()?.get().await?;
-    run_migrations(&client, &migrations_path).await?;
+    run_migrations(&client, migrations_path).await?;
     let prepared_modules = prepare_modules(&client, type_registrar, modules).await?;
-    generate(type_registrar, prepared_modules, &destination)?;
+    generate(type_registrar, prepared_modules, destination)?;
     container::cleanup(podman)?;
 
     Ok(())
