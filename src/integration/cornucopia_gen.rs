@@ -1,7 +1,16 @@
-pub mod types {
+// This file was generated with `cornucopia`. Do not modify.
 
+pub mod types {
     pub mod public {
         use postgres_types::{FromSql, ToSql};
+        #[derive(Debug, ToSql, FromSql)]
+        #[postgres(name = "custom_composite")]
+        #[derive(Clone)]
+        pub struct CustomComposite {
+            pub such_cool: i32,
+            pub wow: String,
+            pub nice: super::public::SpongebobCharacter,
+        }
 
         #[derive(Debug, ToSql, FromSql)]
         #[postgres(name = "spongebob_character")]
@@ -11,20 +20,11 @@ pub mod types {
             Patrick,
             Squidward,
         }
-
-        #[derive(Debug, ToSql, FromSql)]
-        #[postgres(name = "custom_composite")]
-        #[derive(Clone)]
-        pub struct CustomComposite {
-            pub such_cool: i32,
-            pub wow: String,
-            pub nice: super::public::SpongebobCharacter,
-        }
     }
 }
+
 pub mod queries {
     pub mod module_1 {
-
         use cornucopia_client::GenericClient;
         use tokio_postgres::Error;
 

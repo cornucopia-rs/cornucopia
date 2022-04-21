@@ -1,8 +1,8 @@
-pub mod types {
+// This file was generated with `cornucopia`. Do not modify.
 
+pub mod types {
     pub mod public {
         use postgres_types::{FromSql, ToSql};
-
         #[derive(Debug, ToSql, FromSql)]
         #[postgres(name = "spongebob_character")]
         #[derive(Clone, Copy, PartialEq, Eq)]
@@ -22,9 +22,9 @@ pub mod types {
         }
     }
 }
+
 pub mod queries {
     pub mod module_1 {
-
         use cornucopia_client::GenericClient;
         use tokio_postgres::Error;
 
@@ -69,7 +69,6 @@ VALUES ('carl');
     }
 
     pub mod module_2 {
-
         use cornucopia_client::GenericClient;
         use tokio_postgres::Error;
 

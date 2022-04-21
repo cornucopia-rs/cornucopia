@@ -92,23 +92,12 @@ pub(crate) fn generate_type_modules(type_registrar: &TypeRegistrar) -> String {
                 .map(generate_custom_type)
                 .collect::<Vec<String>>()
                 .join("\n\n");
-            format!(
-                "
-        pub mod {mod_name} {{
-            use postgres_types::{{FromSql, ToSql}};
-
-            {tys_str} 
-        }}"
-            )
+            format!("pub mod {mod_name} {{ use postgres_types::{{FromSql, ToSql}}; {tys_str} }}")
         })
         .collect::<Vec<String>>()
         .join("\n\n");
 
-    format!(
-        "pub mod types {{
-    {schema_modules}        
-}}"
-    )
+    format!("pub mod types {{ {schema_modules} }}")
 }
 
 pub(crate) fn generate_query_struct(query: &PreparedQuery) -> Result<Option<String>, Error> {
@@ -120,14 +109,13 @@ pub(crate) fn generate_query_struct(query: &PreparedQuery) -> Result<Option<Stri
             } else {
                 param_ty.rust_ty_usage_path.clone()
             };
-            field_strings.push(format!(r#"pub {} : {}"#, param.name, ty_string));
+            field_strings.push(format!("pub {} : {}", param.name, ty_string));
         }
         let fields_string = field_strings.join(",");
         let struct_name = query.name.to_upper_camel_case();
 
         Ok(Some(format!(
-            r#"#[derive(Debug, Clone, PartialEq)]
-pub struct {struct_name} {{{fields_string}}}"#
+            "#[derive(Debug, Clone, PartialEq)] pub struct {struct_name} {{{fields_string}}}"
         )))
     } else {
         Ok(None)
@@ -288,10 +276,7 @@ pub(crate) fn generate(
     modules: Vec<PreparedModule>,
     destination: &str,
 ) -> Result<(), Error> {
-    let query_imports = r#"
-use cornucopia_client::GenericClient;
-use tokio_postgres::Error;"#;
-
+    let query_imports = "use cornucopia_client::GenericClient;\nuse tokio_postgres::Error;";
     let type_modules = generate_type_modules(type_registrar);
 
     let mut query_modules = Vec::new();
@@ -305,18 +290,14 @@ use tokio_postgres::Error;"#;
         let module_name = module.name;
 
         query_modules.push(format!(
-            r#"pub mod {module_name} {{
-{query_imports}
-
-{queries_string}
-}}"#
+            "pub mod {module_name} {{ {query_imports}\n{queries_string} }}"
         ));
     }
+    let query_modules_string = format!("pub mod queries {{ {} }}", query_modules.join("\n\n"));
+    let top_level_comment = "// This file was generated with `cornucopia`. Do not modify.";
 
-    let generated_modules = format!(
-        "{type_modules} \n pub mod queries {{ {} }}",
-        query_modules.join("\n\n"),
-    );
+    let generated_modules =
+        format!("{top_level_comment}\n\n{type_modules}\n\n{query_modules_string}",);
 
     std::fs::write(destination, generated_modules)?;
 
