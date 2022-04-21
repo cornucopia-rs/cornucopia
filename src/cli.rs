@@ -34,6 +34,9 @@ enum Action {
     Generate {
         /// Folder containing the migrations
         #[clap(short, long)]
+        no_formatting: bool,
+        /// Use `podman` instead of `docker`
+        #[clap(short, long)]
         podman: bool,
         /// Folder containing the migrations (ignored if using the `live` command)
         #[clap(short, long, default_value = "migrations/")]
@@ -94,6 +97,7 @@ pub(crate) async fn run() -> Result<(), Error> {
             }
         },
         Action::Generate {
+            no_formatting,
             action,
             podman,
             migrations_path,
@@ -112,9 +116,9 @@ pub(crate) async fn run() -> Result<(), Error> {
                     if let Err(e) = generate_action(
                         &mut type_registrar,
                         podman,
-                        migrations_path,
-                        queries_path,
-                        destination,
+                        &migrations_path,
+                        &queries_path,
+                        &destination,
                     )
                     .await
                     {
@@ -122,7 +126,10 @@ pub(crate) async fn run() -> Result<(), Error> {
                         return Err(e);
                     }
 
-                    format_project()?;
+                    if no_formatting {
+                    } else {
+                        format_generated_file(&destination)?
+                    };
                 }
             }
 
@@ -131,8 +138,15 @@ pub(crate) async fn run() -> Result<(), Error> {
     }
 }
 
-pub(crate) fn format_project() -> Result<(), FmtError> {
-    if Command::new("cargo").arg("fmt").spawn()?.wait()?.success() {
+pub(crate) fn format_generated_file(path: &str) -> Result<(), FmtError> {
+    if Command::new("rustfmt")
+        .arg("--edition")
+        .arg("2021")
+        .arg(path)
+        .spawn()?
+        .wait()?
+        .success()
+    {
         Ok(())
     } else {
         Err(FmtError::RustFmt)
@@ -142,9 +156,9 @@ pub(crate) fn format_project() -> Result<(), FmtError> {
 pub(crate) async fn generate_action(
     type_registrar: &mut TypeRegistrar,
     podman: bool,
-    migrations_path: String,
-    queries_path: String,
-    destination: String,
+    migrations_path: &str,
+    queries_path: &str,
+    destination: &str,
 ) -> Result<(), Error> {
     let modules = read_queries(&queries_path)?;
     container::setup(podman)?;
