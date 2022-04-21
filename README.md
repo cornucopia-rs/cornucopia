@@ -233,5 +233,8 @@ Cornucopia also supports user-defined `enum`s, `composite`s and `domain`s. Just 
 by inspecting your database. The only requirement for your custom types is that they be based on other supported types (base or custom).
 Cornucopia is also aware of your types' namespaces (what PostgreSQL calls schemas), so it will correctly handle custom types like `my_schema.my_custom_type`.
 
+## MSRV
+This crate uses Rust 2021 edition, which requires at least version 1.56.
+
 ## License
 Licensed under the [MIT license](http://opensource.org/licenses/MIT).
