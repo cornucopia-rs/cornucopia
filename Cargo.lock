@@ -239,7 +239,6 @@ dependencies = [
  "deadpool-runtime",
  "num_cpus",
  "retain_mut",
- "serde",
  "tokio",
 ]
 
@@ -251,7 +250,6 @@ checksum = "c668a58063c6331e3437e3146970943ad82b1b36169fd979bb2645ac2088209a"
 dependencies = [
  "deadpool",
  "log",
- "serde",
  "tokio",
  "tokio-postgres",
 ]

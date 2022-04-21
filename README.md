@@ -46,7 +46,7 @@ Keep reading for more info, or take a look at the [basic example](https://github
 ---
 
 ## Install
-### Docker
+### Container manager
 Cornucopia spawns a `postgres` container when it generates your Rust modules, so, you'll need a working `docker` or `podman` command. 
 
 Note that to use docker on linux, **non-sudo users need to be in the docker group**. For a step-by-step guide, please read the official docker [installation](https://docs.docker.com/get-docker/) and [post-installation](https://docs.docker.com/engine/install/linux-postinstall/) docs. 
@@ -54,12 +54,12 @@ Note that to use docker on linux, **non-sudo users need to be in the docker grou
 No special installation steps are needed for `podman`, but note that you will need to pass a CLI flag (`-p` or `--podman`) because cornucopia defaults to `docker`.
 
 ### Dependencies
-Cornucopia will generate queries powered by the `tokio` runtime through `tokio-postgres` and `deadpool-postgres`, so you will need add the latest version of these to your `Cargo.toml`. You'll also need the `cornucopia_client` crate, which has only one item: the `GenericClient` trait. You might need more dependencies depending on which features you intend to use. The code block below shows what your dependencies might look like with every feature that `cornucopia` supports enabled:
+Cornucopia will generate queries powered by the `tokio` runtime through `tokio-postgres`, so you will need add the latest version of these to your `Cargo.toml`. If you wish to use pooled connections, you'll also need `deadpool-postgres`. Finally, you will need the `cornucopia_client` crate, which has only one item: the `GenericClient` trait. You might need more dependencies depending on which features you intend to use. The code block below shows what your dependencies might look like with every feature that `cornucopia` supports enabled:
 ```toml
 # Cargo.toml
 [dependencies]
 tokio = { version = "1.17.0", features = ["full"] }
-deadpool-postgres = { version = "0.10.2", features = ["serde"] }
+deadpool-postgres = { version = "0.10.2" }
 postgres-types = { version = "0.2.2", features = ["derive"] }
 tokio-postgres = { version = "0.7.5", features = [
     "with-serde_json-1",
