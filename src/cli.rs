@@ -7,7 +7,7 @@ use crate::{
     pg_type::TypeRegistrar,
     pool::{self, cornucopia_pool, from_url},
     prepare_queries::prepare_modules,
-    read_queries::read_queries,
+    read_queries::{read_queries, Module},
     run_migrations::run_migrations,
 };
 use clap::{Parser, Subcommand};
@@ -113,11 +113,13 @@ pub(crate) async fn run() -> Result<(), Error> {
                     generate(&type_registrar, modules, &destination)?;
                 }
                 None => {
+                    let modules = read_queries(&queries_path)?;
+                    container::setup(podman)?;
                     if let Err(e) = generate_action(
                         &mut type_registrar,
+                        modules,
                         podman,
                         &migrations_path,
-                        &queries_path,
                         &destination,
                     )
                     .await
@@ -126,10 +128,9 @@ pub(crate) async fn run() -> Result<(), Error> {
                         return Err(e);
                     }
 
-                    if no_formatting {
-                    } else {
+                    if !no_formatting {
                         format_generated_file(&destination)?
-                    };
+                    }
                 }
             }
 
@@ -155,13 +156,11 @@ pub(crate) fn format_generated_file(path: &str) -> Result<(), FmtError> {
 
 pub(crate) async fn generate_action(
     type_registrar: &mut TypeRegistrar,
+    modules: Vec<Module>,
     podman: bool,
     migrations_path: &str,
-    queries_path: &str,
     destination: &str,
 ) -> Result<(), Error> {
-    let modules = read_queries(queries_path)?;
-    container::setup(podman)?;
     let client = cornucopia_pool()?.get().await?;
     run_migrations(&client, migrations_path).await?;
     let prepared_modules = prepare_modules(&client, type_registrar, modules).await?;

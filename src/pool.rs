@@ -27,13 +27,10 @@ pub(crate) mod error {
     use deadpool_postgres::CreatePoolError;
     use thiserror::Error as ThisError;
     #[derive(Debug, ThisError)]
-    #[error("An error happened when trying to acquire a connection")]
+    #[error("{0}")]
     pub(crate) enum Error {
-        #[error("Invalid database URL")]
         PoolBuilder(#[from] PoolBuilderError),
-        #[error("Invalid database URL")]
         DbUrl(#[from] CreatePoolError),
-        #[error("Invalid database URL")]
         Db(#[from] tokio_postgres::Error),
     }
 }

@@ -299,7 +299,8 @@ pub(crate) fn generate(
     let generated_modules =
         format!("{top_level_comment}\n\n{type_modules}\n\n{query_modules_string}",);
 
-    std::fs::write(destination, generated_modules)?;
+    std::fs::write(destination, generated_modules)
+        .map_err(|err| Error::new(err.into(), destination))?;
 
     Ok(())
 }
@@ -310,10 +311,27 @@ pub(crate) mod error {
     use crate::pg_type::error::UnsupportedPostgresTypeError;
 
     #[derive(Debug, ThisError)]
-    #[error("Encountered an error while generating Rust code")]
-    pub(crate) enum Error {
+    #[error("{0}")]
+    pub(crate) enum ErrorVariants {
         UnsupportedPostgresTypeError(#[from] UnsupportedPostgresTypeError),
-        #[error("error while attempting to write generated modules")]
         Io(#[from] std::io::Error),
+    }
+
+    #[derive(Debug, ThisError)]
+    #[error("Error while trying to write to destination file \"{path}\": {err}.")]
+    pub(crate) struct Error {
+        pub(crate) err: ErrorVariants,
+        pub(crate) path: String,
+    }
+
+    impl Error {
+        pub(crate) fn new(err: ErrorVariants, path: &str) -> Self {
+            Self {
+                path: std::fs::canonicalize(path)
+                    .map(|p| p.to_str().unwrap().to_string())
+                    .unwrap_or_else(|_| String::from(path)),
+                err,
+            }
+        }
     }
 }

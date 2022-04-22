@@ -41,7 +41,7 @@ pub(crate) mod error {
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError)]
-    #[error("error while parsing file")]
+    #[error("{0}")]
     pub(crate) enum Error {
         IO(#[from] std::io::Error),
         Sanitize(#[from] SanitizeError),

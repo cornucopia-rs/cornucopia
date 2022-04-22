@@ -19,5 +19,11 @@ use crate::error::Error;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    run().await
+    let result = run().await;
+    if let Err(e) = &result {
+        eprintln!("{e}");
+        std::process::exit(1);
+    } else {
+        std::process::exit(0);
+    }
 }
