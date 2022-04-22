@@ -8,7 +8,7 @@ use crate::run_migrations::error::Error as MigrationError;
 use deadpool_postgres::CreatePoolError;
 use thiserror::Error as ThisError;
 #[derive(Debug, ThisError)]
-#[error("the program encountered an unexpected error")]
+#[error("{0}")]
 pub(crate) enum Error {
     ReadQueries(#[from] ReadQueriesError),
     Container(#[from] ContainerError),
@@ -19,13 +19,12 @@ pub(crate) enum Error {
     PoolCreation(#[from] CreatePoolError),
     Pool(#[from] deadpool_postgres::PoolError),
     PoolBuilder(#[from] PoolBuilderError),
-    FmtError(#[from] FmtError),
+    Fmt(#[from] FmtError),
 }
 
 #[derive(Debug, ThisError)]
-#[error("`rustfmt` was unable to properly format the generated code. This is probably a bug, and you should report it")]
+#[error("Unable to properly format the generated code.")]
 pub(crate) enum FmtError {
     IO(#[from] std::io::Error),
-    #[error("bad code")]
     RustFmt,
 }

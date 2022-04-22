@@ -1,6 +1,8 @@
 use error::Error;
 use std::fs::File;
 
+use error::ErrorVariants;
+
 /// A query that has been sanitized. The `meta` string should
 /// not contain any whitespace whatsoever, and should be stripped
 /// of SQL comments and the meta-token '--!'.
@@ -19,12 +21,19 @@ pub(crate) fn sanitize(
     let mut sanitized_queries = Vec::new();
     let mut meta = String::new();
     let mut sql = String::new();
+    let mut i = 0;
 
     // Accumulate tokens from each line
     for line in lines {
-        let line_string = line.map_err(|_| Error::UnreadableLine)?.trim().to_owned();
+        let line_string = line
+            .map_err(|_| Error {
+                err: ErrorVariants::UnreadableLine,
+                line: i,
+            })?
+            .trim()
+            .to_owned();
         let line_type = LineType::from_str(&line_string);
-        let next_state = reader_state.next(&line_type)?;
+        let next_state = reader_state.next(i, &line_type)?;
         if line_type.is_ignored() {
             continue;
         } else {
@@ -37,13 +46,23 @@ pub(crate) fn sanitize(
             );
             reader_state = next_state;
         }
+        i += 1;
     }
 
     // Special case for the last line
     match reader_state {
-        QueryReaderState::Uninit => Err(Error::NoQueriesFound),
-        QueryReaderState::CreateNewQuery => Err(Error::MissingSQL),
-        QueryReaderState::AccumulateMeta => Err(Error::MissingSQL),
+        QueryReaderState::Uninit => Err(Error {
+            err: ErrorVariants::NoQueriesFound,
+            line: i,
+        }),
+        QueryReaderState::CreateNewQuery => Err(Error {
+            err: ErrorVariants::MissingSQL,
+            line: i,
+        }),
+        QueryReaderState::AccumulateMeta => Err(Error {
+            err: ErrorVariants::MissingSQL,
+            line: i,
+        }),
         QueryReaderState::AccumulateSQL => {
             sanitized_queries.push(SanitizedQuery { meta, sql });
             Ok(sanitized_queries)
@@ -104,11 +123,14 @@ impl Default for QueryReaderState {
 }
 
 impl QueryReaderState {
-    fn next(&self, line_type: &LineType) -> Result<Self, Error> {
+    fn next(&self, line_nb: usize, line_type: &LineType) -> Result<Self, Error> {
         match self {
             QueryReaderState::Uninit => match line_type {
                 LineType::Meta => Ok(QueryReaderState::CreateNewQuery),
-                LineType::Sql => Err(Error::MissingMeta),
+                LineType::Sql => Err(Error {
+                    err: ErrorVariants::MissingMeta,
+                    line: line_nb,
+                }),
                 _ => Ok(*self),
             },
             QueryReaderState::CreateNewQuery => match line_type {
@@ -177,14 +199,21 @@ pub(crate) mod error {
 
     #[derive(Debug, ThisError)]
     #[error("sanitizing process encountered an error")]
-    pub(crate) enum Error {
-        #[error("query missing meta-comment. Check that every query has a meta-comment")]
+    pub(crate) enum ErrorVariants {
+        #[error("Missing query annotation")]
         MissingMeta,
-        #[error("meta-comment is missing SQL query. Check that every comment has a query")]
+        #[error("Missing SQL query")]
         MissingSQL,
-        #[error("file does not contain any queries")]
+        #[error("File does not contain any queries")]
         NoQueriesFound,
-        #[error("file contains characters that are not valid utf8")]
+        #[error("Line contains characters that are not valid utf8")]
         UnreadableLine,
+    }
+
+    #[derive(Debug, ThisError)]
+    #[error("([Line {line}] {err})")]
+    pub(crate) struct Error {
+        pub(crate) err: ErrorVariants,
+        pub(crate) line: usize,
     }
 }

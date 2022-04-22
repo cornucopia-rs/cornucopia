@@ -1,6 +1,7 @@
 use crate::parse::ParsedQuery;
 use crate::parse_file::parse_file;
-use error::Error;
+
+use self::error::*;
 
 #[derive(Debug)]
 pub(crate) struct Module {
@@ -10,16 +11,16 @@ pub(crate) struct Module {
 
 pub(crate) fn read_queries(path: &str) -> Result<Vec<Module>, Error> {
     let mut modules = Vec::new();
-    for entry_result in std::fs::read_dir(path)? {
-        let entry = entry_result?;
-        let path = entry.path();
+    for entry_result in std::fs::read_dir(path).map_err(|err| Error::new(err.into(), path))? {
+        let entry = entry_result.map_err(|err| Error::new(err.into(), path))?;
+        let path_buf = entry.path();
 
-        if path
+        if path_buf
             .extension()
             .map(|extension| extension == "sql")
             .unwrap_or_default()
         {
-            let module_name = path
+            let module_name = path_buf
                 .file_stem()
                 .expect("is a file")
                 .to_str()
@@ -28,7 +29,8 @@ pub(crate) fn read_queries(path: &str) -> Result<Vec<Module>, Error> {
 
             let module = Module {
                 name: module_name,
-                queries: parse_file(&path)?,
+                queries: parse_file(&path_buf)
+                    .map_err(|err| Error::new(err.into(), path_buf.to_str().unwrap()))?,
             };
 
             modules.push(module);
@@ -44,9 +46,27 @@ pub(crate) mod error {
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError)]
-    #[error("error while reading migrations")]
-    pub(crate) enum Error {
+    #[error("{0}")]
+    pub(crate) enum ErrorVariants {
         Io(#[from] std::io::Error),
         Parser(#[from] FileParserError),
+    }
+
+    #[derive(Debug, ThisError)]
+    #[error("Error while reading query \"{path}\": {err}.")]
+    pub(crate) struct Error {
+        pub(crate) err: ErrorVariants,
+        pub(crate) path: String,
+    }
+
+    impl Error {
+        pub(crate) fn new(err: ErrorVariants, path: &str) -> Self {
+            Self {
+                path: std::fs::canonicalize(path)
+                    .map(|p| p.to_str().unwrap().to_string())
+                    .unwrap_or_else(|_| String::from(path)),
+                err,
+            }
+        }
     }
 }

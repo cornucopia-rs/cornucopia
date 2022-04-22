@@ -359,13 +359,13 @@ impl Default for TypeRegistrar {
 pub(crate) mod error {
     use thiserror::Error as ThisError;
     #[derive(Debug, ThisError)]
-    #[error("encoutered unsupported type `{name}` while parsing queries")]
+    #[error("unsupported type `{name}`")]
     pub(crate) struct UnsupportedPostgresTypeError {
         pub(crate) name: String,
     }
 
     #[derive(Debug, ThisError)]
-    #[error("encountered error while attempting to discover postgres type")]
+    #[error("{0}")]
     pub(crate) enum Error {
         Db(#[from] tokio_postgres::Error),
         UnsupportedPostgresType(#[from] UnsupportedPostgresTypeError),

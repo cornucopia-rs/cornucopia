@@ -73,7 +73,7 @@ pub(crate) mod error {
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError)]
-    #[error("Encountered an error while running migrations")]
+    #[error("{0}")]
     pub(crate) enum Error {
         ReadMigration(#[from] MigrationError),
         Db(#[from] tokio_postgres::Error),
