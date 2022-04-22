@@ -104,16 +104,14 @@ fn remove_container(podman: bool) -> Result<(), RemoveContainerError> {
         Err(RemoveContainerError::Status)
     }
 }
-
 pub(crate) mod error {
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError)]
-    #[error("Error encountered while running docker command. Please check that docker is installed, and that the daemon is running. If you are a Linux user, please check that you are in the `docker` group")]
     pub(crate) enum Error {
-        #[error("couldn't start database container")]
+        #[error("{0}")]
         RunContainer(#[from] RunContainerError),
-        #[error("encountered error while probing database container health")]
+        #[error("Encountered error while probing database container health. If you are using `docker`, please check that the daemon is up-and-running. ")]
         HealthCheck(std::io::Error),
         #[error("couldn't stop database container")]
         StopContainer(#[from] StopContainerError),
@@ -124,7 +122,7 @@ pub(crate) mod error {
     }
 
     #[derive(Debug, ThisError)]
-    #[error("couldn't start database container")]
+    #[error("Couldn't start database container. If you are using `docker`, please check that the daemon is up-and-running.")]
     pub(crate) enum RunContainerError {
         Io(#[from] std::io::Error),
         #[error("command returned with an error status")]
@@ -132,7 +130,7 @@ pub(crate) mod error {
     }
 
     #[derive(Debug, ThisError)]
-    #[error("couldn't stop database container")]
+    #[error("Couldn't stop database container. If you are using `docker`, please check that the daemon is up-and-running.")]
     pub(crate) enum StopContainerError {
         Io(#[from] std::io::Error),
         #[error("command returned with an error status")]
@@ -140,7 +138,7 @@ pub(crate) mod error {
     }
 
     #[derive(Debug, ThisError)]
-    #[error("couldn't clean up database container")]
+    #[error("Couldn't clean up database container. If you are using `docker`, please check that the daemon is up-and-running.")]
     pub(crate) enum RemoveContainerError {
         Io(#[from] std::io::Error),
         #[error("command returned with an error status")]
