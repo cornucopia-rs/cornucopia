@@ -204,6 +204,9 @@ Generated queries take a `GenericClient` as parameter, which accepts both `Clien
 ### Connection pools
 Generated queries take a `GenericClient` as parameter, which accepts both connections from `tokio-postgres` (non-pooled) and `deadpool_postgres` (pooled).
 
+## Automatically generate queries
+You can make use of Rust's build script feature to automatically regenerate your cornucopia queries upon building your crate, only when your SQL has changed. The simplest way to achieve this is simply to call cornucopia's CLI inside your `build.rs` file. You can learn more about this feature in this [example](examples/auto_build/README.md).
+
 ## Supported types
 ### Base types
 | PostgrsQL type                               | Rust type                 |

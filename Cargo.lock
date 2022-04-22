@@ -178,6 +178,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "cornucopia-example-auto-build"
+version = "0.1.0"
+dependencies = [
+ "cornucopia_client 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "deadpool-postgres",
+ "tokio",
+ "tokio-postgres",
+]
+
+[[package]]
 name = "cornucopia-example-basic"
 version = "0.1.0"
 dependencies = [

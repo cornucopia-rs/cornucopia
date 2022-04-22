@@ -1,0 +1,12 @@
+[package]
+name = "cornucopia-example-auto-build"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "1.17.0", features = ["full"] }
+tokio-postgres = "0.7.5"
+cornucopia_client = "0.1.0"
+deadpool-postgres = { version = "0.10.2" }
