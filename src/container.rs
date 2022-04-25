@@ -109,37 +109,37 @@ pub(crate) mod error {
 
     #[derive(Debug, ThisError)]
     pub(crate) enum Error {
-        #[error("{0}")]
+        #[error("Couldn't start database container ({0}). If you are using `docker`, please check that the daemon is up-and-running.")]
         RunContainer(#[from] RunContainerError),
-        #[error("Encountered error while probing database container health. If you are using `docker`, please check that the daemon is up-and-running. ")]
+        #[error("Encountered error while probing database container health. If you are using `docker`, please check that the daemon is up-and-running.")]
         HealthCheck(std::io::Error),
-        #[error("couldn't stop database container")]
+        #[error("Couldn't stop database container ({0}). If you are using `docker`, please check that the daemon is up-and-running.")]
         StopContainer(#[from] StopContainerError),
-        #[error("couldn't clean up database container")]
+        #[error("Couldn't clean up database container ({0}). If you are using `docker`, please check that the daemon is up-and-running.")]
         RemoveContainer(#[from] RemoveContainerError),
-        #[error("max number of retries reached while waiting for database container to start")]
+        #[error("Max number of retries reached while waiting for database container to start. If you are using `docker`, please check that the daemon is up-and-running.")]
         MaxNbRetries,
     }
 
     #[derive(Debug, ThisError)]
-    #[error("Couldn't start database container. If you are using `docker`, please check that the daemon is up-and-running.")]
     pub(crate) enum RunContainerError {
+        #[error("{0}")]
         Io(#[from] std::io::Error),
         #[error("command returned with an error status")]
         Status,
     }
 
     #[derive(Debug, ThisError)]
-    #[error("Couldn't stop database container. If you are using `docker`, please check that the daemon is up-and-running.")]
     pub(crate) enum StopContainerError {
+        #[error("{0}")]
         Io(#[from] std::io::Error),
         #[error("command returned with an error status")]
         Status,
     }
 
     #[derive(Debug, ThisError)]
-    #[error("Couldn't clean up database container. If you are using `docker`, please check that the daemon is up-and-running.")]
     pub(crate) enum RemoveContainerError {
+        #[error("{0}")]
         Io(#[from] std::io::Error),
         #[error("command returned with an error status")]
         Status,
