@@ -4,15 +4,6 @@ pub mod types {
     pub mod public {
         use postgres_types::{FromSql, ToSql};
         #[derive(Debug, ToSql, FromSql)]
-        #[postgres(name = "custom_composite")]
-        #[derive(Clone)]
-        pub struct CustomComposite {
-            pub such_cool: i32,
-            pub wow: String,
-            pub nice: super::public::SpongebobCharacter,
-        }
-
-        #[derive(Debug, ToSql, FromSql)]
         #[postgres(name = "spongebob_character")]
         #[derive(Clone, Copy, PartialEq, Eq)]
         pub enum SpongebobCharacter {
@@ -20,54 +11,19 @@ pub mod types {
             Patrick,
             Squidward,
         }
+
+        #[derive(Debug, ToSql, FromSql)]
+        #[postgres(name = "custom_composite")]
+        #[derive(Clone)]
+        pub struct CustomComposite {
+            pub such_cool: i32,
+            pub wow: String,
+            pub nice: super::public::SpongebobCharacter,
+        }
     }
 }
 
 pub mod queries {
-    pub mod module_1 {
-        use cornucopia_client::GenericClient;
-        use tokio_postgres::Error;
-
-        pub async fn insert_book_one<T: GenericClient>(client: &T) -> Result<(), Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO Book (title)
-VALUES ('bob');
-",
-                )
-                .await?;
-            let _ = client.execute(&stmt, &[]).await?;
-
-            Ok(())
-        }
-
-        pub async fn insert_book_zero_or_one<T: GenericClient>(client: &T) -> Result<(), Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO Book (title)
-VALUES ('alice');
-",
-                )
-                .await?;
-            let _ = client.execute(&stmt, &[]).await?;
-
-            Ok(())
-        }
-
-        pub async fn insert_book_zero_or_more<T: GenericClient>(client: &T) -> Result<(), Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO Book (title)
-VALUES ('carl');
-",
-                )
-                .await?;
-            let _ = client.execute(&stmt, &[]).await?;
-
-            Ok(())
-        }
-    }
-
     pub mod module_2 {
         use cornucopia_client::GenericClient;
         use tokio_postgres::Error;
@@ -314,6 +270,8 @@ WHERE (col1).nice = $1;
             client: &T,
         ) -> Result<
             (
+                Vec<bool>,
+                Vec<super::super::types::public::SpongebobCharacter>,
                 bool,
                 bool,
                 i8,
@@ -362,39 +320,42 @@ Everything;
             let res = client.query_one(&stmt, &[]).await?;
 
             let return_value = {
-                let return_value_0: bool = res.get(0);
-                let return_value_1: bool = res.get(1);
-                let return_value_2: i8 = res.get(2);
-                let return_value_3: i16 = res.get(3);
-                let return_value_4: i16 = res.get(4);
+                let return_value_0: Vec<bool> = res.get(0);
+                let return_value_1: Vec<super::super::types::public::SpongebobCharacter> =
+                    res.get(1);
+                let return_value_2: bool = res.get(2);
+                let return_value_3: bool = res.get(3);
+                let return_value_4: i8 = res.get(4);
                 let return_value_5: i16 = res.get(5);
                 let return_value_6: i16 = res.get(6);
-                let return_value_7: i32 = res.get(7);
-                let return_value_8: i32 = res.get(8);
+                let return_value_7: i16 = res.get(7);
+                let return_value_8: i16 = res.get(8);
                 let return_value_9: i32 = res.get(9);
                 let return_value_10: i32 = res.get(10);
-                let return_value_11: i64 = res.get(11);
-                let return_value_12: i64 = res.get(12);
+                let return_value_11: i32 = res.get(11);
+                let return_value_12: i32 = res.get(12);
                 let return_value_13: i64 = res.get(13);
                 let return_value_14: i64 = res.get(14);
-                let return_value_15: f32 = res.get(15);
-                let return_value_16: f32 = res.get(16);
-                let return_value_17: f64 = res.get(17);
-                let return_value_18: f64 = res.get(18);
-                let return_value_19: String = res.get(19);
-                let return_value_20: String = res.get(20);
-                let return_value_21: Vec<u8> = res.get(21);
-                let return_value_22: time::PrimitiveDateTime = res.get(22);
-                let return_value_23: time::PrimitiveDateTime = res.get(23);
-                let return_value_24: time::OffsetDateTime = res.get(24);
-                let return_value_25: time::OffsetDateTime = res.get(25);
-                let return_value_26: time::Date = res.get(26);
-                let return_value_27: time::Time = res.get(27);
-                let return_value_28: serde_json::Value = res.get(28);
-                let return_value_29: serde_json::Value = res.get(29);
-                let return_value_30: uuid::Uuid = res.get(30);
-                let return_value_31: std::net::IpAddr = res.get(31);
-                let return_value_32: eui48::MacAddress = res.get(32);
+                let return_value_15: i64 = res.get(15);
+                let return_value_16: i64 = res.get(16);
+                let return_value_17: f32 = res.get(17);
+                let return_value_18: f32 = res.get(18);
+                let return_value_19: f64 = res.get(19);
+                let return_value_20: f64 = res.get(20);
+                let return_value_21: String = res.get(21);
+                let return_value_22: String = res.get(22);
+                let return_value_23: Vec<u8> = res.get(23);
+                let return_value_24: time::PrimitiveDateTime = res.get(24);
+                let return_value_25: time::PrimitiveDateTime = res.get(25);
+                let return_value_26: time::OffsetDateTime = res.get(26);
+                let return_value_27: time::OffsetDateTime = res.get(27);
+                let return_value_28: time::Date = res.get(28);
+                let return_value_29: time::Time = res.get(29);
+                let return_value_30: serde_json::Value = res.get(30);
+                let return_value_31: serde_json::Value = res.get(31);
+                let return_value_32: uuid::Uuid = res.get(32);
+                let return_value_33: std::net::IpAddr = res.get(33);
+                let return_value_34: eui48::MacAddress = res.get(34);
                 (
                     return_value_0,
                     return_value_1,
@@ -429,9 +390,55 @@ Everything;
                     return_value_30,
                     return_value_31,
                     return_value_32,
+                    return_value_33,
+                    return_value_34,
                 )
             };
             Ok(return_value)
+        }
+    }
+
+    pub mod module_1 {
+        use cornucopia_client::GenericClient;
+        use tokio_postgres::Error;
+
+        pub async fn insert_book_one<T: GenericClient>(client: &T) -> Result<(), Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO Book (title)
+VALUES ('bob');
+",
+                )
+                .await?;
+            let _ = client.execute(&stmt, &[]).await?;
+
+            Ok(())
+        }
+
+        pub async fn insert_book_zero_or_one<T: GenericClient>(client: &T) -> Result<(), Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO Book (title)
+VALUES ('alice');
+",
+                )
+                .await?;
+            let _ = client.execute(&stmt, &[]).await?;
+
+            Ok(())
+        }
+
+        pub async fn insert_book_zero_or_more<T: GenericClient>(client: &T) -> Result<(), Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO Book (title)
+VALUES ('carl');
+",
+                )
+                .await?;
+            let _ = client.execute(&stmt, &[]).await?;
+
+            Ok(())
         }
     }
 }

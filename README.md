@@ -51,7 +51,7 @@ Cornucopia spawns a `postgres` container when it generates your Rust modules, so
 
 Note that to use docker on linux, **non-sudo users need to be in the docker group**. For a step-by-step guide, please read the official docker [installation](https://docs.docker.com/get-docker/) and [post-installation](https://docs.docker.com/engine/install/linux-postinstall/) docs. 
 
-No special installation steps are needed for `podman`, but note that you will need to pass a CLI flag (`-p` or `--podman`) because cornucopia defaults to `docker`.
+No special installation steps are needed for `podman`, but note that you will need to pass a CLI flag (`-p` or `--podman`) because `cornucopia` defaults to `docker`.
 
 ### Dependencies
 Cornucopia will generate queries powered by the `tokio` runtime through `tokio-postgres`, so you will need add the latest version of these to your `Cargo.toml`. If you wish to use pooled connections, you'll also need `deadpool-postgres`. Finally, you will need the `cornucopia_client` crate, which has only one item: the `GenericClient` trait. You might need more dependencies depending on which features you intend to use. The code block below shows what your dependencies might look like with every feature that `cornucopia` supports enabled:
@@ -80,12 +80,12 @@ You can omit `tokio-postgres` feature flags for `json`, `time`, `uuid`, `eui48` 
 Aside from the dependencies, you will need the `cornucopia` cli to generate your Rust modules. This can be done via a simple `cargo install cornucopia` which will pull the latest binary and install it in your `cargo` path.
 
 ## Concepts
-This section explain a bit more about how cornucopia works. If you just want to get started, you should take a look at the [basic example](https://github.com/LouisGariepy/cornucopia/tree/main/examples/basic).
+This section explain a bit more about how Cornucopia works. If you just want to get started, you should take a look at the [basic example](https://github.com/LouisGariepy/cornucopia/tree/main/examples/basic).
 
 Cornucopia is pretty simple to use. Your migrations and queries should each reside in a dedicated folder, and from there the CLI takes care of the rest for you. In the next sections, we'll explore the basic usage, but feel free to explore the CLI's whole interface using the `--help` option at any point. For convenience, this is also available [in this repository](https://github.com/LouisGariepy/cornucopia/blob/main/cli.md).
 
 ### Migrations
-The basic `cornucopia generate` command spins a new container, runs your migrations, generates your queries and cleanups the container. If you want to manage the database and migrations yourself, use the `cornucopia generate live` command to connect to an arbitrary live database. Keep in mind that your queries must still be otherwise compatible with cornucopia (e.g. with regards to [supported types](https://github.com/LouisGariepy/cornucopia#supported-types) and [annotation syntax](https://github.com/LouisGariepy/cornucopia#query-annotation-syntax).
+The basic `cornucopia generate` command spins a new container, runs your migrations, generates your queries and cleanups the container. If you want to manage the database and migrations yourself, use the `cornucopia generate live` command to connect to an arbitrary live database. Keep in mind that your queries must still be otherwise compatible with Cornucopia (e.g. with regards to [supported types](https://github.com/LouisGariepy/cornucopia#supported-types) and [annotation syntax](https://github.com/LouisGariepy/cornucopia#query-annotation-syntax).
 
 New migrations can be added using the command `cornucopia migration new`. Cornucopia will automatically manage migrations when it generates your Rust modules, but you can also use the command `cornucopia migration run` to run migrations on your production database too if you so desire.
 
@@ -95,7 +95,7 @@ Each `.sql` file in your queries directory will be converted into a Rust module 
 ### Generated modules
 Assume you have the following migration:
 ```sql
-CREATE TABLE Authors (
+CREATE TABLE Author (
     Id SERIAL NOT NULL,
     Name VARCHAR(70) NOT NULL,
     Country VARCHAR(100) NOT NULL,
@@ -105,19 +105,13 @@ CREATE TABLE Authors (
 Then, the following query
 ```sql
 --! authors()*
-SELECT * FROM Authors;
+SELECT * FROM Author;
 ```
 will be turned by `cornucopia` into
 ```rust
-pub async fn authors(client: &Client) -> Result<Vec<(i32, String, String)>, Error> {
-    let stmt = client
-        .prepare_typed_cached(
-            "SELECT * FROM Authors;", &[],
-        )
-        .await?;
-
+pub async fn authors<T: GenericClient>(client: &T) -> Result<Vec<(i32, String, String)>, Error> {
+    let stmt = client.prepare("SELECT * FROM Author;").await?;
     let res = client.query(&stmt, &[]).await?;
-
     let return_value = res
         .iter()
         .map(|res| {
@@ -133,9 +127,9 @@ pub async fn authors(client: &Client) -> Result<Vec<(i32, String, String)>, Erro
 Not bad! The generated function uses prepared statements, a statement cache, and strong typing (Notice how the returned rows' types have been inferred!). This is only a taste of what you can achieve, but should be fairly representative of what's going on under the hood.
 
 ### Query annotation syntax
-As you may have noticed from the previous section, this little comment `--! authors()*` is doing a lot of heavy-lifting for us. It tells `cornucopia` to generate a function named `authors` with no parameters. Since there is no specified return, cornucopia will automatically infer what's being returned. Then, there's the asterisk `*` which signals that this query will return zero or more results. That's how we ended up with a `Vec` return in the generated query in the [section above](#generated-modules).
+As you may have noticed from the previous section, this little comment `--! authors()*` is doing a lot of heavy-lifting for us. It tells `cornucopia` to generate a function named `authors` with no parameters. Since there is no specified return, Cornucopia will automatically infer what's being returned. Then, there's the asterisk `*` which signals that this query will return zero or more results. That's how we ended up with a `Vec` return in the generated query in the [section above](#generated-modules).
 
-Note that comments that do not start with `--!` (e.g. `-- This`) are simply ignored by `cornucopia`, so feel free to use them as you usually would.
+Note that comments that do not start with `--!` (e.g. `-- This`) are simply ignored by Cornucopia, so feel free to use them as you usually would.
 
 So, what else can we do with those annotations? The grammar can be summed up as:
 ```<NAME> (<PARAMS>) <RETURN> <QUANTIFIER>```
@@ -153,7 +147,7 @@ The name of the generated function. It has to be a valid PostgresQL and Rust ide
 
 The parameters of the prepared statement, separated by commas (with an optional trailing comma.) 
 
-The order in which parameters are given corresponds to the parameter number (e.g. the first parameter is `$1` in the statement). **Every PostgreSQL parameter `$i` must have a corresponding parameter in the annotation parameter list**.
+The order in which parameters are given corresponds to the parameter index (e.g. the first parameter is `$1` in the statement). **Every PostgreSQL parameter `$i` must have a corresponding parameter in the annotation parameter list**.
 
 #### Return type
 There are two kinds of returns, implicit and explicit. 
@@ -205,7 +199,7 @@ Generated queries take a `GenericClient` as parameter, which accepts both `Clien
 Generated queries take a `GenericClient` as parameter, which accepts both connections from `tokio-postgres` (non-pooled) and `deadpool_postgres` (pooled).
 
 ## Automatically generate queries
-You can make use of Rust's build script feature to automatically regenerate your cornucopia queries upon building your crate, only when your SQL has changed. The simplest way to achieve this is simply to call cornucopia's CLI inside your `build.rs` file. You can learn more about this feature in this [example](examples/auto_build/README.md).
+You can make use of Rust's build script feature to automatically regenerate your Cornucopia queries upon building your crate, only when your SQL has changed. The simplest way to achieve this is simply to call Cornucopia's CLI inside your `build.rs` file. You can learn more about this feature in this [example](examples/auto_build/README.md).
 
 ## Formatting
 By default, Cornucopia will run `rustfmt` on your your queries to facilitate manual inspection of the code. If you don't want this, or you don't have access to `rustfmt` you can use the `--no-formatting` CLI flag.
@@ -238,6 +232,9 @@ By default, Cornucopia will run `rustfmt` on your your queries to facilitate man
 Cornucopia also supports user-defined `enum`s, `composite`s and `domain`s. Just like base types, custom types will be generated automatically
 by inspecting your database. The only requirement for your custom types is that they be based on other supported types (base or custom).
 Cornucopia is also aware of your types' namespaces (what PostgreSQL calls schemas), so it will correctly handle custom types like `my_schema.my_custom_type`.
+
+### Array types
+Cornucopia supports one-dimensionnal arrays for which the element type is also a type supported . That is, Cornucopia supports `example_elem_type[]` if `example_elem_type` is itself a type supported by Cornucopia (base or custom).
 
 ## MSRV
 This crate uses Rust 2021 edition, which requires at least version 1.56.
