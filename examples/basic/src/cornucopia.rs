@@ -4,21 +4,21 @@ pub mod types {
     pub mod public {
         use postgres_types::{FromSql, ToSql};
         #[derive(Debug, ToSql, FromSql)]
-        #[postgres(name = "spongebob_character")]
-        #[derive(Clone, Copy, PartialEq, Eq)]
-        pub enum SpongebobCharacter {
-            Bob,
-            Patrick,
-            Squidward,
-        }
-
-        #[derive(Debug, ToSql, FromSql)]
         #[postgres(name = "custom_composite")]
         #[derive(Clone)]
         pub struct CustomComposite {
             pub such_cool: i32,
             pub wow: String,
             pub nice: super::public::SpongebobCharacter,
+        }
+
+        #[derive(Debug, ToSql, FromSql)]
+        #[postgres(name = "spongebob_character")]
+        #[derive(Clone, Copy, PartialEq, Eq)]
+        pub enum SpongebobCharacter {
+            Bob,
+            Patrick,
+            Squidward,
         }
     }
 }
@@ -28,41 +28,15 @@ pub mod queries {
         use cornucopia_client::GenericClient;
         use tokio_postgres::Error;
 
-        pub async fn insert_book_one<T: GenericClient>(client: &T) -> Result<(), Error> {
+        pub async fn insert_book<T: GenericClient>(client: &T, title: &str) -> Result<(), Error> {
             let stmt = client
                 .prepare(
                     "INSERT INTO Book (title)
-VALUES ('bob');
+VALUES ($1);
 ",
                 )
                 .await?;
-            let _ = client.execute(&stmt, &[]).await?;
-
-            Ok(())
-        }
-
-        pub async fn insert_book_zero_or_one<T: GenericClient>(client: &T) -> Result<(), Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO Book (title)
-VALUES ('alice');
-",
-                )
-                .await?;
-            let _ = client.execute(&stmt, &[]).await?;
-
-            Ok(())
-        }
-
-        pub async fn insert_book_zero_or_more<T: GenericClient>(client: &T) -> Result<(), Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO Book (title)
-VALUES ('carl');
-",
-                )
-                .await?;
-            let _ = client.execute(&stmt, &[]).await?;
+            let _ = client.execute(&stmt, &[&title]).await?;
 
             Ok(())
         }
@@ -307,6 +281,24 @@ WHERE (col1).nice = $1;
             let res = client.query_one(&stmt, &[&spongebob_character]).await?;
 
             let return_value: super::super::types::public::SpongebobCharacter = res.get(0);
+            Ok(return_value)
+        }
+
+        pub async fn select_translations<T: GenericClient>(
+            client: &T,
+        ) -> Result<Vec<String>, Error> {
+            let stmt = client
+                .prepare(
+                    "SELECT
+Translations
+FROM
+Book;
+",
+                )
+                .await?;
+            let res = client.query_one(&stmt, &[]).await?;
+
+            let return_value: Vec<String> = res.get(0);
             Ok(return_value)
         }
     }

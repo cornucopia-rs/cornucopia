@@ -68,3 +68,9 @@ FROM
     CustomTable
 WHERE (col1).nice = $1;
 
+--! select_translations()
+SELECT
+    Translations
+FROM
+    Book;
+

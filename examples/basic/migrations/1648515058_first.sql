@@ -12,6 +12,7 @@ INSERT INTO Author (Name, Country)
 CREATE TABLE Book (
     Id serial NOT NULL,
     Title varchar(50) NOT NULL,
+    Translations text[] NOT NULL DEFAULT '{}',
     PRIMARY KEY (Id)
 );
 
