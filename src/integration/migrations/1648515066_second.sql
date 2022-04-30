@@ -1,10 +1,4 @@
 -- Write your migration SQL here
-CREATE TYPE spongebob_character AS enum (
-    'Bob',
-    'Patrick',
-    'Squidward'
-);
-
 CREATE TYPE custom_composite AS (
     wow text,
     such_cool integer,

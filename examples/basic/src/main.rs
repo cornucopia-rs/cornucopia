@@ -27,7 +27,10 @@ pub async fn main() {
     // Just don't forget to `.commit()` when you're done.
     {
         let transaction = client.transaction().await.unwrap();
-        println!("{:?}", insert_book_one(&transaction).await.unwrap());
+        println!(
+            "{:?}",
+            insert_book(&transaction, "The Great Gatsby").await.unwrap()
+        );
         println!("{:?}", books(&transaction).await.unwrap());
         transaction.commit().await.unwrap();
     }

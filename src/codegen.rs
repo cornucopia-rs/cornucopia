@@ -60,8 +60,8 @@ pub(crate) fn generate_custom_type(ty: &CornucopiaType) -> String {
             let name = &ty.rust_ty_name;
             format!("#[derive(Clone)]\npub struct {} {{ {} }}", name, fields_str)
         }
-        CornucopiaTypeKind::Base => {
-            panic!("got base type while generating custom types. This is a bug")
+        _ => {
+            panic!("got base or array type while generating custom types. This is a bug.")
         }
     };
 
