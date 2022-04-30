@@ -6,12 +6,12 @@ use serde_json::Map;
 use time::{OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;
 
-use crate::integration::cornucopia_gen::{
+use crate::integration::cornucopia::{
     queries::module_2::{books_opt_ret_param, BooksOptRetParam},
     types::public::SpongebobCharacter,
 };
 
-use super::cornucopia_gen::{self, queries::module_2::select_everything};
+use super::cornucopia::{self, queries::module_2::select_everything};
 use deadpool_postgres::Client;
 
 async fn setup() -> Result<Client, crate::error::Error> {
@@ -66,7 +66,7 @@ async fn integration_test() {
 /// that don't return anything. In this case,
 /// the quantifier should be ignored.
 async fn insert_books_test(client: &Client) -> Result<(), Error> {
-    use cornucopia_gen::queries::module_1::{
+    use cornucopia::queries::module_1::{
         insert_book_one, insert_book_zero_or_more, insert_book_zero_or_one,
     };
 
@@ -78,7 +78,7 @@ async fn insert_books_test(client: &Client) -> Result<(), Error> {
 }
 
 async fn authors_test(client: &Client) -> Result<(), Error> {
-    use cornucopia_gen::queries::module_2::authors;
+    use cornucopia::queries::module_2::authors;
 
     let expected = vec![
         (
@@ -105,7 +105,7 @@ async fn authors_test(client: &Client) -> Result<(), Error> {
 }
 
 async fn books_test(client: &Client) -> Result<(), Error> {
-    use cornucopia_gen::queries::module_2::{books, Books};
+    use cornucopia::queries::module_2::{books, Books};
 
     let expected = vec![
         Books {
@@ -135,7 +135,7 @@ async fn books_test(client: &Client) -> Result<(), Error> {
 }
 
 async fn books_from_author_id_test(client: &Client) -> Result<(), Error> {
-    use cornucopia_gen::queries::module_2::books_from_author_id;
+    use cornucopia::queries::module_2::books_from_author_id;
 
     let expected = vec![
         String::from("Death on the Nile"),
@@ -182,7 +182,7 @@ async fn books_opt_ret_param_test(client: &Client) -> Result<(), Error> {
 }
 
 async fn author_name_by_id_test(client: &Client) -> Result<(), Error> {
-    use cornucopia_gen::queries::module_2::author_name_by_id;
+    use cornucopia::queries::module_2::author_name_by_id;
     let expected = String::from("Agatha Christie");
     let actual = author_name_by_id(client, &1).await?;
 
@@ -196,7 +196,7 @@ async fn author_name_by_id_test(client: &Client) -> Result<(), Error> {
 }
 
 async fn author_name_by_id_opt_test(client: &Client) -> Result<(), Error> {
-    use cornucopia_gen::queries::module_2::author_name_by_id_opt;
+    use cornucopia::queries::module_2::author_name_by_id_opt;
     let expected = None;
     let actual = author_name_by_id_opt(client, &-1).await?;
 
@@ -210,7 +210,7 @@ async fn author_name_by_id_opt_test(client: &Client) -> Result<(), Error> {
 }
 
 async fn author_name_starting_with_test(client: &Client) -> Result<(), Error> {
-    use cornucopia_gen::queries::module_2::author_name_starting_with;
+    use cornucopia::queries::module_2::author_name_starting_with;
     let expected = vec![
         (
             2,
@@ -238,8 +238,8 @@ async fn author_name_starting_with_test(client: &Client) -> Result<(), Error> {
 }
 
 async fn return_custom_type_test(client: &Client) -> Result<(), Error> {
-    use cornucopia_gen::queries::module_2::return_custom_type;
-    use cornucopia_gen::types::public::CustomComposite;
+    use cornucopia::queries::module_2::return_custom_type;
+    use cornucopia::types::public::CustomComposite;
 
     let expected = CustomComposite {
         wow: String::from("Impressive"),
@@ -262,7 +262,7 @@ async fn return_custom_type_test(client: &Client) -> Result<(), Error> {
 }
 
 async fn select_where_custom_type_test(client: &Client) -> Result<(), Error> {
-    use cornucopia_gen::queries::module_2::select_where_custom_type;
+    use cornucopia::queries::module_2::select_where_custom_type;
 
     let actual = select_where_custom_type(client, &SpongebobCharacter::Patrick).await?;
     let expected = SpongebobCharacter::Bob;
@@ -290,6 +290,8 @@ async fn select_everything_test(client: &Client) -> Result<(), Error> {
     .unwrap();
 
     let expected = (
+        vec![true, false],
+        vec![SpongebobCharacter::Bob, SpongebobCharacter::Patrick],
         true,
         true,
         42i8,

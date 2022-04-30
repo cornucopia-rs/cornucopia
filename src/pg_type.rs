@@ -51,6 +51,7 @@ impl CornucopiaType {
         } else {
             format!("&{}", self.rust_ty_usage_path)
         }
+        //TODO: Borrow Vecs
     }
 }
 
@@ -66,6 +67,7 @@ pub(crate) enum CornucopiaTypeKind {
     Composite(Vec<CornucopiaField>),
     Domain(Box<CornucopiaType>),
     Enum(Vec<String>),
+    Array(Box<CornucopiaType>),
 }
 
 impl From<&CornucopiaTypeKind> for Kind {
@@ -82,30 +84,28 @@ impl From<&CornucopiaTypeKind> for Kind {
                 Kind::Domain(domain_base_type.pg_ty.clone())
             }
             CornucopiaTypeKind::Enum(variants) => Kind::Enum(variants.clone()),
+            CornucopiaTypeKind::Array(array_ty) => Kind::Array(array_ty.pg_ty.clone()),
         }
     }
 }
 
 pub(crate) struct TypeRegistrar {
-    pub(crate) base_types: HashMap<String, CornucopiaType>,
+    pub(crate) base_types: HashMap<(String, String), CornucopiaType>,
     pub(crate) custom_types: HashMap<(String, String), CornucopiaType>,
 }
 
 impl TypeRegistrar {
-    pub(crate) fn base_type(&self, alias: &str) -> Option<&CornucopiaType> {
-        self.base_types.get(alias)
+    pub(crate) fn get_base_type(&self, schema: &str, alias: &str) -> Option<&CornucopiaType> {
+        self.base_types.get(&(schema.to_owned(), alias.to_owned()))
     }
 
-    pub(crate) fn custom_type(&self, schema: &str, name: &str) -> Option<&CornucopiaType> {
+    pub(crate) fn get_custom_type(&self, schema: &str, name: &str) -> Option<&CornucopiaType> {
         self.custom_types.get(&(schema.to_owned(), name.to_owned()))
     }
 
     pub(crate) fn get(&self, schema: &str, name: &str) -> Option<&CornucopiaType> {
-        if schema == "pg_catalog" {
-            self.base_type(name)
-        } else {
-            self.custom_type(schema, name)
-        }
+        self.get_base_type(schema, name)
+            .or_else(|| self.get_custom_type(schema, name))
     }
 
     fn new() -> Self {
@@ -115,11 +115,11 @@ impl TypeRegistrar {
         }
     }
 
-    fn insert_base_type(&mut self, alias: &'static str, ty: CornucopiaType) {
-        self.base_types.insert(alias.to_owned(), ty);
+    fn insert_base(&mut self, schema: String, name: String, ty: CornucopiaType) {
+        self.base_types.insert((schema, name), ty);
     }
 
-    fn insert(&mut self, ty: CornucopiaType) {
+    fn insert_custom(&mut self, ty: CornucopiaType) {
         self.custom_types.insert(
             (ty.pg_ty.schema().to_owned(), ty.pg_ty.name().to_owned()),
             ty,
@@ -130,10 +130,10 @@ impl TypeRegistrar {
         client: &Client,
         schema: String,
         name: String,
-    ) -> Result<(String, u32, char, String), tokio_postgres::Error> {
+    ) -> Result<(String, u32, char, char, String), tokio_postgres::Error> {
         let row = client
             .query_one(
-                "SELECT pg_type.oid, pg_type.typtype
+                "SELECT pg_type.oid, pg_type.typtype, pg_type.typcategory
 FROM  pg_type 
 JOIN pg_namespace ON pg_namespace.oid = pg_type.typnamespace
 WHERE pg_type.typname = $1
@@ -141,10 +141,16 @@ AND pg_namespace.nspname = $2;",
                 &[&name, &schema],
             )
             .await?;
-
         let oid: u32 = row.get(0);
         let typtype: i8 = row.get(1);
-        Ok((name, oid, typtype as u8 as char, schema))
+        let typcategory: i8 = row.get(2);
+        Ok((
+            name,
+            oid,
+            typtype as u8 as char,
+            typcategory as u8 as char,
+            schema,
+        ))
     }
 
     async fn enum_variants(
@@ -229,24 +235,46 @@ INNER JOIN pg_namespace ON pg_namespace.oid = ty.typnamespace
             .collect())
     }
 
+    async fn array_elem_type(client: &Client, oid: &u32) -> Result<(String, String), Error> {
+        let row = client
+            .query_one(
+                "
+SELECT pg_namespace.nspname, pg_type.typname 
+from pg_type 
+INNER JOIN pg_namespace
+    ON pg_namespace.oid = pg_type.typnamespace
+WHERE pg_type.typarray = $1;",
+                &[oid],
+            )
+            .await?;
+
+        let schema: String = row.get(0);
+        let name: String = row.get(1);
+
+        //println!("{typtype} {typcategory}");
+
+        Ok((schema, name))
+    }
+
     async fn type_kind(
         &mut self,
         client: &Client,
         name: &str,
         oid: &u32,
         typtype: &char,
+        typcategory: &char,
     ) -> Result<CornucopiaTypeKind, Error> {
-        match typtype {
-            'e' => {
+        match (typtype, typcategory) {
+            ('e', _) => {
                 let variants = Self::enum_variants(client, oid).await?;
                 Ok(CornucopiaTypeKind::Enum(variants))
             }
-            'd' => {
+            ('d', _) => {
                 let (base_name, _, _, base_schema) = Self::domain_base_type(client, oid).await?;
                 let sub_type = self.register(client, base_schema, base_name).await?;
                 Ok(CornucopiaTypeKind::Domain(Box::new(sub_type)))
             }
-            'c' => {
+            ('c', _) => {
                 let fields = Self::composite_fields(client, oid).await?;
                 let mut tokio_pg_fields = Vec::new();
                 for (field_name, field_ty_name, _, _, field_ty_schema) in fields {
@@ -260,6 +288,11 @@ INNER JOIN pg_namespace ON pg_namespace.oid = ty.typnamespace
                     });
                 }
                 Ok(CornucopiaTypeKind::Composite(tokio_pg_fields))
+            }
+            ('b', 'A') => {
+                let (elem_ty_schema, elem_ty_name) = Self::array_elem_type(client, oid).await?;
+                let base_elem_ty = self.register(client, elem_ty_schema, elem_ty_name).await?;
+                Ok(CornucopiaTypeKind::Array(Box::new(base_elem_ty)))
             }
             _ => Err(Error::UnsupportedPostgresType(
                 UnsupportedPostgresTypeError {
@@ -288,22 +321,40 @@ INNER JOIN pg_namespace ON pg_namespace.oid = ty.typnamespace
         if let Some(t) = self.get(&schema, &name) {
             Ok(t.clone())
         } else {
-            let (name, oid, typtype, schema) = Self::type_info(client, schema, name).await?;
-            let kind = self.type_kind(client, &name, &oid, &typtype).await?;
-            let rust_ty_name = name.to_upper_camel_case();
-            let pg_ty = Type::new(name, oid, kind.borrow().into(), schema);
-            let new_type = CornucopiaType::new_custom(pg_ty, kind, rust_ty_name);
-            self.insert(new_type.clone());
-            Ok(new_type)
+            let (name, oid, typtype, typcategory, schema) =
+                Self::type_info(client, schema, name).await?;
+            let kind = self
+                .type_kind(client, &name, &oid, &typtype, &typcategory)
+                .await?;
+            let pg_ty = Type::new(name.clone(), oid, kind.borrow().into(), schema.clone());
+
+            Ok(match &kind {
+                CornucopiaTypeKind::Array(t) => {
+                    let rust_ty_name = format!("Vec<{}>", t.rust_ty_usage_path);
+                    let new_type = CornucopiaType::new_base(t.pg_ty.clone(), rust_ty_name);
+                    self.insert_base(schema, name, new_type.clone());
+                    new_type
+                }
+                _ => {
+                    let rust_ty_name = name.to_upper_camel_case();
+                    let new_type = CornucopiaType::new_custom(pg_ty, kind, rust_ty_name);
+                    self.insert_custom(new_type.clone());
+                    new_type
+                }
+            })
         }
     }
 }
 
-impl<const N: usize> From<[(&'static str, Type, &'static str); N]> for TypeRegistrar {
-    fn from(base_types: [(&'static str, Type, &'static str); N]) -> Self {
+impl<const N: usize> From<[(Type, &'static str); N]> for TypeRegistrar {
+    fn from(base_types: [(Type, &'static str); N]) -> Self {
         let mut registrar = Self::new();
-        for (name, ty, rust_ty_name) in base_types {
-            registrar.insert_base_type(name, CornucopiaType::new_base(ty, rust_ty_name.to_owned()));
+        for (ty, rust_ty_name) in base_types {
+            registrar.insert_base(
+                ty.schema().to_owned(),
+                ty.name().to_owned(),
+                CornucopiaType::new_base(ty.clone(), rust_ty_name.to_owned()),
+            );
         }
         registrar
     }
@@ -312,47 +363,44 @@ impl<const N: usize> From<[(&'static str, Type, &'static str); N]> for TypeRegis
 impl Default for TypeRegistrar {
     fn default() -> Self {
         TypeRegistrar::from([
-            ("bool", Type::BOOL, "bool"),
-            ("boolean", Type::BOOL, "bool"),
-            ("char", Type::CHAR, "i8"),
-            ("smallint", Type::INT2, "i16"),
-            ("int2", Type::INT2, "i16"),
-            ("smallserial", Type::INT2, "i16"),
-            ("serial2", Type::INT2, "i16"),
-            ("int", Type::INT4, "i32"),
-            ("int4", Type::INT4, "i32"),
-            ("serial", Type::INT4, "i32"),
-            ("serial4", Type::INT4, "i32"),
-            ("bigint", Type::INT8, "i64"),
-            ("int8", Type::INT8, "i64"),
-            ("bigserial", Type::INT8, "i64"),
-            ("serial8", Type::INT8, "i64"),
-            ("float4", Type::FLOAT4, "f32"),
-            ("real", Type::FLOAT4, "f32"),
-            ("float8", Type::FLOAT8, "f64"),
-            ("double precision", Type::FLOAT8, "f64"),
-            ("text", Type::TEXT, "String"),
-            ("varchar", Type::VARCHAR, "String"),
-            ("bytea", Type::BYTEA, "Vec<u8>"),
-            ("timestamp", Type::TIMESTAMP, "time::PrimitiveDateTime"),
-            (
-                "timestamp without time zone",
-                Type::TIMESTAMP,
-                "time::PrimitiveDateTime",
-            ),
-            ("timestamptz", Type::TIMESTAMPTZ, "time::OffsetDateTime"),
-            (
-                "timestamp with time zone",
-                Type::TIMESTAMPTZ,
-                "time::OffsetDateTime",
-            ),
-            ("date", Type::DATE, "time::Date"),
-            ("time", Type::TIME, "time::Time"),
-            ("json", Type::JSON, "serde_json::Value"),
-            ("jsonb", Type::JSONB, "serde_json::Value"),
-            ("uuid", Type::UUID, "uuid::Uuid"),
-            ("inet", Type::INET, "std::net::IpAddr"),
-            ("macaddr", Type::MACADDR, "eui48::MacAddress"),
+            (Type::BOOL, "bool"),
+            (Type::CHAR, "i8"),
+            (Type::INT2, "i16"),
+            (Type::INT4, "i32"),
+            (Type::INT8, "i64"),
+            (Type::FLOAT4, "f32"),
+            (Type::FLOAT8, "f64"),
+            (Type::TEXT, "String"),
+            (Type::VARCHAR, "String"),
+            (Type::BYTEA, "Vec<u8>"),
+            (Type::TIMESTAMP, "time::PrimitiveDateTime"),
+            (Type::TIMESTAMPTZ, "time::OffsetDateTime"),
+            (Type::DATE, "time::Date"),
+            (Type::TIME, "time::Time"),
+            (Type::JSON, "serde_json::Value"),
+            (Type::JSONB, "serde_json::Value"),
+            (Type::UUID, "uuid::Uuid"),
+            (Type::INET, "std::net::IpAddr"),
+            (Type::MACADDR, "eui48::MacAddress"),
+            (Type::BOOL_ARRAY, "Vec<bool>"),
+            (Type::CHAR_ARRAY, "Vec<i8>"),
+            (Type::INT2_ARRAY, "Vec<i16>"),
+            (Type::INT4_ARRAY, "Vec<i32>"),
+            (Type::INT8_ARRAY, "Vec<i64>"),
+            (Type::FLOAT4_ARRAY, "Vec<f32>"),
+            (Type::FLOAT8_ARRAY, "Vec<f64>"),
+            (Type::TEXT_ARRAY, "Vec<String>"),
+            (Type::VARCHAR_ARRAY, "Vec<String>"),
+            (Type::BYTEA_ARRAY, "Vec<Vec<u8>>"),
+            (Type::TIMESTAMP_ARRAY, "Vec<time::PrimitiveDateTime>"),
+            (Type::TIMESTAMPTZ_ARRAY, "Vec<time::OffsetDateTime>"),
+            (Type::DATE_ARRAY, "Vec<time::Date>"),
+            (Type::TIME_ARRAY, "Vec<time::Time>"),
+            (Type::JSON_ARRAY, "Vec<serde_json::Value>"),
+            (Type::JSONB_ARRAY, "Vec<serde_json::Value>"),
+            (Type::UUID_ARRAY, "Vec<uuid::Uuid>"),
+            (Type::INET_ARRAY, "Vec<std::net::IpAddr>"),
+            (Type::MACADDR_ARRAY, "Vec<eui48::MacAddress>"),
         ])
     }
 }
