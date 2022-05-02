@@ -8,6 +8,8 @@ use crate::pg_type::TypeRegistrar;
 use deadpool_postgres::{Client, Object};
 use error::Error;
 
+use error::ErrorVariant;
+
 use super::read_queries::Module;
 
 #[derive(Debug)]
@@ -52,7 +54,7 @@ async fn prepare_module(
 ) -> Result<PreparedModule, Error> {
     let mut queries = Vec::new();
     for query in module.queries {
-        queries.push(prepare_query(client, type_registrar, query, &module.name).await?);
+        queries.push(prepare_query(client, type_registrar, query, &module.path).await?);
     }
     Ok(PreparedModule {
         name: module.name,
@@ -64,22 +66,38 @@ async fn prepare_query(
     client: &Client,
     type_registrar: &mut TypeRegistrar,
     query: ParsedQuery,
-    module: &str,
+    module_path: &str,
 ) -> Result<PreparedQuery, Error> {
-    let stmt = client.prepare(&query.sql).await?;
+    let stmt = client.prepare(&query.sql).await.map_err(|e| Error {
+        line: Some(query.line),
+        err: e.into(),
+        path: String::from(module_path),
+        name: query.meta.name.clone(),
+    })?;
 
     let mut param_types = Vec::new();
     for param in stmt.params() {
-        let param_type = type_registrar.register_type(client, param).await?;
+        let param_type = type_registrar
+            .register_type(client, param)
+            .await
+            .map_err(|e| Error {
+                line: Some(query.line),
+                err: e.into(),
+                path: String::from(module_path),
+                name: query.meta.name.clone(),
+            })?;
         param_types.push(param_type);
     }
 
     if query.meta.params.len() != param_types.len() {
-        return Err(Error::NbParameters {
-            module: module.to_owned(),
+        return Err(Error {
+            err: ErrorVariant::NbParameters {
+                expected: param_types.len(),
+                actual: query.meta.params.len(),
+            },
             name: query.meta.name,
-            expected: query.meta.params.len(),
-            actual: param_types.len(),
+            line: Some(query.line),
+            path: String::from(module_path),
         });
     }
 
@@ -94,7 +112,15 @@ async fn prepare_query(
     let ret = {
         let mut return_types = Vec::new();
         for column in stmt.columns() {
-            let ty = type_registrar.register_type(client, column.type_()).await?;
+            let ty = type_registrar
+                .register_type(client, column.type_())
+                .await
+                .map_err(|e| Error {
+                    line: Some(query.line),
+                    err: e.into(),
+                    path: String::from(module_path),
+                    name: query.meta.name.clone(),
+                })?;
             return_types.push(ty);
         }
 
@@ -129,23 +155,62 @@ async fn prepare_query(
 }
 
 pub(crate) mod error {
+    use std::fmt::Display;
+
     use crate::pg_type::error::Error as PostgresTypeError;
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError)]
     #[error("{0}")]
-    pub(crate) enum Error {
+    pub(crate) enum ErrorVariant {
         Db(#[from] tokio_postgres::Error),
         Pool(#[from] deadpool_postgres::PoolError),
-        #[error(
-            "invalid number of parameters in {module}::{name}. Expected {expected}, got {actual}"
-        )]
+        #[error("Invalid number of parameters (expected {expected}, got {actual})")]
         NbParameters {
-            module: String,
-            name: String,
             expected: usize,
             actual: usize,
         },
         PostgresType(#[from] PostgresTypeError),
     }
+
+    #[derive(Debug)]
+    pub(crate) struct Error {
+        pub(crate) name: String,
+        pub(crate) line: Option<usize>,
+        pub(crate) err: ErrorVariant,
+        pub(crate) path: String,
+    }
+
+    impl Display for Error {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match &self.err {
+                ErrorVariant::Db(e) => write!(
+                    f,
+                    "Error while preparing query \"{}\" [file: \"{}\", line: {}] ({}).",
+                    self.name,
+                    self.path,
+                    self.line.unwrap_or_default(),
+                    e.as_db_error().unwrap().message()
+                ),
+                _ => match self.line {
+                    Some(line) => {
+                        write!(
+                            f,
+                            "Error while preparing query \"{}\" [file: \"{}\", line: {}]: {}.",
+                            self.name, self.path, line, self.err
+                        )
+                    }
+                    None => {
+                        write!(
+                            f,
+                            "Error while preparing query \"{}\" [file: \"{}\"]: {}.",
+                            self.name, self.path, self.err
+                        )
+                    }
+                },
+            }
+        }
+    }
+
+    impl std::error::Error for Error {}
 }
