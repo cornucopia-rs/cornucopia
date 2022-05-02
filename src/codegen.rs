@@ -9,6 +9,8 @@ use crate::{
     prepare_queries::{PreparedQuery, RustReturnType},
 };
 
+use self::error::WriteFileError;
+
 use super::prepare_queries::PreparedModule;
 
 pub(crate) fn generate_query(module_name: &str, query: &PreparedQuery) -> Result<String, Error> {
@@ -32,7 +34,7 @@ pub(crate) fn generate_query(module_name: &str, query: &PreparedQuery) -> Result
     Ok(query_string)
 }
 
-pub(crate) fn generate_custom_type(ty: &CornucopiaType) -> String {
+pub(crate) fn generate_custom_type(ty: &CornucopiaType) -> Result<String, Error> {
     let type_def = match &ty.kind {
         CornucopiaTypeKind::Enum(variants) => {
             let name = &ty.rust_ty_name;
@@ -60,19 +62,17 @@ pub(crate) fn generate_custom_type(ty: &CornucopiaType) -> String {
             let name = &ty.rust_ty_name;
             format!("#[derive(Clone)]\npub struct {} {{ {} }}", name, fields_str)
         }
-        _ => {
-            panic!("got base or array type while generating custom types. This is a bug.")
-        }
+        _ => return Err(Error::NonBaseType),
     };
 
-    format!(
+    Ok(format!(
         "#[derive(Debug, ToSql, FromSql)]\n#[postgres(name = \"{}\")]\n{}",
         ty.pg_ty.name(),
         type_def
-    )
+    ))
 }
 
-pub(crate) fn generate_type_modules(type_registrar: &TypeRegistrar) -> String {
+pub(crate) fn generate_type_modules(type_registrar: &TypeRegistrar) -> Result<String, Error> {
     let mut modules = HashMap::<String, Vec<CornucopiaType>>::new();
     for ((schema, _), ty) in &type_registrar.custom_types {
         match modules.entry(schema.to_owned()) {
@@ -90,14 +90,16 @@ pub(crate) fn generate_type_modules(type_registrar: &TypeRegistrar) -> String {
             let tys_str = tys
                 .iter()
                 .map(generate_custom_type)
-                .collect::<Vec<String>>()
+                .collect::<Result<Vec<String>, Error>>()?
                 .join("\n\n");
-            format!("pub mod {mod_name} {{ use postgres_types::{{FromSql, ToSql}}; {tys_str} }}")
+            Ok(format!(
+                "pub mod {mod_name} {{ use postgres_types::{{FromSql, ToSql}}; {tys_str} }}"
+            ))
         })
-        .collect::<Vec<String>>()
+        .collect::<Result<Vec<String>, Error>>()?
         .join("\n\n");
 
-    format!("pub mod types {{ {schema_modules} }}")
+    Ok(format!("pub mod types {{ {schema_modules} }}"))
 }
 
 pub(crate) fn generate_query_struct(query: &PreparedQuery) -> Result<Option<String>, Error> {
@@ -277,7 +279,7 @@ pub(crate) fn generate(
     destination: &str,
 ) -> Result<(), Error> {
     let query_imports = "use cornucopia_client::GenericClient;\nuse tokio_postgres::Error;";
-    let type_modules = generate_type_modules(type_registrar);
+    let type_modules = generate_type_modules(type_registrar)?;
 
     let mut query_modules = Vec::new();
     for module in modules {
@@ -297,10 +299,14 @@ pub(crate) fn generate(
     let top_level_comment = "// This file was generated with `cornucopia`. Do not modify.";
 
     let generated_modules =
-        format!("{top_level_comment}\n\n{type_modules}\n\n{query_modules_string}",);
+        format!("{top_level_comment}\n\n{type_modules}\n\n{query_modules_string}");
 
-    std::fs::write(destination, generated_modules)
-        .map_err(|err| Error::new(err.into(), destination))?;
+    std::fs::write(destination, generated_modules).map_err(|err| {
+        Error::Io(WriteFileError {
+            err,
+            path: String::from(destination),
+        })
+    })?;
 
     Ok(())
 }
@@ -308,30 +314,18 @@ pub(crate) fn generate(
 pub(crate) mod error {
     use thiserror::Error as ThisError;
 
-    use crate::pg_type::error::UnsupportedPostgresTypeError;
-
     #[derive(Debug, ThisError)]
     #[error("{0}")]
-    pub(crate) enum ErrorVariants {
-        UnsupportedPostgresTypeError(#[from] UnsupportedPostgresTypeError),
-        Io(#[from] std::io::Error),
+    pub(crate) enum Error {
+        Io(#[from] WriteFileError),
+        #[error("Got base or array type while generating custom types. This is a bug.")]
+        NonBaseType,
     }
 
     #[derive(Debug, ThisError)]
     #[error("Error while trying to write to destination file \"{path}\": {err}.")]
-    pub(crate) struct Error {
-        pub(crate) err: ErrorVariants,
+    pub(crate) struct WriteFileError {
+        pub(crate) err: std::io::Error,
         pub(crate) path: String,
-    }
-
-    impl Error {
-        pub(crate) fn new(err: ErrorVariants, path: &str) -> Self {
-            Self {
-                path: std::fs::canonicalize(path)
-                    .map(|p| p.to_str().unwrap().to_string())
-                    .unwrap_or_else(|_| String::from(path)),
-                err,
-            }
-        }
     }
 }

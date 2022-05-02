@@ -8,6 +8,7 @@ use error::ErrorVariants;
 /// of SQL comments and the meta-token '--!'.
 #[derive(Default)]
 pub(crate) struct SanitizedQuery {
+    pub(crate) line: usize,
     pub(crate) meta: String,
     pub(crate) sql: String,
 }
@@ -28,13 +29,14 @@ pub(crate) fn sanitize(
         let line_string = line
             .map_err(|_| Error {
                 err: ErrorVariants::UnreadableLine,
-                line: i,
+                line: i + 1,
             })?
             .trim()
             .to_owned();
         let line_type = LineType::from_str(&line_string);
-        let next_state = reader_state.next(i, &line_type)?;
+        let next_state = reader_state.next(i + 1, &line_type)?;
         if line_type.is_ignored() {
+            i += 1;
             continue;
         } else {
             reader_state.accumulate(
@@ -53,18 +55,22 @@ pub(crate) fn sanitize(
     match reader_state {
         QueryReaderState::Uninit => Err(Error {
             err: ErrorVariants::NoQueriesFound,
-            line: i,
+            line: i + 1,
         }),
-        QueryReaderState::CreateNewQuery => Err(Error {
+        QueryReaderState::CreateNewQuery { .. } => Err(Error {
             err: ErrorVariants::MissingSQL,
-            line: i,
+            line: i + 1,
         }),
-        QueryReaderState::AccumulateMeta => Err(Error {
+        QueryReaderState::AccumulateMeta { starting_line } => Err(Error {
             err: ErrorVariants::MissingSQL,
-            line: i,
+            line: starting_line,
         }),
-        QueryReaderState::AccumulateSQL => {
-            sanitized_queries.push(SanitizedQuery { meta, sql });
+        QueryReaderState::AccumulateSQL { starting_line } => {
+            sanitized_queries.push(SanitizedQuery {
+                line: starting_line,
+                meta,
+                sql,
+            });
             Ok(sanitized_queries)
         }
     }
@@ -111,9 +117,16 @@ impl LineType {
 #[derive(Debug, PartialEq, Clone, Copy)]
 enum QueryReaderState {
     Uninit,
-    CreateNewQuery,
-    AccumulateMeta,
-    AccumulateSQL,
+    CreateNewQuery {
+        previous_starting_line: usize,
+        new_starting_line: usize,
+    },
+    AccumulateMeta {
+        starting_line: usize,
+    },
+    AccumulateSQL {
+        starting_line: usize,
+    },
 }
 
 impl Default for QueryReaderState {
@@ -126,26 +139,38 @@ impl QueryReaderState {
     fn next(&self, line_nb: usize, line_type: &LineType) -> Result<Self, Error> {
         match self {
             QueryReaderState::Uninit => match line_type {
-                LineType::Meta => Ok(QueryReaderState::CreateNewQuery),
+                LineType::Meta => Ok(QueryReaderState::CreateNewQuery {
+                    previous_starting_line: line_nb,
+                    new_starting_line: line_nb,
+                }),
                 LineType::Sql => Err(Error {
                     err: ErrorVariants::MissingMeta,
                     line: line_nb,
                 }),
                 _ => Ok(*self),
             },
-            QueryReaderState::CreateNewQuery => match line_type {
-                LineType::Meta => Ok(QueryReaderState::AccumulateMeta),
-                LineType::Sql => Ok(QueryReaderState::AccumulateSQL),
+            &QueryReaderState::CreateNewQuery {
+                new_starting_line, ..
+            } => match line_type {
+                LineType::Meta => Ok(QueryReaderState::AccumulateMeta {
+                    starting_line: new_starting_line,
+                }),
+                LineType::Sql => Ok(QueryReaderState::AccumulateSQL {
+                    starting_line: new_starting_line,
+                }),
                 _ => Ok(*self),
             },
-            QueryReaderState::AccumulateMeta => match line_type {
-                LineType::Meta => Ok(QueryReaderState::AccumulateMeta),
-                LineType::Sql => Ok(QueryReaderState::AccumulateSQL),
+            &QueryReaderState::AccumulateMeta { starting_line } => match line_type {
+                LineType::Meta => Ok(QueryReaderState::AccumulateMeta { starting_line }),
+                LineType::Sql => Ok(QueryReaderState::AccumulateSQL { starting_line }),
                 _ => Ok(*self),
             },
-            QueryReaderState::AccumulateSQL => match line_type {
-                LineType::Meta => Ok(QueryReaderState::CreateNewQuery),
-                LineType::Sql => Ok(QueryReaderState::AccumulateSQL),
+            &QueryReaderState::AccumulateSQL { starting_line } => match line_type {
+                LineType::Meta => Ok(QueryReaderState::CreateNewQuery {
+                    previous_starting_line: starting_line,
+                    new_starting_line: line_nb,
+                }),
+                LineType::Sql => Ok(QueryReaderState::AccumulateSQL { starting_line }),
                 _ => Ok(*self),
             },
         }
@@ -160,20 +185,24 @@ impl QueryReaderState {
     ) {
         match &new_state {
             QueryReaderState::Uninit => (),
-            QueryReaderState::AccumulateMeta => {
+            QueryReaderState::AccumulateMeta { .. } => {
                 // Trim unwanted tokens ('--!', ' ', '\t')
                 let sanitized = sanitize_meta(line_str);
                 // Push to accumulator
                 meta.push_str(&sanitized)
             }
-            QueryReaderState::AccumulateSQL => {
+            QueryReaderState::AccumulateSQL { .. } => {
                 // Push new SQL line to accumulator.
                 sql.push_str(&format!("{}\n", line_str))
             }
-            QueryReaderState::CreateNewQuery => {
+            QueryReaderState::CreateNewQuery {
+                previous_starting_line,
+                ..
+            } => {
                 if &QueryReaderState::Uninit != self {
                     // Push accumulators to sanitized queries
                     sanitized_queries.push(SanitizedQuery {
+                        line: *previous_starting_line,
                         meta: meta.clone(),
                         sql: sql.clone(),
                     });
@@ -198,7 +227,6 @@ pub(crate) mod error {
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError)]
-    #[error("sanitizing process encountered an error")]
     pub(crate) enum ErrorVariants {
         #[error("Missing query annotation")]
         MissingMeta,
@@ -211,7 +239,7 @@ pub(crate) mod error {
     }
 
     #[derive(Debug, ThisError)]
-    #[error("([Line {line}] {err})")]
+    #[error("{err}")]
     pub(crate) struct Error {
         pub(crate) err: ErrorVariants,
         pub(crate) line: usize,

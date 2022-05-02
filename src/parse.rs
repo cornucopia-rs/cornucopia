@@ -8,6 +8,7 @@ struct CornucopiaParser;
 
 #[derive(Debug)]
 pub(crate) struct ParsedQuery {
+    pub(crate) line: usize,
     pub(crate) meta: ParsedQueryMeta,
     pub(crate) sql: String,
 }
@@ -108,13 +109,15 @@ fn parse_quantifier(pair: Pair<Rule>) -> Quantifier {
 }
 
 pub(crate) mod error {
+
     use crate::{parse::Rule, pg_type::error::UnsupportedPostgresTypeError};
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError)]
-    #[error("\n{0}")]
     pub(crate) enum Error {
+        #[error("{0}")]
         UnsupportedPostgresType(#[from] UnsupportedPostgresTypeError),
+        #[error("\n{0}")]
         Pest(#[from] pest::error::Error<Rule>),
     }
 }

@@ -6,7 +6,7 @@ FROM
 
 --! books() {title}*
 SELECT
-    Title
+    Title::asd
 FROM
     Book;
 
