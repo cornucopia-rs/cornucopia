@@ -58,20 +58,20 @@ Cornucopia will generate queries powered by the `tokio` runtime through `tokio-p
 ```toml
 # Cargo.toml
 [dependencies]
-tokio = { version = "1.17.0", features = ["full"] }
+tokio = { version = "1.18.1", features = ["full"] }
 deadpool-postgres = { version = "0.10.2" }
-postgres-types = { version = "0.2.2", features = ["derive"] }
-tokio-postgres = { version = "0.7.5", features = [
+postgres-types = { version = "0.2.3", features = ["derive"] }
+tokio-postgres = { version = "0.7.6", features = [
     "with-serde_json-1",
     "with-time-0_3",
-    "with-uuid-0_8",
+    "with-uuid-1",
     "with-eui48-1",
 ] }
 cornucopia_client = "0.1.0"
-serde = { version = "1.0.136", features = ["derive"] }
-serde_json = "1.0.79"
+serde = { version = "1.0.137", features = ["derive"] }
+serde_json = "1.0.80"
 time = "0.3.9"
-uuid = "0.8.2"
+uuid = "1.0.0"
 eui48 = "1.1.0"
 ```
 You can omit `tokio-postgres` feature flags for `json`, `time`, `uuid`, `eui48` and their corresponding crates if you don't need them.
