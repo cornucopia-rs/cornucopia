@@ -1,10 +1,12 @@
 # Example
 ## Before starting
-Please follow the the [install procedure](../../README.md#install). Before running CLI commands, we encourage you to explore its interface, either via the `--help` flag, or by taking a look at this [document](https://github.com/LouisGariepy/cornucopia/blob/main/cli.md).
+Please follow the the [install procedure](../../README.md#install) to ensure you're ready to get started. Before running CLI commands, you can take a look at its interface, either via the `--help` flag, or by reading this [document](https://github.com/LouisGariepy/cornucopia/blob/main/cli.md).
 
 ## Take a look!
-This crate contains a fully working example. There are a few queries and migrations defined for you in the `migrations/` and `queries/` folders. The Rust modules have already been generated in the `src/cornucopia.rs` file. Finally, in `src/main.rs` you can see the queries in action, as you would use them in your own project. Taking a look should give you a solid idea of what `cornucopia` is about, enough to get you started in your own project. **Bear in mind that while it is instructive to look at this example, you will need a live database to execute the main file of this example since it will actually try to connect to a database and run the queries.**. 
+This crate contains a fully working example of what a Cornucopia project can look like. There are a few queries and migrations defined for you in the `migrations/` and `queries/` folders. Please bear in mind the used SQL is for demonstration purposes only.
+The Rust modules have already been generated in the `src/cornucopia.rs` file. 
 
+In `src/main.rs` you can see the queries in action, as you would use them in your own project. Seeing how the queries are used should give you a solid idea of what `cornucopia` is about, enough to get you started in your own project.
 ## (Optional) Running the example
 If you want to be able to run this example, you should
 * Have a reachable postgres database up-and-running (container or otherwise).

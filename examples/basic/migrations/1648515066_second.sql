@@ -6,9 +6,9 @@ CREATE TYPE spongebob_character AS enum (
 );
 
 CREATE TYPE custom_composite AS (
-    wow text,
-    such_cool integer,
-    nice spongebob_character
+    name text,
+    age integer,
+    persona spongebob_character
 );
 
 CREATE TABLE CustomTable (
@@ -17,7 +17,7 @@ CREATE TABLE CustomTable (
 );
 
 INSERT INTO CustomTable (col1, col2)
-    VALUES (ROW('incredible', 42, 'Patrick'), 'Bob');
+    VALUES (ROW ('incredible', 42, 'Patrick'), 'Bob');
 
 CREATE TABLE BookAuthor (
     AuthorId int NOT NULL,

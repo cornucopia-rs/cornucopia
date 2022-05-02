@@ -4,21 +4,21 @@ pub mod types {
     pub mod public {
         use postgres_types::{FromSql, ToSql};
         #[derive(Debug, ToSql, FromSql)]
-        #[postgres(name = "custom_composite")]
-        #[derive(Clone)]
-        pub struct CustomComposite {
-            pub such_cool: i32,
-            pub wow: String,
-            pub nice: super::public::SpongebobCharacter,
-        }
-
-        #[derive(Debug, ToSql, FromSql)]
         #[postgres(name = "spongebob_character")]
         #[derive(Clone, Copy, PartialEq, Eq)]
         pub enum SpongebobCharacter {
             Bob,
             Patrick,
             Squidward,
+        }
+
+        #[derive(Debug, ToSql, FromSql)]
+        #[postgres(name = "custom_composite")]
+        #[derive(Clone)]
+        pub struct CustomComposite {
+            pub age: i32,
+            pub name: String,
+            pub persona: super::public::SpongebobCharacter,
         }
     }
 }
@@ -274,7 +274,7 @@ CustomTable;
 col2
 FROM
 CustomTable
-WHERE (col1).nice = $1;
+WHERE (col1).persona = $1;
 ",
                 )
                 .await?;

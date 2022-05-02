@@ -66,7 +66,7 @@ SELECT
     col2
 FROM
     CustomTable
-WHERE (col1).nice = $1;
+WHERE (col1).persona = $1;
 
 --! select_translations()
 SELECT
