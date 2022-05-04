@@ -4,9 +4,16 @@ SELECT
 FROM
     Author;
 
+--! authors_raw(name, country) #
+SELECT
+    *
+FROM
+    Author
+WHERE Author.Name = $1 AND Author.Country = $2;
+
 --! books() {title}*
 SELECT
-    Title::asd
+    Title
 FROM
     Book;
 

@@ -161,7 +161,7 @@ version = "0.6.1"
 dependencies = [
  "async-recursion",
  "clap",
- "cornucopia_client 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cornucopia_client 0.1.0",
  "deadpool-postgres",
  "eui48",
  "heck",

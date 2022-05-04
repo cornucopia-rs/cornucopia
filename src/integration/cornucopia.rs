@@ -4,15 +4,6 @@ pub mod types {
     pub mod public {
         use postgres_types::{FromSql, ToSql};
         #[derive(Debug, ToSql, FromSql)]
-        #[postgres(name = "spongebob_character")]
-        #[derive(Clone, Copy, PartialEq, Eq)]
-        pub enum SpongebobCharacter {
-            Bob,
-            Patrick,
-            Squidward,
-        }
-
-        #[derive(Debug, ToSql, FromSql)]
         #[postgres(name = "custom_composite")]
         #[derive(Clone)]
         pub struct CustomComposite {
@@ -20,10 +11,60 @@ pub mod types {
             pub wow: String,
             pub nice: super::public::SpongebobCharacter,
         }
+
+        #[derive(Debug, ToSql, FromSql)]
+        #[postgres(name = "spongebob_character")]
+        #[derive(Clone, Copy, PartialEq, Eq)]
+        pub enum SpongebobCharacter {
+            Bob,
+            Patrick,
+            Squidward,
+        }
     }
 }
 
 pub mod queries {
+    pub mod module_1 {
+        use cornucopia_client::GenericClient;
+        use tokio_postgres::Error;
+
+        pub async fn insert_book_one<T: GenericClient>(client: &T) -> Result<(), Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO Book (title)
+VALUES ('bob');
+",
+                )
+                .await?;
+            let _ = client.execute(&stmt, &[]).await?;
+            Ok(())
+        }
+
+        pub async fn insert_book_zero_or_one<T: GenericClient>(client: &T) -> Result<(), Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO Book (title)
+VALUES ('alice');
+",
+                )
+                .await?;
+            let _ = client.execute(&stmt, &[]).await?;
+            Ok(())
+        }
+
+        pub async fn insert_book_zero_or_more<T: GenericClient>(client: &T) -> Result<(), Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO Book (title)
+VALUES ('carl');
+",
+                )
+                .await?;
+            let _ = client.execute(&stmt, &[]).await?;
+            Ok(())
+        }
+    }
+
     pub mod module_2 {
         use cornucopia_client::GenericClient;
         use tokio_postgres::Error;
@@ -41,7 +82,6 @@ Author;
                 )
                 .await?;
             let res = client.query(&stmt, &[]).await?;
-
             let return_value = res
                 .iter()
                 .map(|res| {
@@ -52,6 +92,26 @@ Author;
                 })
                 .collect::<Vec<(i32, String, String)>>();
             Ok(return_value)
+        }
+
+        pub async fn authors_raw<T: GenericClient>(
+            client: &T,
+            name: &str,
+            country: &str,
+        ) -> Result<tokio_postgres::RowStream, Error> {
+            let stmt = client
+                .prepare(
+                    "SELECT
+*
+FROM
+Author
+WHERE Author.Name = $1 AND Author.Country = $2;
+",
+                )
+                .await?;
+            let params: [&dyn postgres_types::ToSql; 2] = [&name, &country];
+            let res = client.query_raw(&stmt, params).await?;
+            Ok(res)
         }
 
         #[derive(Debug, Clone, PartialEq)]
@@ -71,7 +131,6 @@ Book;
                 )
                 .await?;
             let res = client.query(&stmt, &[]).await?;
-
             let return_value = res
                 .iter()
                 .map(|res| {
@@ -101,7 +160,6 @@ Book;
                 )
                 .await?;
             let res = client.query(&stmt, &[]).await?;
-
             let return_value = res
                 .iter()
                 .map(|res| {
@@ -132,7 +190,6 @@ Author.Id = $1;
                 )
                 .await?;
             let res = client.query(&stmt, &[&id]).await?;
-
             let return_value = res
                 .iter()
                 .map(|row| {
@@ -159,7 +216,6 @@ Author.Id = $1;
                 )
                 .await?;
             let res = client.query_opt(&stmt, &[&id]).await?;
-
             let return_value = res.map(|row| {
                 let value: String = row.get(0);
                 value
@@ -183,7 +239,6 @@ Author.Id = $1;
                 )
                 .await?;
             let res = client.query_one(&stmt, &[&id]).await?;
-
             let return_value: String = res.get(0);
             Ok(return_value)
         }
@@ -209,7 +264,6 @@ Author.Name LIKE CONCAT($1::text, '%');
                 )
                 .await?;
             let res = client.query(&stmt, &[&s]).await?;
-
             let return_value = res
                 .iter()
                 .map(|res| {
@@ -241,7 +295,6 @@ CustomTable;
                 )
                 .await?;
             let res = client.query_one(&stmt, &[]).await?;
-
             let return_value: super::super::types::public::CustomComposite = res.get(0);
             Ok(return_value)
         }
@@ -261,7 +314,6 @@ WHERE (col1).nice = $1;
                 )
                 .await?;
             let res = client.query_one(&stmt, &[&spongebob_character]).await?;
-
             let return_value: super::super::types::public::SpongebobCharacter = res.get(0);
             Ok(return_value)
         }
@@ -318,7 +370,6 @@ Everything;
                 )
                 .await?;
             let res = client.query_one(&stmt, &[]).await?;
-
             let return_value = {
                 let return_value_0: Vec<bool> = res.get(0);
                 let return_value_1: Vec<super::super::types::public::SpongebobCharacter> =
@@ -395,50 +446,6 @@ Everything;
                 )
             };
             Ok(return_value)
-        }
-    }
-
-    pub mod module_1 {
-        use cornucopia_client::GenericClient;
-        use tokio_postgres::Error;
-
-        pub async fn insert_book_one<T: GenericClient>(client: &T) -> Result<(), Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO Book (title)
-VALUES ('bob');
-",
-                )
-                .await?;
-            let _ = client.execute(&stmt, &[]).await?;
-
-            Ok(())
-        }
-
-        pub async fn insert_book_zero_or_one<T: GenericClient>(client: &T) -> Result<(), Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO Book (title)
-VALUES ('alice');
-",
-                )
-                .await?;
-            let _ = client.execute(&stmt, &[]).await?;
-
-            Ok(())
-        }
-
-        pub async fn insert_book_zero_or_more<T: GenericClient>(client: &T) -> Result<(), Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO Book (title)
-VALUES ('carl');
-",
-                )
-                .await?;
-            let _ = client.execute(&stmt, &[]).await?;
-
-            Ok(())
         }
     }
 }

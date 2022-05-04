@@ -205,6 +205,11 @@ pub async fn authors<T: GenericClient>(client: &T) -> Result<Vec<ExampleQuery>, 
 }
 ```
 
+###### Raw return
+> `#`
+
+This return type indicates that the query should return a `RowStream`. This is often less desirable, as you don't get type inference of the actual return type, but it is offered as a convenience for those few queries that absolutely need a `RowStream`. You cannot use a quantifier with this return type.
+
 #### Quantifier
 > ` ` (no quantifier), `?`, `*`
 

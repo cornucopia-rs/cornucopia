@@ -25,6 +25,7 @@ pub(crate) struct ParsedQueryMeta {
 pub(crate) enum ReturnType {
     Implicit,
     Explicit { params: Vec<ExplicitReturnParam> },
+    Raw,
 }
 
 #[derive(Debug)]
@@ -38,6 +39,7 @@ pub(crate) enum Quantifier {
     ZeroOrMore,
     ZeroOrOne,
     One,
+    Raw,
 }
 
 pub(crate) fn parse_query_meta(meta: &str) -> Result<ParsedQueryMeta, Error> {
@@ -57,8 +59,12 @@ pub(crate) fn parse_query_meta(meta: &str) -> Result<ParsedQueryMeta, Error> {
     let return_tokens = parser_inner.next().unwrap();
     let ret = parse_return(return_tokens);
     // Parse quantifier
-    let quantifier_tokens = parser_inner.next().unwrap();
-    let quantifier = parse_quantifier(quantifier_tokens);
+    let quantifier = if let ReturnType::Raw = ret {
+        Quantifier::Raw
+    } else {
+        let quantifier_tokens = parser_inner.next().unwrap();
+        parse_quantifier(quantifier_tokens)
+    };
 
     Ok(ParsedQueryMeta {
         name,
@@ -77,25 +83,28 @@ fn parse_params(pair: Pair<Rule>) -> Result<Vec<String>, Error> {
 }
 
 fn parse_return(pair: Pair<Rule>) -> ReturnType {
-    if let Rule::implicit_return = pair.as_rule() {
-        ReturnType::Implicit
-    } else {
-        let params = pair
-            .into_inner()
-            .next()
-            .unwrap()
-            .into_inner()
-            .map(|pair| {
-                let is_nullable = match pair.as_rule() {
-                    Rule::nullable_return_param => true,
-                    Rule::non_nullable_return_param => false,
-                    _ => panic!(),
-                };
-                let name = pair.into_inner().next().unwrap().as_str().to_string();
-                ExplicitReturnParam { name, is_nullable }
-            })
-            .collect::<Vec<ExplicitReturnParam>>();
-        ReturnType::Explicit { params }
+    match pair.as_rule() {
+        Rule::implicit_return => ReturnType::Implicit,
+        Rule::struct_return => {
+            let params = pair
+                .into_inner()
+                .next()
+                .unwrap()
+                .into_inner()
+                .map(|pair| {
+                    let is_nullable = match pair.as_rule() {
+                        Rule::nullable_return_param => true,
+                        Rule::non_nullable_return_param => false,
+                        _ => panic!(),
+                    };
+                    let name = pair.into_inner().next().unwrap().as_str().to_string();
+                    ExplicitReturnParam { name, is_nullable }
+                })
+                .collect::<Vec<ExplicitReturnParam>>();
+            ReturnType::Explicit { params }
+        }
+        Rule::raw_return => ReturnType::Raw,
+        _ => panic!(),
     }
 }
 

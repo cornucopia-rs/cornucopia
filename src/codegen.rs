@@ -131,7 +131,7 @@ pub(crate) fn generate_query_quantified_ret_ty(query: &PreparedQuery, ret_ty: &s
         match query.quantifier {
             Quantifier::ZeroOrMore => format!("Vec<{ret_ty}>"),
             Quantifier::ZeroOrOne => format!("Option<{ret_ty}>"),
-            Quantifier::One => ret_ty.to_string(),
+            _ => ret_ty.to_string(),
         }
     }
 }
@@ -158,6 +158,7 @@ pub(crate) fn generate_query_ret_ty(query: &PreparedQuery) -> Result<String, Err
             format!("({})", tys_string.join(","))
         }
         RustReturnType::Struct(_) => query.name.to_upper_camel_case(),
+        RustReturnType::Raw => String::from("tokio_postgres::RowStream"),
     })
 }
 
@@ -171,6 +172,7 @@ pub(crate) fn generate_query_body(query: &PreparedQuery, ret_ty: String) -> Resu
             Quantifier::ZeroOrMore => "query",
             Quantifier::ZeroOrOne => "query_opt",
             Quantifier::One => "query_one",
+            Quantifier::Raw => "query_raw",
         }
     };
 
@@ -193,6 +195,7 @@ pub(crate) fn generate_query_body(query: &PreparedQuery, ret_ty: String) -> Resu
             Quantifier::One => {
                 format!("let return_value: {ret_ty} = res.get(0); Ok(return_value)")
             }
+            Quantifier::Raw => return Err(Error::UnexpectedRawQuantifier),
         },
         RustReturnType::Tuple(tup) => {
             let mut rust_ret_values = Vec::new();
@@ -220,6 +223,7 @@ pub(crate) fn generate_query_body(query: &PreparedQuery, ret_ty: String) -> Resu
                 Quantifier::One => {
                     format!("let return_value={{ {tuple_value_string} }}; Ok(return_value)")
                 }
+                Quantifier::Raw => return Err(Error::UnexpectedRawQuantifier),
             }
         }
         RustReturnType::Struct(structure) => {
@@ -256,19 +260,31 @@ pub(crate) fn generate_query_body(query: &PreparedQuery, ret_ty: String) -> Resu
                 Quantifier::One => {
                     format!("let return_value={{ {struct_value_string} }}; Ok(return_value)")
                 }
+                Quantifier::Raw => return Err(Error::UnexpectedRawQuantifier),
             }
         }
+        RustReturnType::Raw => String::from("Ok(res)"),
     };
 
     let res_var_name = match query.ret {
         RustReturnType::Void => "_",
         _ => "res",
     };
+    let nb_params = query.params.len();
+    let result_string = if let RustReturnType::Raw = query.ret {
+        format!(
+            "let params : [&dyn postgres_types::ToSql; {nb_params}] = [{query_param_values}];
+let {res_var_name} = client.{query_method}(&stmt, params).await?;"
+        )
+    } else {
+        format!(
+            "let {res_var_name} = client.{query_method}(&stmt, &[{query_param_values}]).await?;"
+        )
+    };
 
     Ok(format!(
         "let stmt = client.prepare({query_string}).await?;
-let {res_var_name} = client.{query_method}(&stmt, &[{query_param_values}]).await?;
-
+{result_string}
 {ret_value}"
     ))
 }
@@ -320,6 +336,8 @@ pub(crate) mod error {
         Io(#[from] WriteFileError),
         #[error("Got base or array type while generating custom types. This is a bug.")]
         NonBaseType,
+        #[error("Got raw quantifier while generating non-raw return type. This is a bug.")]
+        UnexpectedRawQuantifier,
     }
 
     #[derive(Debug, ThisError)]

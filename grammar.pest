@@ -37,7 +37,10 @@ struct_return = {
     ~ comma?
     ~ end_ret_struct
 }
-return_type = _{(struct_return) | (implicit_return)}
+return_type = _{ struct_return | implicit_return }
+
+// Special raw return
+raw_return = {"#"}
 
 // Query quantifier
 zero_or_more = {"*"}
@@ -50,7 +53,6 @@ parser = {
     SOI 
 	~ ident 
     ~ parameter_list 
-    ~ return_type
-    ~ quantifier
+    ~ (raw_return | (return_type ~ quantifier))
     ~ EOI
 }
