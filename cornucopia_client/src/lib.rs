@@ -102,7 +102,7 @@ impl GenericClient for Transaction<'_> {
         I: IntoIterator<Item = P>,
         I::IntoIter: ExactSizeIterator,
     {
-        PgTransaction::query_raw(&self, statement, params).await
+        PgTransaction::query_raw(self, statement, params).await
     }
 }
 
@@ -163,7 +163,7 @@ impl GenericClient for PgTransaction<'_> {
         I: IntoIterator<Item = P>,
         I::IntoIter: ExactSizeIterator,
     {
-        PgTransaction::query_raw(&self, statement, params).await
+        PgTransaction::query_raw(self, statement, params).await
     }
 }
 
@@ -224,7 +224,7 @@ impl GenericClient for Client {
         I: IntoIterator<Item = P>,
         I::IntoIter: ExactSizeIterator,
     {
-        PgClient::query_raw(&self, statement, params).await
+        PgClient::query_raw(self, statement, params).await
     }
 }
 
@@ -285,6 +285,6 @@ impl GenericClient for PgClient {
         I: IntoIterator<Item = P>,
         I::IntoIter: ExactSizeIterator,
     {
-        PgClient::query_raw(&self, statement, params).await
+        PgClient::query_raw(self, statement, params).await
     }
 }
