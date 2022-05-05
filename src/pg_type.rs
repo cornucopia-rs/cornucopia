@@ -48,10 +48,14 @@ impl CornucopiaType {
     pub(crate) fn borrowed_rust_ty(&self) -> String {
         if self.rust_ty_usage_path == "String" {
             String::from("&str")
+        } else if self.rust_ty_usage_path.starts_with("Vec<") {
+            format!(
+                "&[{}]",
+                String::from(&self.rust_ty_usage_path[4..self.rust_ty_usage_path.len() - 1])
+            )
         } else {
             format!("&{}", self.rust_ty_usage_path)
         }
-        //TODO: Borrow Vecs
     }
 }
 
