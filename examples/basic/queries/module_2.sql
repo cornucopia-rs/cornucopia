@@ -4,6 +4,12 @@ SELECT
 FROM
     Author;
 
+--! authors_stream()#
+SELECT
+    *
+FROM
+    Author;
+
 --! books() {title}*
 SELECT
     Title

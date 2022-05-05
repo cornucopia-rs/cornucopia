@@ -33,7 +33,6 @@ pub(crate) enum RustReturnType {
     Scalar(CornucopiaType),
     Tuple(Vec<CornucopiaType>),
     Struct(Vec<(ExplicitReturnParam, CornucopiaType)>),
-    Raw,
 }
 
 pub(crate) async fn prepare_modules(
@@ -143,7 +142,6 @@ async fn prepare_query(
                     .collect::<Vec<(ExplicitReturnParam, CornucopiaType)>>();
                 RustReturnType::Struct(fields)
             }
-            ReturnType::Raw => RustReturnType::Raw,
         }
     };
 

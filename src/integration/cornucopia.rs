@@ -2,8 +2,7 @@
 
 pub mod types {
     pub mod public {
-        use postgres_types::{FromSql, ToSql};
-        #[derive(Debug, ToSql, FromSql)]
+        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql)]
         #[postgres(name = "custom_composite")]
         #[derive(Clone)]
         pub struct CustomComposite {
@@ -12,7 +11,7 @@ pub mod types {
             pub nice: super::public::SpongebobCharacter,
         }
 
-        #[derive(Debug, ToSql, FromSql)]
+        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql)]
         #[postgres(name = "spongebob_character")]
         #[derive(Clone, Copy, PartialEq, Eq)]
         pub enum SpongebobCharacter {
@@ -25,10 +24,9 @@ pub mod types {
 
 pub mod queries {
     pub mod module_1 {
-        use cornucopia_client::GenericClient;
-        use tokio_postgres::Error;
-
-        pub async fn insert_book_one<T: GenericClient>(client: &T) -> Result<(), Error> {
+        pub async fn insert_book_one<T: cornucopia_client::GenericClient>(
+            client: &T,
+        ) -> Result<(), tokio_postgres::Error> {
             let stmt = client
                 .prepare(
                     "INSERT INTO Book (title)
@@ -40,7 +38,9 @@ VALUES ('bob');
             Ok(())
         }
 
-        pub async fn insert_book_zero_or_one<T: GenericClient>(client: &T) -> Result<(), Error> {
+        pub async fn insert_book_zero_or_one<T: cornucopia_client::GenericClient>(
+            client: &T,
+        ) -> Result<(), tokio_postgres::Error> {
             let stmt = client
                 .prepare(
                     "INSERT INTO Book (title)
@@ -52,7 +52,9 @@ VALUES ('alice');
             Ok(())
         }
 
-        pub async fn insert_book_zero_or_more<T: GenericClient>(client: &T) -> Result<(), Error> {
+        pub async fn insert_book_zero_or_more<T: cornucopia_client::GenericClient>(
+            client: &T,
+        ) -> Result<(), tokio_postgres::Error> {
             let stmt = client
                 .prepare(
                     "INSERT INTO Book (title)
@@ -63,15 +65,27 @@ VALUES ('carl');
             let _ = client.execute(&stmt, &[]).await?;
             Ok(())
         }
+
+        pub async fn insert_stream<T: cornucopia_client::GenericClient>(
+            client: &T,
+        ) -> Result<(), tokio_postgres::Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO Book (title)
+VALUES ('dominic');
+",
+                )
+                .await?;
+            let _ = client.execute(&stmt, &[]).await?;
+            Ok(())
+        }
     }
 
     pub mod module_2 {
-        use cornucopia_client::GenericClient;
-        use tokio_postgres::Error;
-
-        pub async fn authors<T: GenericClient>(
+        pub async fn authors<T: cornucopia_client::GenericClient>(
             client: &T,
-        ) -> Result<Vec<(i32, String, String)>, Error> {
+        ) -> Result<Vec<(i32, String, String)>, tokio_postgres::Error> {
+            use futures::{StreamExt, TryStreamExt};
             let stmt = client
                 .prepare(
                     "SELECT
@@ -81,46 +95,60 @@ Author;
 ",
                 )
                 .await?;
-            let res = client.query(&stmt, &[]).await?;
-            let return_value = res
-                .iter()
+            let res = client
+                .query_raw(&stmt, std::iter::empty::<i32>())
+                .await?
                 .map(|res| {
-                    let return_value_0: i32 = res.get(0);
-                    let return_value_1: String = res.get(1);
-                    let return_value_2: String = res.get(2);
-                    (return_value_0, return_value_1, return_value_2)
+                    res.map(|res| {
+                        let return_value_0: i32 = res.get(0);
+                        let return_value_1: String = res.get(1);
+                        let return_value_2: String = res.get(2);
+                        (return_value_0, return_value_1, return_value_2)
+                    })
                 })
-                .collect::<Vec<(i32, String, String)>>();
-            Ok(return_value)
+                .try_collect()
+                .await?;
+            Ok(res)
         }
 
-        pub async fn authors_raw<T: GenericClient>(
+        pub async fn authors_stream<T: cornucopia_client::GenericClient>(
             client: &T,
-            name: &str,
-            country: &str,
-        ) -> Result<tokio_postgres::RowStream, Error> {
+        ) -> Result<
+            impl futures::Stream<Item = Result<(i32, String, String), tokio_postgres::Error>>,
+            tokio_postgres::Error,
+        > {
+            use futures::{StreamExt, TryStreamExt};
             let stmt = client
                 .prepare(
                     "SELECT
 *
 FROM
-Author
-WHERE Author.Name = $1 AND Author.Country = $2;
+Author;
 ",
                 )
                 .await?;
-            let params: [&dyn postgres_types::ToSql; 2] = [&name, &country];
-            let res = client.query_raw(&stmt, params).await?;
-            Ok(res)
+            let row_stream = client
+                .query_raw(&stmt, std::iter::empty::<i32>())
+                .await?
+                .map(|res| {
+                    res.map(|res| {
+                        let return_value_0: i32 = res.get(0);
+                        let return_value_1: String = res.get(1);
+                        let return_value_2: String = res.get(2);
+                        (return_value_0, return_value_1, return_value_2)
+                    })
+                });
+            Ok(row_stream.into_stream())
         }
 
         #[derive(Debug, Clone, PartialEq)]
         pub struct Books {
             pub title: String,
         }
-        pub async fn books<T: GenericClient>(
+        pub async fn books<T: cornucopia_client::GenericClient>(
             client: &T,
-        ) -> Result<Vec<super::super::queries::module_2::Books>, Error> {
+        ) -> Result<Vec<super::super::queries::module_2::Books>, tokio_postgres::Error> {
+            use futures::{StreamExt, TryStreamExt};
             let stmt = client
                 .prepare(
                     "SELECT
@@ -130,26 +158,31 @@ Book;
 ",
                 )
                 .await?;
-            let res = client.query(&stmt, &[]).await?;
-            let return_value = res
-                .iter()
+            let res = client
+                .query_raw(&stmt, std::iter::empty::<i32>())
+                .await?
                 .map(|res| {
-                    let return_value_0: String = res.get(0);
-                    super::super::queries::module_2::Books {
-                        title: return_value_0,
-                    }
+                    res.map(|res| {
+                        let return_value_0: String = res.get(0);
+                        super::super::queries::module_2::Books {
+                            title: return_value_0,
+                        }
+                    })
                 })
-                .collect::<Vec<super::super::queries::module_2::Books>>();
-            Ok(return_value)
+                .try_collect()
+                .await?;
+            Ok(res)
         }
 
         #[derive(Debug, Clone, PartialEq)]
         pub struct BooksOptRetParam {
             pub title: Option<String>,
         }
-        pub async fn books_opt_ret_param<T: GenericClient>(
+        pub async fn books_opt_ret_param<T: cornucopia_client::GenericClient>(
             client: &T,
-        ) -> Result<Vec<super::super::queries::module_2::BooksOptRetParam>, Error> {
+        ) -> Result<Vec<super::super::queries::module_2::BooksOptRetParam>, tokio_postgres::Error>
+        {
+            use futures::{StreamExt, TryStreamExt};
             let stmt = client
                 .prepare(
                     "SELECT
@@ -159,23 +192,27 @@ Book;
 ",
                 )
                 .await?;
-            let res = client.query(&stmt, &[]).await?;
-            let return_value = res
-                .iter()
+            let res = client
+                .query_raw(&stmt, std::iter::empty::<i32>())
+                .await?
                 .map(|res| {
-                    let return_value_0: Option<String> = res.get(0);
-                    super::super::queries::module_2::BooksOptRetParam {
-                        title: return_value_0,
-                    }
+                    res.map(|res| {
+                        let return_value_0: Option<String> = res.get(0);
+                        super::super::queries::module_2::BooksOptRetParam {
+                            title: return_value_0,
+                        }
+                    })
                 })
-                .collect::<Vec<super::super::queries::module_2::BooksOptRetParam>>();
-            Ok(return_value)
+                .try_collect()
+                .await?;
+            Ok(res)
         }
 
-        pub async fn books_from_author_id<T: GenericClient>(
+        pub async fn books_from_author_id<T: cornucopia_client::GenericClient>(
             client: &T,
             id: &i32,
-        ) -> Result<Vec<String>, Error> {
+        ) -> Result<Vec<String>, tokio_postgres::Error> {
+            use futures::{StreamExt, TryStreamExt};
             let stmt = client
                 .prepare(
                     "SELECT
@@ -189,21 +226,24 @@ Author.Id = $1;
 ",
                 )
                 .await?;
-            let res = client.query(&stmt, &[&id]).await?;
-            let return_value = res
-                .iter()
-                .map(|row| {
-                    let value: String = row.get(0);
-                    value
+            let res = client
+                .query_raw(&stmt, &[&id])
+                .await?
+                .map(|res| {
+                    res.map(|row| {
+                        let value: String = row.get(0);
+                        value
+                    })
                 })
-                .collect::<Vec<String>>();
-            Ok(return_value)
+                .try_collect()
+                .await?;
+            Ok(res)
         }
 
-        pub async fn author_name_by_id_opt<T: GenericClient>(
+        pub async fn author_name_by_id_opt<T: cornucopia_client::GenericClient>(
             client: &T,
             id: &i32,
-        ) -> Result<Option<String>, Error> {
+        ) -> Result<Option<String>, tokio_postgres::Error> {
             let stmt = client
                 .prepare(
                     "SELECT
@@ -223,10 +263,10 @@ Author.Id = $1;
             Ok(return_value)
         }
 
-        pub async fn author_name_by_id<T: GenericClient>(
+        pub async fn author_name_by_id<T: cornucopia_client::GenericClient>(
             client: &T,
             id: &i32,
-        ) -> Result<String, Error> {
+        ) -> Result<String, tokio_postgres::Error> {
             let stmt = client
                 .prepare(
                     "SELECT
@@ -243,10 +283,11 @@ Author.Id = $1;
             Ok(return_value)
         }
 
-        pub async fn author_name_starting_with<T: GenericClient>(
+        pub async fn author_name_starting_with<T: cornucopia_client::GenericClient>(
             client: &T,
             s: &str,
-        ) -> Result<Vec<(i32, String, i32, String)>, Error> {
+        ) -> Result<Vec<(i32, String, i32, String)>, tokio_postgres::Error> {
+            use futures::{StreamExt, TryStreamExt};
             let stmt = client
                 .prepare(
                     "SELECT
@@ -263,28 +304,31 @@ Author.Name LIKE CONCAT($1::text, '%');
 ",
                 )
                 .await?;
-            let res = client.query(&stmt, &[&s]).await?;
-            let return_value = res
-                .iter()
+            let res = client
+                .query_raw(&stmt, &[&s])
+                .await?
                 .map(|res| {
-                    let return_value_0: i32 = res.get(0);
-                    let return_value_1: String = res.get(1);
-                    let return_value_2: i32 = res.get(2);
-                    let return_value_3: String = res.get(3);
-                    (
-                        return_value_0,
-                        return_value_1,
-                        return_value_2,
-                        return_value_3,
-                    )
+                    res.map(|res| {
+                        let return_value_0: i32 = res.get(0);
+                        let return_value_1: String = res.get(1);
+                        let return_value_2: i32 = res.get(2);
+                        let return_value_3: String = res.get(3);
+                        (
+                            return_value_0,
+                            return_value_1,
+                            return_value_2,
+                            return_value_3,
+                        )
+                    })
                 })
-                .collect::<Vec<(i32, String, i32, String)>>();
-            Ok(return_value)
+                .try_collect()
+                .await?;
+            Ok(res)
         }
 
-        pub async fn return_custom_type<T: GenericClient>(
+        pub async fn return_custom_type<T: cornucopia_client::GenericClient>(
             client: &T,
-        ) -> Result<super::super::types::public::CustomComposite, Error> {
+        ) -> Result<super::super::types::public::CustomComposite, tokio_postgres::Error> {
             let stmt = client
                 .prepare(
                     "SELECT
@@ -299,10 +343,11 @@ CustomTable;
             Ok(return_value)
         }
 
-        pub async fn select_where_custom_type<T: GenericClient>(
+        pub async fn select_where_custom_type<T: cornucopia_client::GenericClient>(
             client: &T,
             spongebob_character: &super::super::types::public::SpongebobCharacter,
-        ) -> Result<super::super::types::public::SpongebobCharacter, Error> {
+        ) -> Result<super::super::types::public::SpongebobCharacter, tokio_postgres::Error>
+        {
             let stmt = client
                 .prepare(
                     "SELECT
@@ -318,7 +363,7 @@ WHERE (col1).nice = $1;
             Ok(return_value)
         }
 
-        pub async fn select_everything<T: GenericClient>(
+        pub async fn select_everything<T: cornucopia_client::GenericClient>(
             client: &T,
         ) -> Result<
             (
@@ -358,7 +403,7 @@ WHERE (col1).nice = $1;
                 std::net::IpAddr,
                 eui48::MacAddress,
             ),
-            Error,
+            tokio_postgres::Error,
         > {
             let stmt = client
                 .prepare(

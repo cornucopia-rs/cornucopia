@@ -10,3 +10,7 @@ INSERT INTO Book (title)
 INSERT INTO Book (title)
   VALUES ('carl');
 
+--! insert_stream()#
+INSERT INTO Book (title)
+  VALUES ('dominic');
+

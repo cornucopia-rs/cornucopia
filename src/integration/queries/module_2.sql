@@ -4,12 +4,11 @@ SELECT
 FROM
     Author;
 
---! authors_raw(name, country) #
+--! authors_stream()#
 SELECT
     *
 FROM
-    Author
-WHERE Author.Name = $1 AND Author.Country = $2;
+    Author;
 
 --! books() {title}*
 SELECT

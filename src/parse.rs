@@ -25,7 +25,6 @@ pub(crate) struct ParsedQueryMeta {
 pub(crate) enum ReturnType {
     Implicit,
     Explicit { params: Vec<ExplicitReturnParam> },
-    Raw,
 }
 
 #[derive(Debug)]
@@ -36,10 +35,10 @@ pub(crate) struct ExplicitReturnParam {
 
 #[derive(Debug)]
 pub(crate) enum Quantifier {
-    ZeroOrMore,
-    ZeroOrOne,
+    Vec,
+    Option,
     One,
-    Raw,
+    Stream,
 }
 
 pub(crate) fn parse_query_meta(meta: &str) -> Result<ParsedQueryMeta, Error> {
@@ -59,12 +58,8 @@ pub(crate) fn parse_query_meta(meta: &str) -> Result<ParsedQueryMeta, Error> {
     let return_tokens = parser_inner.next().unwrap();
     let ret = parse_return(return_tokens);
     // Parse quantifier
-    let quantifier = if let ReturnType::Raw = ret {
-        Quantifier::Raw
-    } else {
-        let quantifier_tokens = parser_inner.next().unwrap();
-        parse_quantifier(quantifier_tokens)
-    };
+    let quantifier_tokens = parser_inner.next().unwrap();
+    let quantifier = parse_quantifier(quantifier_tokens);
 
     Ok(ParsedQueryMeta {
         name,
@@ -103,16 +98,16 @@ fn parse_return(pair: Pair<Rule>) -> ReturnType {
                 .collect::<Vec<ExplicitReturnParam>>();
             ReturnType::Explicit { params }
         }
-        Rule::raw_return => ReturnType::Raw,
         _ => panic!(),
     }
 }
 
 fn parse_quantifier(pair: Pair<Rule>) -> Quantifier {
     match pair.into_inner().next().unwrap().as_rule() {
-        Rule::zero_or_more => Quantifier::ZeroOrMore,
-        Rule::zero_or_one => Quantifier::ZeroOrOne,
+        Rule::zero_or_more => Quantifier::Vec,
+        Rule::zero_or_one => Quantifier::Option,
         Rule::one => Quantifier::One,
+        Rule::stream => Quantifier::Stream,
         _ => panic!(),
     }
 }

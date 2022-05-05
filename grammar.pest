@@ -39,20 +39,19 @@ struct_return = {
 }
 return_type = _{ struct_return | implicit_return }
 
-// Special raw return
-raw_return = {"#"}
-
 // Query quantifier
+stream = {"#"}
 zero_or_more = {"*"}
 zero_or_one = {"?"}
 one = {""}
-quantifier = {zero_or_more | zero_or_one | one}
+quantifier = {zero_or_more | zero_or_one | stream | one}
 
 // Parser
 parser = {
     SOI 
 	~ ident 
     ~ parameter_list 
-    ~ (raw_return | (return_type ~ quantifier))
+    ~ return_type 
+    ~ quantifier
     ~ EOI
 }

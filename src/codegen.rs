@@ -28,7 +28,7 @@ pub(crate) fn generate_query(module_name: &str, query: &PreparedQuery) -> Result
     let body = generate_query_body(query, ret_ty)?;
     let query_string = format!(
         "{query_struct}
-    pub async fn {name}<T: GenericClient>(client:&T, {params}) -> Result<{ret},Error> {{{body}}}"
+    pub async fn {name}<T: cornucopia_client::GenericClient>(client:&T, {params}) -> Result<{ret},tokio_postgres::Error> {{{body}}}"
     );
 
     Ok(query_string)
@@ -66,7 +66,7 @@ pub(crate) fn generate_custom_type(ty: &CornucopiaType) -> Result<String, Error>
     };
 
     Ok(format!(
-        "#[derive(Debug, ToSql, FromSql)]\n#[postgres(name = \"{}\")]\n{}",
+        "#[derive(Debug, postgres_types::ToSql, postgres_types::FromSql)]\n#[postgres(name = \"{}\")]\n{}",
         ty.pg_ty.name(),
         type_def
     ))
@@ -92,9 +92,7 @@ pub(crate) fn generate_type_modules(type_registrar: &TypeRegistrar) -> Result<St
                 .map(generate_custom_type)
                 .collect::<Result<Vec<String>, Error>>()?
                 .join("\n\n");
-            Ok(format!(
-                "pub mod {mod_name} {{ use postgres_types::{{FromSql, ToSql}}; {tys_str} }}"
-            ))
+            Ok(format!("pub mod {mod_name} {{ {tys_str} }}"))
         })
         .collect::<Result<Vec<String>, Error>>()?
         .join("\n\n");
@@ -129,9 +127,12 @@ pub(crate) fn generate_query_quantified_ret_ty(query: &PreparedQuery, ret_ty: &s
         String::from("()")
     } else {
         match query.quantifier {
-            Quantifier::ZeroOrMore => format!("Vec<{ret_ty}>"),
-            Quantifier::ZeroOrOne => format!("Option<{ret_ty}>"),
-            _ => ret_ty.to_string(),
+            Quantifier::Vec => format!("Vec<{ret_ty}>"),
+            Quantifier::Option => format!("Option<{ret_ty}>"),
+            Quantifier::One => ret_ty.to_string(),
+            Quantifier::Stream => {
+                format!("impl futures::Stream<Item = Result<{ret_ty}, tokio_postgres::Error>>")
+            }
         }
     }
 }
@@ -158,7 +159,6 @@ pub(crate) fn generate_query_ret_ty(query: &PreparedQuery) -> Result<String, Err
             format!("({})", tys_string.join(","))
         }
         RustReturnType::Struct(_) => query.name.to_upper_camel_case(),
-        RustReturnType::Raw => String::from("tokio_postgres::RowStream"),
     })
 }
 
@@ -169,10 +169,10 @@ pub(crate) fn generate_query_body(query: &PreparedQuery, ret_ty: String) -> Resu
         "execute"
     } else {
         match query.quantifier {
-            Quantifier::ZeroOrMore => "query",
-            Quantifier::ZeroOrOne => "query_opt",
+            Quantifier::Vec => "query_raw",
+            Quantifier::Option => "query_opt",
             Quantifier::One => "query_one",
-            Quantifier::Raw => "query_raw",
+            Quantifier::Stream => "query_raw",
         }
     };
 
@@ -186,16 +186,30 @@ pub(crate) fn generate_query_body(query: &PreparedQuery, ret_ty: String) -> Resu
     let ret_value = match &query.ret {
         RustReturnType::Void => String::from("Ok(())"),
         RustReturnType::Scalar(_) => match query.quantifier {
-            Quantifier::ZeroOrMore => {
-                format!("let return_value = res.iter().map(|row| {{let value : {ret_ty} = row.get(0); value}}).collect::<Vec<{ret_ty}>>(); Ok(return_value)")
+            Quantifier::Vec | Quantifier::Stream => {
+                format!(
+                    "res
+                            .map(|row| {{
+                                let value : {ret_ty} = row.get(0); value
+                            }})"
+                )
             }
-            Quantifier::ZeroOrOne => {
-                format!("let return_value = res.map(|row| {{let value: {ret_ty} = row.get(0); value}}); Ok(return_value)")
+            Quantifier::Option => {
+                format!(
+                    "let return_value = res
+                        .map(|row| {{
+                            let value: {ret_ty} = row.get(0);
+                            value
+                        }}); 
+                    Ok(return_value)"
+                )
             }
             Quantifier::One => {
-                format!("let return_value: {ret_ty} = res.get(0); Ok(return_value)")
+                format!(
+                    "let return_value: {ret_ty} = res.get(0); 
+                    Ok(return_value)"
+                )
             }
-            Quantifier::Raw => return Err(Error::UnexpectedRawQuantifier),
         },
         RustReturnType::Tuple(tup) => {
             let mut rust_ret_values = Vec::new();
@@ -214,16 +228,31 @@ pub(crate) fn generate_query_body(query: &PreparedQuery, ret_ty: String) -> Resu
                 rust_ret_value_names.join(",")
             );
             match query.quantifier {
-                Quantifier::ZeroOrMore => {
-                    format!("let return_value = res.iter().map(|res| {{ {tuple_value_string} }}).collect::<Vec<{ret_ty}>>(); Ok(return_value)")
-                }
-                Quantifier::ZeroOrOne => {
-                    format!("let return_value = res.map(|res| {{ {tuple_value_string} }}); Ok(return_value)")
+                Quantifier::Option => {
+                    format!(
+                        "let return_value = res
+                            .map(|res| {{ 
+                                {tuple_value_string} 
+                            }}); 
+                        Ok(return_value)"
+                    )
                 }
                 Quantifier::One => {
-                    format!("let return_value={{ {tuple_value_string} }}; Ok(return_value)")
+                    format!(
+                        "let return_value = {{ 
+                            {tuple_value_string} 
+                        }}; 
+                        Ok(return_value)"
+                    )
                 }
-                Quantifier::Raw => return Err(Error::UnexpectedRawQuantifier),
+                Quantifier::Vec | Quantifier::Stream => {
+                    format!(
+                        "res
+                            .map(|res| {{
+                                {tuple_value_string} 
+                            }})"
+                    )
+                }
             }
         }
         RustReturnType::Struct(structure) => {
@@ -251,42 +280,93 @@ pub(crate) fn generate_query_body(query: &PreparedQuery, ret_ty: String) -> Resu
             );
 
             match query.quantifier {
-                Quantifier::ZeroOrMore => {
-                    format!("let return_value = res.iter().map(|res| {{ {struct_value_string} }}).collect::<Vec<{ret_ty}>>(); Ok(return_value)")
+                Quantifier::Vec | Quantifier::Stream => {
+                    format!(
+                        "res
+                            .map(|res| {{
+                                {struct_value_string} 
+                            }})"
+                    )
                 }
-                Quantifier::ZeroOrOne => {
-                    format!("let return_value = res.map(|res| {{ {struct_value_string} }}); Ok(return_value)")
+                Quantifier::Option => {
+                    format!(
+                        "let return_value = res.map(|res| {{
+                            {struct_value_string}
+                        }}); 
+                        Ok(return_value)"
+                    )
                 }
                 Quantifier::One => {
-                    format!("let return_value={{ {struct_value_string} }}; Ok(return_value)")
+                    format!(
+                        "let return_value = {{ 
+                            {struct_value_string} 
+                        }}; 
+                        Ok(return_value)"
+                    )
                 }
-                Quantifier::Raw => return Err(Error::UnexpectedRawQuantifier),
             }
         }
-        RustReturnType::Raw => String::from("Ok(res)"),
     };
 
     let res_var_name = match query.ret {
         RustReturnType::Void => "_",
         _ => "res",
     };
-    let nb_params = query.params.len();
-    let result_string = if let RustReturnType::Raw = query.ret {
-        format!(
-            "let params : [&dyn postgres_types::ToSql; {nb_params}] = [{query_param_values}];
-let {res_var_name} = client.{query_method}(&stmt, params).await?;"
-        )
+    let params_str = if query.params.is_empty()
+        && matches!(query.quantifier, Quantifier::Stream | Quantifier::Vec)
+        && !matches!(query.ret, RustReturnType::Void)
+    {
+        String::from("std::iter::empty::<i32>()")
     } else {
-        format!(
-            "let {res_var_name} = client.{query_method}(&stmt, &[{query_param_values}]).await?;"
-        )
+        format!("&[{query_param_values}]")
     };
 
-    Ok(format!(
-        "let stmt = client.prepare({query_string}).await?;
-{result_string}
-{ret_value}"
-    ))
+    let result_string = match (&query.ret, &query.quantifier) {
+        (
+            RustReturnType::Tuple(_) | RustReturnType::Struct(_) | RustReturnType::Scalar(_),
+            Quantifier::Stream,
+        ) => {
+            format!(
+                "use futures::{{StreamExt, TryStreamExt}};
+                let stmt = client.prepare({query_string}).await?;            
+                let row_stream = client
+                    .{query_method}(&stmt, {params_str})
+                    .await?
+                    .map(|res| {{
+                        {ret_value}
+                    }});
+                Ok(row_stream.into_stream())"
+            )
+        }
+        (
+            RustReturnType::Tuple(_) | RustReturnType::Struct(_) | RustReturnType::Scalar(_),
+            Quantifier::Vec,
+        ) => {
+            format!(
+                "
+                use futures::{{StreamExt, TryStreamExt}};
+                let stmt = client.prepare({query_string}).await?;            
+                let res = client
+                    .{query_method}(&stmt, {params_str})
+                    .await?
+                    .map(|res| {{
+                        {ret_value}
+                    }})
+                    .try_collect()
+                    .await?;
+                Ok(res)"
+            )
+        }
+        _ => {
+            format!(
+                "let stmt = client.prepare({query_string}).await?;
+                let {res_var_name} = client.{query_method}(&stmt, &[{query_param_values}]).await?;
+                {ret_value}"
+            )
+        }
+    };
+
+    Ok(result_string)
 }
 
 pub(crate) fn generate(
@@ -294,7 +374,6 @@ pub(crate) fn generate(
     modules: Vec<PreparedModule>,
     destination: &str,
 ) -> Result<(), Error> {
-    let query_imports = "use cornucopia_client::GenericClient;\nuse tokio_postgres::Error;";
     let type_modules = generate_type_modules(type_registrar)?;
 
     let mut query_modules = Vec::new();
@@ -307,9 +386,7 @@ pub(crate) fn generate(
         let queries_string = query_strings.join("\n\n");
         let module_name = module.name;
 
-        query_modules.push(format!(
-            "pub mod {module_name} {{ {query_imports}\n{queries_string} }}"
-        ));
+        query_modules.push(format!("pub mod {module_name} {{ {queries_string} }}"));
     }
     let query_modules_string = format!("pub mod queries {{ {} }}", query_modules.join("\n\n"));
     let top_level_comment = "// This file was generated with `cornucopia`. Do not modify.";
@@ -336,8 +413,6 @@ pub(crate) mod error {
         Io(#[from] WriteFileError),
         #[error("Got base or array type while generating custom types. This is a bug.")]
         NonBaseType,
-        #[error("Got raw quantifier while generating non-raw return type. This is a bug.")]
-        UnexpectedRawQuantifier,
     }
 
     #[derive(Debug, ThisError)]

@@ -157,7 +157,7 @@ AND pg_namespace.nspname = $2;",
         client: &Client,
         oid: &u32,
     ) -> Result<Vec<String>, tokio_postgres::Error> {
-        let x = client
+        Ok(client
             .query(
                 "select e.enumlabel
 from pg_type t 
@@ -168,8 +168,7 @@ where t.oid = $1;",
             .await?
             .iter()
             .map(|row| row.get(0))
-            .collect::<Vec<String>>();
-        Ok(x)
+            .collect::<Vec<String>>())
     }
 
     async fn domain_base_type(
@@ -250,8 +249,6 @@ WHERE pg_type.typarray = $1;",
 
         let schema: String = row.get(0);
         let name: String = row.get(1);
-
-        //println!("{typtype} {typcategory}");
 
         Ok((schema, name))
     }

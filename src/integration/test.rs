@@ -2,16 +2,17 @@ use std::net::{IpAddr, Ipv4Addr};
 
 use error::Error;
 use eui48::MacAddress;
+use futures::StreamExt;
 use serde_json::Map;
 use time::{OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;
 
 use crate::integration::cornucopia::{
-    queries::module_2::{books_opt_ret_param, BooksOptRetParam},
+    self,
+    queries::module_2::{authors_stream, books_opt_ret_param, select_everything, BooksOptRetParam},
     types::public::SpongebobCharacter,
 };
 
-use super::cornucopia::{self, queries::module_2::select_everything};
 use deadpool_postgres::Client;
 
 async fn setup() -> Result<Client, crate::error::Error> {
@@ -36,6 +37,7 @@ async fn integration() -> Result<(), Error> {
     let client = setup().await?;
 
     authors_test(&client).await?;
+    authors_stream_test(&client).await?;
     books_test(&client).await?;
     books_from_author_id_test(&client).await?;
     author_name_by_id_test(&client).await?;
@@ -92,12 +94,41 @@ async fn authors_test(client: &Client) -> Result<(), Error> {
             String::from("United Kingdom"),
         ),
     ];
+
     let actual = authors(client).await?;
 
     if !actual.iter().all(|item| expected.contains(item)) {
         return Err(Error::Integration {
             expected: format!("{:?}", expected),
             actual: format!("{:?}", actual),
+        });
+    };
+
+    Ok(())
+}
+
+async fn authors_stream_test(client: &Client) -> Result<(), Error> {
+    use futures::Stream;
+    let expected = vec![
+        (
+            1,
+            String::from("Agatha Christie"),
+            String::from("United Kingdom"),
+        ),
+        (
+            2,
+            String::from("John Ronald Reuel Tolkien"),
+            String::from("United Kingdom"),
+        ),
+    ];
+    let actual = authors_stream(client).await?;
+
+    let is_deep_equal = actual.all(|item| async { expected.contains(&(item.unwrap())) });
+
+    if !is_deep_equal.await {
+        return Err(Error::Integration {
+            expected: format!("{:?}", expected),
+            actual: format!("cannot display async stream"),
         });
     };
 
