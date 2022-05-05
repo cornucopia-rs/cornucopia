@@ -6,6 +6,7 @@ version = "0.1.0"
 [dependencies]
 tokio = { version = "1.18.1", features = ["full"] }
 deadpool-postgres = "0.10.2"
+futures = "0.3.21"
 postgres-types = { version = "0.2.3", features = ["derive"] }
 tokio-postgres = "0.7.6"
-cornucopia_client = "0.1.0"
+cornucopia_client = "0.2.0"

@@ -69,22 +69,39 @@ To use `docker` on Linux, **non-sudo users need to be in the docker group**. For
 No special installation steps are needed for `podman`, but note that you will need to pass a CLI flag (`-p` or `--podman`) because `cornucopia` defaults to `docker`.
 
 ### Dependencies
-Cornucopia will generate queries powered by the `tokio` runtime through `tokio-postgres`, so you will need add the latest version of these to your `Cargo.toml`. If you wish to use pooled connections, you'll also need `deadpool-postgres`. You'll also need the `postgres_types` crate if you want to work with custom PostgreSQL types. Finally, you will need the `cornucopia_client` crate, which has only one item: the `GenericClient` trait. You might need more dependencies depending on which features you intend to use. The code block below shows what your dependencies might look like with every feature that `cornucopia` supports enabled:
+#### Required
+Cornucopia will generate queries powered by the `tokio` runtime through `tokio-postgres`, and it also uses some extended async features from `futures` so you will need add the latest version of these to your `Cargo.toml`. Finally, you will need the `cornucopia_client` crate, which has only one item: the `GenericClient` trait.
+
+#### Optional
+* Pooled connections: `deadpool-postgres`. 
+* Custom PostgreSQL user types: `postgres_types`.
+
+#### Extra types using `tokio_postgres` features
+| Crate        | available types                                    | `tokio_postgres` feature |
+| ------------ | -------------------------------------------------- | ------------------------ |
+| `serde_json` | `Value`                                            | `with-serde_json-1`      |
+| `time`       | `Date` `Time` `PrimitiveDateTime` `OffsetDateTime` | `with-time-0_3`          |
+| `uuid`       | `Uuid`                                             | `with-uuid-1`            |
+| `eui48`      | `MacAddress`                                       | `with-eui48-1`           |
+
+#### Full dependencies
+The code block below shows what your dependencies might look like with every feature that `cornucopia` supports enabled:
 ```toml
 # Cargo.toml
 [dependencies]
 tokio = { version = "1.18.1", features = ["full"] }
 deadpool-postgres = { version = "0.10.2" }
 postgres-types = { version = "0.2.3", features = ["derive"] }
+cornucopia_client = "0.2.0"
+futures = "0.3.21"
 tokio-postgres = { version = "0.7.6", features = [
     "with-serde_json-1",
     "with-time-0_3",
     "with-uuid-1",
     "with-eui48-1",
 ] }
-cornucopia_client = "0.1.0"
 serde = { version = "1.0.137", features = ["derive"] }
-serde_json = "1.0.80"
+serde_json = "1.0.81"
 time = "0.3.9"
 uuid = "1.0.0"
 eui48 = "1.1.0"
@@ -206,15 +223,16 @@ pub async fn authors<T: GenericClient>(client: &T) -> Result<Vec<ExampleQuery>, 
 ```
 
 #### Quantifier
-> ` ` (no quantifier), `?`, `*`
+> ` ` (no quantifier), `?`, `*`, `#`
 
-The quantifier indicates the expected number of rows returned by a query. If no quantifier is specified, then it is assumed that only one record will be returned. Using `*` and `?` (corresponding to the "zero or more" and "zero or one" quantifiers) will wrap the resulting Rust type in a `Vec` and `Option` respectively. To sum it up:
+The quantifier indicates the expected number of rows returned by a query. No more than one quantifier can be used, and if no quantifier is specified, then it is assumed that only one record will be returned. Using `*` and `?` (corresponding to the "zero or more" and "zero or one" quantifiers) will wrap the resulting Rust type in a `Vec` and `Option` respectively. Additionally, there is the stream identifier `#` which is very similar to `*`, but produces a `Stream` instead of a `Vec` To sum it up:
 
 * ` ` (no quantifier) results in `T`
 * `*` results in `Vec<T>`
 * `?` results in `Option<T>`
+* `#` results in `impl Stream<Item = Result<T, Error>>`
 
-Note that explicit returns' columns  can be marked as nullable with `?`, while the `?` quantifier acts on the whole row.
+Note that explicit return columns can be marked as nullable with `?`, while the `?` quantifier acts on the whole row.
 
 ### Transactions
 Generated queries take a `GenericClient` as parameter, which accepts both `Client`s and `Transaction`s. That means you can use the same generated queries for both single statements and transactions.

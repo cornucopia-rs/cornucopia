@@ -67,6 +67,7 @@ fn healthcheck(podman: bool, max_retries: u64, ms_per_retry: u64) -> Result<(), 
             println!("Container startup slower than expected ({nb_retries} retries out of {max_retries})")
         }
     }
+    std::thread::sleep(std::time::Duration::from_millis(250));
     Ok(())
 }
 

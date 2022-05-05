@@ -35,9 +35,10 @@ pub(crate) struct ExplicitReturnParam {
 
 #[derive(Debug)]
 pub(crate) enum Quantifier {
-    ZeroOrMore,
-    ZeroOrOne,
+    Vec,
+    Option,
     One,
+    Stream,
 }
 
 pub(crate) fn parse_query_meta(meta: &str) -> Result<ParsedQueryMeta, Error> {
@@ -77,33 +78,36 @@ fn parse_params(pair: Pair<Rule>) -> Result<Vec<String>, Error> {
 }
 
 fn parse_return(pair: Pair<Rule>) -> ReturnType {
-    if let Rule::implicit_return = pair.as_rule() {
-        ReturnType::Implicit
-    } else {
-        let params = pair
-            .into_inner()
-            .next()
-            .unwrap()
-            .into_inner()
-            .map(|pair| {
-                let is_nullable = match pair.as_rule() {
-                    Rule::nullable_return_param => true,
-                    Rule::non_nullable_return_param => false,
-                    _ => panic!(),
-                };
-                let name = pair.into_inner().next().unwrap().as_str().to_string();
-                ExplicitReturnParam { name, is_nullable }
-            })
-            .collect::<Vec<ExplicitReturnParam>>();
-        ReturnType::Explicit { params }
+    match pair.as_rule() {
+        Rule::implicit_return => ReturnType::Implicit,
+        Rule::struct_return => {
+            let params = pair
+                .into_inner()
+                .next()
+                .unwrap()
+                .into_inner()
+                .map(|pair| {
+                    let is_nullable = match pair.as_rule() {
+                        Rule::nullable_return_param => true,
+                        Rule::non_nullable_return_param => false,
+                        _ => panic!(),
+                    };
+                    let name = pair.into_inner().next().unwrap().as_str().to_string();
+                    ExplicitReturnParam { name, is_nullable }
+                })
+                .collect::<Vec<ExplicitReturnParam>>();
+            ReturnType::Explicit { params }
+        }
+        _ => panic!(),
     }
 }
 
 fn parse_quantifier(pair: Pair<Rule>) -> Quantifier {
     match pair.into_inner().next().unwrap().as_rule() {
-        Rule::zero_or_more => Quantifier::ZeroOrMore,
-        Rule::zero_or_one => Quantifier::ZeroOrOne,
+        Rule::zero_or_more => Quantifier::Vec,
+        Rule::zero_or_one => Quantifier::Option,
         Rule::one => Quantifier::One,
+        Rule::stream => Quantifier::Stream,
         _ => panic!(),
     }
 }

@@ -37,20 +37,21 @@ struct_return = {
     ~ comma?
     ~ end_ret_struct
 }
-return_type = _{(struct_return) | (implicit_return)}
+return_type = _{ struct_return | implicit_return }
 
 // Query quantifier
+stream = {"#"}
 zero_or_more = {"*"}
 zero_or_one = {"?"}
 one = {""}
-quantifier = {zero_or_more | zero_or_one | one}
+quantifier = {zero_or_more | zero_or_one | stream | one}
 
 // Parser
 parser = {
     SOI 
 	~ ident 
     ~ parameter_list 
-    ~ return_type
+    ~ return_type 
     ~ quantifier
     ~ EOI
 }

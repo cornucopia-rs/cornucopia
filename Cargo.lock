@@ -161,9 +161,10 @@ version = "0.6.1"
 dependencies = [
  "async-recursion",
  "clap",
- "cornucopia_client 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cornucopia_client 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "deadpool-postgres",
  "eui48",
+ "futures",
  "heck",
  "pest",
  "pest_derive",
@@ -181,7 +182,7 @@ dependencies = [
 name = "cornucopia-example-auto-build"
 version = "0.1.0"
 dependencies = [
- "cornucopia_client 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cornucopia_client 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "deadpool-postgres",
  "tokio",
  "tokio-postgres",
@@ -191,8 +192,9 @@ dependencies = [
 name = "cornucopia-example-basic"
 version = "0.1.0"
 dependencies = [
- "cornucopia_client 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cornucopia_client 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "deadpool-postgres",
+ "futures",
  "postgres-types",
  "tokio",
  "tokio-postgres",
@@ -200,7 +202,7 @@ dependencies = [
 
 [[package]]
 name = "cornucopia_client"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "async-trait",
  "deadpool-postgres",
@@ -210,9 +212,9 @@ dependencies = [
 
 [[package]]
 name = "cornucopia_client"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55c80d61fbc0276d93c0b5df6b2d9c1570a55ff183c71e42c7a6f904eecd8780"
+checksum = "ea767c5bfc64ebeec00abe9a329d630e04a91f420761248cbd57c3ca11cd7cec"
 dependencies = [
  "async-trait",
  "deadpool-postgres",
@@ -504,9 +506,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.16"
+version = "0.4.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6389c490849ff5bc16be905ae24bc913a9c8892e19b2341dbc175e14c341c2b8"
+checksum = "abb12e687cfb44aa40f41fc3978ef76448f9b6038cad6aef4259d3c095a2382e"
 dependencies = [
  "cfg-if",
 ]
@@ -576,9 +578,9 @@ dependencies = [
 
 [[package]]
 name = "num_threads"
-version = "0.1.5"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aba1801fb138d8e85e11d0fc70baf4fe1cdfffda7c6cd34a854905df588e5ed0"
+checksum = "2819ce041d2ee131036f4fc9d6ae7ae125a3a40e97ba64d04fe799ad9dabbb44"
 dependencies = [
  "libc",
 ]
@@ -899,9 +901,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.80"
+version = "1.0.81"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f972498cf015f7c0746cac89ebe1d6ef10c293b94175a243a2d9442c163d9944"
+checksum = "9b7ce2b32a1aed03c558dc61a5cd328f15aff2dbc17daad8fb8af04d2100e15c"
 dependencies = [
  "itoa",
  "ryu",
