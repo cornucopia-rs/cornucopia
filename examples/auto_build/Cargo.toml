@@ -8,5 +8,5 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1.18.1", features = ["full"] }
 tokio-postgres = "0.7.6"
-cornucopia_client = "0.2.0"
+cornucopia_client = "0.2.1"
 deadpool-postgres = "0.10.2"

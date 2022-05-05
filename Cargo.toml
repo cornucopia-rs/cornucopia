@@ -1,6 +1,6 @@
 [package]
 name = "cornucopia"
-version = "0.7.1"
+version = "0.7.2"
 edition = "2021"
 license = "MIT"
 description = "Generate type checked  Rust from your SQL"
@@ -14,7 +14,7 @@ keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 members = ["examples/*", "cornucopia_client"]
 
 [dependencies]
-cornucopia_client = "0.2.0"
+cornucopia_client = "0.2.1"
 futures = "0.3.21"
 tokio = { version = "1.18.1", features = ["full"] }
 deadpool-postgres = "0.10.2"
