@@ -145,26 +145,37 @@ SELECT * FROM Author;
 will be turned by `cornucopia` into
 ```rust
 pub async fn authors<T: GenericClient>(client: &T) -> Result<Vec<(i32, String, String)>, Error> {
-    let stmt = client.prepare("SELECT * FROM Author;").await?;
-    let res = client.query(&stmt, &[]).await?;
-    let return_value = res
-        .iter()
+    let stmt = client
+        .prepare(
+"SELECT
+*
+FROM
+Author;
+",
+        )
+        .await?;
+    let res = client
+        .query_raw(&stmt, std::iter::empty::<i32>())
+        .await?
         .map(|res| {
-            let return_value_0: i32 = res.get(0);
-            let return_value_1: String = res.get(1);
-            let return_value_2: String = res.get(2);
-            (return_value_0, return_value_1, return_value_2)
+            res.map(|res| {
+                let return_value_0: i32 = res.get(0);
+                let return_value_1: String = res.get(1);
+                let return_value_2: String = res.get(2);
+                (return_value_0, return_value_1, return_value_2)
+            })
         })
-        .collect::<Vec<(i32, String, String)>>();
-    Ok(return_value)
+        .try_collect()
+        .await?;
+    Ok(res)
 }
 ```
-Not bad! The generated function uses prepared statements, a statement cache, and strong typing (Notice how the returned rows' types have been inferred!). This is only a taste of what you can achieve, but should be fairly representative of what's going on under the hood.
+Not bad! Notice how the returned rows' types have been inferred and how the Rust function signature reflects these types clearly. The generated function uses prepared statements, a statement cache, and an async stream to reduce allocations. This is only a taste of what you can achieve, but should be fairly representative of what's going on under the hood.
 
 ### Query annotation syntax
 As you may have noticed from the previous section, this little comment `--! authors()*` is doing a lot of heavy-lifting for us. It tells `cornucopia` to generate a function named `authors` with no parameters. Since there is no specified return, Cornucopia will automatically infer what's being returned. Then, the asterisk `*` signals that this query will return zero or more results (that's why we ended up with a `Vec` return in the generated query in the [section above](#generated-modules)).
 
-Note: annotations are whitespace insignificant and can be split accross multiple lines too
+Note that annotations are whitespace insignificant and can be split accross multiple lines too
 ```sql
 --! authors (
 --!
