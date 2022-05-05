@@ -48,6 +48,7 @@ Cornucopia aims to get out of your way, **transpiling your PostgreSQL queries to
 ##### Features
 * SQL-first. Your database schema is the source of truth. No ORM.
 * Custom user types (composites, enums and domains).
+* Strongly-typed async row streams.
 * One-dimensional array types.
 * Nullable return columns.
 * Optional migration management.
