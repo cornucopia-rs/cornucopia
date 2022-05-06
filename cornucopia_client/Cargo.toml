@@ -1,6 +1,6 @@
 [package]
 name = "cornucopia_client"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 license = "MIT"
 description = "Generic client trait for Cornucopia users"
