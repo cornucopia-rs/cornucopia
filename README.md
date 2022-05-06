@@ -93,7 +93,7 @@ The code block below shows what your dependencies might look like with every fea
 tokio = { version = "1.18.1", features = ["full"] }
 deadpool-postgres = { version = "0.10.2" }
 postgres-types = { version = "0.2.3", features = ["derive"] }
-cornucopia_client = "0.2.1"
+cornucopia_client = "0.2.2"
 futures = "0.3.21"
 tokio-postgres = { version = "0.7.6", features = [
     "with-serde_json-1",

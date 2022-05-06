@@ -9,4 +9,4 @@ deadpool-postgres = "0.10.2"
 futures = "0.3.21"
 postgres-types = { version = "0.2.3", features = ["derive"] }
 tokio-postgres = "0.7.6"
-cornucopia_client = "0.2.1"
+cornucopia_client = "0.2.2"
