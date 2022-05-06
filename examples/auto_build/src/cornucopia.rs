@@ -4,10 +4,9 @@ pub mod types {}
 
 pub mod queries {
     pub mod module_1 {
-        use cornucopia_client::GenericClient;
-        use tokio_postgres::Error;
-
-        pub async fn example_query1<T: GenericClient>(client: &T) -> Result<String, Error> {
+        pub async fn example_query1<T: cornucopia_client::GenericClient>(
+            client: &T,
+        ) -> Result<String, tokio_postgres::Error> {
             let stmt = client
                 .prepare(
                     "SELECT
@@ -18,7 +17,6 @@ example_table;
                 )
                 .await?;
             let res = client.query_one(&stmt, &[]).await?;
-
             let return_value: String = res.get(0);
             Ok(return_value)
         }

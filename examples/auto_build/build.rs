@@ -23,6 +23,7 @@ fn main() -> Result<(), std::io::Error> {
         .arg(migrations_path)
         .arg("-d")
         .arg(destination)
+        .arg("--podman") //<-- Comment this line if you want Docker instead.
         .output()?;
 
     // If Cornucopia couldn't run properly, try to display the error.

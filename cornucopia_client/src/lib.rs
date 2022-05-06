@@ -5,7 +5,7 @@ use tokio_postgres::{
     Transaction as PgTransaction,
 };
 
-#[async_trait(?Send)]
+#[async_trait]
 pub trait GenericClient {
     async fn prepare(&self, query: &str) -> Result<Statement, Error>;
     async fn execute<T>(
@@ -39,13 +39,13 @@ pub trait GenericClient {
 
     async fn query_raw<T, P, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
     where
-        T: ?Sized + ToStatement,
+        T: ?Sized + ToStatement + Sync + Send,
         P: BorrowToSql,
-        I: IntoIterator<Item = P>,
+        I: IntoIterator<Item = P> + Sync + Send,
         I::IntoIter: ExactSizeIterator;
 }
 
-#[async_trait(?Send)]
+#[async_trait]
 impl GenericClient for Transaction<'_> {
     async fn prepare(&self, query: &str) -> Result<Statement, Error> {
         Transaction::prepare_cached(self, query).await
@@ -97,16 +97,16 @@ impl GenericClient for Transaction<'_> {
 
     async fn query_raw<T, P, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
     where
-        T: ?Sized + ToStatement,
+        T: ?Sized + ToStatement + Sync + Send,
         P: BorrowToSql,
-        I: IntoIterator<Item = P>,
+        I: IntoIterator<Item = P> + Sync + Send,
         I::IntoIter: ExactSizeIterator,
     {
-        PgTransaction::query_raw(self, statement, params).await
+        PgTransaction::query_raw(&self, statement, params).await
     }
 }
 
-#[async_trait(?Send)]
+#[async_trait]
 impl GenericClient for PgTransaction<'_> {
     async fn prepare(&self, query: &str) -> Result<Statement, Error> {
         PgTransaction::prepare(self, query).await
@@ -158,16 +158,16 @@ impl GenericClient for PgTransaction<'_> {
 
     async fn query_raw<T, P, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
     where
-        T: ?Sized + ToStatement,
+        T: ?Sized + ToStatement + Sync + Send,
         P: BorrowToSql,
-        I: IntoIterator<Item = P>,
+        I: IntoIterator<Item = P> + Sync + Send,
         I::IntoIter: ExactSizeIterator,
     {
         PgTransaction::query_raw(self, statement, params).await
     }
 }
 
-#[async_trait(?Send)]
+#[async_trait]
 impl GenericClient for Client {
     async fn prepare(&self, query: &str) -> Result<Statement, Error> {
         ClientWrapper::prepare_cached(self, query).await
@@ -219,16 +219,16 @@ impl GenericClient for Client {
 
     async fn query_raw<T, P, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
     where
-        T: ?Sized + ToStatement,
+        T: ?Sized + ToStatement + Sync + Send,
         P: BorrowToSql,
-        I: IntoIterator<Item = P>,
+        I: IntoIterator<Item = P> + Sync + Send,
         I::IntoIter: ExactSizeIterator,
     {
         PgClient::query_raw(self, statement, params).await
     }
 }
 
-#[async_trait(?Send)]
+#[async_trait]
 impl GenericClient for PgClient {
     async fn prepare(&self, query: &str) -> Result<Statement, Error> {
         PgClient::prepare(self, query).await
@@ -280,9 +280,9 @@ impl GenericClient for PgClient {
 
     async fn query_raw<T, P, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
     where
-        T: ?Sized + ToStatement,
+        T: ?Sized + ToStatement + Sync + Send,
         P: BorrowToSql,
-        I: IntoIterator<Item = P>,
+        I: IntoIterator<Item = P> + Sync + Send,
         I::IntoIter: ExactSizeIterator,
     {
         PgClient::query_raw(self, statement, params).await
