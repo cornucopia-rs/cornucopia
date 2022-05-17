@@ -166,6 +166,7 @@ dependencies = [
  "eui48",
  "futures",
  "heck",
+ "indexmap",
  "pest",
  "pest_derive",
  "postgres-types",
