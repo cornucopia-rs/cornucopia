@@ -1,57 +1,87 @@
-// Symbols
-dot = _{"."}
-underscore = _{"_"}
-colon = _{":"}
-comma = _{","}
-start_param_list = _{"("}
-end_param_list = _{")"}
-start_ret_struct = _{"{"}
-end_ret_struct = _{"}"}
+// Whitespace
+comment = _{ NEWLINE ~ (" " | "\t")* ~ "--" ~ !"!" ~ (!NEWLINE ~ ANY)*}
+annotation_token = _{"--!"}
+blank = _{ comment | " " | "\t" | NEWLINE }
+ws = _{ blank | annotation_token }
+significant_whitespace = { blank | annotation_token }
+
+// Numbers
+number = {ASCII_DIGIT+}
 
 // Postgres identifiers
-lowercase_letter = _{'a'..'z'}
-uppercase_letter = _{'A'..'Z'}
-letter = _{ lowercase_letter | uppercase_letter }
-digit = _{'0'..'9'}
-postgres_alpha = _{ letter | digit | underscore }
-ident = { (underscore | letter) ~ postgres_alpha* }
+ident = { 
+    !"_"+
+    ~ (("_" | LETTER) ~ (LETTER | ASCII_DIGIT | "_")*) 
+}
+extended_bind_parameter = _{":" ~ ident}
+pg_bind_parameter = _{"$" ~ number}
 
-// Query parameters
-parameter_list = {
-	start_param_list
-    ~ (ident ~ (comma ~ ident)*)?
-    ~ (comma)?
-    ~ end_param_list
+// Parameters
+param_list = {
+	"(" ~ ws* 
+    ~ (ident ~ ws* 
+        ~ ("," ~ ws* ~ ident ~ ws*)*)? 
+    ~ ","? ~ ws* 
+    ~ ")"
 }
 
-// Query return
-nullable_return_param = {ident ~ nullable_marker}
-non_nullable_return_param = {ident}
-return_param = _{nullable_return_param | non_nullable_return_param }
-nullable_marker = _{"?"}
-inferred_params = { return_param ~ (comma ~ return_param)* }
-implicit_return = { "" }
-struct_return = {
-	start_ret_struct
-	~ inferred_params?
-    ~ comma?
-    ~ end_ret_struct
+// Nullable column list
+nullable_column_list = {
+	"?{" ~ ws* 
+    ~ ((ident | number) ~ ws* 
+        ~ ("," ~ ws* ~ (ident | number) ~ ws*)*)? 
+    ~ ","? ~ ws* 
+    ~ "}"
 }
-return_type = _{ struct_return | implicit_return }
 
-// Query quantifier
-stream = {"#"}
-zero_or_more = {"*"}
-zero_or_one = {"?"}
-one = {""}
-quantifier = {zero_or_more | zero_or_one | stream | one}
-
-// Parser
-parser = {
-    SOI 
-	~ ident 
-    ~ parameter_list 
-    ~ return_type 
-    ~ quantifier
-    ~ EOI
+// Query
+annotation = {
+    annotation_token ~ ws+
+    ~ ident
+    ~ (ws* ~ param_list)?
+    ~ (ws* ~ nullable_column_list)?
+    ~ ((" " | "\t")* ~ NEWLINE | significant_whitespace* ~ NEWLINE)
 }
+
+query = {
+    annotation
+    ~ sql
+}
+
+
+// SQL Strings
+string_constant = _{
+    "'" 
+    ~ ("''" | (!"'" ~ ANY))*
+    ~ "'"
+}
+quoted_identifier = _{
+    "\"" 
+    ~ (!"\"" ~ ANY)* 
+    ~ "\""
+}
+c_style = _{
+    "E"
+    ~ "'"
+    ~ ( "\\\\" | "''" | "\\'" | (!"'" ~ ANY))*
+    ~ "'"
+}
+dollar_quoted = _{
+    "$" ~ PUSH((!"$" ~ ANY)*) ~ "$" 
+    ~ (!("$" ~ POP ~ "$") ~ ANY)* 
+    ~ ("$" ~ POP ~ "$")
+}
+sql_string = _{string_constant | quoted_identifier | c_style | dollar_quoted}
+
+// SQL Block
+sql = {
+	(
+	    sql_string
+        | "::" 
+	    | (extended_bind_parameter | pg_bind_parameter)
+	    | (!(NEWLINE ~ blank* ~ annotation_token) ~ ANY)
+	)+
+}
+
+// Parsers
+parser = {SOI ~ (blank* ~ query ~ blank*)* ~ EOI}
