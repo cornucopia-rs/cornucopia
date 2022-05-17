@@ -1,7 +1,5 @@
-use crate::parse::ParsedQuery;
-use crate::parse_file::parse_file;
-
-use self::error::*;
+use crate::parser::{parse_queries, ParsedQuery};
+use error::Error;
 
 #[derive(Debug)]
 pub(crate) struct Module {
@@ -10,20 +8,24 @@ pub(crate) struct Module {
     pub(crate) queries: Vec<ParsedQuery>,
 }
 
-pub(crate) fn read_queries(path: &str) -> Result<Vec<Module>, Error> {
+/// Reads queries in the directory. Only .sql files are considered.
+///
+/// # Error
+/// Returns an error if `dir_path` does not point to a valid directory or if a query file cannot be parsed.
+pub(crate) fn read_query_modules(dir_path: &str) -> Result<Vec<Module>, Error> {
     let mut modules = Vec::new();
-    for entry_result in std::fs::read_dir(path).map_err(|err| Error {
+    for entry_result in std::fs::read_dir(dir_path).map_err(|err| Error {
         err: err.into(),
-        path: String::from(path),
-        line: None,
+        path: String::from(dir_path),
     })? {
+        // Directory entry
         let entry = entry_result.map_err(|err| Error {
             err: err.into(),
-            path: String::from(path),
-            line: None,
+            path: dir_path.to_owned(),
         })?;
         let path_buf = entry.path();
 
+        // Check we're dealing with a .sql file
         if path_buf
             .extension()
             .map(|extension| extension == "sql")
@@ -36,16 +38,17 @@ pub(crate) fn read_queries(path: &str) -> Result<Vec<Module>, Error> {
                 .expect("file name is valid utf8")
                 .to_string();
 
+            let file_contents = std::fs::read_to_string(&path_buf).map_err(|err| Error {
+                err: err.into(),
+                path: dir_path.to_owned(),
+            })?;
+
             let module = Module {
                 path: String::from(path_buf.to_string_lossy()),
                 name: module_name,
-                queries: parse_file(&path_buf).map_err(|err| {
-                    let line = err.line;
-                    Error {
-                        err: Box::new(err).into(),
-                        path: String::from(path_buf.to_string_lossy()),
-                        line,
-                    }
+                queries: parse_queries(&file_contents).map_err(|err| Error {
+                    err: err.into(),
+                    path: String::from(path_buf.to_string_lossy()),
                 })?,
             };
 
@@ -58,45 +61,21 @@ pub(crate) fn read_queries(path: &str) -> Result<Vec<Module>, Error> {
 }
 
 pub(crate) mod error {
-    use std::fmt::Display;
+    use crate::parser::error::Error as ParseError;
 
-    use crate::parse_file::error::Error as FileParserError;
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError)]
     #[error("{0}")]
     pub(crate) enum ErrorVariants {
         Io(#[from] std::io::Error),
-        Parser(#[from] Box<FileParserError>),
+        Parser(#[from] ParseError),
     }
 
-    #[derive(Debug)]
+    #[derive(Debug, ThisError)]
+    #[error("Error while reading queries [path: \"{path}\"]: {err}.")]
     pub(crate) struct Error {
-        pub(crate) line: Option<usize>,
         pub(crate) err: ErrorVariants,
         pub(crate) path: String,
     }
-
-    impl Display for Error {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            match self.line {
-                Some(line) => {
-                    write!(
-                        f,
-                        "Error while reading queries [\"{}\", line: {}]: {}.",
-                        self.path, line, self.err
-                    )
-                }
-                None => {
-                    write!(
-                        f,
-                        "Error while reading queries [\"{}\"]: {}.",
-                        self.path, self.err
-                    )
-                }
-            }
-        }
-    }
-
-    impl std::error::Error for Error {}
 }

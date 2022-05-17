@@ -4,11 +4,11 @@ use crate::{
     codegen::generate,
     container,
     error::{Error, FmtError},
-    pg_type::TypeRegistrar,
     pool::{self, cornucopia_pool, from_url},
-    prepare_queries::prepare_modules,
-    read_queries::{read_queries, Module},
+    prepare_queries::prepare,
+    read_queries::{read_query_modules, Module},
     run_migrations::run_migrations,
+    type_registrar::TypeRegistrar,
 };
 use clap::{Parser, Subcommand};
 use time::OffsetDateTime;
@@ -74,6 +74,7 @@ enum GenerateLiveAction {
     },
 }
 
+// Main entrypoint of the CLI. Parses the args and calls the appropriate routines.
 pub(crate) async fn run() -> Result<(), Error> {
     let args = Args::parse();
 
@@ -83,13 +84,17 @@ pub(crate) async fn run() -> Result<(), Error> {
             migrations_path,
         } => match action {
             MigrationsAction::New { name } => {
+                // Create a timestamp of the current time.
                 let unix_ts = OffsetDateTime::now_utc().unix_timestamp();
+                // Format the target file name
                 let file_path =
                     Path::new(&migrations_path).join(format!("{}_{}.sql", unix_ts, name));
+                // Write file with header
                 std::fs::write(file_path, "-- Write your migration SQL here\n")?;
                 Ok(())
             }
             MigrationsAction::Run { url } => {
+                // Runs all migrations at the target url
                 let client = pool::from_url(&url)?.get().await?;
                 run_migrations(&client, &migrations_path).await?;
 
@@ -107,14 +112,15 @@ pub(crate) async fn run() -> Result<(), Error> {
             let mut type_registrar = TypeRegistrar::default();
             match action {
                 Some(GenerateLiveAction::Live { url }) => {
-                    let modules = read_queries(&queries_path)?;
+                    let modules = read_query_modules(&queries_path)?;
                     let client = from_url(&url)?.get().await?;
-                    let modules = prepare_modules(&client, &mut type_registrar, modules).await?;
+                    let modules = prepare(&client, &mut type_registrar, modules).await?;
                     generate(&type_registrar, modules, &destination)?;
                 }
                 None => {
-                    let modules = read_queries(&queries_path)?;
+                    let modules = read_query_modules(&queries_path)?;
                     container::setup(podman)?;
+                    // Run the generate command. If the command is unsuccessful, cleanup Cornucopia's container
                     if let Err(e) = generate_action(
                         &mut type_registrar,
                         modules,
@@ -128,6 +134,7 @@ pub(crate) async fn run() -> Result<(), Error> {
                         return Err(e);
                     }
 
+                    // Format file, unless `--no-formatting option is enabled`
                     if !no_formatting {
                         format_generated_file(&destination)?
                     }
@@ -139,7 +146,8 @@ pub(crate) async fn run() -> Result<(), Error> {
     }
 }
 
-pub(crate) fn format_generated_file(path: &str) -> Result<(), FmtError> {
+/// Format the file at the target path using `rustfmt`
+fn format_generated_file(path: &str) -> Result<(), FmtError> {
     if Command::new("rustfmt")
         .arg("--edition")
         .arg("2021")
@@ -154,7 +162,8 @@ pub(crate) fn format_generated_file(path: &str) -> Result<(), FmtError> {
     }
 }
 
-pub(crate) async fn generate_action(
+/// Performs the `generate` CLI command
+async fn generate_action(
     type_registrar: &mut TypeRegistrar,
     modules: Vec<Module>,
     podman: bool,
@@ -163,7 +172,7 @@ pub(crate) async fn generate_action(
 ) -> Result<(), Error> {
     let client = cornucopia_pool()?.get().await?;
     run_migrations(&client, migrations_path).await?;
-    let prepared_modules = prepare_modules(&client, type_registrar, modules).await?;
+    let prepared_modules = prepare(&client, type_registrar, modules).await?;
     generate(type_registrar, prepared_modules, destination)?;
     container::cleanup(podman)?;
 

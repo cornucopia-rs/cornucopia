@@ -1,9 +1,9 @@
+use deadpool_postgres::{Config, Pool, Runtime};
 use error::Error;
 use std::str::FromStr;
-
-use deadpool_postgres::{Config, Pool, Runtime};
 use tokio_postgres::NoTls;
 
+/// Creates a non-TLS connection pool from a URL.
 pub(crate) fn from_url(url: &str) -> Result<Pool, Error> {
     let config = tokio_postgres::Config::from_str(url)?;
     let manager = deadpool_postgres::Manager::new(config, tokio_postgres::NoTls);
@@ -11,6 +11,7 @@ pub(crate) fn from_url(url: &str) -> Result<Pool, Error> {
     Ok(pool)
 }
 
+/// Create a non-TLS connection pool for usage internal to Cornucopia.
 pub(crate) fn cornucopia_pool() -> Result<Pool, Error> {
     let mut cfg = Config::new();
     cfg.user = Some(String::from("postgres"));
