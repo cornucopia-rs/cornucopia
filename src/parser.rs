@@ -12,7 +12,7 @@ pub enum NullableColumn {
     Named(String),
 }
 
-/// This data structure holds a value and the context in which it was parsed.
+/// Th    if is data structure holds a value and the context in which it was parsed.
 /// This context is used for error reporting.
 #[derive(Debug, Clone)]
 pub(crate) struct Parsed<T> {
@@ -327,6 +327,7 @@ fn parse_nullable_columns(pair: Pair<Rule>) -> Result<Vec<Parsed<NullableColumn>
         let nullable_column = match it.as_rule() {
             // Named nullable column
             Rule::ident => NullableColumn::Named(it_str.to_owned()),
+            // Indexed nullable column
             Rule::number => {
                 // Check that the index can be parsed as a i16 (required by postgres wire protocol)
                 let index = it_str.parse::<i16>().map_err(|_| {
@@ -338,7 +339,7 @@ fn parse_nullable_columns(pair: Pair<Rule>) -> Result<Vec<Parsed<NullableColumn>
                         },
                     })
                 })?;
-                // Check that index is not zero
+                // Check that index is not zero (Postgres columns are 1-indexed)
                 if index == 0 {
                     return Err(Error::Validation(ValidationError::InvalidI16Index {
                         pos: ErrorPosition {
@@ -348,7 +349,6 @@ fn parse_nullable_columns(pair: Pair<Rule>) -> Result<Vec<Parsed<NullableColumn>
                         },
                     }));
                 }
-                // Indexed nullable column
                 NullableColumn::Index(index)
             }
             _ => unreachable!(),

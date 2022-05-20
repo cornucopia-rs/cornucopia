@@ -43,16 +43,16 @@ impl CornucopiaType {
     /// a Rust equivalent is a String or a Vec<T>, it will return a &str and a &[T] respectively.
     pub(crate) fn borrowed_rust_ty(&self) -> String {
         if self.rust_path_from_queries == "String" {
-            String::from("&str")
+            String::from("str")
         } else if self.rust_path_from_queries.starts_with("Vec<") {
             format!(
-                "&[{}]",
+                "[{}]",
                 String::from(
                     &self.rust_path_from_queries[4..self.rust_path_from_queries.len() - 1]
                 )
             )
         } else {
-            format!("&{}", self.rust_path_from_queries)
+            format!("{}", self.rust_path_from_queries)
         }
     }
 }
@@ -106,17 +106,20 @@ impl TypeRegistrar {
 
         Ok(match ty.kind() {
             Kind::Enum(_) => self.insert_custom(ty.clone(), ty.name().to_upper_camel_case()),
-            Kind::Array(a) => {
-                let a_rust_ty_name = &self.register(client, a).await?.rust_ty_name;
+            Kind::Array(array_inner_ty) => {
+                let a_rust_ty_name = &self
+                    .register(client, array_inner_ty)
+                    .await?
+                    .rust_path_from_queries;
                 let rust_ty_name = format!("Vec<{}>", a_rust_ty_name);
                 self.insert_base(ty.clone(), rust_ty_name)
             }
-            Kind::Domain(d) => {
-                self.register(client, d).await?;
+            Kind::Domain(domain_inner_ty) => {
+                self.register(client, domain_inner_ty).await?;
                 self.insert_custom(ty.clone(), ty.name().to_upper_camel_case())
             }
-            Kind::Composite(c) => {
-                for field in c {
+            Kind::Composite(composite_fields) => {
+                for field in composite_fields {
                     self.register(client, field.type_()).await?;
                 }
                 self.insert_custom(ty.clone(), ty.name().to_upper_camel_case())
