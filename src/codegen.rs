@@ -29,7 +29,7 @@ fn generate_custom_type(
         Kind::Enum(variants) => {
             let name = &ty.rust_ty_name;
             format!(
-                "#[derive(Debug, Clone, Copy, PartialEq, Eq)]\npub enum {} {{ {} }}",
+                "#[derive(Clone, Copy, PartialEq, Eq)]\npub enum {} {{ {} }}",
                 name,
                 variants.join(",")
             )
@@ -37,7 +37,7 @@ fn generate_custom_type(
         Kind::Domain(domain_inner_ty) => {
             let inner_ty = type_registrar.get(domain_inner_ty).unwrap();
             format!(
-                "#[derive(Debug, Clone, PartialEq)]\npub struct {} ({})",
+                "#[derive(Clone, PartialEq)]\npub struct {} ({})",
                 ty.rust_ty_name, inner_ty.rust_path_from_types
             )
         }
@@ -46,13 +46,13 @@ fn generate_custom_type(
                 .iter()
                 .map(|f| {
                     let f_ty = type_registrar.get(f.type_()).unwrap();
-                    format!("pub {} : {}", f_ty.rust_ty_name, f_ty.rust_path_from_types)
+                    format!("pub {} : {}", f.name(), f_ty.rust_path_from_types)
                 })
                 .collect::<Vec<String>>()
                 .join(",");
 
             format!(
-                "#[derive(Debug, Clone, PartialEq)]\npub struct {} {{ {} }}",
+                "#[derive(Clone, PartialEq)]\npub struct {} {{ {} }}",
                 ty.rust_ty_name, fields_str
             )
         }
@@ -98,7 +98,68 @@ fn generate_type_modules(type_registrar: &TypeRegistrar) -> Result<String, Error
 }
 
 fn generate_query(module_name: &str, query: &PreparedQuery) -> String {
-    todo!()
+    let query_struct_name = query.name.to_upper_camel_case();
+
+    let params_struct = if query.params.is_empty() {
+        String::new()
+    } else {
+        let params_struct_fields = query
+            .params
+            .iter()
+            .map(|p| format!("pub {} : &'a {}", p.name, p.ty.borrowed_rust_ty()))
+            .collect::<Vec<String>>()
+            .join(",");
+        format!("pub struct {query_struct_name}Params<'a> {{ {params_struct_fields} }}")
+    };
+
+    let borrowed_ret_struct = if query.ret_fields.is_empty() {
+        String::new()
+    } else {
+        let ret_struct_fields = query
+            .ret_fields
+            .iter()
+            .map(|p| format!("pub {} : &'a {}", p.name, p.ty.borrowed_rust_ty()))
+            .collect::<Vec<String>>()
+            .join(",");
+        format!("pub struct {query_struct_name}Borrowed<'a> {{ {ret_struct_fields} }}")
+    };
+    let ret_struct = if query.ret_fields.is_empty() {
+        String::new()
+    } else {
+        let ret_struct_fields = query
+            .ret_fields
+            .iter()
+            .map(|p| format!("pub {} : {}", p.name, p.ty.rust_path_from_queries))
+            .collect::<Vec<String>>()
+            .join(",");
+        format!("pub struct {query_struct_name} {{ {ret_struct_fields} }}")
+    };
+
+    let from_impl = if query.ret_fields.is_empty() {
+        String::new()
+    } else {
+        let fields_names = query
+            .ret_fields
+            .iter()
+            .map(|f| f.name.clone())
+            .collect::<Vec<String>>()
+            .join(",");
+        let borrowed_fields_to_owned = query
+            .ret_fields
+            .iter()
+            .map(|f| format!("{}: {}.to_owned()", f.name, f.name))
+            .collect::<Vec<String>>()
+            .join(",");
+        format!(
+            "impl<'a> From<{query_struct_name}Borrowed<'a>> for {query_struct_name} {{
+    fn from({query_struct_name}Borrowed {{ {fields_names} }}: {query_struct_name}Borrowed<'a>) -> Self {{
+        Self {{ {borrowed_fields_to_owned} }}
+    }}
+}}"
+        )
+    };
+
+    format!("{params_struct}\n{borrowed_ret_struct}\n{ret_struct}\n{from_impl}")
 }
 
 pub(crate) fn generate(
