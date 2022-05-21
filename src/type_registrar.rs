@@ -13,18 +13,20 @@ pub(crate) struct CornucopiaType {
     pub(crate) rust_ty_name: String,
     pub(crate) rust_path_from_queries: String,
     pub(crate) rust_path_from_types: String,
+    pub(crate) is_copy: bool,
 }
 
 impl CornucopiaType {
-    fn new_base(pg_ty: Type, rust_ty_name: String) -> Self {
+    fn new_base(pg_ty: Type, rust_ty_name: String, is_copy: bool) -> Self {
         Self {
             rust_path_from_queries: rust_ty_name.clone(),
             rust_path_from_types: rust_ty_name.clone(),
             pg_ty,
             rust_ty_name,
+            is_copy,
         }
     }
-    fn new_custom(pg_ty: Type, rust_ty_name: String) -> Self {
+    fn new_custom(pg_ty: Type, rust_ty_name: String, is_copy: bool) -> Self {
         Self {
             rust_path_from_queries: format!(
                 "super::super::types::{}::{}",
@@ -34,25 +36,72 @@ impl CornucopiaType {
             rust_path_from_types: format!("super::{}::{}", pg_ty.schema(), rust_ty_name),
             pg_ty,
             rust_ty_name,
+            is_copy,
         }
     }
 }
 
 impl CornucopiaType {
+    pub(crate) fn owning_call(&self, var_name: &str) -> String {
+        if self.is_copy {
+            return "".into();
+        }
+
+        if self.rust_path_from_queries == "tokio_postgres::types::Json<serde_json::Value>" {
+            return format!(
+                "tokio_postgres::types::Json(serde_json::from_str({var_name}.0.get()).unwrap())
+            "
+            );
+        }
+
+        match self.pg_ty.kind() {
+            Kind::Array(_) => format!("{var_name}.collect()"),
+            Kind::Domain(_) | Kind::Composite(_) => format!("{var_name}.into()"),
+            _ => format!("{var_name}.to_owned()"),
+        }
+    }
     /// String representing a borrowed rust equivalent of this type. Notably, if
     /// a Rust equivalent is a String or a Vec<T>, it will return a &str and a &[T] respectively.
-    pub(crate) fn borrowed_rust_ty(&self) -> String {
-        if self.rust_path_from_queries == "String" {
-            String::from("str")
-        } else if self.rust_path_from_queries.starts_with("Vec<") {
-            format!(
-                "[{}]",
+    pub(crate) fn borrowed_rust_ty(&self, lifetime: Option<&'static str>) -> String {
+        // Special case for copy types
+        if self.is_copy {
+            return self.rust_path_from_queries.to_owned();
+        }
+        // Special case for byte arrays
+        if self.rust_path_from_queries == "Vec<u8>" {
+            return format!("&{} [u8]", lifetime.unwrap_or(""));
+        }
+        // Special case for domains and composites
+        if matches!(self.pg_ty.kind(), Kind::Domain(_) | Kind::Composite(_)) {
+            return format!(
+                "{}Borrowed<{}>",
+                self.rust_path_from_queries,
+                lifetime.unwrap_or("'a")
+            );
+        }
+        // Special case for PostgreSQL arrays
+        if self.rust_path_from_queries.starts_with("Vec<") {
+            return format!(
+                "cornucopia_client::ArrayIterator<{}, {}>",
+                lifetime.unwrap_or("'a"),
                 String::from(
                     &self.rust_path_from_queries[4..self.rust_path_from_queries.len() - 1]
                 )
-            )
-        } else {
-            format!("{}", self.rust_path_from_queries)
+            );
+        }
+
+        // Simple checks
+        match self.rust_path_from_queries.as_str() {
+            "String" => {
+                format!("&{} str", lifetime.unwrap_or(""))
+            }
+            "tokio_postgres::types::Json<serde_json::Value>" => {
+                format!(
+                    "tokio_postgres::types::Json<&{} serde_json::value::RawValue>",
+                    lifetime.unwrap_or("")
+                )
+            }
+            _ => unreachable!(),
         }
     }
 }
@@ -105,24 +154,26 @@ impl TypeRegistrar {
         };
 
         Ok(match ty.kind() {
-            Kind::Enum(_) => self.insert_custom(ty.clone(), ty.name().to_upper_camel_case()),
+            Kind::Enum(_) => self.insert_custom(ty.clone(), ty.name().to_upper_camel_case(), true),
             Kind::Array(array_inner_ty) => {
                 let a_rust_ty_name = &self
                     .register(client, array_inner_ty)
                     .await?
                     .rust_path_from_queries;
                 let rust_ty_name = format!("Vec<{}>", a_rust_ty_name);
-                self.insert_base(ty.clone(), rust_ty_name)
+                self.insert_base(ty.clone(), rust_ty_name, false)
             }
             Kind::Domain(domain_inner_ty) => {
-                self.register(client, domain_inner_ty).await?;
-                self.insert_custom(ty.clone(), ty.name().to_upper_camel_case())
+                let inner_is_copy = self.register(client, domain_inner_ty).await?.is_copy;
+                self.insert_custom(ty.clone(), ty.name().to_upper_camel_case(), inner_is_copy)
             }
             Kind::Composite(composite_fields) => {
+                let mut is_copy = true;
                 for field in composite_fields {
-                    self.register(client, field.type_()).await?;
+                    let field_ty = self.register(client, field.type_()).await?;
+                    is_copy = is_copy && field_ty.is_copy;
                 }
-                self.insert_custom(ty.clone(), ty.name().to_upper_camel_case())
+                self.insert_custom(ty.clone(), ty.name().to_upper_camel_case(), is_copy)
             }
             _ => {
                 return Err(Error::UnsupportedPostgresType(
@@ -158,7 +209,7 @@ impl TypeRegistrar {
         }
     }
 
-    fn insert_base(&mut self, ty: Type, rust_ty_name: String) -> &CornucopiaType {
+    fn insert_base(&mut self, ty: Type, rust_ty_name: String, is_copy: bool) -> &CornucopiaType {
         let index = match self
             .base_types
             .entry((ty.schema().to_owned(), ty.name().to_owned()))
@@ -166,7 +217,7 @@ impl TypeRegistrar {
             indexmap::map::Entry::Occupied(o) => o.index(),
             indexmap::map::Entry::Vacant(v) => {
                 let index = v.index();
-                v.insert(CornucopiaType::new_base(ty, rust_ty_name));
+                v.insert(CornucopiaType::new_base(ty, rust_ty_name, is_copy));
                 index
             }
         };
@@ -174,7 +225,7 @@ impl TypeRegistrar {
         &self.base_types[index]
     }
 
-    fn insert_custom(&mut self, ty: Type, rust_ty_name: String) -> &CornucopiaType {
+    fn insert_custom(&mut self, ty: Type, rust_ty_name: String, is_copy: bool) -> &CornucopiaType {
         let index = match self
             .custom_types
             .entry((ty.schema().to_owned(), ty.name().to_owned()))
@@ -182,7 +233,7 @@ impl TypeRegistrar {
             indexmap::map::Entry::Occupied(o) => o.index(),
             indexmap::map::Entry::Vacant(v) => {
                 let index = v.index();
-                v.insert(CornucopiaType::new_custom(ty, rust_ty_name));
+                v.insert(CornucopiaType::new_custom(ty, rust_ty_name, is_copy));
                 index
             }
         };
@@ -191,11 +242,11 @@ impl TypeRegistrar {
     }
 }
 
-impl<const N: usize> From<[(Type, &'static str); N]> for TypeRegistrar {
-    fn from(base_types: [(Type, &'static str); N]) -> Self {
+impl<const N: usize> From<[(Type, &'static str, bool); N]> for TypeRegistrar {
+    fn from(base_types: [(Type, &'static str, bool); N]) -> Self {
         let mut registrar = Self::new();
-        for (ty, rust_ty_name) in base_types {
-            registrar.insert_base(ty, rust_ty_name.to_owned());
+        for (ty, rust_ty_name, is_copy) in base_types {
+            registrar.insert_base(ty, rust_ty_name.to_owned(), is_copy);
         }
         registrar
     }
@@ -204,47 +255,64 @@ impl<const N: usize> From<[(Type, &'static str); N]> for TypeRegistrar {
 impl Default for TypeRegistrar {
     fn default() -> Self {
         TypeRegistrar::from([
-            (Type::BOOL, "bool"),
-            (Type::CHAR, "i8"),
-            (Type::INT2, "i16"),
-            (Type::INT4, "i32"),
-            (Type::INT8, "i64"),
-            (Type::FLOAT4, "f32"),
-            (Type::FLOAT8, "f64"),
-            (Type::TEXT, "String"),
-            (Type::VARCHAR, "String"),
-            (Type::BYTEA, "Vec<u8>"),
-            (Type::TIMESTAMP, "time::PrimitiveDateTime"),
-            (Type::TIMESTAMPTZ, "time::OffsetDateTime"),
-            (Type::DATE, "time::Date"),
-            (Type::TIME, "time::Time"),
-            (Type::JSON, "serde_json::Value"),
-            (Type::JSONB, "serde_json::Value"),
-            (Type::UUID, "uuid::Uuid"),
-            (Type::INET, "std::net::IpAddr"),
-            (Type::MACADDR, "eui48::MacAddress"),
-            (Type::BOOL_ARRAY, "Vec<bool>"),
-            (Type::CHAR_ARRAY, "Vec<i8>"),
-            (Type::INT2_ARRAY, "Vec<i16>"),
-            (Type::INT4_ARRAY, "Vec<i32>"),
-            (Type::INT8_ARRAY, "Vec<i64>"),
-            (Type::FLOAT4_ARRAY, "Vec<f32>"),
-            (Type::FLOAT8_ARRAY, "Vec<f64>"),
-            (Type::TEXT_ARRAY, "Vec<String>"),
-            (Type::VARCHAR_ARRAY, "Vec<String>"),
-            (Type::BYTEA_ARRAY, "Vec<Vec<u8>>"),
-            (Type::TIMESTAMP_ARRAY, "Vec<time::PrimitiveDateTime>"),
-            (Type::TIMESTAMPTZ_ARRAY, "Vec<time::OffsetDateTime>"),
-            (Type::DATE_ARRAY, "Vec<time::Date>"),
-            (Type::TIME_ARRAY, "Vec<time::Time>"),
-            (Type::JSON_ARRAY, "Vec<serde_json::Value>"),
-            (Type::JSONB_ARRAY, "Vec<serde_json::Value>"),
-            (Type::UUID_ARRAY, "Vec<uuid::Uuid>"),
-            (Type::INET_ARRAY, "Vec<std::net::IpAddr>"),
-            (Type::MACADDR_ARRAY, "Vec<eui48::MacAddress>"),
+            (Type::BOOL, "bool", true),
+            (Type::CHAR, "i8", true),
+            (Type::INT2, "i16", true),
+            (Type::INT4, "i32", true),
+            (Type::INT8, "i64", true),
+            (Type::FLOAT4, "f32", true),
+            (Type::FLOAT8, "f64", true),
+            (Type::TEXT, "String", false),
+            (Type::VARCHAR, "String", false),
+            (Type::BYTEA, "Vec<u8>", false),
+            (Type::TIMESTAMP, "time::PrimitiveDateTime", true),
+            (Type::TIMESTAMPTZ, "time::OffsetDateTime", true),
+            (Type::DATE, "time::Date", true),
+            (Type::TIME, "time::Time", true),
+            (
+                Type::JSON,
+                "tokio_postgres::types::Json<serde_json::Value>",
+                false,
+            ),
+            (
+                Type::JSONB,
+                "tokio_postgres::types::Json<serde_json::Value>",
+                false,
+            ),
+            (Type::UUID, "uuid::Uuid", true),
+            (Type::INET, "std::net::IpAddr", true),
+            (Type::MACADDR, "eui48::MacAddress", true),
+            (Type::BOOL_ARRAY, "Vec<bool>", false),
+            (Type::CHAR_ARRAY, "Vec<i8>", false),
+            (Type::INT2_ARRAY, "Vec<i16>", false),
+            (Type::INT4_ARRAY, "Vec<i32>", false),
+            (Type::INT8_ARRAY, "Vec<i64>", false),
+            (Type::FLOAT4_ARRAY, "Vec<f32>", false),
+            (Type::FLOAT8_ARRAY, "Vec<f64>", false),
+            (Type::TEXT_ARRAY, "Vec<String>", false),
+            (Type::VARCHAR_ARRAY, "Vec<String>", false),
+            (Type::BYTEA_ARRAY, "Vec<Vec<u8>>", false),
+            (Type::TIMESTAMP_ARRAY, "Vec<time::PrimitiveDateTime>", false),
+            (Type::TIMESTAMPTZ_ARRAY, "Vec<time::OffsetDateTime>", false),
+            (Type::DATE_ARRAY, "Vec<time::Date>", false),
+            (Type::TIME_ARRAY, "Vec<time::Time>", false),
+            (
+                Type::JSON_ARRAY,
+                "Vec<tokio_postgres::types::Json<serde_json::Value>>",
+                false,
+            ),
+            (
+                Type::JSON_ARRAY,
+                "Vec<tokio_postgres::types::Json<serde_json::Value>>",
+                false,
+            ),
+            (Type::UUID_ARRAY, "Vec<uuid::Uuid>", false),
+            (Type::INET_ARRAY, "Vec<std::net::IpAddr>", false),
+            (Type::MACADDR_ARRAY, "Vec<eui48::MacAddress>", false),
         ])
     }
 }
+
 pub(crate) mod error {
     use thiserror::Error as ThisError;
     #[derive(Debug, ThisError)]
