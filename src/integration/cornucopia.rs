@@ -2,18 +2,18 @@
 
 pub mod types {
     pub mod public {
-        #[derive(Debug)]
+        #[derive(
+            Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, Copy, PartialEq, Eq,
+        )]
         #[postgres(name = "spongebob_character")]
-        #[derive(postgres_types::ToSql, postgres_types::FromSql, Clone, Copy, PartialEq, Eq)]
         pub enum SpongebobCharacter {
             Bob,
             Patrick,
             Squidward,
         }
 
-        #[derive(Debug)]
+        #[derive(Debug, postgres_types::ToSql, Clone, PartialEq)]
         #[postgres(name = "custom_composite")]
-        #[derive(postgres_types::ToSql, Clone, PartialEq)]
         pub struct CustomComposite {
             pub wow: String,
             pub such_cool: i32,
@@ -36,9 +36,9 @@ pub mod types {
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
                 let wow = postgres_types::private::read_value(fields[0].type_(), &mut buf)?;
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let such_cool = postgres_types::private::read_value(fields[0].type_(), &mut buf)?;
+                let such_cool = postgres_types::private::read_value(fields[1].type_(), &mut buf)?;
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let nice = postgres_types::private::read_value(fields[0].type_(), &mut buf)?;
+                let nice = postgres_types::private::read_value(fields[2].type_(), &mut buf)?;
                 std::result::Result::Ok(CustomComposite {
                     wow,
                     such_cool,
@@ -72,9 +72,9 @@ pub mod types {
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
                 let wow = postgres_types::private::read_value(fields[0].type_(), &mut buf)?;
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let such_cool = postgres_types::private::read_value(fields[0].type_(), &mut buf)?;
+                let such_cool = postgres_types::private::read_value(fields[1].type_(), &mut buf)?;
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let nice = postgres_types::private::read_value(fields[0].type_(), &mut buf)?;
+                let nice = postgres_types::private::read_value(fields[2].type_(), &mut buf)?;
                 std::result::Result::Ok(CustomCompositeBorrowed {
                     wow,
                     such_cool,

@@ -29,11 +29,11 @@ fn generate_custom_type(
 ) -> Result<String, Error> {
     let ty_name = ty.pg_ty.name();
     let struct_name = &ty.rust_ty_name;
-    let type_def = match &ty.pg_ty.kind() {
+    Ok(match &ty.pg_ty.kind() {
         Kind::Enum(variants) => {
             let name = &ty.rust_ty_name;
             format!(
-                "#[derive(postgres_types::ToSql, postgres_types::FromSql, Clone, Copy, PartialEq, Eq)]\npub enum {} {{ {} }}",
+                "#[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, Copy, PartialEq, Eq)]\n#[postgres(name = \"{ty_name}\")]\npub enum {} {{ {} }}",
                 name,
                 variants.join(",")
             )
@@ -58,9 +58,23 @@ fn generate_custom_type(
                 .collect::<Vec<String>>()
                 .join(",");
             let mut owned_struct = format!(
-                "#[derive(postgres_types::ToSql, Clone, PartialEq)]\npub struct {} {{ {} }}",
+                "#[derive(Debug, postgres_types::ToSql, Clone, PartialEq)]\n#[postgres(name = \"{ty_name}\")]\npub struct {} {{ {} }}",
                 ty.rust_ty_name, fields_str
             );
+
+            let read_fields = fields
+                .iter()
+                .enumerate()
+                .map(|(index, f)| {
+                    format!(
+                        "let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+            let {} = postgres_types::private::read_value(fields[{}].type_(), &mut buf)?;",
+                        f.name(),
+                        index
+                    )
+                })
+                .collect::<Vec<String>>()
+                .join("\n");
 
             let owned_fromsql_impl = format!(
                 r#"
@@ -77,12 +91,7 @@ fn generate_custom_type(
                         _ => unreachable!(),
                     }};
                     let mut buf = buf;
-                    let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                    let wow = postgres_types::private::read_value(fields[0].type_(), &mut buf)?;
-                    let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                    let such_cool = postgres_types::private::read_value(fields[0].type_(), &mut buf)?;
-                    let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                    let nice = postgres_types::private::read_value(fields[0].type_(), &mut buf)?;
+                    {read_fields}
                     std::result::Result::Ok(CustomComposite {{
                         wow,
                         such_cool,
@@ -125,12 +134,7 @@ fn generate_custom_type(
                         _ => unreachable!(),
                     }};
                     let mut buf = buf;
-                    let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                    let wow = postgres_types::private::read_value(fields[0].type_(), &mut buf)?;
-                    let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                    let such_cool = postgres_types::private::read_value(fields[0].type_(), &mut buf)?;
-                    let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                    let nice = postgres_types::private::read_value(fields[0].type_(), &mut buf)?;
+                    {read_fields}
                     std::result::Result::Ok(CustomCompositeBorrowed {{
                         wow,
                         such_cool,
@@ -183,13 +187,7 @@ fn generate_custom_type(
             }
         }
         _ => unreachable!(),
-    };
-
-    Ok(format!(
-        "#[derive(Debug, )]\n#[postgres(name = \"{}\")]\n{}",
-        ty.pg_ty.name(),
-        type_def
-    ))
+    })
 }
 
 fn generate_type_modules(type_registrar: &TypeRegistrar) -> Result<String, Error> {
