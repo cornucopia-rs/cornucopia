@@ -1,9 +1,4 @@
 -- Write your migration SQL here
-CREATE TYPE custom_composite AS (
-    wow text,
-    such_cool integer,
-    nice spongebob_character
-);
 
 CREATE TABLE CustomTable (
     col1 custom_composite,

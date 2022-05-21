@@ -5,7 +5,15 @@ CREATE TYPE spongebob_character AS enum (
     'Squidward'
 );
 
+CREATE TYPE custom_composite AS (
+    wow text,
+    such_cool integer,
+    nice spongebob_character
+);
+
 CREATE DOMAIN my_domain AS TEXT[];
+
+CREATE DOMAIN custom_domain AS custom_composite[];
 
 CREATE TABLE Author (
     Id serial NOT NULL,
@@ -27,6 +35,7 @@ INSERT INTO Book (Title)
     VALUES ('Murder on the Orient Express'), ('Death on the Nile'), ('The Hobbit'), ('The Silmarillion');
 
 CREATE TABLE Everything (
+    custom_domain_ custom_domain,
     domain_ my_domain,
     array_ bool[],
     custom_array_ spongebob_character[],

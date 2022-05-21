@@ -104,6 +104,72 @@ pub mod types {
         }
 
         #[derive(Debug, Clone, PartialEq, postgres_types::ToSql)]
+        #[postgres(name = "custom_domain")]
+        pub struct CustomDomain(pub Vec<super::super::types::public::CustomComposite>);
+
+        impl<'a> postgres_types::FromSql<'a> for CustomDomain {
+            fn from_sql(
+                _type: &postgres_types::Type,
+                buf: &'a [u8],
+            ) -> std::result::Result<
+                CustomDomain,
+                std::boxed::Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>,
+            > {
+                let inner = match *_type.kind() {
+                    postgres_types::Kind::Domain(ref inner) => inner,
+                    _ => unreachable!(),
+                };
+                let mut buf = buf;
+
+                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                std::result::Result::Ok(CustomDomain(postgres_types::private::read_value(
+                    inner, &mut buf,
+                )?))
+            }
+
+            fn accepts(type_: &postgres_types::Type) -> bool {
+                type_.name() == "custom_domain" && type_.schema() == "public"
+            }
+        }
+        pub struct CustomDomainBorrowed<'a>(
+            pub  cornucopia_client::ArrayIterator<
+                'a,
+                super::super::types::public::CustomCompositeBorrowed<'a>,
+            >,
+        );
+
+        impl<'a> postgres_types::FromSql<'a> for CustomDomainBorrowed<'a> {
+            fn from_sql(
+                _type: &postgres_types::Type,
+                buf: &'a [u8],
+            ) -> std::result::Result<
+                CustomDomainBorrowed<'a>,
+                std::boxed::Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>,
+            > {
+                let inner = match *_type.kind() {
+                    postgres_types::Kind::Domain(ref inner) => inner,
+                    _ => unreachable!(),
+                };
+                let mut buf = buf;
+
+                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                std::result::Result::Ok(CustomDomainBorrowed(postgres_types::private::read_value(
+                    inner, &mut buf,
+                )?))
+            }
+
+            fn accepts(type_: &postgres_types::Type) -> bool {
+                type_.name() == "custom_domain" && type_.schema() == "public"
+            }
+        }
+
+        impl<'a> From<CustomDomainBorrowed<'a>> for CustomDomain {
+            fn from(CustomDomainBorrowed(inner): CustomDomainBorrowed<'a>) -> Self {
+                Self(inner.map(|v| v.into()).collect())
+            }
+        }
+
+        #[derive(Debug, Clone, PartialEq, postgres_types::ToSql)]
         #[postgres(name = "my_domain")]
         pub struct MyDomain(pub Vec<String>);
 
@@ -131,7 +197,7 @@ pub mod types {
                 type_.name() == "my_domain" && type_.schema() == "public"
             }
         }
-        pub struct MyDomainBorrowed<'a>(pub cornucopia_client::ArrayIterator<'a, String>);
+        pub struct MyDomainBorrowed<'a>(pub cornucopia_client::ArrayIterator<'a, &'a str>);
 
         impl<'a> postgres_types::FromSql<'a> for MyDomainBorrowed<'a> {
             fn from_sql(
@@ -160,7 +226,7 @@ pub mod types {
 
         impl<'a> From<MyDomainBorrowed<'a>> for MyDomain {
             fn from(MyDomainBorrowed(inner): MyDomainBorrowed<'a>) -> Self {
-                Self(inner.collect())
+                Self(inner.map(|v| v.into()).collect())
             }
         }
     }
@@ -945,7 +1011,11 @@ WHERE (col1).nice = $1;",
         }
 
         pub struct SelectEverythingBorrowed<'a> {
-            pub domain_: cornucopia_client::ArrayIterator<'a, String>,
+            pub custom_domain_: cornucopia_client::ArrayIterator<
+                'a,
+                super::super::types::public::CustomCompositeBorrowed<'a>,
+            >,
+            pub domain_: cornucopia_client::ArrayIterator<'a, &'a str>,
             pub array_: cornucopia_client::ArrayIterator<'a, bool>,
             pub custom_array_: cornucopia_client::ArrayIterator<
                 'a,
@@ -987,6 +1057,7 @@ WHERE (col1).nice = $1;",
         }
         #[derive(Debug, Clone, PartialEq)]
         pub struct SelectEverything {
+            pub custom_domain_: Vec<super::super::types::public::CustomComposite>,
             pub domain_: Vec<String>,
             pub array_: Vec<bool>,
             pub custom_array_: Vec<super::super::types::public::SpongebobCharacter>,
@@ -1027,6 +1098,7 @@ WHERE (col1).nice = $1;",
         impl<'a> From<SelectEverythingBorrowed<'a>> for SelectEverything {
             fn from(
                 SelectEverythingBorrowed {
+                    custom_domain_,
                     domain_,
                     array_,
                     custom_array_,
@@ -1066,9 +1138,10 @@ WHERE (col1).nice = $1;",
                 }: SelectEverythingBorrowed<'a>,
             ) -> Self {
                 Self {
-                    domain_: domain_.collect(),
-                    array_: array_.collect(),
-                    custom_array_: custom_array_.collect(),
+                    custom_domain_: custom_domain_.map(|v| v.into()).collect(),
+                    domain_: domain_.map(|v| v.into()).collect(),
+                    array_: array_.map(|v| v.into()).collect(),
+                    custom_array_: custom_array_.map(|v| v.into()).collect(),
                     bool_,
                     boolean_,
                     char_,
@@ -1132,42 +1205,43 @@ WHERE (col1).nice = $1;",
 
             pub fn extractor(row: &tokio_postgres::row::Row) -> SelectEverythingBorrowed {
                 SelectEverythingBorrowed {
-                    domain_: row.get(0),
-                    array_: row.get(1),
-                    custom_array_: row.get(2),
-                    bool_: row.get(3),
-                    boolean_: row.get(4),
-                    char_: row.get(5),
-                    smallint_: row.get(6),
-                    int2_: row.get(7),
-                    smallserial_: row.get(8),
-                    serial2_: row.get(9),
-                    int_: row.get(10),
-                    int4_: row.get(11),
-                    serial_: row.get(12),
-                    serial4_: row.get(13),
-                    bingint_: row.get(14),
-                    int8_: row.get(15),
-                    bigserial_: row.get(16),
-                    serial8_: row.get(17),
-                    float4_: row.get(18),
-                    real_: row.get(19),
-                    float8_: row.get(20),
-                    double_precision_: row.get(21),
-                    text_: row.get(22),
-                    varchar_: row.get(23),
-                    bytea_: row.get(24),
-                    timestamp_: row.get(25),
-                    timestamp_without_time_zone_: row.get(26),
-                    timestamptz_: row.get(27),
-                    timestamp_with_time_zone_: row.get(28),
-                    date_: row.get(29),
-                    time_: row.get(30),
-                    json_: row.get(31),
-                    jsonb_: row.get(32),
-                    uuid_: row.get(33),
-                    inet_: row.get(34),
-                    macaddr_: row.get(35),
+                    custom_domain_: row.get(0),
+                    domain_: row.get(1),
+                    array_: row.get(2),
+                    custom_array_: row.get(3),
+                    bool_: row.get(4),
+                    boolean_: row.get(5),
+                    char_: row.get(6),
+                    smallint_: row.get(7),
+                    int2_: row.get(8),
+                    smallserial_: row.get(9),
+                    serial2_: row.get(10),
+                    int_: row.get(11),
+                    int4_: row.get(12),
+                    serial_: row.get(13),
+                    serial4_: row.get(14),
+                    bingint_: row.get(15),
+                    int8_: row.get(16),
+                    bigserial_: row.get(17),
+                    serial8_: row.get(18),
+                    float4_: row.get(19),
+                    real_: row.get(20),
+                    float8_: row.get(21),
+                    double_precision_: row.get(22),
+                    text_: row.get(23),
+                    varchar_: row.get(24),
+                    bytea_: row.get(25),
+                    timestamp_: row.get(26),
+                    timestamp_without_time_zone_: row.get(27),
+                    timestamptz_: row.get(28),
+                    timestamp_with_time_zone_: row.get(29),
+                    date_: row.get(30),
+                    time_: row.get(31),
+                    json_: row.get(32),
+                    jsonb_: row.get(33),
+                    uuid_: row.get(34),
+                    inet_: row.get(35),
+                    macaddr_: row.get(36),
                 }
             }
 
@@ -1227,6 +1301,7 @@ FROM
         }
 
         pub struct InsertEverythingParams<'a> {
+            pub custom_domain: super::super::types::public::CustomDomain,
             pub domain_: super::super::types::public::MyDomain,
             pub array_: &'a [bool],
             pub custom_array_: &'a [super::super::types::public::SpongebobCharacter],
@@ -1271,6 +1346,7 @@ FROM
             ) -> InsertEverythingQuery<'a, C> {
                 insert_everything(
                     client,
+                    &self.custom_domain,
                     &self.domain_,
                     &self.array_,
                     &self.custom_array_,
@@ -1313,7 +1389,7 @@ FROM
 
         pub struct InsertEverythingQuery<'a, C: cornucopia_client::GenericClient> {
             client: &'a C,
-            params: [&'a (dyn tokio_postgres::types::ToSql + Sync); 36],
+            params: [&'a (dyn tokio_postgres::types::ToSql + Sync); 37],
         }
 
         impl<'a, C> InsertEverythingQuery<'a, C>
@@ -1321,8 +1397,8 @@ FROM
             C: cornucopia_client::GenericClient,
         {
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
-                self.client.prepare("INSERT INTO Everything (domain_, array_, custom_array_, bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36);
+                self.client.prepare("INSERT INTO Everything (custom_domain_, domain_, array_, custom_array_, bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37);
 
 ").await
             }
@@ -1334,6 +1410,7 @@ FROM
         }
         pub fn insert_everything<'a, C: cornucopia_client::GenericClient>(
             client: &'a C,
+            custom_domain: &'a super::super::types::public::CustomDomain,
             domain_: &'a super::super::types::public::MyDomain,
             array_: &'a &'a [bool],
             custom_array_: &'a &'a [super::super::types::public::SpongebobCharacter],
@@ -1374,6 +1451,7 @@ FROM
             InsertEverythingQuery {
                 client,
                 params: [
+                    custom_domain,
                     domain_,
                     array_,
                     custom_array_,

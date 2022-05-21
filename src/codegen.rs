@@ -79,7 +79,8 @@ fn generate_custom_type(
                 let owned_struct = format!("#[derive(Copy)]{owned_struct}");
                 format!("{owned_struct}\n{owned_fromsql_impl}")
             } else {
-                let borrowed_fields_str = inner_ty.borrowed_rust_ty(Some("'a"), false);
+                let borrowed_fields_str =
+                    inner_ty.borrowed_rust_ty(type_registrar, Some("'a"), false);
                 let borrowed_struct =
                     format!("pub struct {struct_name}Borrowed<'a> (pub {borrowed_fields_str});",);
                 let borrowed_fromsql_impl = format!(
@@ -198,7 +199,7 @@ fn generate_custom_type(
                         format!(
                             "pub {} : {}",
                             f.name(),
-                            f_ty.borrowed_rust_ty(Some("'a"), false)
+                            f_ty.borrowed_rust_ty(type_registrar, Some("'a"), false)
                         )
                     })
                     .collect::<Vec<String>>()
@@ -300,7 +301,11 @@ fn generate_type_modules(type_registrar: &TypeRegistrar) -> Result<String, Error
     Ok(format!("pub mod types {{ {modules_str} }}"))
 }
 
-fn generate_query(module_name: &str, query: &PreparedQuery) -> String {
+fn generate_query(
+    type_registrar: &TypeRegistrar,
+    module_name: &str,
+    query: &PreparedQuery,
+) -> String {
     let query_name = query.name.clone();
     let query_sql = query.sql.clone();
     let query_struct_name = query.name.to_upper_camel_case();
@@ -328,7 +333,7 @@ fn generate_query(module_name: &str, query: &PreparedQuery) -> String {
                 format!(
                     "pub {} : {}",
                     p.name,
-                    p.ty.borrowed_rust_ty(Some("'a"), true)
+                    p.ty.borrowed_rust_ty(type_registrar, Some("'a"), true)
                 )
             })
             .collect::<Vec<String>>()
@@ -382,7 +387,7 @@ fn generate_query(module_name: &str, query: &PreparedQuery) -> String {
                 format!(
                     "pub {} : {}",
                     p.name,
-                    p.ty.borrowed_rust_ty(Some("'a"), false)
+                    p.ty.borrowed_rust_ty(type_registrar, Some("'a"), false)
                 )
             })
             .collect::<Vec<String>>()
@@ -598,7 +603,13 @@ fn generate_query(module_name: &str, query: &PreparedQuery) -> String {
         let params = query
             .params
             .iter()
-            .map(|p| format!("{} : &'a {}", p.name, p.ty.borrowed_rust_ty(None, true)))
+            .map(|p| {
+                format!(
+                    "{} : &'a {}",
+                    p.name,
+                    p.ty.borrowed_rust_ty(type_registrar, None, true)
+                )
+            })
             .collect::<Vec<String>>()
             .join(",");
         let param_names = query
@@ -641,7 +652,7 @@ pub(crate) fn generate(
     for module in modules {
         let mut query_strings = Vec::new();
         for query in module.queries {
-            let query_string = generate_query(&module.name, &query);
+            let query_string = generate_query(type_registrar, &module.name, &query);
             query_strings.push(query_string);
         }
         let queries_string = query_strings.join("\n\n");

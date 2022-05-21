@@ -55,7 +55,7 @@ impl CornucopiaType {
         }
 
         match self.pg_ty.kind() {
-            Kind::Array(_) => format!("{var_name}.collect()"),
+            Kind::Array(_) => format!("{var_name}.map(|v| v.into()).collect()"),
             Kind::Domain(_) | Kind::Composite(_) => format!("{var_name}.into()"),
             _ => format!("{var_name}.to_owned()"),
         }
@@ -64,6 +64,7 @@ impl CornucopiaType {
     /// a Rust equivalent is a String or a Vec<T>, it will return a &str and a &[T] respectively.
     pub(crate) fn borrowed_rust_ty(
         &self,
+        type_registrar: &TypeRegistrar,
         lifetime: Option<&'static str>,
         is_param: bool,
     ) -> String {
@@ -87,24 +88,23 @@ impl CornucopiaType {
                 )
             };
         }
+
         // Special case for PostgreSQL arrays
-        if self.rust_path_from_queries.starts_with("Vec<") {
+        if let Kind::Array(inner_ty) = self.pg_ty.kind() {
+            let inner_ty = type_registrar.get(inner_ty).unwrap();
+
             // Its more practical for users to use a slice
             if is_param {
                 return format!(
                     "&{} [{}]",
                     lifetime.unwrap_or("'a"),
-                    String::from(
-                        &self.rust_path_from_queries[4..self.rust_path_from_queries.len() - 1]
-                    )
+                    inner_ty.borrowed_rust_ty(type_registrar, lifetime, is_param)
                 );
             } else {
                 return format!(
                     "cornucopia_client::ArrayIterator<{}, {}>",
                     lifetime.unwrap_or("'a"),
-                    String::from(
-                        &self.rust_path_from_queries[4..self.rust_path_from_queries.len() - 1]
-                    )
+                    inner_ty.borrowed_rust_ty(type_registrar, lifetime, is_param)
                 );
             }
         }
