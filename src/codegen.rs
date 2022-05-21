@@ -45,14 +45,8 @@ fn generate_custom_type(
             } else {
             }
             let owned_struct = format!(
-                "#[derive(Clone, PartialEq)]\npub struct {} (pub {})",
+                "#[derive(Debug, Clone, PartialEq, postgres_types::ToSql)]#[postgres(name = \"{ty_name}\")]\npub struct {} (pub {});",
                 ty.rust_ty_name, inner_ty.rust_path_from_types
-            );
-
-            let borrowed_struct = format!(
-                "#[derive(Clone, PartialEq)]\npub struct {}Borrowed<'a> (pub {})",
-                ty.rust_ty_name,
-                inner_ty.borrowed_rust_ty(Some("'a"))
             );
 
             let owned_fromsql_impl = format!(
@@ -65,14 +59,14 @@ fn generate_custom_type(
                     {struct_name},
                     std::boxed::Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>,
                 > {{
-                    let fields = match *_type.kind() {{
+                    let inner = match *_type.kind() {{
                         postgres_types::Kind::Domain(ref inner) => inner,
                         _ => unreachable!(),
                     }};
                     let mut buf = buf;
                    
                     let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                    std::result::Result::Ok({struct_name} (postgres_types::private::read_value(inner.type_(), &mut buf)?))
+                    std::result::Result::Ok({struct_name} (postgres_types::private::read_value(inner, &mut buf)?))
                 }}
     
                 fn accepts(type_: &postgres_types::Type) -> bool {{
@@ -85,9 +79,9 @@ fn generate_custom_type(
                 let owned_struct = format!("#[derive(Copy)]{owned_struct}");
                 format!("{owned_struct}\n{owned_fromsql_impl}")
             } else {
-                let borrowed_fields_str = inner_ty.borrowed_rust_ty(Some("'a"));
+                let borrowed_fields_str = inner_ty.borrowed_rust_ty(Some("'a"), false);
                 let borrowed_struct =
-                    format!("pub struct {struct_name}Borrowed<'a> ({borrowed_fields_str})",);
+                    format!("pub struct {struct_name}Borrowed<'a> (pub {borrowed_fields_str});",);
                 let borrowed_fromsql_impl = format!(
                     r#"
                     impl<'a> postgres_types::FromSql<'a> for {struct_name}Borrowed<'a> {{
@@ -98,14 +92,14 @@ fn generate_custom_type(
                             {struct_name}Borrowed<'a>,
                             std::boxed::Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>,
                         > {{
-                            let fields = match *_type.kind() {{
+                            let inner = match *_type.kind() {{
                                 postgres_types::Kind::Domain(ref inner) => inner,
                                 _ => unreachable!(),
                             }};
                             let mut buf = buf;
                            
                             let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                            std::result::Result::Ok({struct_name}Borrowed (postgres_types::private::read_value(inner.type_(), &mut buf)?))
+                            std::result::Result::Ok({struct_name}Borrowed (postgres_types::private::read_value(inner, &mut buf)?))
                         }}
             
                         fn accepts(type_: &postgres_types::Type) -> bool {{
@@ -201,7 +195,11 @@ fn generate_custom_type(
                     .iter()
                     .map(|f| {
                         let f_ty = type_registrar.get(f.type_()).unwrap();
-                        format!("pub {} : {}", f.name(), f_ty.borrowed_rust_ty(Some("'a")))
+                        format!(
+                            "pub {} : {}",
+                            f.name(),
+                            f_ty.borrowed_rust_ty(Some("'a"), false)
+                        )
                     })
                     .collect::<Vec<String>>()
                     .join(",");
@@ -326,7 +324,13 @@ fn generate_query(module_name: &str, query: &PreparedQuery) -> String {
         let params_struct_fields = query
             .params
             .iter()
-            .map(|p| format!("pub {} : {}", p.name, p.ty.borrowed_rust_ty(Some("'a"))))
+            .map(|p| {
+                format!(
+                    "pub {} : {}",
+                    p.name,
+                    p.ty.borrowed_rust_ty(Some("'a"), true)
+                )
+            })
             .collect::<Vec<String>>()
             .join(",");
         let param_values = query
@@ -356,7 +360,7 @@ fn generate_query(module_name: &str, query: &PreparedQuery) -> String {
             if params_is_copy {
                 "#[derive(Debug, Clone)]"
             } else {
-                "#[derive(Debug, Clone)]"
+                ""
             },
             if params_is_copy { "" } else { "<'a>" }
         )
@@ -368,7 +372,13 @@ fn generate_query(module_name: &str, query: &PreparedQuery) -> String {
         let ret_struct_fields = query
             .ret_fields
             .iter()
-            .map(|p| format!("pub {} : {}", p.name, p.ty.borrowed_rust_ty(Some("'a"))))
+            .map(|p| {
+                format!(
+                    "pub {} : {}",
+                    p.name,
+                    p.ty.borrowed_rust_ty(Some("'a"), false)
+                )
+            })
             .collect::<Vec<String>>()
             .join(",");
         format!("pub struct {query_struct_name}Borrowed<'a> {{ {ret_struct_fields} }}")
@@ -557,7 +567,7 @@ fn generate_query(module_name: &str, query: &PreparedQuery) -> String {
         let params = query
             .params
             .iter()
-            .map(|p| format!("{} : &'a {}", p.name, p.ty.borrowed_rust_ty(None)))
+            .map(|p| format!("{} : &'a {}", p.name, p.ty.borrowed_rust_ty(None, true)))
             .collect::<Vec<String>>()
             .join(",");
         let param_names = query

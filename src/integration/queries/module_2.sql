@@ -4,19 +4,13 @@ SELECT
 FROM
     Author;
 
---! authors_stream
-SELECT
-    *
-FROM
-    Author;
-
 --! books
 SELECT
     Title
 FROM
     Book;
 
---! books_opt_ret_param ?{1}
+--! books_opt_ret ?{1}
 SELECT
     Title
 FROM
@@ -32,22 +26,6 @@ FROM
 WHERE
     Author.Id = $1;
 
---! author_name_by_id_opt
-SELECT
-    Author.Name
-FROM
-    Author
-WHERE
-    Author.Id = :id;
-
---! author_name_by_id
-SELECT
-    Author.Name
-FROM
-    Author
-WHERE
-    Author.Id = :id;
-
 --! author_name_starting_with ?{authorid}
 SELECT
     BookAuthor.AuthorId,
@@ -59,7 +37,7 @@ FROM
     INNER JOIN Author ON Author.id = BookAuthor.AuthorId
     INNER JOIN Book ON Book.Id = BookAuthor.BookId
 WHERE
-    Author.Name LIKE CONCAT((:s)::text, '%');
+    Author.Name LIKE CONCAT(:s::text, '%');
 
 --! return_custom_type
 SELECT
@@ -79,4 +57,8 @@ SELECT
     *
 FROM
     Everything;
+
+--! insert_everything
+INSERT INTO Everything (domain_, array_, custom_array_, bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
+    VALUES (:domain_, :array_, :custom_array_, :bool_, :boolean_, :char_, :smallint_, :int2_, :smallserial_, :serial2_, :int_, :int4_, :serial_, :serial4_, :bingint_, :int8_, :bigserial_, :serial8_, :float4_, :real_, :float8_, :double_precision_, :text_, :varchar_, :bytea_, :timestamp_, :timestamp_without_time_zone_, :timestamptz_, :timestamp_with_time_zone_, :date_, :time_, :json_, :jsonb_, :uuid_, :inet_, :macaddr_);
 

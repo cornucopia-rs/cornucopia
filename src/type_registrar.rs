@@ -62,7 +62,11 @@ impl CornucopiaType {
     }
     /// String representing a borrowed rust equivalent of this type. Notably, if
     /// a Rust equivalent is a String or a Vec<T>, it will return a &str and a &[T] respectively.
-    pub(crate) fn borrowed_rust_ty(&self, lifetime: Option<&'static str>) -> String {
+    pub(crate) fn borrowed_rust_ty(
+        &self,
+        lifetime: Option<&'static str>,
+        is_param: bool,
+    ) -> String {
         // Special case for copy types
         if self.is_copy {
             return self.rust_path_from_queries.to_owned();
@@ -73,21 +77,36 @@ impl CornucopiaType {
         }
         // Special case for domains and composites
         if matches!(self.pg_ty.kind(), Kind::Domain(_) | Kind::Composite(_)) {
-            return format!(
-                "{}Borrowed<{}>",
-                self.rust_path_from_queries,
-                lifetime.unwrap_or("'a")
-            );
+            return if is_param {
+                self.rust_path_from_queries.clone()
+            } else {
+                format!(
+                    "{}Borrowed<{}>",
+                    self.rust_path_from_queries,
+                    lifetime.unwrap_or("'a")
+                )
+            };
         }
         // Special case for PostgreSQL arrays
         if self.rust_path_from_queries.starts_with("Vec<") {
-            return format!(
-                "cornucopia_client::ArrayIterator<{}, {}>",
-                lifetime.unwrap_or("'a"),
-                String::from(
-                    &self.rust_path_from_queries[4..self.rust_path_from_queries.len() - 1]
-                )
-            );
+            // Its more practical for users to use a slice
+            if is_param {
+                return format!(
+                    "&{} [{}]",
+                    lifetime.unwrap_or("'a"),
+                    String::from(
+                        &self.rust_path_from_queries[4..self.rust_path_from_queries.len() - 1]
+                    )
+                );
+            } else {
+                return format!(
+                    "cornucopia_client::ArrayIterator<{}, {}>",
+                    lifetime.unwrap_or("'a"),
+                    String::from(
+                        &self.rust_path_from_queries[4..self.rust_path_from_queries.len() - 1]
+                    )
+                );
+            }
         }
 
         // Simple checks
