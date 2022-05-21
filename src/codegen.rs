@@ -28,6 +28,7 @@ fn generate_custom_type(
     ty: &CornucopiaType,
 ) -> Result<String, Error> {
     let ty_name = ty.pg_ty.name();
+    let ty_schema = ty.pg_ty.schema();
     let struct_name = &ty.rust_ty_name;
     Ok(match &ty.pg_ty.kind() {
         Kind::Enum(variants) => {
@@ -43,10 +44,92 @@ fn generate_custom_type(
             if ty.is_copy {
             } else {
             }
-            format!(
-                "#[derive(Clone, PartialEq)]\npub struct {} ({})",
+            let owned_struct = format!(
+                "#[derive(Clone, PartialEq)]\npub struct {} (pub {})",
                 ty.rust_ty_name, inner_ty.rust_path_from_types
-            )
+            );
+
+            let borrowed_struct = format!(
+                "#[derive(Clone, PartialEq)]\npub struct {}Borrowed<'a> (pub {})",
+                ty.rust_ty_name,
+                inner_ty.borrowed_rust_ty(Some("'a"))
+            );
+
+            let owned_fromsql_impl = format!(
+                r#"
+            impl<'a> postgres_types::FromSql<'a> for {struct_name} {{
+                fn from_sql(
+                    _type: &postgres_types::Type,
+                    buf: &'a [u8],
+                ) -> std::result::Result<
+                    {struct_name},
+                    std::boxed::Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>,
+                > {{
+                    let fields = match *_type.kind() {{
+                        postgres_types::Kind::Domain(ref inner) => inner,
+                        _ => unreachable!(),
+                    }};
+                    let mut buf = buf;
+                   
+                    let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                    std::result::Result::Ok({struct_name} (postgres_types::private::read_value(inner.type_(), &mut buf)?))
+                }}
+    
+                fn accepts(type_: &postgres_types::Type) -> bool {{
+                    type_.name() == "{ty_name}" && type_.schema() == "{ty_schema}"
+                }}
+            }}"#
+            );
+
+            if ty.is_copy {
+                let owned_struct = format!("#[derive(Copy)]{owned_struct}");
+                format!("{owned_struct}\n{owned_fromsql_impl}")
+            } else {
+                let borrowed_fields_str = inner_ty.borrowed_rust_ty(Some("'a"));
+                let borrowed_struct =
+                    format!("pub struct {struct_name}Borrowed<'a> ({borrowed_fields_str})",);
+                let borrowed_fromsql_impl = format!(
+                    r#"
+                    impl<'a> postgres_types::FromSql<'a> for {struct_name}Borrowed<'a> {{
+                        fn from_sql(
+                            _type: &postgres_types::Type,
+                            buf: &'a [u8],
+                        ) -> std::result::Result<
+                            {struct_name}Borrowed<'a>,
+                            std::boxed::Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>,
+                        > {{
+                            let fields = match *_type.kind() {{
+                                postgres_types::Kind::Domain(ref inner) => inner,
+                                _ => unreachable!(),
+                            }};
+                            let mut buf = buf;
+                           
+                            let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                            std::result::Result::Ok({struct_name}Borrowed (postgres_types::private::read_value(inner.type_(), &mut buf)?))
+                        }}
+            
+                        fn accepts(type_: &postgres_types::Type) -> bool {{
+                            type_.name() == "{ty_name}" && type_.schema() == "{ty_schema}"
+                        }}
+                    }}"#
+                );
+                let inner_value = inner_ty.owning_call("inner");
+                let owned_from_borrowed_impl = format!(
+                    "
+                impl<'a> From<{struct_name}Borrowed<'a>> for {struct_name} {{
+                    fn from(
+                        {struct_name}Borrowed (
+                           inner
+                        ): {struct_name}Borrowed<'a>,
+                    ) -> Self {{
+                        Self (
+                           {inner_value}
+                        )
+                    }}
+                }}"
+                );
+                format!("{owned_struct}\n{owned_fromsql_impl}\n{borrowed_struct}\n{borrowed_fromsql_impl}\n{owned_from_borrowed_impl}")
+            }
         }
         Kind::Composite(fields) => {
             let fields_str = fields
@@ -57,10 +140,17 @@ fn generate_custom_type(
                 })
                 .collect::<Vec<String>>()
                 .join(",");
+
             let mut owned_struct = format!(
                 "#[derive(Debug, postgres_types::ToSql, Clone, PartialEq)]\n#[postgres(name = \"{ty_name}\")]\npub struct {} {{ {} }}",
                 ty.rust_ty_name, fields_str
             );
+
+            let field_names = fields
+                .iter()
+                .map(|f| f.name().to_owned())
+                .collect::<Vec<String>>()
+                .join(",");
 
             let read_fields = fields
                 .iter()
@@ -78,12 +168,12 @@ fn generate_custom_type(
 
             let owned_fromsql_impl = format!(
                 r#"
-            impl<'a> postgres_types::FromSql<'a> for CustomComposite {{
+            impl<'a> postgres_types::FromSql<'a> for {struct_name} {{
                 fn from_sql(
                     _type: &postgres_types::Type,
                     buf: &'a [u8],
                 ) -> std::result::Result<
-                    CustomComposite,
+                    {struct_name} ,
                     std::boxed::Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>,
                 > {{
                     let fields = match *_type.kind() {{
@@ -92,15 +182,13 @@ fn generate_custom_type(
                     }};
                     let mut buf = buf;
                     {read_fields}
-                    std::result::Result::Ok(CustomComposite {{
-                        wow,
-                        such_cool,
-                        nice,
+                    std::result::Result::Ok({struct_name}  {{
+                        {field_names}
                     }})
                 }}
     
                 fn accepts(type_: &postgres_types::Type) -> bool {{
-                    type_.name() == "custom_composite" && type_.schema() == "public"
+                    type_.name() == "{ty_name}" && type_.schema() == "{ty_schema}"
                 }}
             }}"#
             );
@@ -121,12 +209,12 @@ fn generate_custom_type(
                     format!("pub struct {struct_name}Borrowed<'a> {{ {borrowed_fields_str} }}",);
                 let borrowed_fromsql_impl = format!(
                     r#"
-            impl<'a> postgres_types::FromSql<'a> for CustomCompositeBorrowed<'a> {{
+            impl<'a> postgres_types::FromSql<'a> for {struct_name}Borrowed<'a> {{
                 fn from_sql(
                     _type: &postgres_types::Type,
                     buf: &'a [u8],
                 ) -> std::result::Result<
-                    CustomCompositeBorrowed<'a>,
+                    {struct_name}Borrowed<'a>,
                     std::boxed::Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>,
                 > {{
                     let fields = match *_type.kind() {{
@@ -135,23 +223,16 @@ fn generate_custom_type(
                     }};
                     let mut buf = buf;
                     {read_fields}
-                    std::result::Result::Ok(CustomCompositeBorrowed {{
-                        wow,
-                        such_cool,
-                        nice,
+                    std::result::Result::Ok({struct_name}Borrowed {{
+                        {field_names}
                     }})
                 }}
     
                 fn accepts(type_: &postgres_types::Type) -> bool {{
-                    type_.name() == "custom_composite" && type_.schema() == "public"
+                    type_.name() == "{ty_name}" && type_.schema() == "{ty_schema}"
                 }}
             }}"#
                 );
-                let field_names = fields
-                    .iter()
-                    .map(|f| f.name().to_owned())
-                    .collect::<Vec<String>>()
-                    .join(",");
                 let field_values = fields
                     .iter()
                     .map(|f| {
