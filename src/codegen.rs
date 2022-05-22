@@ -41,9 +41,6 @@ fn generate_custom_type(
         }
         Kind::Domain(domain_inner_ty) => {
             let inner_ty = type_registrar.get(domain_inner_ty).unwrap();
-            if ty.is_copy {
-            } else {
-            }
             let owned_struct = format!(
                 "#[derive(Debug, Clone, PartialEq, postgres_types::ToSql)]#[postgres(name = \"{ty_name}\")]\npub struct {} (pub {});",
                 ty.rust_ty_name, inner_ty.rust_path_from_types
@@ -244,7 +241,7 @@ fn generate_custom_type(
                             if f_ty.is_copy {
                                 String::new()
                             } else {
-                                format!(": {}", f_ty.owning_call(&f.name()))
+                                format!(": {}", f_ty.owning_call(f.name()))
                             }
                         )
                     })
@@ -317,12 +314,7 @@ fn generate_query(
         .map(|a| a.ty.is_copy)
         .reduce(|a, b| a && b)
         .unwrap_or(true);
-    let ret_is_copy = query
-        .ret_fields
-        .iter()
-        .map(|a| a.ty.is_copy)
-        .reduce(|a, b| a && b)
-        .unwrap_or(true);
+    let ret_is_copy = query.ret_fields.iter().all(|a| a.ty.is_copy);
     let params_len = query.params.len();
 
     let params_struct = if query.params.is_empty() {
@@ -389,7 +381,14 @@ fn generate_query(
                 format!(
                     "pub {} : {}",
                     p.name,
-                    p.ty.borrowed_rust_ty(type_registrar, Some("'a"), false)
+                    if p.is_nullable {
+                        format!(
+                            "Option<{}>",
+                            p.ty.borrowed_rust_ty(type_registrar, Some("'a"), false)
+                        )
+                    } else {
+                        p.ty.borrowed_rust_ty(type_registrar, Some("'a"), false)
+                    }
                 )
             })
             .collect::<Vec<String>>()
@@ -403,7 +402,17 @@ fn generate_query(
         let ret_struct_fields = query
             .ret_fields
             .iter()
-            .map(|p| format!("pub {} : {}", p.name, p.ty.rust_path_from_queries))
+            .map(|p| {
+                format!(
+                    "pub {} : {}",
+                    p.name,
+                    if p.is_nullable {
+                        format!("Option<{}>", p.ty.rust_path_from_queries)
+                    } else {
+                        p.ty.rust_path_from_queries.clone()
+                    }
+                )
+            })
             .collect::<Vec<String>>()
             .join(",");
 

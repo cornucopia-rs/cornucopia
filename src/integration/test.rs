@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use crate::integration::cornucopia::{
     self,
-    queries::module_2::{select_everything, SelectEverything, InsertEverythingParams},
+    queries::module_2::{select_everything, InsertEverythingParams, SelectEverything},
     types::public::{CustomComposite, CustomDomain, MyDomain, SpongebobCharacter},
 };
 
@@ -122,6 +122,7 @@ async fn select_everything_test(client: &Client) -> Result<(), Error> {
         array_: vec![true, false],
         custom_array_: vec![SpongebobCharacter::Bob, SpongebobCharacter::Patrick],
         bool_: true,
+        bool_opt: Some(true),
         boolean_: true,
         char_: 42i8,
         smallint_: 300i16,
