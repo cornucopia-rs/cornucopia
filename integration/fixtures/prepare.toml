@@ -13,23 +13,3 @@ CREATE TABLE item (
 error = '''
 Error while preparing query "items" [file: "queries/module_1.sql", line: 1]:
 Two or more columns have the same name: `name`. Consider disambiguing the column names with `AS` clauses.'''
-
-[[test]]
-name = 'DuplicateParam'
-query = '''
---! new_author(id, id)
-INSERT INTO Author (id, name) VALUES ($1, $2);
-'''
-migration = '''
-CREATE TABLE author (
-  id SERIAL,
-  name TEXT
-);
-'''
-error = '''
-Error while reading queries [path: "queries/module_1.sql"]:  --> 1:20
-  | 
-  | --! new_author(id, id)
-  |                    ^---
-  | 
-  = Parameter is already used in parameter list..'''
