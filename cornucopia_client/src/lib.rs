@@ -108,7 +108,7 @@ impl GenericClient for Transaction<'_> {
         I: IntoIterator<Item = P> + Sync + Send,
         I::IntoIter: ExactSizeIterator,
     {
-        PgTransaction::query_raw(&self, statement, params).await
+        PgTransaction::query_raw(self, statement, params).await
     }
 }
 

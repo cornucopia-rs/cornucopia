@@ -11,6 +11,7 @@ use std::collections::HashMap;
 
 /// Can be used eventually to either error on reserved keywords, or
 /// support them via raw identifiers.
+#[allow(unused)]
 fn is_reserved_keyword(s: &str) -> bool {
     [
         "as", "break", "const", "continue", "crate", "else", "enum", "extern", "false", "fn",
@@ -300,11 +301,7 @@ fn generate_type_modules(type_registrar: &TypeRegistrar) -> Result<String, Error
     Ok(format!("pub mod types {{ {modules_str} }}"))
 }
 
-fn generate_query(
-    type_registrar: &TypeRegistrar,
-    module_name: &str,
-    query: &PreparedQuery,
-) -> String {
+fn generate_query(type_registrar: &TypeRegistrar, query: &PreparedQuery) -> String {
     let query_name = query.name.clone();
     let query_sql = query.sql.clone();
     let query_struct_name = query.name.to_upper_camel_case();
@@ -664,7 +661,7 @@ pub(crate) fn generate(
     for module in modules {
         let mut query_strings = Vec::new();
         for query in module.queries {
-            let query_string = generate_query(type_registrar, &module.name, &query);
+            let query_string = generate_query(type_registrar, &query);
             query_strings.push(query_string);
         }
         let queries_string = query_strings.join("\n\n");

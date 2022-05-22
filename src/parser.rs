@@ -217,7 +217,7 @@ fn parse_pg_bind_params(pair: Pair<Rule>) -> Result<Vec<Parsed<i16>>, Error> {
                     pos: ErrorPosition {
                         line,
                         col,
-                        line_str: line_str,
+                        line_str,
                     },
                 }));
             };
