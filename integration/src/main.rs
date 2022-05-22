@@ -23,6 +23,8 @@ pub struct Test<'a> {
     name: &'a str,
     query: Option<&'a str>,
     migration: Option<&'a str>,
+    query_name: Option<&'a str>,
+    migration_name: Option<&'a str>,
     error: Cow<'a, str>,
 }
 
@@ -63,10 +65,12 @@ fn main() {
             std::fs::create_dir(&migrations_path).unwrap();
 
             if let Some(migration) = test.migration {
-                std::fs::write("migrations/1653210840_first.sql", migration).unwrap();
+                let name = test.migration_name.unwrap_or("1653210840_first.sql");
+                std::fs::write(&format!("migrations/{name}"), migration).unwrap();
             }
             if let Some(query) = test.query {
-                std::fs::write("queries/module_1.sql", query).unwrap();
+                let name = test.query_name.unwrap_or("module_1.sql");
+                std::fs::write(&format!("queries/{name}"), query).unwrap();
             }
 
             let output = std::process::Command::new("cornucopia")
