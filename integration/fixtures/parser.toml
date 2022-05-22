@@ -44,3 +44,18 @@ Error while reading queries [path: "queries/module_1.sql"]:  --> 2:44
   | 
   = Index is higher than the number of parameters supplied (2)..
 """
+
+[[test]]
+name = "MoreBindParamsThanParams"
+query = """
+--! new_author(id, name)
+INSERT INTO Author (id, name) VALUES ($1, $3);
+"""
+error = """
+Error while reading queries [path: "queries/module_1.sql"]:  --> 2:44
+  | 
+  | INSERT INTO Author (id, name) VALUES ($1, $3);
+  |                                            ^---
+  | 
+  = Index is higher than the number of parameters supplied (2)..
+"""

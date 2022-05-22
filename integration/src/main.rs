@@ -1,3 +1,5 @@
+use owo_colors::OwoColorize;
+
 #[derive(serde::Deserialize)]
 pub struct TestSuite<'a> {
     #[serde(borrow)]
@@ -21,7 +23,7 @@ fn main() {
         let content = std::fs::read_to_string(file.path()).unwrap();
         let suite: TestSuite = toml::from_str(&content).unwrap();
 
-        println!("TEST SUITE {name}");
+        println!("{}", name.magenta());
         for test in suite.test {
             // Generate file tree path
             let temp_dir = tempfile::tempdir().unwrap();
@@ -34,7 +36,7 @@ fn main() {
             // Generate file tree content
             std::fs::create_dir(&queries_path).unwrap();
             std::fs::create_dir(&migrations_path).unwrap();
-            
+
             if let Some(migration) = test.migration {
                 std::fs::write("migrations/1653210840_first.sql", migration).unwrap();
             }
@@ -55,9 +57,9 @@ fn main() {
 
             let err = String::from_utf8(output.stderr).unwrap();
             if err.trim() != test.error.trim() {
-                println!("{} Err\nExpected:\n{}\nGot:\n{err}", test.name, test.error);
+                println!("{} {}\n{}\n{}\n{}\n{}", test.name, "ERR".red(), "Got:".bright_black(), err, "Expected:".bright_black(), test.error);
             } else {
-                println!("{} OK", test.name);
+                println!("{} {}", test.name, "OK".green());
             }
             std::env::set_current_dir(&original_pwd).unwrap();
         }

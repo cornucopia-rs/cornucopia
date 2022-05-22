@@ -9,3 +9,4 @@ edition = "2021"
 tempfile = "3.3.0"
 toml = "0.5.9"
 serde = { version = "1.0.137", features = ["derive"] }
+owo-colors = "3.4.0"
