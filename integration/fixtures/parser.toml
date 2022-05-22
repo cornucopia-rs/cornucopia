@@ -1,0 +1,46 @@
+[[test]]
+name = "PgParamInExtendedQuery"
+query = """
+--! new_author
+INSERT INTO Author (id, name) VALUES (:id, $1);
+"""
+error = """
+Error while reading queries [path: "queries/module_1.sql"]:  --> 2:45
+  | 
+  | INSERT INTO Author (id, name) VALUES (:id, $1);
+  |                                             ^---
+  | 
+  = Indexed bind parameters (`$index`) are not allowed when using the extended syntax.
+  = Consider using a named bind parameter like `:identifier`, or use the PostgreSQL-compatible syntax..
+"""
+
+[[test]]
+name = "ExtendedParamInPgQuery"
+query = """
+--! new_author(id, name)
+INSERT INTO Author (id, name) VALUES ($1, :name);
+"""
+error = """
+Error while reading queries [path: "queries/module_1.sql"]:  --> 2:44
+  | 
+  | INSERT INTO Author (id, name) VALUES ($1, :name);
+  |                                            ^---
+  | 
+  = Named bind parameters like `:identifier` are not allowed when using the PostgreSQL-compatible syntax.
+  = Consider using an indexed bind parameter like `$index`, or use the extended syntax..
+"""
+
+[[test]]
+name = "InvalidI16Index"
+query = """
+--! new_author(id, name)
+INSERT INTO Author (id, name) VALUES ($1, $10000);
+"""
+error = """
+Error while reading queries [path: "queries/module_1.sql"]:  --> 2:44
+  | 
+  | INSERT INTO Author (id, name) VALUES ($1, $10000);
+  |                                            ^---
+  | 
+  = Index is higher than the number of parameters supplied (2)..
+"""
