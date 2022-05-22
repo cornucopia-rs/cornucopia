@@ -11,7 +11,7 @@ CREATE TYPE custom_composite AS (
     nice spongebob_character
 );
 
-CREATE DOMAIN my_domain AS TEXT[];
+CREATE DOMAIN my_domain AS TEXT CHECK (value ~ '^\w{5}$');
 
 CREATE DOMAIN custom_domain AS custom_composite[];
 
@@ -37,8 +37,8 @@ INSERT INTO Book (Title)
 CREATE TABLE Everything (
     custom_domain_ custom_domain,
     domain_ my_domain,
-    array_ bool[],
     custom_array_ spongebob_character[],
+    array_ bool[],
     bool_ bool,
     boolean_ boolean,
     char_ "char",
