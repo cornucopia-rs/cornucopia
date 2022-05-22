@@ -176,6 +176,7 @@ fn generate_custom_type(
                         _ => unreachable!(),
                     }};
                     let mut buf = buf;
+                    let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
                     {read_fields}
                     std::result::Result::Ok({struct_name}  {{
                         {field_names}
@@ -221,6 +222,7 @@ fn generate_custom_type(
                         _ => unreachable!(),
                     }};
                     let mut buf = buf;
+                    let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
                     {read_fields}
                     std::result::Result::Ok({struct_name}Borrowed {{
                         {field_names}
@@ -354,14 +356,14 @@ fn generate_query(
         let params_struct_impl = if params_is_copy {
             format!(
                 "impl {query_struct_name}Params {{
-                    fn {query_name}<'a, C: cornucopia_client::GenericClient>(&'a self, client: &'a C) -> {query_struct_name}Query<'a, C {type_generic}> {{
+                    pub fn {query_name}<'a, C: cornucopia_client::GenericClient>(&'a self, client: &'a C) -> {query_struct_name}Query<'a, C {type_generic}> {{
                         {query_name}(client, {param_values})
                     }}
                 }}")
         } else {
             format!(
                 "impl<'a> {query_struct_name}Params<'a> {{
-                    fn {query_name}<C: cornucopia_client::GenericClient>(&'a self, client: &'a C) -> {query_struct_name}Query<'a, C {type_generic}> {{
+                    pub fn {query_name}<C: cornucopia_client::GenericClient>(&'a self, client: &'a C) -> {query_struct_name}Query<'a, C {type_generic}> {{
                         {query_name}(client, {param_values})
                     }}
                 }}")
@@ -404,6 +406,7 @@ fn generate_query(
             .map(|p| format!("pub {} : {}", p.name, p.ty.rust_path_from_queries))
             .collect::<Vec<String>>()
             .join(",");
+
         format!(
             "{}\npub struct {query_struct_name} {{ {ret_struct_fields} }}",
             if ret_is_copy {
