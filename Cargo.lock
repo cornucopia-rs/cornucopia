@@ -479,6 +479,7 @@ dependencies = [
 name = "integration"
 version = "0.1.0"
 dependencies = [
+ "clap",
  "owo-colors",
  "serde",
  "tempfile",

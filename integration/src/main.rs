@@ -1,30 +1,55 @@
+use std::borrow::Cow;
+
+use clap::Parser;
 use owo_colors::OwoColorize;
 
-#[derive(serde::Deserialize)]
+/// Run cornucopia test runner
+#[derive(Parser, Debug)]
+#[clap(version)]
+struct Args {
+    /// Apply returned error to the test description if not matching
+    #[clap(short, long)]
+    apply: bool,
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
 pub struct TestSuite<'a> {
     #[serde(borrow)]
     test: Vec<Test<'a>>,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, serde::Serialize)]
 pub struct Test<'a> {
     name: &'a str,
     query: Option<&'a str>,
     migration: Option<&'a str>,
-    error: &'a str,
+    error: Cow<'a, str>,
 }
 
 fn main() {
+    let args = Args::parse();
+
+    let got_msg = if args.apply {
+        "Apply:".bright_black()
+    } else {
+        "Got:".bright_black()
+    };
+    let expected_msg = if args.apply {
+        "Previous:".bright_black()
+    } else {
+        "Expected:".bright_black()
+    };
+
     // TODO use cornucopia lib API
     let original_pwd = std::env::current_dir().unwrap();
     for file in std::fs::read_dir("fixtures").unwrap() {
         let file = file.unwrap();
         let name = file.file_name().to_string_lossy().to_string();
         let content = std::fs::read_to_string(file.path()).unwrap();
-        let suite: TestSuite = toml::from_str(&content).unwrap();
+        let mut suite: TestSuite = toml::from_str(&content).unwrap();
 
         println!("{}", name.magenta());
-        for test in suite.test {
+        for test in &mut suite.test {
             // Generate file tree path
             let temp_dir = tempfile::tempdir().unwrap();
 
@@ -57,11 +82,26 @@ fn main() {
 
             let err = String::from_utf8(output.stderr).unwrap();
             if err.trim() != test.error.trim() {
-                println!("{} {}\n{}\n{}\n{}\n{}", test.name, "ERR".red(), "Got:".bright_black(), err, "Expected:".bright_black(), test.error);
+                println!(
+                    "{} {}\n{}\n{}\n{}\n{}",
+                    test.name,
+                    "ERR".red(),
+                    got_msg,
+                    err,
+                    expected_msg,
+                    test.error
+                );
             } else {
                 println!("{} {}", test.name, "OK".green());
             }
+            if args.apply {
+                test.error = Cow::Owned(err.trim().to_string())
+            }
             std::env::set_current_dir(&original_pwd).unwrap();
+        }
+        if args.apply {
+            let edited = toml::to_string_pretty(&suite).unwrap();
+            std::fs::write(file.path(), edited).unwrap()
         }
     }
 }

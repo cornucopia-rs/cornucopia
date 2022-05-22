@@ -1,37 +1,35 @@
 [[test]]
-name = "ColumnNameAlreadyTaken"
-migration = """
+name = 'ColumnNameAlreadyTaken'
+query = '''
+--! items
+SELECT name, price AS name FROM item;
+'''
+migration = '''
 CREATE TABLE item (
   name TEXT,
   price INTEGER
 );
-"""
-query = """
---! items
-SELECT name, price AS name FROM item;
-"""
-error = """
+'''
+error = '''
 Error while preparing query "items" [file: "queries/module_1.sql", line: 1]:
-Two or more columns have the same name: `name`. Consider disambiguing the column names with `AS` clauses.
-"""
+Two or more columns have the same name: `name`. Consider disambiguing the column names with `AS` clauses.'''
 
 [[test]]
-name = "DuplicateParam"
-migration = """
+name = 'DuplicateParam'
+query = '''
+--! new_author(id, id)
+INSERT INTO Author (id, name) VALUES ($1, $2);
+'''
+migration = '''
 CREATE TABLE author (
   id SERIAL,
   name TEXT
 );
-"""
-query = """
---! new_author(id, id)
-INSERT INTO Author (id, name) VALUES ($1, $2);
-"""
-error = """
+'''
+error = '''
 Error while reading queries [path: "queries/module_1.sql"]:  --> 1:20
   | 
   | --! new_author(id, id)
   |                    ^---
   | 
-  = Parameter is already used in parameter list..
-"""
+  = Parameter is already used in parameter list..'''
