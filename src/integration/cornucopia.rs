@@ -122,13 +122,11 @@ pub mod types {
                     _ => unreachable!(),
                 };
                 let mut buf = buf;
-
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
                 std::result::Result::Ok(CustomDomain(postgres_types::private::read_value(
                     inner, &mut buf,
                 )?))
             }
-
             fn accepts(type_: &postgres_types::Type) -> bool {
                 type_.name() == "custom_domain" && type_.schema() == "public"
             }
@@ -153,13 +151,11 @@ pub mod types {
                     _ => unreachable!(),
                 };
                 let mut buf = buf;
-
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
                 std::result::Result::Ok(CustomDomainBorrowed(postgres_types::private::read_value(
                     inner, &mut buf,
                 )?))
             }
-
             fn accepts(type_: &postgres_types::Type) -> bool {
                 type_.name() == "custom_domain" && type_.schema() == "public"
             }
@@ -188,13 +184,11 @@ pub mod types {
                     _ => unreachable!(),
                 };
                 let mut buf = buf;
-
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
                 std::result::Result::Ok(MyDomain(postgres_types::private::read_value(
                     inner, &mut buf,
                 )?))
             }
-
             fn accepts(type_: &postgres_types::Type) -> bool {
                 type_.name() == "my_domain" && type_.schema() == "public"
             }
@@ -214,13 +208,11 @@ pub mod types {
                     _ => unreachable!(),
                 };
                 let mut buf = buf;
-
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
                 std::result::Result::Ok(MyDomainBorrowed(postgres_types::private::read_value(
                     inner, &mut buf,
                 )?))
             }
-
             fn accepts(type_: &postgres_types::Type) -> bool {
                 type_.name() == "my_domain" && type_.schema() == "public"
             }
