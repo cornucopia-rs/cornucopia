@@ -42,7 +42,7 @@ impl CornucopiaType {
 }
 
 impl CornucopiaType {
-    pub(crate) fn owning_call(&self, var_name: &str) -> String {
+    pub(crate) fn owning_call(&self, var_name: &str, is_nullable: bool) -> String {
         if self.is_copy {
             return "".into();
         }
@@ -55,9 +55,21 @@ impl CornucopiaType {
         }
 
         match self.pg_ty.kind() {
-            Kind::Array(_) => format!("{var_name}.map(|v| v.into()).collect()"),
+            Kind::Array(_) => {
+                if is_nullable {
+                    format!("{var_name}.map(|v| v.map(|v| v.into()).collect())")
+                } else {
+                    format!("{var_name}.map(|v| v.into()).collect()")
+                }
+            }
             Kind::Domain(_) | Kind::Composite(_) => format!("{var_name}.into()"),
-            _ => format!("{var_name}.to_owned()"),
+            _ => {
+                if is_nullable && self.pg_ty == Type::BYTEA {
+                    format!("{var_name}.map(|v| v.into())")
+                } else {
+                    format!("{var_name}.into()")
+                }
+            }
         }
     }
     /// String representing a borrowed rust equivalent of this type. Notably, if

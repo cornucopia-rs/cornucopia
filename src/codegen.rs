@@ -370,7 +370,7 @@ fn generate_ret_structs(
                 let owned_value = if f.ty.is_copy {
                     String::new()
                 } else {
-                    format!(": {}", f.ty.owning_call(&f.name))
+                    format!(": {}", f.ty.owning_call(&f.name, f.is_nullable))
                 };
                 format!("{field_name} {owned_value}")
             })
@@ -467,7 +467,7 @@ fn generate_custom_type(
                     format!("pub struct {struct_name}Borrowed<'a> (pub {borrowed_fields_str});",);
                 let borrowed_fromsql_impl =
                     domain_fromsql_impl(struct_name, ty_name, ty_schema, true);
-                let inner_value = inner_ty.owning_call("inner");
+                let inner_value = inner_ty.owning_call("inner", false);
                 let owned_from_borrowed_impl = format!(
                     "
                 impl<'a> From<{struct_name}Borrowed<'a>> for {struct_name} {{
@@ -538,7 +538,7 @@ fn generate_custom_type(
                             if f_ty.is_copy {
                                 String::new()
                             } else {
-                                format!(": {}", f_ty.owning_call(f.name()))
+                                format!(": {}", f_ty.owning_call(f.name(), false))
                             }
                         )
                     })
