@@ -72,7 +72,7 @@ enum GenerateLiveAction {
 }
 
 // Main entrypoint of the CLI. Parses the args and calls the appropriate routines.
-pub(crate) async fn run() -> Result<(), Error> {
+pub(crate) fn run() -> Result<(), Error> {
     let args = Args::parse();
 
     match args.action {
@@ -92,8 +92,8 @@ pub(crate) async fn run() -> Result<(), Error> {
             }
             MigrationsAction::Run { url } => {
                 // Runs all migrations at the target url
-                let client = conn::from_url(&url).await?;
-                run_migrations(&client, &migrations_path).await?;
+                let mut client = conn::from_url(&url)?;
+                run_migrations(&mut client, &migrations_path)?;
 
                 Ok(())
             }
@@ -109,8 +109,8 @@ pub(crate) async fn run() -> Result<(), Error> {
             match action {
                 Some(GenerateLiveAction::Live { url }) => {
                     let modules = read_query_modules(&queries_path)?;
-                    let client = from_url(&url).await?;
-                    let modules = prepare(&client, &mut type_registrar, modules).await?;
+                    let mut client = from_url(&url)?;
+                    let modules = prepare(&mut client, &mut type_registrar, modules)?;
                     generate(&type_registrar, modules, &destination)?;
                 }
                 None => {
@@ -123,9 +123,7 @@ pub(crate) async fn run() -> Result<(), Error> {
                         podman,
                         &migrations_path,
                         &destination,
-                    )
-                    .await
-                    {
+                    ) {
                         container::cleanup(podman)?;
                         return Err(e);
                     }
@@ -138,16 +136,16 @@ pub(crate) async fn run() -> Result<(), Error> {
 }
 
 /// Performs the `generate` CLI command
-async fn generate_action(
+fn generate_action(
     type_registrar: &mut TypeRegistrar,
     modules: Vec<Module>,
     podman: bool,
     migrations_path: &str,
     destination: &str,
 ) -> Result<(), Error> {
-    let client = cornucopia_conn().await?;
-    run_migrations(&client, migrations_path).await?;
-    let prepared_modules = prepare(&client, type_registrar, modules).await?;
+    let mut client = cornucopia_conn()?;
+    run_migrations(&mut client, migrations_path)?;
+    let prepared_modules = prepare(&mut client, type_registrar, modules)?;
     generate(type_registrar, prepared_modules, destination)?;
     container::cleanup(podman)?;
 

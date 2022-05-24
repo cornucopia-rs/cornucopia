@@ -1,11 +1,9 @@
 use std::marker::PhantomData;
 
 use async_trait::async_trait;
-//use byteorder::{BigEndian, ReadBytesExt};
 use deadpool_postgres::{Client, ClientWrapper, Transaction};
 use fallible_iterator::FallibleIterator;
 use postgres_protocol::types::{array_from_sql, ArrayValues};
-//use fallible_iterator::FallibleIterator;
 use tokio_postgres::{
     types::{BorrowToSql, FromSql, Kind, ToSql, Type},
     Client as PgClient, Error, RowStream, Statement, ToStatement, Transaction as PgTransaction,

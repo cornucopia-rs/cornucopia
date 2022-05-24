@@ -132,16 +132,16 @@ fn generate_query_struct(
     let borrowed_str = if ret_is_copy { "" } else { "Borrowed" };
     let query_struct = if ret_fields.is_empty() {
         format!(
-            "pub struct {query_struct_name}Query<'a, C: cornucopia_client::GenericClient> {{
-                client: &'a C,
-                params: [&'a (dyn tokio_postgres::types::ToSql + Sync); {params_len}]
+            "pub struct {query_struct_name}Query<'a, C: GenericClient> {{
+                client: &'a mut C,
+                params: [&'a (dyn postgres_types::ToSql + Sync); {params_len}]
             }}"
         )
     } else {
         format!(
-            "pub struct {query_struct_name}Query<'a, C: cornucopia_client::GenericClient, T> {{
-                client: &'a C,
-                params: [&'a (dyn tokio_postgres::types::ToSql + Sync); {params_len}],
+            "pub struct {query_struct_name}Query<'a, C: GenericClient, T> {{
+                client: &'a mut C,
+                params: [&'a (dyn postgres_types::ToSql + Sync); {params_len}],
                 mapper: fn({query_struct_name}{borrowed_str}) -> T,
             }}",
         )
@@ -159,23 +159,23 @@ fn generate_query_struct(
             "
         impl<'a, C> {query_struct_name}Query<'a, C>
         where
-            C: cornucopia_client::GenericClient,
+            C: GenericClient,
         {{
-            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {{
-                self.client.prepare(\"{query_sql}\").await
+            pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {{
+                self.client.prepare(\"{query_sql}\")
             }}
 
-            pub async fn exec(self) -> Result<u64, tokio_postgres::Error> {{
-                let stmt = self.stmt().await?;
-                self.client.execute(&stmt, &self.params).await
+            pub fn exec(mut self) -> Result<u64, postgres::Error> {{
+                let stmt = self.stmt()?;
+                self.client.execute(&stmt, &self.params)
             }}
         }}"
         )
     } else {
         format!("
-        impl<'a, C, T> {query_struct_name}Query<'a, C, T>
+        impl<'a, C, T: 'a> {query_struct_name}Query<'a, C, T>
         where
-            C: cornucopia_client::GenericClient,
+            C: GenericClient,
         {{
             pub fn map<R>(self, mapper: fn({query_struct_name}{borrowed_str}) -> R) -> {query_struct_name}Query<'a,C,R> {{
                 {query_struct_name}Query {{
@@ -185,43 +185,42 @@ fn generate_query_struct(
                 }}
             }}
 
-            pub fn extractor(row: &tokio_postgres::row::Row) -> {query_struct_name}{borrowed_str} {{
+            pub fn extractor(row: &postgres::row::Row) -> {query_struct_name}{borrowed_str} {{
                 {query_struct_name}{borrowed_str} {{ {get_fields} }}
             }}
         
-            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {{
-                self.client.prepare(\"{query_sql}\").await
+            pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {{
+                self.client.prepare(\"{query_sql}\")
             }}
         
-            pub async fn one(self) -> Result<T, tokio_postgres::Error> {{
-                let stmt = self.stmt().await?;
-                let row = self.client.query_one(&stmt, &self.params).await?;
+            pub fn one(mut self) -> Result<T, postgres::Error> {{
+                let stmt = self.stmt()?;
+                let row = self.client.query_one(&stmt, &self.params)?;
                 Ok((self.mapper)(Self::extractor(&row)))
             }}
         
-            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {{
-                self.stream().await?.try_collect().await
+            pub fn vec(self) -> Result<Vec<T>, postgres::Error> {{
+                self.stream()?.collect()
             }}
         
-            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {{
-                let stmt = self.stmt().await?;
+            pub fn opt(mut self) -> Result<Option<T>, postgres::Error> {{
+                let stmt = self.stmt()?;
                 Ok(self
                     .client
-                    .query_opt(&stmt, &self.params)
-                    .await?
+                    .query_opt(&stmt, &self.params)?
                     .map(|row| (self.mapper)(Self::extractor(&row))))
             }}
         
-            pub async fn stream(
-                self,
-            ) -> Result<impl futures::Stream<Item = Result<T, tokio_postgres::Error>>, tokio_postgres::Error> {{
-                let stmt = self.stmt().await?;
+            pub fn stream(
+                mut self,
+            ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error> {{
+                let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
-                    .await?
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .iterator()
                     .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))));
-                Ok(stream.into_stream())
+                Ok(stream)
             }}
         }}")
     };
@@ -271,14 +270,14 @@ fn generate_params_struct(
     let params_struct_impl = if params_is_copy {
         format!(
                 "impl {query_struct_name}Params {{
-                    pub fn query<'a, C: cornucopia_client::GenericClient>(&'a self, client: &'a C) -> {query_struct_name}Query<'a, C {type_generic}> {{
+                    pub fn query<'a, C: GenericClient>(&'a self, client: &'a mut C) -> {query_struct_name}Query<'a, C {type_generic}> {{
                         {query_name}(client, {param_values})
                     }}
                 }}")
     } else {
         format!(
                 "impl<'a> {query_struct_name}Params<'a> {{
-                    pub fn query<C: cornucopia_client::GenericClient>(&'a self, client: &'a C) -> {query_struct_name}Query<'a, C {type_generic}> {{
+                    pub fn query<C: GenericClient>(&'a self, client: &'a mut C) -> {query_struct_name}Query<'a, C {type_generic}> {{
                         {query_name}(client, {param_values})
                     }}
                 }}")
@@ -419,7 +418,7 @@ fn generate_query_fn(
         )
     };
     format!(
-        "pub fn {query_name}<'a, C: cornucopia_client::GenericClient>(client: &'a C, {param_list}) -> {query_struct_name}Query<'a,C {concrete_type}> {{
+        "pub fn {query_name}<'a, C: GenericClient>(client: &'a mut C, {param_list}) -> {query_struct_name}Query<'a,C {concrete_type}> {{
         {query_struct_name}Query {{
             client,
             params: [{param_names}],
@@ -657,7 +656,7 @@ pub(crate) fn generate(
         let queries_string = query_strings.join("\n\n");
         let module_name = module.name;
 
-        query_modules.push(format!("pub mod {module_name} {{ use futures::{{StreamExt, TryStreamExt}};\n{queries_string} }}"));
+        query_modules.push(format!("pub mod {module_name} {{ use postgres::fallible_iterator::FallibleIterator;use postgres::GenericClient;{queries_string} }}"));
     }
     let query_modules_string = format!("pub mod queries {{ {} }}", query_modules.join("\n\n"));
     let top_level_comment = "// This file was generated with `cornucopia`. Do not modify.";

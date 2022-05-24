@@ -1,11 +1,10 @@
-use async_recursion::async_recursion;
 use error::{Error, UnsupportedPostgresTypeError};
 use heck::ToUpperCamelCase;
 use indexmap::{Equivalent, IndexMap};
-use postgres_types::Kind;
-use tokio_postgres::{types::Type, Client};
+use postgres::Client;
+use postgres_types::{Kind, Type};
 
-/// A struct containing a `tokio_postgres` type and its Rust-equivalent.
+/// A struct containing a postgres type and its Rust-equivalent.
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub(crate) struct CornucopiaType {
     pub(crate) pg_ty: Type,
@@ -46,9 +45,9 @@ impl CornucopiaType {
             return "".into();
         }
 
-        if self.rust_path_from_queries == "tokio_postgres::types::Json<serde_json::Value>" {
+        if self.rust_path_from_queries == "postgres_types::Json<serde_json::Value>" {
             return format!(
-                "tokio_postgres::types::Json(serde_json::from_str({var_name}.0.get()).unwrap())
+                "postgres_types::Json(serde_json::from_str({var_name}.0.get()).unwrap())
             "
             );
         }
@@ -125,9 +124,9 @@ impl CornucopiaType {
             "String" => {
                 format!("&{} str", lifetime.unwrap_or(""))
             }
-            "tokio_postgres::types::Json<serde_json::Value>" => {
+            "postgres_types::Json<serde_json::Value>" => {
                 format!(
-                    "tokio_postgres::types::Json<&{} serde_json::value::RawValue>",
+                    "postgres_types::Json<&{} serde_json::value::RawValue>",
                     lifetime.unwrap_or("")
                 )
             }
@@ -170,10 +169,9 @@ enum TypeVariant {
 }
 
 impl TypeRegistrar {
-    #[async_recursion]
-    pub(crate) async fn register(
+    pub(crate) fn register(
         &mut self,
-        client: &Client,
+        client: &mut Client,
         ty: &Type,
     ) -> Result<&CornucopiaType, Error> {
         if let Some(cty) = self.get_by_index(ty) {
@@ -187,20 +185,19 @@ impl TypeRegistrar {
             Kind::Enum(_) => self.insert_custom(ty.clone(), ty.name().to_upper_camel_case(), true),
             Kind::Array(array_inner_ty) => {
                 let a_rust_ty_name = &self
-                    .register(client, array_inner_ty)
-                    .await?
+                    .register(client, array_inner_ty)?
                     .rust_path_from_queries;
                 let rust_ty_name = format!("Vec<{}>", a_rust_ty_name);
                 self.insert_base(ty.clone(), rust_ty_name, false)
             }
             Kind::Domain(domain_inner_ty) => {
-                let inner_is_copy = self.register(client, domain_inner_ty).await?.is_copy;
+                let inner_is_copy = self.register(client, domain_inner_ty)?.is_copy;
                 self.insert_custom(ty.clone(), ty.name().to_upper_camel_case(), inner_is_copy)
             }
             Kind::Composite(composite_fields) => {
                 let mut is_copy = true;
                 for field in composite_fields {
-                    let field_ty = self.register(client, field.type_()).await?;
+                    let field_ty = self.register(client, field.type_())?;
                     is_copy = is_copy && field_ty.is_copy;
                 }
                 self.insert_custom(ty.clone(), ty.name().to_upper_camel_case(), is_copy)
@@ -299,14 +296,10 @@ impl Default for TypeRegistrar {
             (Type::TIMESTAMPTZ, "time::OffsetDateTime", true),
             (Type::DATE, "time::Date", true),
             (Type::TIME, "time::Time", true),
-            (
-                Type::JSON,
-                "tokio_postgres::types::Json<serde_json::Value>",
-                false,
-            ),
+            (Type::JSON, "postgres_types::Json<serde_json::Value>", false),
             (
                 Type::JSONB,
-                "tokio_postgres::types::Json<serde_json::Value>",
+                "postgres_types::Json<serde_json::Value>",
                 false,
             ),
             (Type::UUID, "uuid::Uuid", true),
@@ -328,12 +321,12 @@ impl Default for TypeRegistrar {
             (Type::TIME_ARRAY, "Vec<time::Time>", false),
             (
                 Type::JSON_ARRAY,
-                "Vec<tokio_postgres::types::Json<serde_json::Value>>",
+                "Vec<postgres_types::Json<serde_json::Value>>",
                 false,
             ),
             (
                 Type::JSON_ARRAY,
-                "Vec<tokio_postgres::types::Json<serde_json::Value>>",
+                "Vec<postgres_types::Json<serde_json::Value>>",
                 false,
             ),
             (Type::UUID_ARRAY, "Vec<uuid::Uuid>", false),
@@ -354,7 +347,7 @@ pub(crate) mod error {
     #[derive(Debug, ThisError)]
     #[error("{0}")]
     pub(crate) enum Error {
-        Db(#[from] tokio_postgres::Error),
+        Db(#[from] postgres::Error),
         UnsupportedPostgresType(#[from] UnsupportedPostgresTypeError),
     }
 }

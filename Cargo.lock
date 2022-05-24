@@ -163,11 +163,12 @@ dependencies = [
  "clap",
  "cornucopia_client",
  "eui48",
- "futures",
+ "fallible-iterator",
  "heck",
  "indexmap",
  "pest",
  "pest_derive",
+ "postgres",
  "postgres-types",
  "prettyplease",
  "serde",
@@ -175,8 +176,6 @@ dependencies = [
  "syn",
  "thiserror",
  "time",
- "tokio",
- "tokio-postgres",
  "uuid",
 ]
 
@@ -210,6 +209,7 @@ dependencies = [
  "async-trait",
  "deadpool-postgres",
  "fallible-iterator",
+ "postgres",
  "postgres-protocol",
  "tokio",
  "tokio-postgres",
@@ -677,6 +677,20 @@ name = "pin-utils"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
+
+[[package]]
+name = "postgres"
+version = "0.19.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c8bbcd5f6deb39585a0d9f4ef34c4a41c25b7ad26d23c75d837d78c8e7adc85f"
+dependencies = [
+ "bytes",
+ "fallible-iterator",
+ "futures",
+ "log",
+ "tokio",
+ "tokio-postgres",
+]
 
 [[package]]
 name = "postgres-derive"

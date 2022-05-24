@@ -124,105 +124,6 @@ pub mod types {
                 }
             }
         }
-        #[derive(Debug, postgres_types::ToSql, Clone, PartialEq)]
-        #[postgres(name = "nightmare_composite")]
-        pub struct NightmareComposite {
-            pub custom: Vec<super::super::types::public::CustomComposite>,
-            pub spongebob: Vec<super::super::types::public::SpongebobCharacter>,
-        }
-        impl<'a> postgres_types::FromSql<'a> for NightmareComposite {
-            fn from_sql(
-                _type: &postgres_types::Type,
-                buf: &'a [u8],
-            ) -> std::result::Result<
-                    NightmareComposite,
-                    std::boxed::Box<
-                        dyn std::error::Error + std::marker::Sync + std::marker::Send,
-                    >,
-                > {
-                let fields = match *_type.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                let mut buf = buf;
-                let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let custom = postgres_types::private::read_value(
-                    fields[0].type_(),
-                    &mut buf,
-                )?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let spongebob = postgres_types::private::read_value(
-                    fields[1].type_(),
-                    &mut buf,
-                )?;
-                std::result::Result::Ok(NightmareComposite {
-                    custom,
-                    spongebob,
-                })
-            }
-            fn accepts(type_: &postgres_types::Type) -> bool {
-                type_.name() == "nightmare_composite" && type_.schema() == "public"
-            }
-        }
-        pub struct NightmareCompositeBorrowed<'a> {
-            pub custom: cornucopia_client::ArrayIterator<
-                'a,
-                super::super::types::public::CustomCompositeBorrowed<'a>,
-            >,
-            pub spongebob: cornucopia_client::ArrayIterator<
-                'a,
-                super::super::types::public::SpongebobCharacter,
-            >,
-        }
-        impl<'a> postgres_types::FromSql<'a> for NightmareCompositeBorrowed<'a> {
-            fn from_sql(
-                _type: &postgres_types::Type,
-                buf: &'a [u8],
-            ) -> std::result::Result<
-                    NightmareCompositeBorrowed<'a>,
-                    std::boxed::Box<
-                        dyn std::error::Error + std::marker::Sync + std::marker::Send,
-                    >,
-                > {
-                let fields = match *_type.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                let mut buf = buf;
-                let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let custom = postgres_types::private::read_value(
-                    fields[0].type_(),
-                    &mut buf,
-                )?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let spongebob = postgres_types::private::read_value(
-                    fields[1].type_(),
-                    &mut buf,
-                )?;
-                std::result::Result::Ok(NightmareCompositeBorrowed {
-                    custom,
-                    spongebob,
-                })
-            }
-            fn accepts(type_: &postgres_types::Type) -> bool {
-                type_.name() == "nightmare_composite" && type_.schema() == "public"
-            }
-        }
-        impl<'a> From<NightmareCompositeBorrowed<'a>> for NightmareComposite {
-            fn from(
-                NightmareCompositeBorrowed {
-                    custom,
-                    spongebob,
-                }: NightmareCompositeBorrowed<'a>,
-            ) -> Self {
-                Self {
-                    custom: custom.map(|v| v.into()).collect(),
-                    spongebob: spongebob.map(|v| v.into()).collect(),
-                }
-            }
-        }
         #[derive(Debug, Clone, PartialEq, postgres_types::ToSql)]
         #[postgres(name = "custom_domain")]
         pub struct CustomDomain(pub Vec<super::super::types::public::CustomComposite>);
@@ -346,174 +247,118 @@ pub mod types {
                 Self(inner.into())
             }
         }
+        #[derive(Debug, postgres_types::ToSql, Clone, PartialEq)]
+        #[postgres(name = "nightmare_composite")]
+        pub struct NightmareComposite {
+            pub custom: Vec<super::super::types::public::CustomComposite>,
+            pub spongebob: Vec<super::super::types::public::SpongebobCharacter>,
+        }
+        impl<'a> postgres_types::FromSql<'a> for NightmareComposite {
+            fn from_sql(
+                _type: &postgres_types::Type,
+                buf: &'a [u8],
+            ) -> std::result::Result<
+                    NightmareComposite,
+                    std::boxed::Box<
+                        dyn std::error::Error + std::marker::Sync + std::marker::Send,
+                    >,
+                > {
+                let fields = match *_type.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                let mut buf = buf;
+                let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
+                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                let custom = postgres_types::private::read_value(
+                    fields[0].type_(),
+                    &mut buf,
+                )?;
+                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                let spongebob = postgres_types::private::read_value(
+                    fields[1].type_(),
+                    &mut buf,
+                )?;
+                std::result::Result::Ok(NightmareComposite {
+                    custom,
+                    spongebob,
+                })
+            }
+            fn accepts(type_: &postgres_types::Type) -> bool {
+                type_.name() == "nightmare_composite" && type_.schema() == "public"
+            }
+        }
+        pub struct NightmareCompositeBorrowed<'a> {
+            pub custom: cornucopia_client::ArrayIterator<
+                'a,
+                super::super::types::public::CustomCompositeBorrowed<'a>,
+            >,
+            pub spongebob: cornucopia_client::ArrayIterator<
+                'a,
+                super::super::types::public::SpongebobCharacter,
+            >,
+        }
+        impl<'a> postgres_types::FromSql<'a> for NightmareCompositeBorrowed<'a> {
+            fn from_sql(
+                _type: &postgres_types::Type,
+                buf: &'a [u8],
+            ) -> std::result::Result<
+                    NightmareCompositeBorrowed<'a>,
+                    std::boxed::Box<
+                        dyn std::error::Error + std::marker::Sync + std::marker::Send,
+                    >,
+                > {
+                let fields = match *_type.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                let mut buf = buf;
+                let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
+                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                let custom = postgres_types::private::read_value(
+                    fields[0].type_(),
+                    &mut buf,
+                )?;
+                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                let spongebob = postgres_types::private::read_value(
+                    fields[1].type_(),
+                    &mut buf,
+                )?;
+                std::result::Result::Ok(NightmareCompositeBorrowed {
+                    custom,
+                    spongebob,
+                })
+            }
+            fn accepts(type_: &postgres_types::Type) -> bool {
+                type_.name() == "nightmare_composite" && type_.schema() == "public"
+            }
+        }
+        impl<'a> From<NightmareCompositeBorrowed<'a>> for NightmareComposite {
+            fn from(
+                NightmareCompositeBorrowed {
+                    custom,
+                    spongebob,
+                }: NightmareCompositeBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    custom: custom.map(|v| v.into()).collect(),
+                    spongebob: spongebob.map(|v| v.into()).collect(),
+                }
+            }
+        }
     }
 }
 pub mod queries {
-    pub mod module_1 {
-        use futures::{StreamExt, TryStreamExt};
-        pub struct InsertBookParams<'a> {
-            pub book_name: &'a str,
-        }
-        impl<'a> InsertBookParams<'a> {
-            pub fn query<C: cornucopia_client::GenericClient>(
-                &'a self,
-                client: &'a C,
-            ) -> InsertBookQuery<'a, C> {
-                insert_book(client, &self.book_name)
-            }
-        }
-        pub struct InsertBookQuery<'a, C: cornucopia_client::GenericClient> {
-            client: &'a C,
-            params: [&'a (dyn tokio_postgres::types::ToSql + Sync); 1],
-        }
-        impl<'a, C> InsertBookQuery<'a, C>
-        where
-            C: cornucopia_client::GenericClient,
-        {
-            pub async fn stmt(
-                &self,
-            ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
-                self.client.prepare("INSERT INTO Book (title)
-  VALUES ($1);").await
-            }
-            pub async fn exec(self) -> Result<u64, tokio_postgres::Error> {
-                let stmt = self.stmt().await?;
-                self.client.execute(&stmt, &self.params).await
-            }
-        }
-        pub fn insert_book<'a, C: cornucopia_client::GenericClient>(
-            client: &'a C,
-            book_name: &'a &str,
-        ) -> InsertBookQuery<'a, C> {
-            InsertBookQuery {
-                client,
-                params: [book_name],
-            }
-        }
-        pub struct NightmareBorrowed<'a> {
-            pub composite: super::super::types::public::NightmareCompositeBorrowed<'a>,
-            pub name: &'a str,
-            pub names: cornucopia_client::ArrayIterator<'a, &'a str>,
-            pub data: Option<&'a [u8]>,
-            pub datas: Option<cornucopia_client::ArrayIterator<'a, &'a [u8]>>,
-        }
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct Nightmare {
-            pub composite: super::super::types::public::NightmareComposite,
-            pub name: String,
-            pub names: Vec<String>,
-            pub data: Option<Vec<u8>>,
-            pub datas: Option<Vec<Vec<u8>>>,
-        }
-        impl<'a> From<NightmareBorrowed<'a>> for Nightmare {
-            fn from(
-                NightmareBorrowed {
-                    composite,
-                    name,
-                    names,
-                    data,
-                    datas,
-                }: NightmareBorrowed<'a>,
-            ) -> Self {
-                Self {
-                    composite: composite.into(),
-                    name: name.into(),
-                    names: names.map(|v| v.into()).collect(),
-                    data: data.map(|v| v.into()),
-                    datas: datas.map(|v| v.map(|v| v.into()).collect()),
-                }
-            }
-        }
-        pub struct NightmareQuery<'a, C: cornucopia_client::GenericClient, T> {
-            client: &'a C,
-            params: [&'a (dyn tokio_postgres::types::ToSql + Sync); 0],
-            mapper: fn(NightmareBorrowed) -> T,
-        }
-        impl<'a, C, T> NightmareQuery<'a, C, T>
-        where
-            C: cornucopia_client::GenericClient,
-        {
-            pub fn map<R>(
-                self,
-                mapper: fn(NightmareBorrowed) -> R,
-            ) -> NightmareQuery<'a, C, R> {
-                NightmareQuery {
-                    client: self.client,
-                    params: self.params,
-                    mapper,
-                }
-            }
-            pub fn extractor(row: &tokio_postgres::row::Row) -> NightmareBorrowed {
-                NightmareBorrowed {
-                    composite: row.get(0),
-                    name: row.get(1),
-                    names: row.get(2),
-                    data: row.get(3),
-                    datas: row.get(4),
-                }
-            }
-            pub async fn stmt(
-                &self,
-            ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
-                self.client.prepare("SELECT
-  *
-FROM
-  nightmare;
-
-").await
-            }
-            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                let stmt = self.stmt().await?;
-                let row = self.client.query_one(&stmt, &self.params).await?;
-                Ok((self.mapper)(Self::extractor(&row)))
-            }
-            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
-                self.stream().await?.try_collect().await
-            }
-            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                let stmt = self.stmt().await?;
-                Ok(
-                    self
-                        .client
-                        .query_opt(&stmt, &self.params)
-                        .await?
-                        .map(|row| (self.mapper)(Self::extractor(&row))),
-                )
-            }
-            pub async fn stream(
-                self,
-            ) -> Result<
-                    impl futures::Stream<Item = Result<T, tokio_postgres::Error>>,
-                    tokio_postgres::Error,
-                > {
-                let stmt = self.stmt().await?;
-                let stream = self
-                    .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
-                    .await?
-                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))));
-                Ok(stream.into_stream())
-            }
-        }
-        pub fn nightmare<'a, C: cornucopia_client::GenericClient>(
-            client: &'a C,
-        ) -> NightmareQuery<'a, C, Nightmare> {
-            NightmareQuery {
-                client,
-                params: [],
-                mapper: |it| Nightmare::from(it),
-            }
-        }
-    }
     pub mod module_2 {
-        use futures::{StreamExt, TryStreamExt};
+        use postgres::fallible_iterator::FallibleIterator;
+        use postgres::GenericClient;
         pub struct AuthorNameStartingWithParams<'a> {
             pub start_str: &'a str,
         }
         impl<'a> AuthorNameStartingWithParams<'a> {
-            pub fn query<C: cornucopia_client::GenericClient>(
+            pub fn query<C: GenericClient>(
                 &'a self,
-                client: &'a C,
+                client: &'a mut C,
             ) -> AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith> {
                 author_name_starting_with(client, &self.start_str)
             }
@@ -534,18 +379,14 @@ FROM
                 Self { name: name.into() }
             }
         }
-        pub struct AuthorNameStartingWithQuery<
-            'a,
-            C: cornucopia_client::GenericClient,
-            T,
-        > {
-            client: &'a C,
-            params: [&'a (dyn tokio_postgres::types::ToSql + Sync); 1],
+        pub struct AuthorNameStartingWithQuery<'a, C: GenericClient, T> {
+            client: &'a mut C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); 1],
             mapper: fn(AuthorNameStartingWithBorrowed) -> T,
         }
-        impl<'a, C, T> AuthorNameStartingWithQuery<'a, C, T>
+        impl<'a, C, T: 'a> AuthorNameStartingWithQuery<'a, C, T>
         where
-            C: cornucopia_client::GenericClient,
+            C: GenericClient,
         {
             pub fn map<R>(
                 self,
@@ -558,15 +399,13 @@ FROM
                 }
             }
             pub fn extractor(
-                row: &tokio_postgres::row::Row,
+                row: &postgres::row::Row,
             ) -> AuthorNameStartingWithBorrowed {
                 AuthorNameStartingWithBorrowed {
                     name: row.get(0),
                 }
             }
-            pub async fn stmt(
-                &self,
-            ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+            pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
                 self.client
                     .prepare(
                         "SELECT
@@ -576,43 +415,41 @@ FROM
 WHERE
     name LIKE CONCAT($1::text, '%');",
                     )
-                    .await
             }
-            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                let stmt = self.stmt().await?;
-                let row = self.client.query_one(&stmt, &self.params).await?;
+            pub fn one(mut self) -> Result<T, postgres::Error> {
+                let stmt = self.stmt()?;
+                let row = self.client.query_one(&stmt, &self.params)?;
                 Ok((self.mapper)(Self::extractor(&row)))
             }
-            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
-                self.stream().await?.try_collect().await
+            pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
+                self.stream()?.collect()
             }
-            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                let stmt = self.stmt().await?;
+            pub fn opt(mut self) -> Result<Option<T>, postgres::Error> {
+                let stmt = self.stmt()?;
                 Ok(
                     self
                         .client
-                        .query_opt(&stmt, &self.params)
-                        .await?
+                        .query_opt(&stmt, &self.params)?
                         .map(|row| (self.mapper)(Self::extractor(&row))),
                 )
             }
-            pub async fn stream(
-                self,
+            pub fn stream(
+                mut self,
             ) -> Result<
-                    impl futures::Stream<Item = Result<T, tokio_postgres::Error>>,
-                    tokio_postgres::Error,
+                    impl Iterator<Item = Result<T, postgres::Error>> + 'a,
+                    postgres::Error,
                 > {
-                let stmt = self.stmt().await?;
+                let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
-                    .await?
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .iterator()
                     .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))));
-                Ok(stream.into_stream())
+                Ok(stream)
             }
         }
-        pub fn author_name_starting_with<'a, C: cornucopia_client::GenericClient>(
-            client: &'a C,
+        pub fn author_name_starting_with<'a, C: GenericClient>(
+            client: &'a mut C,
             start_str: &'a &str,
         ) -> AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith> {
             AuthorNameStartingWithQuery {
@@ -661,8 +498,8 @@ WHERE
             pub timestamp_with_time_zone_: time::OffsetDateTime,
             pub date_: time::Date,
             pub time_: time::Time,
-            pub json_: tokio_postgres::types::Json<&'a serde_json::value::RawValue>,
-            pub jsonb_: tokio_postgres::types::Json<&'a serde_json::value::RawValue>,
+            pub json_: postgres_types::Json<&'a serde_json::value::RawValue>,
+            pub jsonb_: postgres_types::Json<&'a serde_json::value::RawValue>,
             pub uuid_: uuid::Uuid,
             pub inet_: std::net::IpAddr,
             pub macaddr_: eui48::MacAddress,
@@ -702,8 +539,8 @@ WHERE
             pub timestamp_with_time_zone_: time::OffsetDateTime,
             pub date_: time::Date,
             pub time_: time::Time,
-            pub json_: tokio_postgres::types::Json<serde_json::Value>,
-            pub jsonb_: tokio_postgres::types::Json<serde_json::Value>,
+            pub json_: postgres_types::Json<serde_json::Value>,
+            pub jsonb_: postgres_types::Json<serde_json::Value>,
             pub uuid_: uuid::Uuid,
             pub inet_: std::net::IpAddr,
             pub macaddr_: eui48::MacAddress,
@@ -785,10 +622,10 @@ WHERE
                     timestamp_with_time_zone_,
                     date_,
                     time_,
-                    json_: tokio_postgres::types::Json(
+                    json_: postgres_types::Json(
                         serde_json::from_str(json_.0.get()).unwrap(),
                     ),
-                    jsonb_: tokio_postgres::types::Json(
+                    jsonb_: postgres_types::Json(
                         serde_json::from_str(jsonb_.0.get()).unwrap(),
                     ),
                     uuid_,
@@ -797,14 +634,14 @@ WHERE
                 }
             }
         }
-        pub struct SelectEverythingQuery<'a, C: cornucopia_client::GenericClient, T> {
-            client: &'a C,
-            params: [&'a (dyn tokio_postgres::types::ToSql + Sync); 0],
+        pub struct SelectEverythingQuery<'a, C: GenericClient, T> {
+            client: &'a mut C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
             mapper: fn(SelectEverythingBorrowed) -> T,
         }
-        impl<'a, C, T> SelectEverythingQuery<'a, C, T>
+        impl<'a, C, T: 'a> SelectEverythingQuery<'a, C, T>
         where
-            C: cornucopia_client::GenericClient,
+            C: GenericClient,
         {
             pub fn map<R>(
                 self,
@@ -816,9 +653,7 @@ WHERE
                     mapper,
                 }
             }
-            pub fn extractor(
-                row: &tokio_postgres::row::Row,
-            ) -> SelectEverythingBorrowed {
+            pub fn extractor(row: &postgres::row::Row) -> SelectEverythingBorrowed {
                 SelectEverythingBorrowed {
                     custom_domain_: row.get(0),
                     custom_array_: row.get(1),
@@ -860,9 +695,7 @@ WHERE
                     macaddr_: row.get(37),
                 }
             }
-            pub async fn stmt(
-                &self,
-            ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+            pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
                 self.client
                     .prepare(
                         "SELECT
@@ -907,43 +740,41 @@ WHERE
 FROM
     Everything;",
                     )
-                    .await
             }
-            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                let stmt = self.stmt().await?;
-                let row = self.client.query_one(&stmt, &self.params).await?;
+            pub fn one(mut self) -> Result<T, postgres::Error> {
+                let stmt = self.stmt()?;
+                let row = self.client.query_one(&stmt, &self.params)?;
                 Ok((self.mapper)(Self::extractor(&row)))
             }
-            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
-                self.stream().await?.try_collect().await
+            pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
+                self.stream()?.collect()
             }
-            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                let stmt = self.stmt().await?;
+            pub fn opt(mut self) -> Result<Option<T>, postgres::Error> {
+                let stmt = self.stmt()?;
                 Ok(
                     self
                         .client
-                        .query_opt(&stmt, &self.params)
-                        .await?
+                        .query_opt(&stmt, &self.params)?
                         .map(|row| (self.mapper)(Self::extractor(&row))),
                 )
             }
-            pub async fn stream(
-                self,
+            pub fn stream(
+                mut self,
             ) -> Result<
-                    impl futures::Stream<Item = Result<T, tokio_postgres::Error>>,
-                    tokio_postgres::Error,
+                    impl Iterator<Item = Result<T, postgres::Error>> + 'a,
+                    postgres::Error,
                 > {
-                let stmt = self.stmt().await?;
+                let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
-                    .await?
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .iterator()
                     .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))));
-                Ok(stream.into_stream())
+                Ok(stream)
             }
         }
-        pub fn select_everything<'a, C: cornucopia_client::GenericClient>(
-            client: &'a C,
+        pub fn select_everything<'a, C: GenericClient>(
+            client: &'a mut C,
         ) -> SelectEverythingQuery<'a, C, SelectEverything> {
             SelectEverythingQuery {
                 client,
@@ -984,16 +815,16 @@ FROM
             pub timestamp_with_time_zone_: time::OffsetDateTime,
             pub date_: time::Date,
             pub time_: time::Time,
-            pub json_: tokio_postgres::types::Json<&'a serde_json::value::RawValue>,
-            pub jsonb_: tokio_postgres::types::Json<&'a serde_json::value::RawValue>,
+            pub json_: postgres_types::Json<&'a serde_json::value::RawValue>,
+            pub jsonb_: postgres_types::Json<&'a serde_json::value::RawValue>,
             pub uuid_: uuid::Uuid,
             pub inet_: std::net::IpAddr,
             pub macaddr_: eui48::MacAddress,
         }
         impl<'a> InsertEverythingParams<'a> {
-            pub fn query<C: cornucopia_client::GenericClient>(
+            pub fn query<C: GenericClient>(
                 &'a self,
-                client: &'a C,
+                client: &'a mut C,
             ) -> InsertEverythingQuery<'a, C> {
                 insert_everything(
                     client,
@@ -1037,17 +868,15 @@ FROM
                 )
             }
         }
-        pub struct InsertEverythingQuery<'a, C: cornucopia_client::GenericClient> {
-            client: &'a C,
-            params: [&'a (dyn tokio_postgres::types::ToSql + Sync); 37],
+        pub struct InsertEverythingQuery<'a, C: GenericClient> {
+            client: &'a mut C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); 37],
         }
         impl<'a, C> InsertEverythingQuery<'a, C>
         where
-            C: cornucopia_client::GenericClient,
+            C: GenericClient,
         {
-            pub async fn stmt(
-                &self,
-            ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+            pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
                 self.client
                     .prepare(
                         "INSERT INTO Everything (custom_domain_, custom_array_, domain_, array_, bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
@@ -1055,15 +884,14 @@ FROM
 
 ",
                     )
-                    .await
             }
-            pub async fn exec(self) -> Result<u64, tokio_postgres::Error> {
-                let stmt = self.stmt().await?;
-                self.client.execute(&stmt, &self.params).await
+            pub fn exec(mut self) -> Result<u64, postgres::Error> {
+                let stmt = self.stmt()?;
+                self.client.execute(&stmt, &self.params)
             }
         }
-        pub fn insert_everything<'a, C: cornucopia_client::GenericClient>(
-            client: &'a C,
+        pub fn insert_everything<'a, C: GenericClient>(
+            client: &'a mut C,
             custom_domain_: &'a super::super::types::public::CustomDomain,
             custom_array_: &'a &'a [super::super::types::public::SpongebobCharacter],
             domain_: &'a super::super::types::public::MyDomain,
@@ -1096,8 +924,8 @@ FROM
             timestamp_with_time_zone_: &'a time::OffsetDateTime,
             date_: &'a time::Date,
             time_: &'a time::Time,
-            json_: &'a tokio_postgres::types::Json<&serde_json::value::RawValue>,
-            jsonb_: &'a tokio_postgres::types::Json<&serde_json::value::RawValue>,
+            json_: &'a postgres_types::Json<&serde_json::value::RawValue>,
+            jsonb_: &'a postgres_types::Json<&serde_json::value::RawValue>,
             uuid_: &'a uuid::Uuid,
             inet_: &'a std::net::IpAddr,
             macaddr_: &'a eui48::MacAddress,
@@ -1143,6 +971,158 @@ FROM
                     inet_,
                     macaddr_,
                 ],
+            }
+        }
+    }
+    pub mod module_1 {
+        use postgres::fallible_iterator::FallibleIterator;
+        use postgres::GenericClient;
+        pub struct InsertBookParams<'a> {
+            pub book_name: &'a str,
+        }
+        impl<'a> InsertBookParams<'a> {
+            pub fn query<C: GenericClient>(
+                &'a self,
+                client: &'a mut C,
+            ) -> InsertBookQuery<'a, C> {
+                insert_book(client, &self.book_name)
+            }
+        }
+        pub struct InsertBookQuery<'a, C: GenericClient> {
+            client: &'a mut C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); 1],
+        }
+        impl<'a, C> InsertBookQuery<'a, C>
+        where
+            C: GenericClient,
+        {
+            pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
+                self.client.prepare("INSERT INTO Book (title)
+  VALUES ($1);")
+            }
+            pub fn exec(mut self) -> Result<u64, postgres::Error> {
+                let stmt = self.stmt()?;
+                self.client.execute(&stmt, &self.params)
+            }
+        }
+        pub fn insert_book<'a, C: GenericClient>(
+            client: &'a mut C,
+            book_name: &'a &str,
+        ) -> InsertBookQuery<'a, C> {
+            InsertBookQuery {
+                client,
+                params: [book_name],
+            }
+        }
+        pub struct NightmareBorrowed<'a> {
+            pub composite: super::super::types::public::NightmareCompositeBorrowed<'a>,
+            pub name: &'a str,
+            pub names: cornucopia_client::ArrayIterator<'a, &'a str>,
+            pub data: Option<&'a [u8]>,
+            pub datas: Option<cornucopia_client::ArrayIterator<'a, &'a [u8]>>,
+        }
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct Nightmare {
+            pub composite: super::super::types::public::NightmareComposite,
+            pub name: String,
+            pub names: Vec<String>,
+            pub data: Option<Vec<u8>>,
+            pub datas: Option<Vec<Vec<u8>>>,
+        }
+        impl<'a> From<NightmareBorrowed<'a>> for Nightmare {
+            fn from(
+                NightmareBorrowed {
+                    composite,
+                    name,
+                    names,
+                    data,
+                    datas,
+                }: NightmareBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    composite: composite.into(),
+                    name: name.into(),
+                    names: names.map(|v| v.into()).collect(),
+                    data: data.map(|v| v.into()),
+                    datas: datas.map(|v| v.map(|v| v.into()).collect()),
+                }
+            }
+        }
+        pub struct NightmareQuery<'a, C: GenericClient, T> {
+            client: &'a mut C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
+            mapper: fn(NightmareBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a> NightmareQuery<'a, C, T>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(
+                self,
+                mapper: fn(NightmareBorrowed) -> R,
+            ) -> NightmareQuery<'a, C, R> {
+                NightmareQuery {
+                    client: self.client,
+                    params: self.params,
+                    mapper,
+                }
+            }
+            pub fn extractor(row: &postgres::row::Row) -> NightmareBorrowed {
+                NightmareBorrowed {
+                    composite: row.get(0),
+                    name: row.get(1),
+                    names: row.get(2),
+                    data: row.get(3),
+                    datas: row.get(4),
+                }
+            }
+            pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
+                self.client.prepare("SELECT
+  *
+FROM
+  nightmare;
+
+")
+            }
+            pub fn one(mut self) -> Result<T, postgres::Error> {
+                let stmt = self.stmt()?;
+                let row = self.client.query_one(&stmt, &self.params)?;
+                Ok((self.mapper)(Self::extractor(&row)))
+            }
+            pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
+                self.stream()?.collect()
+            }
+            pub fn opt(mut self) -> Result<Option<T>, postgres::Error> {
+                let stmt = self.stmt()?;
+                Ok(
+                    self
+                        .client
+                        .query_opt(&stmt, &self.params)?
+                        .map(|row| (self.mapper)(Self::extractor(&row))),
+                )
+            }
+            pub fn stream(
+                mut self,
+            ) -> Result<
+                    impl Iterator<Item = Result<T, postgres::Error>> + 'a,
+                    postgres::Error,
+                > {
+                let stmt = self.stmt()?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .iterator()
+                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))));
+                Ok(stream)
+            }
+        }
+        pub fn nightmare<'a, C: GenericClient>(
+            client: &'a mut C,
+        ) -> NightmareQuery<'a, C, Nightmare> {
+            NightmareQuery {
+                client,
+                params: [],
+                mapper: |it| Nightmare::from(it),
             }
         }
     }

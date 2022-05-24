@@ -14,5 +14,5 @@ pub(crate) enum Error {
     PrepareQueries(#[from] PrepareQueriesError),
     NewMigration(#[from] std::io::Error),
     Migration(#[from] MigrationError),
-    Db(#[from] tokio_postgres::Error),
+    Db(#[from] postgres::Error),
 }
