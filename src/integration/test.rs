@@ -6,6 +6,7 @@ use futures::StreamExt;
 use postgres_types::Json;
 use serde_json::Map;
 use time::{OffsetDateTime, PrimitiveDateTime};
+use tokio_postgres::Client;
 use uuid::Uuid;
 
 use crate::integration::cornucopia::{
@@ -14,15 +15,12 @@ use crate::integration::cornucopia::{
     types::public::{CustomComposite, CustomDomain, MyDomain, SpongebobCharacter},
 };
 
-use deadpool_postgres::Client;
-
 async fn setup() -> Result<Client, crate::error::Error> {
     use crate::run_migrations::run_migrations;
-    use crate::{container, pool::cornucopia_pool};
+    use crate::{conn::cornucopia_conn, container};
 
     container::setup(true)?;
-    let pool = cornucopia_pool()?;
-    let client = pool.get().await?;
+    let client = cornucopia_conn().await?;
     run_migrations(&client, "src/integration/migrations").await?;
 
     Ok(client)

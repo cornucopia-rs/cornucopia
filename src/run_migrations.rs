@@ -1,12 +1,12 @@
 use crate::read_migrations::read_migrations;
-use deadpool_postgres::Object;
 use error::Error;
+use tokio_postgres::Client;
 
 /// Runs all migrations in the specified directory. Only `.sql` files are considered.
 ///
 /// # Errors
 /// Returns an error if a migration can't be read or installed.
-pub(crate) async fn run_migrations(client: &Object, dir_path: &str) -> Result<(), Error> {
+pub(crate) async fn run_migrations(client: &Client, dir_path: &str) -> Result<(), Error> {
     // Create the table holding Cornucopia migrations
     create_migration_table(client)
         .await
@@ -33,7 +33,7 @@ pub(crate) async fn run_migrations(client: &Object, dir_path: &str) -> Result<()
     Ok(())
 }
 
-async fn create_migration_table(client: &Object) -> Result<(), tokio_postgres::Error> {
+async fn create_migration_table(client: &Client) -> Result<(), tokio_postgres::Error> {
     client
         .execute(
             "CREATE TABLE IF NOT EXISTS _cornucopia_migrations (
@@ -49,7 +49,7 @@ async fn create_migration_table(client: &Object) -> Result<(), tokio_postgres::E
 }
 
 async fn is_installed(
-    client: &Object,
+    client: &Client,
     timestamp: &i64,
     name: &str,
 ) -> Result<bool, tokio_postgres::Error> {
@@ -66,7 +66,7 @@ async fn is_installed(
 }
 
 async fn install_migration(
-    client: &Object,
+    client: &Client,
     timestamp: &i64,
     name: &str,
     sql: &str,

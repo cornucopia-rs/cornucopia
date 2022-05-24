@@ -2,9 +2,9 @@ use std::path::Path;
 
 use crate::{
     codegen::generate,
+    conn::{self, cornucopia_conn, from_url},
     container,
     error::Error,
-    pool::{self, cornucopia_pool, from_url},
     prepare_queries::prepare,
     read_queries::{read_query_modules, Module},
     run_migrations::run_migrations,
@@ -92,7 +92,7 @@ pub(crate) async fn run() -> Result<(), Error> {
             }
             MigrationsAction::Run { url } => {
                 // Runs all migrations at the target url
-                let client = pool::from_url(&url)?.get().await?;
+                let client = conn::from_url(&url).await?;
                 run_migrations(&client, &migrations_path).await?;
 
                 Ok(())
@@ -109,7 +109,7 @@ pub(crate) async fn run() -> Result<(), Error> {
             match action {
                 Some(GenerateLiveAction::Live { url }) => {
                     let modules = read_query_modules(&queries_path)?;
-                    let client = from_url(&url)?.get().await?;
+                    let client = from_url(&url).await?;
                     let modules = prepare(&client, &mut type_registrar, modules).await?;
                     generate(&type_registrar, modules, &destination)?;
                 }
@@ -145,7 +145,7 @@ async fn generate_action(
     migrations_path: &str,
     destination: &str,
 ) -> Result<(), Error> {
-    let client = cornucopia_pool()?.get().await?;
+    let client = cornucopia_conn().await?;
     run_migrations(&client, migrations_path).await?;
     let prepared_modules = prepare(&client, type_registrar, modules).await?;
     generate(type_registrar, prepared_modules, destination)?;
