@@ -106,11 +106,7 @@ async fn select_everything_test(client: &Client) -> Result<(), Error> {
         macaddr_: MacAddress::new([8, 0, 43, 1, 2, 3]),
     };
 
-    assert_eq!(
-        1,
-        params.insert_everything(client).exec().await?,
-        "inserting one row"
-    );
+    assert_eq!(1, params.query(client).exec().await?, "inserting one row");
 
     let expected = SelectEverything {
         custom_domain_: vec![CustomComposite {
