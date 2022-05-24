@@ -1,11 +1,7 @@
-// This file was generated with `cornucopia`. Do not modify.
-
 pub mod types {}
-
 pub mod queries {
     pub mod module_1 {
         use futures::{StreamExt, TryStreamExt};
-
         pub struct ExampleQueryBorrowed<'a> {
             pub col1: &'a str,
         }
@@ -23,7 +19,6 @@ pub mod queries {
             params: [&'a (dyn tokio_postgres::types::ToSql + Sync); 0],
             mapper: fn(ExampleQueryBorrowed) -> T,
         }
-
         impl<'a, C, T> ExampleQueryQuery<'a, C, T>
         where
             C: cornucopia_client::GenericClient,
@@ -38,49 +33,45 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn extractor(row: &tokio_postgres::row::Row) -> ExampleQueryBorrowed {
-                ExampleQueryBorrowed { col1: row.get(0) }
+                ExampleQueryBorrowed {
+                    col1: row.get(0),
+                }
             }
-
-            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
-                self.client
-                    .prepare(
-                        "SELECT
+            pub async fn stmt(
+                &self,
+            ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+                self.client.prepare("SELECT
     *
 FROM
     example_table;
 
-",
-                    )
-                    .await
+").await
             }
-
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
                 Ok((self.mapper)(Self::extractor(&row)))
             }
-
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
             }
-
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
-                Ok(self
-                    .client
-                    .query_opt(&stmt, &self.params)
-                    .await?
-                    .map(|row| (self.mapper)(Self::extractor(&row))))
+                Ok(
+                    self
+                        .client
+                        .query_opt(&stmt, &self.params)
+                        .await?
+                        .map(|row| (self.mapper)(Self::extractor(&row))),
+                )
             }
-
             pub async fn stream(
                 self,
             ) -> Result<
-                impl futures::Stream<Item = Result<T, tokio_postgres::Error>>,
-                tokio_postgres::Error,
-            > {
+                    impl futures::Stream<Item = Result<T, tokio_postgres::Error>>,
+                    tokio_postgres::Error,
+                > {
                 let stmt = self.stmt().await?;
                 let stream = self
                     .client
