@@ -1,10 +1,9 @@
 use async_recursion::async_recursion;
-use deadpool_postgres::Client;
 use error::{Error, UnsupportedPostgresTypeError};
 use heck::ToUpperCamelCase;
 use indexmap::{Equivalent, IndexMap};
 use postgres_types::Kind;
-use tokio_postgres::types::Type;
+use tokio_postgres::{types::Type, Client};
 
 /// A struct containing a `tokio_postgres` type and its Rust-equivalent.
 #[derive(PartialEq, Eq, Debug, Clone)]

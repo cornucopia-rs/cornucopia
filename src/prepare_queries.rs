@@ -7,9 +7,9 @@ use crate::{
     type_registrar::CornucopiaType,
     type_registrar::TypeRegistrar,
 };
-use deadpool_postgres::{Client, Object};
 use error::Error;
 use error::ErrorVariant;
+use tokio_postgres::Client;
 
 /// This data structure is used by Cornucopia to generate all constructs related to this particular query.
 #[derive(Debug)]
@@ -59,7 +59,7 @@ where
 
 /// Prepares all modules
 pub(crate) async fn prepare(
-    client: &Object,
+    client: &Client,
     type_registrar: &mut TypeRegistrar,
     modules: Vec<Module>,
 ) -> Result<Vec<PreparedModule>, Error> {
@@ -72,7 +72,7 @@ pub(crate) async fn prepare(
 
 /// Prepares all queries in this module
 async fn prepare_module(
-    client: &Object,
+    client: &Client,
     module: Module,
     type_registrar: &mut TypeRegistrar,
 ) -> Result<PreparedModule, Error> {
@@ -257,7 +257,6 @@ pub(crate) mod error {
     #[error("{0}")]
     pub(crate) enum ErrorVariant {
         Db(#[from] tokio_postgres::Error),
-        Pool(#[from] deadpool_postgres::PoolError),
         PostgresType(#[from] PostgresTypeError),
         Validation(#[from] ValidationError),
         #[error("Two or more columns have the same name: `{name}`. Consider disambiguing the column names with `AS` clauses.")]

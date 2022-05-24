@@ -1,10 +1,10 @@
 pub(crate) mod cli;
 pub(crate) mod codegen;
+pub(crate) mod conn;
 pub(crate) mod container;
 pub(crate) mod error;
 pub(crate) mod integration;
 pub(crate) mod parser;
-pub(crate) mod pool;
 pub(crate) mod prepare_queries;
 pub(crate) mod read_migrations;
 pub(crate) mod read_queries;
