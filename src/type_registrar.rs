@@ -47,8 +47,7 @@ impl CornucopiaType {
 
         if self.rust_path_from_queries == "postgres_types::Json<serde_json::Value>" {
             return format!(
-                "postgres_types::Json(serde_json::from_str({var_name}.0.get()).unwrap())
-            "
+                "postgres_types::Json(serde_json::from_str({var_name}.0.get()).unwrap())"
             );
         }
 

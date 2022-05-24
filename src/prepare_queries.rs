@@ -131,26 +131,25 @@ fn prepare_query(
         match &nullable_col.value {
             crate::parser::NullableColumn::Index(index) => {
                 // Get name from column index
-                let name = match stmt_cols.get(*index as usize - 1) {
-                    Some(col) => col.name(),
-                    None => {
-                        return Err(Error {
-                            err: ErrorVariant::Validation(
-                                ValidationError::InvalidNullableColumnIndex {
-                                    index: *index as usize,
-                                    max_col_index: stmt_cols.len(),
-                                    pos: ErrorPosition {
-                                        line: nullable_col.line,
-                                        col: nullable_col.col,
-                                        line_str: nullable_col.line_str,
-                                    },
+                let name = if let Some(col) = stmt_cols.get(*index as usize - 1) {
+                    col.name()
+                } else {
+                    return Err(Error {
+                        err: ErrorVariant::Validation(
+                            ValidationError::InvalidNullableColumnIndex {
+                                index: *index as usize,
+                                max_col_index: stmt_cols.len(),
+                                pos: ErrorPosition {
+                                    line: nullable_col.line,
+                                    col: nullable_col.col,
+                                    line_str: nullable_col.line_str,
                                 },
-                            ),
-                            query_name: query.name,
-                            query_start_line: Some(query.line),
-                            path: module_path.to_owned(),
-                        })
-                    }
+                            },
+                        ),
+                        query_name: query.name,
+                        query_start_line: Some(query.line),
+                        path: module_path.to_owned(),
+                    });
                 };
 
                 // Check if `nullable_cols` already contains this column. If not, add it.

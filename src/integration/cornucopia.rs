@@ -346,6 +346,44 @@ pub mod types {
                 }
             }
         }
+        #[derive(Copy, Debug, postgres_types::ToSql, Clone, PartialEq)]
+        #[postgres(name = "copy_composite")]
+        pub struct CopyComposite {
+            pub first: i32,
+            pub second: f64,
+        }
+        impl<'a> postgres_types::FromSql<'a> for CopyComposite {
+            fn from_sql(
+                _type: &postgres_types::Type,
+                buf: &'a [u8],
+            ) -> std::result::Result<
+                    CopyComposite,
+                    std::boxed::Box<
+                        dyn std::error::Error + std::marker::Sync + std::marker::Send,
+                    >,
+                > {
+                let fields = match *_type.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                let mut buf = buf;
+                let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
+                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                let first = postgres_types::private::read_value(
+                    fields[0].type_(),
+                    &mut buf,
+                )?;
+                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                let second = postgres_types::private::read_value(
+                    fields[1].type_(),
+                    &mut buf,
+                )?;
+                std::result::Result::Ok(CopyComposite { first, second })
+            }
+            fn accepts(type_: &postgres_types::Type) -> bool {
+                type_.name() == "copy_composite" && type_.schema() == "public"
+            }
+        }
     }
 }
 pub mod queries {
@@ -1048,9 +1086,7 @@ FROM
                 self.client.prepare("SELECT
   *
 FROM
-  nightmare;
-
-")
+  nightmare;")
             }
             pub fn one(mut self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt()?;
@@ -1091,6 +1127,77 @@ FROM
                 client,
                 params: [],
                 mapper: |it| Nightmare::from(it),
+            }
+        }
+        #[derive(Debug, Copy, Clone, PartialEq)]
+        pub struct Copies {
+            pub composite: super::super::types::public::CopyComposite,
+            pub domain: i32,
+        }
+        pub struct CopiesQuery<'a, C: GenericClient, T> {
+            client: &'a mut C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
+            mapper: fn(Copies) -> T,
+        }
+        impl<'a, C, T: 'a> CopiesQuery<'a, C, T>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(self, mapper: fn(Copies) -> R) -> CopiesQuery<'a, C, R> {
+                CopiesQuery {
+                    client: self.client,
+                    params: self.params,
+                    mapper,
+                }
+            }
+            pub fn extractor(row: &postgres::row::Row) -> Copies {
+                Copies {
+                    composite: row.get(0),
+                    domain: row.get(1),
+                }
+            }
+            pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
+                self.client.prepare("SELECT * FROM copy;")
+            }
+            pub fn one(mut self) -> Result<T, postgres::Error> {
+                let stmt = self.stmt()?;
+                let row = self.client.query_one(&stmt, &self.params)?;
+                Ok((self.mapper)(Self::extractor(&row)))
+            }
+            pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
+                self.stream()?.collect()
+            }
+            pub fn opt(mut self) -> Result<Option<T>, postgres::Error> {
+                let stmt = self.stmt()?;
+                Ok(
+                    self
+                        .client
+                        .query_opt(&stmt, &self.params)?
+                        .map(|row| (self.mapper)(Self::extractor(&row))),
+                )
+            }
+            pub fn stream(
+                mut self,
+            ) -> Result<
+                    impl Iterator<Item = Result<T, postgres::Error>> + 'a,
+                    postgres::Error,
+                > {
+                let stmt = self.stmt()?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .iterator()
+                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))));
+                Ok(stream)
+            }
+        }
+        pub fn copies<'a, C: GenericClient>(
+            client: &'a mut C,
+        ) -> CopiesQuery<'a, C, Copies> {
+            CopiesQuery {
+                client,
+                params: [],
+                mapper: |it| Copies::from(it),
             }
         }
     }
