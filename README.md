@@ -1,4 +1,4 @@
-<div align="center"> <img src="https://raw.githubusercontent.com/louisgariepy/cornucopia/main/assets/logo.svg" width=200 /> </div>
+<div align="center"> <img src="https://raw.githubusercontent.com/cornucopia-rs/cornucopia/main/assets/logo.svg" width=200 /> </div>
 <h1 align="center">Cornucopia</h1>
 <div align="center">
  <strong>
@@ -20,11 +20,11 @@
     alt="Crates.io version" />
   </a>
   <!-- Github Actions -->
-  <img src="https://img.shields.io/github/workflow/status/LouisGariepy/cornucopia/ci?style=flat-square" alt="actions status" />
+  <img src="https://img.shields.io/github/workflow/status/cornucopia-rs/cornucopia/ci?style=flat-square" alt="actions status" />
   <!-- Dependencies -->
-  <img src="https://deps.rs/repo/github/LouisGariepy/cornucopia/status.svg?style=flat-square">
+  <img src="https://deps.rs/repo/github/cornucopia-rs/cornucopia/status.svg?style=flat-square">
   <!-- License -->
-  <img src="https://img.shields.io/github/license/LouisGariepy/cornucopia?style=flat-square">
+  <img src="https://img.shields.io/github/license/cornucopia-rs/cornucopia?style=flat-square">
 </div>
 
 <div align="center">

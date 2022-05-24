@@ -1,4 +1,4 @@
-<div align="center"> <img src="https://raw.githubusercontent.com/louisgariepy/cornucopia/main/assets/logo.svg" width=200 /> </div>
+<div align="center"> <img src="https://raw.githubusercontent.com/cornucopia-rs/cornucopia/main/assets/logo.svg" width=200 /> </div>
 <h1 align="center">Cornucopia</h1>
 <div align="center">
  <strong>
@@ -10,7 +10,7 @@
 
 <div align="center">
   <!-- Github Actions -->
-  <img src="https://img.shields.io/github/workflow/status/LouisGariepy/cornucopia/ci" alt="actions status" />
+  <img src="https://img.shields.io/github/workflow/status/cornucopia-rs/cornucopia/ci" alt="actions status" />
   <!-- Version -->
   <a href="https://crates.io/crates/cornucopia">
     <img src="https://img.shields.io/crates/v/cornucopia.svg?style=flat-square"
