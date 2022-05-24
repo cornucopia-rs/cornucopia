@@ -58,7 +58,7 @@ Cornucopia aims to get out of your way, **transpiling your PostgreSQL queries to
 * Compatible with `build.rs` to rebuild Rust queries whenever SQL files change.
 * No macros, respects your compile times.
 
-Keep reading for more info, or take a look at the [basic example](https://github.com/LouisGariepy/cornucopia/tree/main/examples/basic) for a quickstart 🚀.
+Keep reading for more info, or take a look at the [basic example](/examples/basic/README.md) for a quickstart 🚀.
 
 ---
 
@@ -117,12 +117,12 @@ You can omit `tokio-postgres` feature flags for `json`, `time`, `uuid`, `eui48` 
 Aside from the code dependencies, you will need the `cornucopia` CLI to generate your Rust modules. This can be done via a simple `cargo install cornucopia` which will pull the latest binary and install it in your `cargo` path. Note that once the queries have been generated, they build and run standalone without requiring the CLI.
 
 ## Concepts
-This section explain a bit more about how Cornucopia works. If you just want to get started, you should take a look at the [basic example](https://github.com/LouisGariepy/cornucopia/tree/main/examples/basic).
+This section explain a bit more about how Cornucopia works. If you just want to get started, you should take a look at the [basic example](examples/basic/README.md).
 
-Cornucopia is pretty simple to use. In the next sections, we'll explore the basic usage, but feel free to look the CLI's whole interface using the `--help` option at any point. For convenience, the CLI's [reference document](https://github.com/LouisGariepy/cornucopia/blob/main/cli.md) is also available in this repository.
+Cornucopia is pretty simple to use. In the next sections, we'll explore the basic usage, but feel free to look the CLI's whole interface using the `--help` option at any point. For convenience, the CLI's [reference document](cli.md) is also available in this repository.
 
 ### Migrations
-The basic `cornucopia generate` command creates a new container, runs your migrations, generates your queries and cleanups the container. If you want to manage the database and migrations yourself, use the `cornucopia generate live` command to connect to an arbitrary live database. Keep in mind that your queries must still be otherwise compatible with Cornucopia (e.g. with regards to [supported types](https://github.com/LouisGariepy/cornucopia#supported-types) and [annotation syntax](https://github.com/LouisGariepy/cornucopia#query-annotation-syntax)).
+The basic `cornucopia generate` command creates a new container, runs your migrations, generates your queries and cleanups the container. If you want to manage the database and migrations yourself, use the `cornucopia generate live` command to connect to an arbitrary live database. Keep in mind that your queries must still be otherwise compatible with Cornucopia (e.g. with regards to [supported types](#supported-types) and [annotation syntax](#query-annotation-syntax)).
 
 New migrations can be added using the command `cornucopia migration new`. 
 

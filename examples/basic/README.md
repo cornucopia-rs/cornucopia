@@ -1,6 +1,6 @@
 # Example
 ## Before starting
-Please follow the the [install procedure](../../README.md#install) to ensure you're ready to get started. Before running CLI commands, you can take a look at its interface, either via the `--help` flag, or by reading this [document](https://github.com/LouisGariepy/cornucopia/blob/main/cli.md).
+Please follow the the [install procedure](../../README.md#install) to ensure you're ready to get started. Before running CLI commands, you can take a look at its interface, either via the `--help` flag, or by reading this [document](../../cli.md).
 
 ## Take a look!
 This crate contains a fully working example of what a Cornucopia project can look like. There are a few queries and migrations defined for you in the `migrations/` and `queries/` folders. Please bear in mind the used SQL is for demonstration purposes only.

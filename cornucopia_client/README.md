@@ -25,11 +25,11 @@
 
 <div align="center">
   <h4>
-    <a href="https://github.com/LouisGariepy/cornucopia#install">
+    <a href="#install">
       Install
     </a>
     <span> | </span>
-    <a href="https://github.com/LouisGariepy/cornucopia/examples/basic/README.md">
+    <a href="/examples/basic/README.md">
       Example
     </a>
   </h4>
