@@ -2,7 +2,7 @@
 name = "cornucopia_client"
 version = "0.2.2"
 edition = "2021"
-license = "MIT"
+license = "MIT/Apache-2.0"
 description = "Generic client trait for Cornucopia users"
 homepage = "https://github.com/LouisGariepy/cornucopia"
 repository = "https://github.com/LouisGariepy/cornucopia"
