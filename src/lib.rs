@@ -25,8 +25,8 @@ pub use cli::run;
 pub use error::Error;
 
 pub async fn run_migrations(url: &str, migrations_path: &str) -> Result<(), Error> {
-    let client = conn::from_url(&url).await?;
-    Ok(crate::run_migrations::run_migrations(&client, &migrations_path).await?)
+    let client = conn::from_url(url).await?;
+    Ok(crate::run_migrations::run_migrations(&client, migrations_path).await?)
 }
 
 pub async fn new_migration(migrations_path: &str, name: &str) -> Result<(), Error> {
@@ -52,8 +52,8 @@ pub async fn generate_live(
 ) -> Result<String, Error> {
     let mut type_registrar = TypeRegistrar::default();
 
-    let modules = read_query_modules(&queries_path)?;
-    let client = conn::from_url(&url).await?;
+    let modules = read_query_modules(queries_path)?;
+    let client = conn::from_url(url).await?;
     let prepared_modules = prepare(&client, &mut type_registrar, modules).await?;
     let generated_code = generate_internal(&type_registrar, prepared_modules)?;
 
@@ -72,7 +72,7 @@ pub async fn generate(
 ) -> Result<String, Error> {
     let mut type_registrar = TypeRegistrar::default();
 
-    let modules = read_query_modules(&queries_path)?;
+    let modules = read_query_modules(queries_path)?;
     container::setup(podman)?;
     let client = cornucopia_conn().await?;
     run_migrations_internal(&client, migrations_path).await?;
@@ -80,8 +80,8 @@ pub async fn generate(
     let generated_code = generate_internal(&type_registrar, prepared_modules)?;
     container::cleanup(podman)?;
 
-    if let Some(d) = destination {
-        write_generated_code(d, &generated_code)?
+    if let Some(destination) = destination {
+        write_generated_code(destination, &generated_code)?
     };
 
     Ok(generated_code)

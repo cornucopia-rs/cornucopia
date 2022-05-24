@@ -1,4 +1,3 @@
-use self::error::WriteFileError;
 use super::prepare_queries::PreparedModule;
 use crate::{
     prepare_queries::{PreparedColumn, PreparedParameter, PreparedQuery},
