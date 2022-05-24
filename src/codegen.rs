@@ -271,14 +271,14 @@ fn generate_params_struct(
     let params_struct_impl = if params_is_copy {
         format!(
                 "impl {query_struct_name}Params {{
-                    pub fn {query_name}<'a, C: cornucopia_client::GenericClient>(&'a self, client: &'a C) -> {query_struct_name}Query<'a, C {type_generic}> {{
+                    pub fn query<'a, C: cornucopia_client::GenericClient>(&'a self, client: &'a C) -> {query_struct_name}Query<'a, C {type_generic}> {{
                         {query_name}(client, {param_values})
                     }}
                 }}")
     } else {
         format!(
                 "impl<'a> {query_struct_name}Params<'a> {{
-                    pub fn {query_name}<C: cornucopia_client::GenericClient>(&'a self, client: &'a C) -> {query_struct_name}Query<'a, C {type_generic}> {{
+                    pub fn query<C: cornucopia_client::GenericClient>(&'a self, client: &'a C) -> {query_struct_name}Query<'a, C {type_generic}> {{
                         {query_name}(client, {param_values})
                     }}
                 }}")
