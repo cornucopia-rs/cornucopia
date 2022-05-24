@@ -19,12 +19,24 @@
     <img src="https://img.shields.io/crates/v/cornucopia.svg?style=flat-square"
     alt="Crates.io version" />
   </a>
+
   <!-- Github Actions -->
+  <a href = "https://github.com/cornucopia-rs/cornucopia/actions">
   <img src="https://img.shields.io/github/workflow/status/cornucopia-rs/cornucopia/ci?style=flat-square" alt="actions status" />
+  </a>
+  
   <!-- Dependencies -->
-  <img src="https://deps.rs/repo/github/cornucopia-rs/cornucopia/status.svg?style=flat-square">
+  <a href="https://deps.rs/repo/github/cornucopia-rs/cornucopia">
+    <img src="https://deps.rs/repo/github/cornucopia-rs/cornucopia/status.svg?style=flat-square"
+    alt="Crates.io version" />
+  </a>
+
   <!-- License -->
-  <img src="https://img.shields.io/github/license/cornucopia-rs/cornucopia?style=flat-square">
+  <a href="https://github.com/cornucopia-rs/cornucopia#License">
+    <img src="https://img.shields.io/badge/License-APACHE--2.0%2FMIT-blue?style=flat-square" alt="License">
+  </a>
+
+
 </div>
 
 <div align="center">
