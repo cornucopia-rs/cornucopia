@@ -1,4 +1,7 @@
-use self::error::WriteFileError;
+use self::{
+    error::WriteFileError,
+    utils::{comma_join, comma_join_iter, join},
+};
 use super::prepare_queries::PreparedModule;
 use crate::{
     prepare_queries::{PreparedColumn, PreparedParameter, PreparedQuery},
@@ -8,6 +11,42 @@ use error::Error;
 use heck::ToUpperCamelCase;
 use postgres_types::{Field, Kind};
 use std::collections::HashMap;
+
+/// Utils functions to make codegen clearer
+mod utils {
+    pub fn join<'a, T, R: AsRef<str>>(
+        iter: impl IntoIterator<Item = T>,
+        map: impl Fn(T) -> R,
+        char: char,
+    ) -> String {
+        let mut first = true;
+        iter.into_iter()
+            .map(map)
+            .fold(String::new(), |mut buf, it| {
+                if first {
+                    first = false;
+                } else {
+                    buf.push(char);
+                }
+                buf.push_str(it.as_ref());
+                return buf;
+            })
+    }
+
+    pub fn comma_join<'a, T, R: AsRef<str>>(
+        iter: impl IntoIterator<Item = T>,
+        map: impl Fn(T) -> R,
+    ) -> String {
+        join(iter, map, ',')
+    }
+
+    pub fn comma_join_iter<'a, T, R: AsRef<str>>(
+        iter: impl IntoIterator<Item = T>,
+        map: impl Fn((usize, T)) -> R,
+    ) -> String {
+        comma_join(iter.into_iter().enumerate(), map)
+    }
+}
 
 // Unused for now, but could be used eventually to error on reserved
 // keywords, or support them via raw identifiers.
@@ -73,25 +112,20 @@ fn composite_fromsql_impl(
     } else {
         ("", "")
     };
-    let field_names = fields
-        .iter()
-        .map(|f| f.name().to_owned())
-        .collect::<Vec<String>>()
-        .join(",");
+    let field_names = comma_join(fields, |f| f.name().to_owned());
 
-    let read_fields = fields
-        .iter()
-        .enumerate()
-        .map(|(index, f)| {
+    let read_fields = join(
+        fields.iter().enumerate(),
+        |(index, f)| {
             format!(
                 "let _oid = postgres_types::private::read_be_i32(&mut buf)?;
     let {} = postgres_types::private::read_value(fields[{}].type_(), &mut buf)?;",
                 f.name(),
                 index
             )
-        })
-        .collect::<Vec<String>>()
-        .join("\n");
+        },
+        '\n',
+    );
 
     format!(
         r#"
@@ -149,12 +183,9 @@ fn generate_query_struct(
         )
     };
 
-    let get_fields = ret_fields
-        .iter()
-        .enumerate()
-        .map(|(index, f)| format!("{}: row.get({index})", f.name))
-        .collect::<Vec<String>>()
-        .join(",");
+    let get_fields = comma_join_iter(ret_fields, |(index, f)| {
+        format!("{}: row.get({index})", f.name)
+    });
 
     let query_struct_impl = if is_async {
         if ret_fields.is_empty() {
@@ -315,22 +346,14 @@ fn generate_params_struct(
         return String::new();
     }
 
-    let params_struct_fields = params
-        .iter()
-        .map(|p| {
-            format!(
-                "pub {} : {}",
-                p.name,
-                p.ty.borrowed_rust_ty(type_registrar, Some("'a"), true)
-            )
-        })
-        .collect::<Vec<String>>()
-        .join(",");
-    let param_values = params
-        .iter()
-        .map(|p| format!("&self.{}", p.name))
-        .collect::<Vec<String>>()
-        .join(",");
+    let params_struct_fields = comma_join(params, |p| {
+        format!(
+            "pub {} : {}",
+            p.name,
+            p.ty.borrowed_rust_ty(type_registrar, Some("'a"), true)
+        )
+    });
+    let param_values = comma_join(params, |p| format!("&self.{}", p.name));
 
     let type_generic = if ret_fields_is_empty {
         String::new()
@@ -384,41 +407,33 @@ fn generate_ret_structs(
     let borrowed_ret_struct = if ret_fields.is_empty() || ret_is_copy {
         String::new()
     } else {
-        let ret_struct_fields = ret_fields
-            .iter()
-            .map(|col| {
-                let col_name = &col.name;
-                let col_ty = if col.is_nullable {
-                    format!(
-                        "Option<{}>",
-                        col.ty.borrowed_rust_ty(type_registrar, Some("'a"), false)
-                    )
-                } else {
+        let ret_struct_fields = comma_join(ret_fields, |col| {
+            let col_name = &col.name;
+            let col_ty = if col.is_nullable {
+                format!(
+                    "Option<{}>",
                     col.ty.borrowed_rust_ty(type_registrar, Some("'a"), false)
-                };
-                format!("pub {col_name} : {col_ty}")
-            })
-            .collect::<Vec<String>>()
-            .join(",");
+                )
+            } else {
+                col.ty.borrowed_rust_ty(type_registrar, Some("'a"), false)
+            };
+            format!("pub {col_name} : {col_ty}")
+        });
         format!("pub struct {query_struct_name}Borrowed<'a> {{ {ret_struct_fields} }}")
     };
 
     let ret_struct = if ret_fields.is_empty() {
         String::new()
     } else {
-        let ret_struct_fields = ret_fields
-            .iter()
-            .map(|col| {
-                let col_name = &col.name;
-                let col_ty = if col.is_nullable {
-                    format!("Option<{}>", col.ty.rust_path_from_queries)
-                } else {
-                    col.ty.rust_path_from_queries.clone()
-                };
-                format!("pub {col_name} : {col_ty}")
-            })
-            .collect::<Vec<String>>()
-            .join(",");
+        let ret_struct_fields = comma_join(ret_fields, |col| {
+            let col_name = &col.name;
+            let col_ty = if col.is_nullable {
+                format!("Option<{}>", col.ty.rust_path_from_queries)
+            } else {
+                col.ty.rust_path_from_queries.clone()
+            };
+            format!("pub {col_name} : {col_ty}")
+        });
         let query_struct_derives = if ret_is_copy {
             "#[derive(Debug, Copy, Clone, PartialEq)]"
         } else {
@@ -435,24 +450,16 @@ fn generate_ret_structs(
     let ret_from_impl = if ret_fields.is_empty() || ret_is_copy {
         String::new()
     } else {
-        let fields_names = ret_fields
-            .iter()
-            .map(|f| f.name.clone())
-            .collect::<Vec<String>>()
-            .join(",");
-        let borrowed_fields_to_owned = ret_fields
-            .iter()
-            .map(|f| {
-                let field_name = &f.name;
-                let owned_value = if f.ty.is_copy {
-                    String::new()
-                } else {
-                    format!(": {}", f.ty.owning_call(&f.name, f.is_nullable))
-                };
-                format!("{field_name} {owned_value}")
-            })
-            .collect::<Vec<String>>()
-            .join(",");
+        let fields_names = comma_join(ret_fields, |f| f.name.clone());
+        let borrowed_fields_to_owned = comma_join(ret_fields, |f| {
+            let field_name = &f.name;
+            let owned_value = if f.ty.is_copy {
+                String::new()
+            } else {
+                format!(": {}", f.ty.owning_call(&f.name, f.is_nullable))
+            };
+            format!("{field_name} {owned_value}")
+        });
         format!(
             "impl<'a> From<{query_struct_name}Borrowed<'a>> for {query_struct_name} {{
                 fn from({query_struct_name}Borrowed {{ {fields_names} }}: {query_struct_name}Borrowed<'a>) -> Self {{
@@ -473,20 +480,12 @@ fn generate_query_fn(
     ret_fields_is_empty: bool,
     is_async: bool,
 ) -> String {
-    let param_list = params
-        .iter()
-        .map(|p| {
-            let param_name = &p.name;
-            let borrowed_rust_ty = p.ty.borrowed_rust_ty(type_registrar, None, true);
-            format!("{param_name} : &'a {borrowed_rust_ty}",)
-        })
-        .collect::<Vec<String>>()
-        .join(",");
-    let param_names = params
-        .iter()
-        .map(|p| p.name.clone())
-        .collect::<Vec<String>>()
-        .join(",");
+    let param_list = comma_join(params, |p| {
+        let param_name = &p.name;
+        let borrowed_rust_ty = p.ty.borrowed_rust_ty(type_registrar, None, true);
+        format!("{param_name} : &'a {borrowed_rust_ty}",)
+    });
+    let param_names = comma_join(params, |p| p.name.clone());
 
     let (concrete_type, mapper_field) = if ret_fields_is_empty {
         (String::new(), String::new())
@@ -565,14 +564,10 @@ fn generate_custom_type(
             }
         }
         Kind::Composite(fields) => {
-            let fields_str = fields
-                .iter()
-                .map(|f| {
-                    let f_ty = type_registrar.get(f.type_()).unwrap();
-                    format!("pub {} : {}", f.name(), f_ty.rust_path_from_types)
-                })
-                .collect::<Vec<String>>()
-                .join(",");
+            let fields_str = comma_join(fields, |f| {
+                let f_ty = type_registrar.get(f.type_()).unwrap();
+                format!("pub {} : {}", f.name(), f_ty.rust_path_from_types)
+            });
             let mut owned_struct = format!(
                 "#[derive(Debug, postgres_types::ToSql, Clone, PartialEq)]
                 #[postgres(name = \"{ty_name}\")]
@@ -586,43 +581,31 @@ fn generate_custom_type(
                 owned_struct = format!("#[derive(Copy)]{owned_struct}");
                 format!("{owned_struct}\n{owned_fromsql_impl}")
             } else {
-                let borrowed_fields_str = fields
-                    .iter()
-                    .map(|f| {
-                        let f_ty = type_registrar.get(f.type_()).unwrap();
-                        format!(
-                            "pub {} : {}",
-                            f.name(),
-                            f_ty.borrowed_rust_ty(type_registrar, Some("'a"), false)
-                        )
-                    })
-                    .collect::<Vec<String>>()
-                    .join(",");
+                let borrowed_fields_str = comma_join(fields, |f| {
+                    let f_ty = type_registrar.get(f.type_()).unwrap();
+                    format!(
+                        "pub {} : {}",
+                        f.name(),
+                        f_ty.borrowed_rust_ty(type_registrar, Some("'a"), false)
+                    )
+                });
                 let borrowed_struct =
                     format!("pub struct {struct_name}Borrowed<'a> {{ {borrowed_fields_str} }}",);
                 let borrowed_fromsql_impl =
                     composite_fromsql_impl(struct_name, fields, ty_name, ty_schema, true);
-                let field_names = fields
-                    .iter()
-                    .map(|f| f.name().to_owned())
-                    .collect::<Vec<String>>()
-                    .join(",");
-                let field_values = fields
-                    .iter()
-                    .map(|f| {
-                        let f_ty = type_registrar.get(f.type_()).unwrap();
-                        format!(
-                            "{} {}",
-                            f.name(),
-                            if f_ty.is_copy {
-                                String::new()
-                            } else {
-                                format!(": {}", f_ty.owning_call(f.name(), false))
-                            }
-                        )
-                    })
-                    .collect::<Vec<String>>()
-                    .join(",");
+                let field_names = comma_join(fields, |f| f.name());
+                let field_values = comma_join(fields, |f| {
+                    let f_ty = type_registrar.get(f.type_()).unwrap();
+                    format!(
+                        "{} {}",
+                        f.name(),
+                        if f_ty.is_copy {
+                            String::new()
+                        } else {
+                            format!(": {}", f_ty.owning_call(f.name(), false))
+                        }
+                    )
+                });
                 let owned_from_borrowed_impl = format!(
                     "
                 impl<'a> From<{struct_name}Borrowed<'a>> for {struct_name} {{
@@ -687,7 +670,7 @@ fn generate_query(type_registrar: &TypeRegistrar, query: &PreparedQuery, is_asyn
         &query_name,
         &query_struct_name,
         query.ret_fields.is_empty(),
-        is_async
+        is_async,
     );
     let (ret_struct, borrowed_ret_struct, ret_from_impl) = generate_ret_structs(
         type_registrar,
