@@ -14,7 +14,7 @@ use std::collections::HashMap;
 
 /// Utils functions to make codegen clearer
 mod utils {
-    pub fn join<'a, T, R: AsRef<str>>(
+    pub fn join<T, R: AsRef<str>>(
         iter: impl IntoIterator<Item = T>,
         map: impl Fn(T) -> R,
         char: char,
@@ -29,18 +29,18 @@ mod utils {
                     buf.push(char);
                 }
                 buf.push_str(it.as_ref());
-                return buf;
+                buf
             })
     }
 
-    pub fn comma_join<'a, T, R: AsRef<str>>(
+    pub fn comma_join<T, R: AsRef<str>>(
         iter: impl IntoIterator<Item = T>,
         map: impl Fn(T) -> R,
     ) -> String {
         join(iter, map, ',')
     }
 
-    pub fn comma_join_iter<'a, T, R: AsRef<str>>(
+    pub fn comma_join_iter<T, R: AsRef<str>>(
         iter: impl IntoIterator<Item = T>,
         map: impl Fn((usize, T)) -> R,
     ) -> String {
@@ -156,6 +156,37 @@ fn composite_fromsql_impl(
     )
 }
 
+fn generate_execute(
+    type_registrar: &TypeRegistrar,
+    query_name: &str,
+    params: &[PreparedParameter],
+    query_sql: &str,
+    is_async: bool,
+) -> String {
+    let client_mut = if is_async { "" } else { "mut" };
+    let param_list = comma_join(params, |p| {
+        let param_name = &p.name;
+        let borrowed_rust_ty = p.ty.borrowed_rust_ty(type_registrar, None, true);
+        format!("{param_name} : &'a {borrowed_rust_ty}",)
+    });
+    let param_names = comma_join(params, |p| &p.name);
+    if is_async {
+        format!(
+                "pub async fn {query_name}<'a, C: GenericClient>(client: &'a {client_mut} C, {param_list}) -> Result<u64, tokio_postgres::Error> {{
+                    let stmt = client.prepare(\"{query_sql}\").await?;
+                    client.execute(&stmt, &[{param_names}]).await
+                }}"
+            )
+    } else {
+        format!(
+            "pub fn {query_name}<'a, C: GenericClient>(client: &'a {client_mut} C, {param_list}) -> Result<u64, postgres::Error> {{
+                let stmt = client.prepare(\"{query_sql}\")?;
+                client.execute(&stmt, &[{param_names}])
+            }}"
+        )
+    }
+}
+
 fn generate_query_struct(
     query_struct_name: &str,
     params_len: usize,
@@ -166,47 +197,20 @@ fn generate_query_struct(
 ) -> (String, String) {
     let borrowed_str = if ret_is_copy { "" } else { "Borrowed" };
     let client_mut = if is_async { "" } else { "mut" };
-    let query_struct = if ret_fields.is_empty() {
-        format!(
-            "pub struct {query_struct_name}Query<'a, C: GenericClient> {{
-                client: &'a {client_mut} C,
-                params: [&'a (dyn postgres_types::ToSql + Sync); {params_len}]
-            }}"
-        )
-    } else {
-        format!(
-            "pub struct {query_struct_name}Query<'a, C: GenericClient, T> {{
+    let query_struct = format!(
+        "pub struct {query_struct_name}Query<'a, C: GenericClient, T> {{
                 client: &'a {client_mut} C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); {params_len}],
                 mapper: fn({query_struct_name}{borrowed_str}) -> T,
             }}",
-        )
-    };
+    );
 
     let get_fields = comma_join_iter(ret_fields, |(index, f)| {
         format!("{}: row.get({index})", f.name)
     });
 
     let query_struct_impl = if is_async {
-        if ret_fields.is_empty() {
-            format!(
-                "
-            impl<'a, C> {query_struct_name}Query<'a, C>
-            where
-                C: cornucopia_client::GenericClient,
-            {{
-                pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {{
-                    self.client.prepare(\"{query_sql}\").await
-                }}
-    
-                pub async fn exec(self) -> Result<u64, tokio_postgres::Error> {{
-                    let stmt = self.stmt().await?;
-                    self.client.execute(&stmt, &self.params).await
-                }}
-            }}"
-            )
-        } else {
-            format!("
+        format!("
             impl<'a, C, T> {query_struct_name}Query<'a, C, T>
             where
                 C: cornucopia_client::GenericClient,
@@ -258,27 +262,8 @@ fn generate_query_struct(
                     Ok(stream.into_stream())
                 }}
             }}")
-        }
     } else {
-        if ret_fields.is_empty() {
-            format!(
-                "
-        impl<'a, C> {query_struct_name}Query<'a, C>
-        where
-            C: GenericClient,
-        {{
-            pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {{
-                self.client.prepare(\"{query_sql}\")
-            }}
-
-            pub fn exec(mut self) -> Result<u64, postgres::Error> {{
-                let stmt = self.stmt()?;
-                self.client.execute(&stmt, &self.params)
-            }}
-        }}"
-            )
-        } else {
-            format!("
+        format!("
         impl<'a, C, T: 'a> {query_struct_name}Query<'a, C, T>
         where
             C: GenericClient,
@@ -329,7 +314,6 @@ fn generate_query_struct(
                 Ok(stream)
             }}
         }}")
-        }
     };
     (query_struct, query_struct_impl)
 }
@@ -339,7 +323,7 @@ fn generate_params_struct(
     params: &[PreparedParameter],
     query_name: &str,
     query_struct_name: &str,
-    ret_fields_is_empty: bool,
+    execute: bool,
     is_async: bool,
 ) -> String {
     if params.is_empty() {
@@ -355,30 +339,29 @@ fn generate_params_struct(
     });
     let param_values = comma_join(params, |p| format!("&self.{}", p.name));
 
-    let type_generic = if ret_fields_is_empty {
-        String::new()
+    let ret_type = if execute {
+        if is_async {
+            "Result<u64, tokio_postgres::Error>".to_string()
+        } else {
+            "Result<u64, postgres::Error>".to_string()
+        }
     } else {
-        format!(", {query_struct_name}")
+        format!("{query_struct_name}Query<'a, C, {query_struct_name}>")
     };
 
-    let params_is_copy = params
-        .iter()
-        .map(|a| a.ty.is_copy)
-        .reduce(|a, b| a && b)
-        .unwrap_or(true);
-
+    let params_is_copy = params.iter().all(|a| a.ty.is_copy);
     let client_mut = if is_async { "" } else { "mut" };
     let params_struct_impl = if params_is_copy {
         format!(
                 "impl {query_struct_name}Params {{
-                    pub fn query<'a, C: GenericClient>(&'a self, client: &'a {client_mut} C) -> {query_struct_name}Query<'a, C {type_generic}> {{
+                    pub fn query<'a, C: GenericClient>(&'a self, client: &'a {client_mut} C) -> {ret_type} {{
                         {query_name}(client, {param_values})
                     }}
                 }}")
     } else {
         format!(
                 "impl<'a> {query_struct_name}Params<'a> {{
-                    pub fn query<C: GenericClient>(&'a self, client: &'a {client_mut} C) -> {query_struct_name}Query<'a, C {type_generic}> {{
+                    pub fn query<C: GenericClient>(&'a self, client: &'a {client_mut} C) -> {ret_type} {{
                         {query_name}(client, {param_values})
                     }}
                 }}")
@@ -404,7 +387,7 @@ fn generate_ret_structs(
     query_struct_name: &str,
     ret_is_copy: bool,
 ) -> (String, String, String) {
-    let borrowed_ret_struct = if ret_fields.is_empty() || ret_is_copy {
+    let borrowed_ret_struct = if ret_is_copy {
         String::new()
     } else {
         let ret_struct_fields = comma_join(ret_fields, |col| {
@@ -422,32 +405,28 @@ fn generate_ret_structs(
         format!("pub struct {query_struct_name}Borrowed<'a> {{ {ret_struct_fields} }}")
     };
 
-    let ret_struct = if ret_fields.is_empty() {
-        String::new()
-    } else {
-        let ret_struct_fields = comma_join(ret_fields, |col| {
-            let col_name = &col.name;
-            let col_ty = if col.is_nullable {
-                format!("Option<{}>", col.ty.rust_path_from_queries)
-            } else {
-                col.ty.rust_path_from_queries.clone()
-            };
-            format!("pub {col_name} : {col_ty}")
-        });
-        let query_struct_derives = if ret_is_copy {
-            "#[derive(Debug, Copy, Clone, PartialEq)]"
+    let ret_struct_fields = comma_join(ret_fields, |col| {
+        let col_name = &col.name;
+        let col_ty = if col.is_nullable {
+            format!("Option<{}>", col.ty.rust_path_from_queries)
         } else {
-            "#[derive(Debug, Clone, PartialEq)]"
+            col.ty.rust_path_from_queries.clone()
         };
-        format!(
-            "{query_struct_derives}
+        format!("pub {col_name} : {col_ty}")
+    });
+    let query_struct_derives = if ret_is_copy {
+        "#[derive(Debug, Copy, Clone, PartialEq)]"
+    } else {
+        "#[derive(Debug, Clone, PartialEq)]"
+    };
+    let ret_struct = format!(
+        "{query_struct_derives}
             pub struct {query_struct_name} {{ 
                 {ret_struct_fields} 
             }}",
-        )
-    };
+    );
 
-    let ret_from_impl = if ret_fields.is_empty() || ret_is_copy {
+    let ret_from_impl = if ret_is_copy {
         String::new()
     } else {
         let fields_names = comma_join(ret_fields, |f| f.name.clone());
@@ -477,7 +456,6 @@ fn generate_query_fn(
     query_struct_name: &str,
     query_name: &str,
     params: &[PreparedParameter],
-    ret_fields_is_empty: bool,
     is_async: bool,
 ) -> String {
     let param_list = comma_join(params, |p| {
@@ -485,23 +463,14 @@ fn generate_query_fn(
         let borrowed_rust_ty = p.ty.borrowed_rust_ty(type_registrar, None, true);
         format!("{param_name} : &'a {borrowed_rust_ty}",)
     });
-    let param_names = comma_join(params, |p| p.name.clone());
-
-    let (concrete_type, mapper_field) = if ret_fields_is_empty {
-        (String::new(), String::new())
-    } else {
-        (
-            format!(", {query_struct_name}"),
-            format!("mapper: |it| {query_struct_name}::from(it),"),
-        )
-    };
+    let param_names = comma_join(params, |p| &p.name);
     let client_mut = if is_async { "" } else { "mut" };
     format!(
-        "pub fn {query_name}<'a, C: GenericClient>(client: &'a {client_mut} C, {param_list}) -> {query_struct_name}Query<'a,C {concrete_type}> {{
+        "pub fn {query_name}<'a, C: GenericClient>(client: &'a {client_mut} C, {param_list}) -> {query_struct_name}Query<'a,C, {query_struct_name}> {{
         {query_struct_name}Query {{
             client,
             params: [{param_names}],
-            {mapper_field}
+            mapper: |it| {query_struct_name}::from(it),
         }}
     }}",
     )
@@ -660,43 +629,56 @@ fn generate_type_modules(type_registrar: &TypeRegistrar) -> Result<String, Error
 }
 
 fn generate_query(type_registrar: &TypeRegistrar, query: &PreparedQuery, is_async: bool) -> String {
-    let query_name = query.name.clone();
     let query_struct_name = query.name.to_upper_camel_case();
     let ret_is_copy = query.ret_fields.iter().all(|a| a.ty.is_copy);
-    let params_len = query.params.len();
     let params_struct = generate_params_struct(
         type_registrar,
         &query.params,
-        &query_name,
+        &query.name,
         &query_struct_name,
-        query.ret_fields.is_empty(),
-        is_async,
-    );
-    let (ret_struct, borrowed_ret_struct, ret_from_impl) = generate_ret_structs(
-        type_registrar,
-        &query.ret_fields,
-        &query_struct_name,
-        ret_is_copy,
-    );
-    let (query_struct, query_struct_impl) = generate_query_struct(
-        &query_struct_name,
-        params_len,
-        &query.ret_fields,
-        ret_is_copy,
-        &query.sql,
-        is_async,
-    );
-    let query_fn = generate_query_fn(
-        type_registrar,
-        &query_struct_name,
-        &query_name,
-        &query.params,
         query.ret_fields.is_empty(),
         is_async,
     );
 
-    format!(
-        "
+    if query.ret_fields.is_empty() {
+        let query_fn = generate_execute(
+            type_registrar,
+            &query.name,
+            &query.params,
+            &query.sql,
+            is_async,
+        );
+        format!(
+            "
+        {params_struct}
+    {query_fn}
+    "
+        )
+    } else {
+        let (ret_struct, borrowed_ret_struct, ret_from_impl) = generate_ret_structs(
+            type_registrar,
+            &query.ret_fields,
+            &query_struct_name,
+            ret_is_copy,
+        );
+        let (query_struct, query_struct_impl) = generate_query_struct(
+            &query_struct_name,
+            query.params.len(),
+            &query.ret_fields,
+            ret_is_copy,
+            &query.sql,
+            is_async,
+        );
+        let query_fn = generate_query_fn(
+            type_registrar,
+            &query_struct_name,
+            &query.name,
+            &query.params,
+            is_async,
+        );
+
+        format!(
+            "
         {params_struct}
     {borrowed_ret_struct}
     {ret_struct}
@@ -705,7 +687,8 @@ fn generate_query(type_registrar: &TypeRegistrar, query: &PreparedQuery, is_asyn
     {query_struct_impl}
     {query_fn}
     "
-    )
+        )
+    }
 }
 
 pub(crate) fn generate(

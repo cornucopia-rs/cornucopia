@@ -825,7 +825,7 @@ FROM
             pub fn query<C: GenericClient>(
                 &'a self,
                 client: &'a mut C,
-            ) -> InsertEverythingQuery<'a, C> {
+            ) -> Result<u64, postgres::Error> {
                 insert_everything(
                     client,
                     &self.custom_domain_,
@@ -868,28 +868,6 @@ FROM
                 )
             }
         }
-        pub struct InsertEverythingQuery<'a, C: GenericClient> {
-            client: &'a mut C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); 37],
-        }
-        impl<'a, C> InsertEverythingQuery<'a, C>
-        where
-            C: GenericClient,
-        {
-            pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
-                self.client
-                    .prepare(
-                        "INSERT INTO Everything (custom_domain_, custom_array_, domain_, array_, bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37);
-
-",
-                    )
-            }
-            pub fn exec(mut self) -> Result<u64, postgres::Error> {
-                let stmt = self.stmt()?;
-                self.client.execute(&stmt, &self.params)
-            }
-        }
         pub fn insert_everything<'a, C: GenericClient>(
             client: &'a mut C,
             custom_domain_: &'a super::super::types::public::CustomDomain,
@@ -929,49 +907,57 @@ FROM
             uuid_: &'a uuid::Uuid,
             inet_: &'a std::net::IpAddr,
             macaddr_: &'a eui48::MacAddress,
-        ) -> InsertEverythingQuery<'a, C> {
-            InsertEverythingQuery {
-                client,
-                params: [
-                    custom_domain_,
-                    custom_array_,
-                    domain_,
-                    array_,
-                    bool_,
-                    boolean_,
-                    char_,
-                    smallint_,
-                    int2_,
-                    smallserial_,
-                    serial2_,
-                    int_,
-                    int4_,
-                    serial_,
-                    serial4_,
-                    bingint_,
-                    int8_,
-                    bigserial_,
-                    serial8_,
-                    float4_,
-                    real_,
-                    float8_,
-                    double_precision_,
-                    text_,
-                    varchar_,
-                    bytea_,
-                    timestamp_,
-                    timestamp_without_time_zone_,
-                    timestamptz_,
-                    timestamp_with_time_zone_,
-                    date_,
-                    time_,
-                    json_,
-                    jsonb_,
-                    uuid_,
-                    inet_,
-                    macaddr_,
-                ],
-            }
+        ) -> Result<u64, postgres::Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO Everything (custom_domain_, custom_array_, domain_, array_, bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37);
+
+",
+                )?;
+            client
+                .execute(
+                    &stmt,
+                    &[
+                        custom_domain_,
+                        custom_array_,
+                        domain_,
+                        array_,
+                        bool_,
+                        boolean_,
+                        char_,
+                        smallint_,
+                        int2_,
+                        smallserial_,
+                        serial2_,
+                        int_,
+                        int4_,
+                        serial_,
+                        serial4_,
+                        bingint_,
+                        int8_,
+                        bigserial_,
+                        serial8_,
+                        float4_,
+                        real_,
+                        float8_,
+                        double_precision_,
+                        text_,
+                        varchar_,
+                        bytea_,
+                        timestamp_,
+                        timestamp_without_time_zone_,
+                        timestamptz_,
+                        timestamp_with_time_zone_,
+                        date_,
+                        time_,
+                        json_,
+                        jsonb_,
+                        uuid_,
+                        inet_,
+                        macaddr_,
+                    ],
+                )
         }
     }
     pub mod module_1 {
@@ -984,35 +970,17 @@ FROM
             pub fn query<C: GenericClient>(
                 &'a self,
                 client: &'a mut C,
-            ) -> InsertBookQuery<'a, C> {
+            ) -> Result<u64, postgres::Error> {
                 insert_book(client, &self.book_name)
-            }
-        }
-        pub struct InsertBookQuery<'a, C: GenericClient> {
-            client: &'a mut C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); 1],
-        }
-        impl<'a, C> InsertBookQuery<'a, C>
-        where
-            C: GenericClient,
-        {
-            pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
-                self.client.prepare("INSERT INTO Book (title)
-  VALUES ($1);")
-            }
-            pub fn exec(mut self) -> Result<u64, postgres::Error> {
-                let stmt = self.stmt()?;
-                self.client.execute(&stmt, &self.params)
             }
         }
         pub fn insert_book<'a, C: GenericClient>(
             client: &'a mut C,
             book_name: &'a &str,
-        ) -> InsertBookQuery<'a, C> {
-            InsertBookQuery {
-                client,
-                params: [book_name],
-            }
+        ) -> Result<u64, postgres::Error> {
+            let stmt = client.prepare("INSERT INTO Book (title)
+  VALUES ($1);")?;
+            client.execute(&stmt, &[book_name])
         }
         pub struct NightmareBorrowed<'a> {
             pub composite: super::super::types::public::NightmareCompositeBorrowed<'a>,
