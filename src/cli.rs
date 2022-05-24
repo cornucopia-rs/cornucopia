@@ -46,6 +46,9 @@ enum Action {
         destination: String,
         #[clap(subcommand)]
         action: Option<GenerateLiveAction>,
+        /// Generate synchronous rust code
+        #[clap(long)]
+        sync: bool,
     },
 }
 
@@ -104,6 +107,7 @@ pub(crate) fn run() -> Result<(), Error> {
             migrations_path,
             queries_path,
             destination,
+            sync,
         } => {
             let mut type_registrar = TypeRegistrar::default();
             match action {
@@ -111,7 +115,7 @@ pub(crate) fn run() -> Result<(), Error> {
                     let modules = read_query_modules(&queries_path)?;
                     let mut client = from_url(&url)?;
                     let modules = prepare(&mut client, &mut type_registrar, modules)?;
-                    generate(&type_registrar, modules, &destination)?;
+                    generate(&type_registrar, modules, &destination, !sync)?;
                 }
                 None => {
                     let modules = read_query_modules(&queries_path)?;
@@ -123,6 +127,7 @@ pub(crate) fn run() -> Result<(), Error> {
                         podman,
                         &migrations_path,
                         &destination,
+                        !sync,
                     ) {
                         container::cleanup(podman)?;
                         return Err(e);
@@ -142,11 +147,12 @@ fn generate_action(
     podman: bool,
     migrations_path: &str,
     destination: &str,
+    is_async: bool,
 ) -> Result<(), Error> {
     let mut client = cornucopia_conn()?;
     run_migrations(&mut client, migrations_path)?;
     let prepared_modules = prepare(&mut client, type_registrar, modules)?;
-    generate(type_registrar, prepared_modules, destination)?;
+    generate(type_registrar, prepared_modules, destination, is_async)?;
     container::cleanup(podman)?;
 
     Ok(())

@@ -128,19 +128,21 @@ fn generate_query_struct(
     ret_fields: &[PreparedColumn],
     ret_is_copy: bool,
     query_sql: &str,
+    is_async: bool,
 ) -> (String, String) {
     let borrowed_str = if ret_is_copy { "" } else { "Borrowed" };
+    let client_mut = if is_async { "" } else { "mut" };
     let query_struct = if ret_fields.is_empty() {
         format!(
             "pub struct {query_struct_name}Query<'a, C: GenericClient> {{
-                client: &'a mut C,
+                client: &'a {client_mut} C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); {params_len}]
             }}"
         )
     } else {
         format!(
             "pub struct {query_struct_name}Query<'a, C: GenericClient, T> {{
-                client: &'a mut C,
+                client: &'a {client_mut} C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); {params_len}],
                 mapper: fn({query_struct_name}{borrowed_str}) -> T,
             }}",
@@ -154,9 +156,82 @@ fn generate_query_struct(
         .collect::<Vec<String>>()
         .join(",");
 
-    let query_struct_impl = if ret_fields.is_empty() {
-        format!(
-            "
+    let query_struct_impl = if is_async {
+        if ret_fields.is_empty() {
+            format!(
+                "
+            impl<'a, C> {query_struct_name}Query<'a, C>
+            where
+                C: cornucopia_client::GenericClient,
+            {{
+                pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {{
+                    self.client.prepare(\"{query_sql}\").await
+                }}
+    
+                pub async fn exec(self) -> Result<u64, tokio_postgres::Error> {{
+                    let stmt = self.stmt().await?;
+                    self.client.execute(&stmt, &self.params).await
+                }}
+            }}"
+            )
+        } else {
+            format!("
+            impl<'a, C, T> {query_struct_name}Query<'a, C, T>
+            where
+                C: cornucopia_client::GenericClient,
+            {{
+                pub fn map<R>(self, mapper: fn({query_struct_name}{borrowed_str}) -> R) -> {query_struct_name}Query<'a,C,R> {{
+                    {query_struct_name}Query {{
+                        client: self.client,
+                        params: self.params,
+                        mapper,
+                    }}
+                }}
+    
+                pub fn extractor(row: &tokio_postgres::row::Row) -> {query_struct_name}{borrowed_str} {{
+                    {query_struct_name}{borrowed_str} {{ {get_fields} }}
+                }}
+            
+                pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {{
+                    self.client.prepare(\"{query_sql}\").await
+                }}
+            
+                pub async fn one(self) -> Result<T, tokio_postgres::Error> {{
+                    let stmt = self.stmt().await?;
+                    let row = self.client.query_one(&stmt, &self.params).await?;
+                    Ok((self.mapper)(Self::extractor(&row)))
+                }}
+            
+                pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {{
+                    self.stream().await?.try_collect().await
+                }}
+            
+                pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {{
+                    let stmt = self.stmt().await?;
+                    Ok(self
+                        .client
+                        .query_opt(&stmt, &self.params)
+                        .await?
+                        .map(|row| (self.mapper)(Self::extractor(&row))))
+                }}
+            
+                pub async fn stream(
+                    self,
+                ) -> Result<impl futures::Stream<Item = Result<T, tokio_postgres::Error>>, tokio_postgres::Error> {{
+                    let stmt = self.stmt().await?;
+                    let stream = self
+                        .client
+                        .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                        .await?
+                        .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))));
+                    Ok(stream.into_stream())
+                }}
+            }}")
+        }
+    } else {
+        if ret_fields.is_empty() {
+            format!(
+                "
         impl<'a, C> {query_struct_name}Query<'a, C>
         where
             C: GenericClient,
@@ -170,9 +245,9 @@ fn generate_query_struct(
                 self.client.execute(&stmt, &self.params)
             }}
         }}"
-        )
-    } else {
-        format!("
+            )
+        } else {
+            format!("
         impl<'a, C, T: 'a> {query_struct_name}Query<'a, C, T>
         where
             C: GenericClient,
@@ -223,6 +298,7 @@ fn generate_query_struct(
                 Ok(stream)
             }}
         }}")
+        }
     };
     (query_struct, query_struct_impl)
 }
@@ -233,6 +309,7 @@ fn generate_params_struct(
     query_name: &str,
     query_struct_name: &str,
     ret_fields_is_empty: bool,
+    is_async: bool,
 ) -> String {
     if params.is_empty() {
         return String::new();
@@ -267,17 +344,18 @@ fn generate_params_struct(
         .reduce(|a, b| a && b)
         .unwrap_or(true);
 
+    let client_mut = if is_async { "" } else { "mut" };
     let params_struct_impl = if params_is_copy {
         format!(
                 "impl {query_struct_name}Params {{
-                    pub fn query<'a, C: GenericClient>(&'a self, client: &'a mut C) -> {query_struct_name}Query<'a, C {type_generic}> {{
+                    pub fn query<'a, C: GenericClient>(&'a self, client: &'a {client_mut} C) -> {query_struct_name}Query<'a, C {type_generic}> {{
                         {query_name}(client, {param_values})
                     }}
                 }}")
     } else {
         format!(
                 "impl<'a> {query_struct_name}Params<'a> {{
-                    pub fn query<C: GenericClient>(&'a self, client: &'a mut C) -> {query_struct_name}Query<'a, C {type_generic}> {{
+                    pub fn query<C: GenericClient>(&'a self, client: &'a {client_mut} C) -> {query_struct_name}Query<'a, C {type_generic}> {{
                         {query_name}(client, {param_values})
                     }}
                 }}")
@@ -393,6 +471,7 @@ fn generate_query_fn(
     query_name: &str,
     params: &[PreparedParameter],
     ret_fields_is_empty: bool,
+    is_async: bool,
 ) -> String {
     let param_list = params
         .iter()
@@ -417,8 +496,9 @@ fn generate_query_fn(
             format!("mapper: |it| {query_struct_name}::from(it),"),
         )
     };
+    let client_mut = if is_async { "" } else { "mut" };
     format!(
-        "pub fn {query_name}<'a, C: GenericClient>(client: &'a mut C, {param_list}) -> {query_struct_name}Query<'a,C {concrete_type}> {{
+        "pub fn {query_name}<'a, C: GenericClient>(client: &'a {client_mut} C, {param_list}) -> {query_struct_name}Query<'a,C {concrete_type}> {{
         {query_struct_name}Query {{
             client,
             params: [{param_names}],
@@ -428,7 +508,7 @@ fn generate_query_fn(
     )
 }
 
-/// Generates type definitions for custom user types. This inclues domains, composites and enums.
+/// Generates type definitions for custom user types. This includes domains, composites and enums.
 /// If the type is not `Copy`, then a Borrowed version will be generated.
 fn generate_custom_type(
     type_registrar: &TypeRegistrar,
@@ -596,7 +676,7 @@ fn generate_type_modules(type_registrar: &TypeRegistrar) -> Result<String, Error
     Ok(format!("pub mod types {{ {modules_str} }}"))
 }
 
-fn generate_query(type_registrar: &TypeRegistrar, query: &PreparedQuery) -> String {
+fn generate_query(type_registrar: &TypeRegistrar, query: &PreparedQuery, is_async: bool) -> String {
     let query_name = query.name.clone();
     let query_struct_name = query.name.to_upper_camel_case();
     let ret_is_copy = query.ret_fields.iter().all(|a| a.ty.is_copy);
@@ -607,6 +687,7 @@ fn generate_query(type_registrar: &TypeRegistrar, query: &PreparedQuery) -> Stri
         &query_name,
         &query_struct_name,
         query.ret_fields.is_empty(),
+        is_async
     );
     let (ret_struct, borrowed_ret_struct, ret_from_impl) = generate_ret_structs(
         type_registrar,
@@ -620,6 +701,7 @@ fn generate_query(type_registrar: &TypeRegistrar, query: &PreparedQuery) -> Stri
         &query.ret_fields,
         ret_is_copy,
         &query.sql,
+        is_async,
     );
     let query_fn = generate_query_fn(
         type_registrar,
@@ -627,16 +709,19 @@ fn generate_query(type_registrar: &TypeRegistrar, query: &PreparedQuery) -> Stri
         &query_name,
         &query.params,
         query.ret_fields.is_empty(),
+        is_async,
     );
 
     format!(
-        "{params_struct}
+        "
+        {params_struct}
     {borrowed_ret_struct}
     {ret_struct}
     {ret_from_impl}
     {query_struct}
     {query_struct_impl}
-    {query_fn}"
+    {query_fn}
+    "
     )
 }
 
@@ -644,19 +729,27 @@ pub(crate) fn generate(
     type_registrar: &TypeRegistrar,
     modules: Vec<PreparedModule>,
     destination: &str,
+    is_async: bool,
 ) -> Result<(), Error> {
+    let import = if is_async {
+        "use futures::{{StreamExt, TryStreamExt}};use cornucopia_client::GenericClient;"
+    } else {
+        "use postgres::fallible_iterator::FallibleIterator;use postgres::GenericClient;"
+    };
     let type_modules_str = generate_type_modules(type_registrar)?;
     let mut query_modules = Vec::new();
     for module in modules {
         let mut query_strings = Vec::new();
         for query in module.queries {
-            let query_string = generate_query(type_registrar, &query);
+            let query_string = generate_query(type_registrar, &query, is_async);
             query_strings.push(query_string);
         }
         let queries_string = query_strings.join("\n\n");
         let module_name = module.name;
 
-        query_modules.push(format!("pub mod {module_name} {{ use postgres::fallible_iterator::FallibleIterator;use postgres::GenericClient;{queries_string} }}"));
+        query_modules.push(format!(
+            "pub mod {module_name} {{ {import} {queries_string} }}"
+        ));
     }
     let query_modules_string = format!("pub mod queries {{ {} }}", query_modules.join("\n\n"));
     let top_level_comment = "// This file was generated with `cornucopia`. Do not modify.";
