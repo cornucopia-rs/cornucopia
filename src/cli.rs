@@ -1,4 +1,6 @@
-use crate::{container, error::Error, generate, generate_live, new_migration, run_migrations};
+use crate::{
+    container, error::Error, generate_live, generate_managed, new_migration, run_migrations,
+};
 use clap::{Parser, Subcommand};
 
 /// Command line interface to interact with Cornucopia SQL.
@@ -85,8 +87,13 @@ pub async fn run() -> Result<(), Error> {
                 }
                 None => {
                     // Run the generate command. If the command is unsuccessful, cleanup Cornucopia's container
-                    if let Err(e) =
-                        generate(&queries_path, &migrations_path, Some(&destination), podman).await
+                    if let Err(e) = generate_managed(
+                        &queries_path,
+                        &migrations_path,
+                        Some(&destination),
+                        podman,
+                    )
+                    .await
                     {
                         container::cleanup(podman)?;
                         return Err(e);

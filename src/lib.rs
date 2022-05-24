@@ -24,11 +24,15 @@ use type_registrar::TypeRegistrar;
 pub use cli::run;
 pub use error::Error;
 
+/// Runs the migrations given at `migrations_path` at the specified `url`.
 pub async fn run_migrations(url: &str, migrations_path: &str) -> Result<(), Error> {
     let client = conn::from_url(url).await?;
     Ok(crate::run_migrations::run_migrations(&client, migrations_path).await?)
 }
 
+/// Creates a new migration file at the specified `migrations_path`.
+/// The full name of the migration will correspond to `timestamp`_`name`.sql
+/// where `timestamp is the unix time when the migration was created.`
 pub async fn new_migration(migrations_path: &str, name: &str) -> Result<(), Error> {
     // Create a timestamp of the current time.
     let unix_ts = OffsetDateTime::now_utc().unix_timestamp();
@@ -45,6 +49,8 @@ pub async fn new_migration(migrations_path: &str, name: &str) -> Result<(), Erro
     )
 }
 
+/// Generates your cornucopia queries residing in `queries_path` against the database
+/// at `url`. If some `destination` is given, the generated code will be written at that path.
 pub async fn generate_live(
     url: &str,
     queries_path: &str,
@@ -64,7 +70,11 @@ pub async fn generate_live(
     Ok(generated_code)
 }
 
-pub async fn generate(
+/// Generates your cornucopia queries residing in `queries_path` against a container
+/// managed by cornucopia. The database is created using the migrations in the given
+/// `migrations_path` folder.
+/// If some `destination` is given, the generated code will be written at that path.
+pub async fn generate_managed(
     queries_path: &str,
     migrations_path: &str,
     destination: Option<&str>,
