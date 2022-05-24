@@ -1,54 +1,30 @@
---! authors()*
+--! authors
 SELECT
     *
 FROM
     Author;
 
---! authors_stream()#
-SELECT
-    *
-FROM
-    Author;
-
---! books() {title}*
+--! books
 SELECT
     Title
 FROM
     Book;
 
---! books_opt_ret_param() {title?}*
+--! books_opt_ret_param ?{title}
 SELECT
     Title
 FROM
     Book;
 
---! books_from_author_id(id,)*
-SELECT
-    Book.Title
-FROM
-    BookAuthor
-    INNER JOIN Author ON Author.Id = BookAuthor.AuthorId
-    INNER JOIN Book ON Book.Id = BookAuthor.BookId
-WHERE
-    Author.Id = $1;
-
---! author_name_by_id_opt(id)?
+--! author_name_by_id
 SELECT
     Author.Name
 FROM
     Author
 WHERE
-    Author.Id = $1;
+    Author.Id = :id;
 
---! author_name_by_id(id)
-SELECT
-    Author.Name
-FROM
-    Author
-WHERE
-    Author.Id = $1;
-
---! author_name_starting_with(s)*
+--! author_name_starting_with
 SELECT
     BookAuthor.AuthorId,
     Author.Name,
@@ -59,22 +35,22 @@ FROM
     INNER JOIN Author ON Author.id = BookAuthor.AuthorId
     INNER JOIN Book ON Book.Id = BookAuthor.BookId
 WHERE
-    Author.Name LIKE CONCAT($1::text, '%');
+    Author.Name LIKE CONCAT(:start_str::text, '%');
 
---! return_custom_type()
+--! return_custom_type
 SELECT
     col1
 FROM
     CustomTable;
 
---! select_where_custom_type(spongebob_character)
+--! select_where_custom_type
 SELECT
     col2
 FROM
     CustomTable
-WHERE (col1).persona = $1;
+WHERE (col1).persona = :spongebob_character;
 
---! select_translations()
+--! select_translations
 SELECT
     Translations
 FROM

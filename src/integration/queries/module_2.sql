@@ -1,15 +1,10 @@
---! author_name_starting_with ?{authorid}
+--! author_name_starting_with
 SELECT
-    BookAuthor.AuthorId,
-    Author.Name,
-    BookAuthor.BookId,
-    Book.Title
+    name
 FROM
-    BookAuthor
-    INNER JOIN Author ON Author.id = BookAuthor.AuthorId
-    INNER JOIN Book ON Book.Id = BookAuthor.BookId
+    Author
 WHERE
-    Author.Name LIKE CONCAT(:s::text, '%');
+    name LIKE CONCAT(:start_str::text, '%');
 
 --! select_everything ?{bool_opt}
 SELECT
