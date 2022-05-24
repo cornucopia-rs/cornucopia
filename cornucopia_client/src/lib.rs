@@ -1,8 +1,14 @@
+use std::marker::PhantomData;
+
 use async_trait::async_trait;
+//use byteorder::{BigEndian, ReadBytesExt};
 use deadpool_postgres::{Client, ClientWrapper, Transaction};
+use fallible_iterator::FallibleIterator;
+use postgres_protocol::types::{array_from_sql, ArrayValues};
+//use fallible_iterator::FallibleIterator;
 use tokio_postgres::{
-    types::BorrowToSql, Client as PgClient, Error, RowStream, Statement, ToStatement,
-    Transaction as PgTransaction,
+    types::{BorrowToSql, FromSql, Kind, ToSql, Type},
+    Client as PgClient, Error, RowStream, Statement, ToStatement, Transaction as PgTransaction,
 };
 
 #[async_trait]
@@ -102,7 +108,7 @@ impl GenericClient for Transaction<'_> {
         I: IntoIterator<Item = P> + Sync + Send,
         I::IntoIter: ExactSizeIterator,
     {
-        PgTransaction::query_raw(&self, statement, params).await
+        PgTransaction::query_raw(self, statement, params).await
     }
 }
 
@@ -286,5 +292,58 @@ impl GenericClient for PgClient {
         I::IntoIter: ExactSizeIterator,
     {
         PgClient::query_raw(self, statement, params).await
+    }
+}
+
+pub fn slice_iter<'a>(
+    s: &'a [&'a (dyn ToSql + Sync)],
+) -> impl ExactSizeIterator<Item = &'a dyn ToSql> + 'a {
+    s.iter().map(|s| *s as _)
+}
+
+pub struct ArrayIterator<'a, T: FromSql<'a>> {
+    values: ArrayValues<'a>,
+    ty: Type,
+    _type: PhantomData<T>,
+}
+
+impl<'a, T: FromSql<'a>> Iterator for ArrayIterator<'a, T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.values
+            .next()
+            .unwrap()
+            .map(|raw| T::from_sql_nullable(&self.ty, raw).unwrap())
+    }
+}
+
+impl<'a, T: FromSql<'a>> FromSql<'a> for ArrayIterator<'a, T> {
+    fn from_sql(
+        ty: &Type,
+        raw: &'a [u8],
+    ) -> Result<ArrayIterator<'a, T>, Box<dyn std::error::Error + Sync + Send>> {
+        let member_type = match *ty.kind() {
+            Kind::Array(ref member) => member,
+            _ => panic!("expected array type"),
+        };
+
+        let array = array_from_sql(raw)?;
+        if array.dimensions().count()? > 1 {
+            return Err("array contains too many dimensions".into());
+        }
+
+        Ok(ArrayIterator {
+            ty: member_type.to_owned(),
+            values: array.values(),
+            _type: PhantomData::default(),
+        })
+    }
+
+    fn accepts(ty: &Type) -> bool {
+        match *ty.kind() {
+            Kind::Array(ref inner) => T::accepts(inner),
+            _ => false,
+        }
     }
 }

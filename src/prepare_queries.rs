@@ -1,41 +1,64 @@
-use crate::parse::ExplicitReturnParam;
-use crate::parse::ParsedQuery;
-use crate::parse::Quantifier;
-use crate::parse::ReturnType;
-use crate::pg_type::CornucopiaField;
-use crate::pg_type::CornucopiaType;
-use crate::pg_type::TypeRegistrar;
+use crate::{
+    parser::{
+        error::{ErrorPosition, ValidationError},
+        NullableColumn, Parsed, ParsedQuery,
+    },
+    read_queries::Module,
+    type_registrar::CornucopiaType,
+    type_registrar::TypeRegistrar,
+};
 use deadpool_postgres::{Client, Object};
 use error::Error;
-
 use error::ErrorVariant;
 
-use super::read_queries::Module;
-
+/// This data structure is used by Cornucopia to generate all constructs related to this particular query.
 #[derive(Debug)]
 pub(crate) struct PreparedQuery {
     pub(crate) name: String,
-    pub(crate) params: Vec<CornucopiaField>,
-    pub(crate) ret: RustReturnType,
-    pub(crate) quantifier: Quantifier,
+    pub(crate) params: Vec<PreparedParameter>,
+    pub(crate) ret_fields: Vec<PreparedColumn>,
     pub(crate) sql: String,
 }
 
+#[derive(Debug)]
+pub(crate) struct PreparedParameter {
+    pub(crate) name: String,
+    pub(crate) ty: CornucopiaType,
+}
+
+#[derive(Debug)]
+pub(crate) struct PreparedColumn {
+    pub(crate) name: String,
+    pub(crate) ty: CornucopiaType,
+    pub(crate) is_nullable: bool,
+}
+
+/// A struct containing the module name and the list of all
+/// the queries it contains.
 #[derive(Debug)]
 pub(crate) struct PreparedModule {
     pub(crate) name: String,
     pub(crate) queries: Vec<PreparedQuery>,
 }
 
-#[derive(Debug)]
-pub(crate) enum RustReturnType {
-    Void,
-    Scalar(CornucopiaType),
-    Tuple(Vec<CornucopiaType>),
-    Struct(Vec<(ExplicitReturnParam, CornucopiaType)>),
+fn has_duplicate<T, U>(
+    iter: T,
+    mapper: fn(<T as IntoIterator>::Item) -> U,
+) -> Option<<T as IntoIterator>::Item>
+where
+    T: IntoIterator + Clone,
+    U: Eq + std::hash::Hash + Clone,
+{
+    let mut uniq = std::collections::HashSet::new();
+    iter.clone()
+        .into_iter()
+        .zip(iter.into_iter().map(mapper))
+        .find(|(_, u)| !uniq.insert(u.clone()))
+        .map(|(t, _)| t)
 }
 
-pub(crate) async fn prepare_modules(
+/// Prepares all modules
+pub(crate) async fn prepare(
     client: &Object,
     type_registrar: &mut TypeRegistrar,
     modules: Vec<Module>,
@@ -47,6 +70,7 @@ pub(crate) async fn prepare_modules(
     Ok(prepared_modules)
 }
 
+/// Prepares all queries in this module
 async fn prepare_module(
     client: &Object,
     module: Module,
@@ -62,102 +86,171 @@ async fn prepare_module(
     })
 }
 
+/// Prepares a query
 async fn prepare_query(
     client: &Client,
     type_registrar: &mut TypeRegistrar,
     query: ParsedQuery,
     module_path: &str,
 ) -> Result<PreparedQuery, Error> {
-    let stmt = client.prepare(&query.sql).await.map_err(|e| Error {
-        line: Some(query.line),
-        err: e.into(),
-        path: String::from(module_path),
-        name: query.meta.name.clone(),
-    })?;
+    // Prepare the statement
+    let stmt = client
+        .prepare(&query.sql_str)
+        .await
+        .map_err(|e| Error::new(e, &query, module_path))?;
 
-    let mut param_types = Vec::new();
-    for param in stmt.params() {
-        let param_type = type_registrar
-            .register_type(client, param)
+    // Get parameter parameters
+    let mut params = Vec::new();
+    for (name, ty) in query.params.iter().zip(stmt.params().iter()) {
+        // Register type
+        let ty = type_registrar
+            .register(client, ty)
             .await
-            .map_err(|e| Error {
-                line: Some(query.line),
-                err: e.into(),
-                path: String::from(module_path),
-                name: query.meta.name.clone(),
-            })?;
-        param_types.push(param_type);
-    }
-
-    if query.meta.params.len() != param_types.len() {
-        return Err(Error {
-            err: ErrorVariant::NbParameters {
-                expected: param_types.len(),
-                actual: query.meta.params.len(),
-            },
-            name: query.meta.name,
-            line: Some(query.line),
-            path: String::from(module_path),
+            .map_err(|e| Error::new(e, &query, module_path))?;
+        let name = name.value.to_owned();
+        params.push(PreparedParameter {
+            name,
+            ty: ty.to_owned(),
         });
     }
 
-    let params = query
-        .meta
-        .params
-        .into_iter()
-        .zip(param_types)
-        .map(|(name, ty)| CornucopiaField { name, ty })
-        .collect::<Vec<CornucopiaField>>();
-
-    let ret = {
-        let mut return_types = Vec::new();
-        for column in stmt.columns() {
-            let ty = type_registrar
-                .register_type(client, column.type_())
-                .await
-                .map_err(|e| Error {
-                    line: Some(query.line),
-                    err: e.into(),
-                    path: String::from(module_path),
-                    name: query.meta.name.clone(),
-                })?;
-            return_types.push(ty);
-        }
-
-        match query.meta.ret {
-            ReturnType::Implicit => match return_types.len() {
-                0 => RustReturnType::Void,
-                1 => RustReturnType::Scalar(
-                    return_types
-                        .pop()
-                        .expect("moving out the single return type found"),
-                ),
-                _ => RustReturnType::Tuple(return_types),
+    // Get return columns
+    let stmt_cols = stmt.columns();
+    // Check for duplicate names
+    if let Some(duplicate_col) = has_duplicate(stmt_cols.iter(), |col| col.name()) {
+        return Err(Error::new(
+            ErrorVariant::ColumnNameAlreadyTaken {
+                name: duplicate_col.name().to_owned(),
             },
-            ReturnType::Explicit { params } => {
-                let fields = params
-                    .into_iter()
-                    .zip(return_types)
-                    .map(|(param, ty)| (param, ty))
-                    .collect::<Vec<(ExplicitReturnParam, CornucopiaType)>>();
-                RustReturnType::Struct(fields)
-            }
-        }
+            &query,
+            module_path,
+        ));
     };
 
+    // Nullable columns
+    let mut nullable_cols = Vec::new();
+    for nullable_col in query.nullable_columns {
+        match &nullable_col.value {
+            crate::parser::NullableColumn::Index(index) => {
+                // Get name from column index
+                let name = match stmt_cols.get(*index as usize - 1) {
+                    Some(col) => col.name(),
+                    None => {
+                        return Err(Error {
+                            err: ErrorVariant::Validation(
+                                ValidationError::InvalidNullableColumnIndex {
+                                    index: *index as usize,
+                                    max_col_index: stmt_cols.len(),
+                                    pos: ErrorPosition {
+                                        line: nullable_col.line,
+                                        col: nullable_col.col,
+                                        line_str: nullable_col.line_str,
+                                    },
+                                },
+                            ),
+                            query_name: query.name,
+                            query_start_line: Some(query.line),
+                            path: module_path.to_owned(),
+                        })
+                    }
+                };
+
+                // Check if `nullable_cols` already contains this column. If not, add it.
+                if let Some((p, n)) = nullable_cols
+                    .iter()
+                    .find(|(_, n): &&(Parsed<NullableColumn>, String)| n == name)
+                {
+                    return Err(Error {
+                        err: ErrorVariant::Validation(ValidationError::ColumnAlreadyNullable {
+                            name: n.to_owned(),
+                            pos: ErrorPosition {
+                                line: p.line,
+                                col: p.col,
+                                line_str: p.line_str.to_owned(),
+                            },
+                        }),
+                        query_name: query.name,
+                        query_start_line: Some(query.line),
+                        path: module_path.to_owned(),
+                    });
+                } else {
+                    nullable_cols.push((nullable_col, name.to_owned()))
+                }
+            }
+            crate::parser::NullableColumn::Named(name) => {
+                // Check that the nullable column's name corresponds to one of the returned columns'.
+                if stmt_cols.iter().any(|y| y.name() == name) {
+                    nullable_cols.push((nullable_col.clone(), name.to_owned()))
+                } else {
+                    return Err(Error {
+                        err: ErrorVariant::Validation(ValidationError::InvalidNullableColumnName {
+                            name: name.to_owned(),
+                            pos: ErrorPosition {
+                                line: nullable_col.line,
+                                col: nullable_col.col,
+                                line_str: nullable_col.line_str,
+                            },
+                        }),
+                        query_name: query.name.to_owned(),
+                        query_start_line: Some(query.line),
+                        path: module_path.to_owned(),
+                    });
+                };
+            }
+        }
+    }
+
+    // Now that we know all the nullable columns by name, check if there are duplicates.
+    if let Some((p, u)) = has_duplicate(nullable_cols.iter(), |(_, n)| n) {
+        return Err(Error {
+            query_name: query.name,
+            query_start_line: Some(query.line),
+            err: ErrorVariant::Validation(ValidationError::ColumnAlreadyNullable {
+                name: u.to_owned(),
+                pos: ErrorPosition {
+                    line: p.line,
+                    col: p.col,
+                    line_str: p.line_str.to_owned(),
+                },
+            }),
+            path: module_path.to_owned(),
+        });
+    };
+
+    // Get return columns
+    let mut ret_fields = Vec::new();
+    for column in stmt_cols {
+        let ty = type_registrar
+            .register(client, column.type_())
+            .await
+            .map_err(|e| Error {
+                query_start_line: Some(query.line),
+                err: e.into(),
+                path: String::from(module_path),
+                query_name: query.name.clone(),
+            })?;
+        let name = column.name().to_owned();
+        let is_nullable = nullable_cols.iter().any(|(_, n)| *n == name);
+        ret_fields.push(PreparedColumn {
+            is_nullable,
+            name,
+            ty: ty.clone(),
+        });
+    }
+
     Ok(PreparedQuery {
-        name: query.meta.name,
+        name: query.name,
         params,
-        ret,
-        quantifier: query.meta.quantifier,
-        sql: query.sql,
+        ret_fields,
+        sql: query.sql_str,
     })
 }
 
 pub(crate) mod error {
     use std::fmt::Display;
 
-    use crate::pg_type::error::Error as PostgresTypeError;
+    use crate::parser::{error::ValidationError, ParsedQuery};
+    use crate::type_registrar::error::Error as PostgresTypeError;
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError)]
@@ -165,20 +258,31 @@ pub(crate) mod error {
     pub(crate) enum ErrorVariant {
         Db(#[from] tokio_postgres::Error),
         Pool(#[from] deadpool_postgres::PoolError),
-        #[error("Invalid number of parameters (expected {expected}, got {actual})")]
-        NbParameters {
-            expected: usize,
-            actual: usize,
-        },
         PostgresType(#[from] PostgresTypeError),
+        Validation(#[from] ValidationError),
+        #[error("Two or more columns have the same name: `{name}`. Consider disambiguing the column names with `AS` clauses.")]
+        ColumnNameAlreadyTaken {
+            name: String,
+        },
     }
 
     #[derive(Debug)]
     pub(crate) struct Error {
-        pub(crate) name: String,
-        pub(crate) line: Option<usize>,
+        pub(crate) query_name: String,
+        pub(crate) query_start_line: Option<usize>,
         pub(crate) err: ErrorVariant,
         pub(crate) path: String,
+    }
+
+    impl Error {
+        pub(crate) fn new<E: Into<ErrorVariant>>(err: E, query: &ParsedQuery, path: &str) -> Self {
+            Self {
+                query_start_line: Some(query.line),
+                err: err.into(),
+                path: String::from(path),
+                query_name: query.name.clone(),
+            }
+        }
     }
 
     impl Display for Error {
@@ -186,25 +290,25 @@ pub(crate) mod error {
             match &self.err {
                 ErrorVariant::Db(e) => write!(
                     f,
-                    "Error while preparing query \"{}\" [file: \"{}\", line: {}] ({}).",
-                    self.name,
+                    "Error while preparing query \"{}\" [file: \"{}\", line: {}] ({})",
+                    self.query_name,
                     self.path,
-                    self.line.unwrap_or_default(),
+                    self.query_start_line.unwrap_or_default(),
                     e.as_db_error().unwrap().message()
                 ),
-                _ => match self.line {
+                _ => match self.query_start_line {
                     Some(line) => {
                         write!(
                             f,
-                            "Error while preparing query \"{}\" [file: \"{}\", line: {}]: {}.",
-                            self.name, self.path, line, self.err
+                            "Error while preparing query \"{}\" [file: \"{}\", line: {}]:\n{}",
+                            self.query_name, self.path, line, self.err
                         )
                     }
                     None => {
                         write!(
                             f,
-                            "Error while preparing query \"{}\" [file: \"{}\"]: {}.",
-                            self.name, self.path, self.err
+                            "Error while preparing query \"{}\" [file: \"{}\"]: {}",
+                            self.query_name, self.path, self.err
                         )
                     }
                 },

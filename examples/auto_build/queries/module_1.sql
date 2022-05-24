@@ -1,4 +1,4 @@
---! example_query1()
+--! example_query
 SELECT
     *
 FROM

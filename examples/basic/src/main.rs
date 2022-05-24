@@ -1,19 +1,25 @@
 use deadpool_postgres::{Config, Runtime};
 use tokio_postgres::NoTls;
 
+// Take a look at the generated `cornucopia.rs` file if you want to
+// see what it looks like under the hood.
+use crate::cornucopia::{
+    queries::{
+        module_1::insert_book,
+        module_2::{
+            author_name_by_id, authors, books, select_where_custom_type,
+            AuthorNameStartingWithParams,
+        },
+    },
+    types::public::SpongebobCharacter,
+};
+
 pub mod cornucopia;
 
 #[tokio::main]
 pub async fn main() {
-    // Take a look at the generated `cornucopia.rs` file if you want to
-    // see what it looks like under the hood.
-    use crate::cornucopia::queries::module_1::*;
-    use crate::cornucopia::queries::module_2::*;
-    use crate::cornucopia::types::public::SpongebobCharacter;
-
     // Connection pool configuration
-    // This has nothing to do with cornucopia, please look at
-    // `tokio_postgres` and `deadpool_postgres` for details
+    // Please look at `tokio_postgres` and `deadpool_postgres` for details.
     let mut cfg = Config::new();
     cfg.user = Some(String::from("postgres"));
     cfg.password = Some(String::from("postgres"));
@@ -23,33 +29,45 @@ pub async fn main() {
     let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
     let mut client = pool.get().await.unwrap();
 
-    // An example of how transactions work. Pretty easy :)
-    // Just don't forget to `.commit()` when you're done.
+    // Queries accept regular clients.
+    println!("{:?}", authors(&client).vec().await.unwrap());
+
+    // Queries also accept transactions
+    // Don't forget to `.commit()` when you're done!
     {
         let transaction = client.transaction().await.unwrap();
-        println!(
-            "{:?}",
-            insert_book(&transaction, "The Great Gatsby").await.unwrap()
-        );
-        println!("{:?}", books(&transaction).await.unwrap());
+        // Insert a book
+        insert_book(&transaction, &"The Great Gatsby")
+            .exec()
+            .await
+            .unwrap();
+        // Use a map if needed
+        let books = books(&transaction).vec().await.unwrap();
+        println!("{books:?}");
         transaction.commit().await.unwrap();
     }
 
-    // Regular queries. These queries have been chosen to showcase the
-    // features of cornucopia, including custom types, nullable return columns,
-    // quantifiers, etc. You can compare with the SQL queries in the `queries` folder.
-    println!("{:?}", authors(&client).await.unwrap());
-    println!("{:?}", books_opt_ret_param(&client).await.unwrap());
-    println!("{:?}", books_from_author_id(&client, &0).await.unwrap());
-    println!("{:?}", author_name_by_id(&client, &0).await.unwrap());
-    println!("{:?}", author_name_by_id_opt(&client, &0).await.unwrap());
+    // Using opt returns an optional row (zero or one).
+    println!("{:?}", author_name_by_id(&client, &0).opt().await.unwrap());
+
+    // The param struct can be more convenient
+    // and less error-prone in some cases
+    AuthorNameStartingWithParams { start_str: &"Jo" };
     println!(
         "{:?}",
-        author_name_starting_with(&client, "Jo").await.unwrap()
+        AuthorNameStartingWithParams { start_str: &"Jo" }
+            .query(&client)
+            .vec()
+            .await
+            .unwrap()
     );
-    println!("{:?}", return_custom_type(&client).await.unwrap());
+
+    // Custom types from your queries also work!
     println!(
         "{:?}",
-        select_where_custom_type(&client, &SpongebobCharacter::Bob).await
+        select_where_custom_type(&client, &SpongebobCharacter::Bob)
+            .one()
+            .await
+            .unwrap()
     );
 }

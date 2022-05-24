@@ -3,18 +3,21 @@ use std::process::{Command, Stdio};
 
 use self::error::{RemoveContainerError, RunContainerError, StopContainerError};
 
+/// Starts Cornucopia's database container and wait until it reports healthy.
 pub(crate) fn setup(podman: bool) -> Result<(), Error> {
     spawn_container(podman)?;
     healthcheck(podman, 120, 1000)?;
     Ok(())
 }
 
+/// Stop and remove a container and its volume.
 pub(crate) fn cleanup(podman: bool) -> Result<(), Error> {
     stop_container(podman)?;
     remove_container(podman)?;
     Ok(())
 }
 
+/// Starts Cornucopia's database container.
 fn spawn_container(podman: bool) -> Result<(), RunContainerError> {
     let command = if podman { "podman" } else { "docker" };
     let success = Command::new(&command)
@@ -39,6 +42,7 @@ fn spawn_container(podman: bool) -> Result<(), RunContainerError> {
     }
 }
 
+/// Checks if Cornucopia's container reports healthy
 fn is_postgres_healthy(podman: bool) -> Result<bool, Error> {
     let command = if podman { "podman" } else { "docker" };
     Ok(Command::new(&command)
@@ -54,6 +58,7 @@ fn is_postgres_healthy(podman: bool) -> Result<bool, Error> {
         .success())
 }
 
+/// This function controls how the healthcheck retries are handled.
 fn healthcheck(podman: bool, max_retries: u64, ms_per_retry: u64) -> Result<(), Error> {
     let mut nb_retries = 0;
     while !is_postgres_healthy(podman)? {
@@ -67,10 +72,12 @@ fn healthcheck(podman: bool, max_retries: u64, ms_per_retry: u64) -> Result<(), 
             println!("Container startup slower than expected ({nb_retries} retries out of {max_retries})")
         }
     }
+    // Just for extra safety...
     std::thread::sleep(std::time::Duration::from_millis(250));
     Ok(())
 }
 
+/// Stops Cornucopia's container.
 fn stop_container(podman: bool) -> Result<(), StopContainerError> {
     let command = if podman { "podman" } else { "docker" };
     let success = Command::new(&command)
@@ -88,6 +95,7 @@ fn stop_container(podman: bool) -> Result<(), StopContainerError> {
     }
 }
 
+/// Removes Cornucopia's container and its volume.
 fn remove_container(podman: bool) -> Result<(), RemoveContainerError> {
     let command = if podman { "podman" } else { "docker" };
     let success = Command::new(&command)

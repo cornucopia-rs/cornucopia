@@ -1,16 +1,24 @@
 use crate::read_migrations::read_migrations;
 use deadpool_postgres::Object;
-use error::{Error, ErrorVariant};
+use error::Error;
 
-pub(crate) async fn run_migrations(client: &Object, path: &str) -> Result<(), Error> {
+/// Runs all migrations in the specified directory. Only `.sql` files are considered.
+///
+/// # Errors
+/// Returns an error if a migration can't be read or installed.
+pub(crate) async fn run_migrations(client: &Object, dir_path: &str) -> Result<(), Error> {
+    // Create the table holding Cornucopia migrations
     create_migration_table(client)
         .await
-        .map_err(|err| Error::new(err, "", path))?;
-    for migration in read_migrations(path).map_err(|err| Error::new(err.into(), "", path))? {
-        let migration_not_installed =
-            !migration_is_installed(client, &migration.timestamp, &migration.name)
-                .await
-                .map_err(|err| Error::new(err, "", &migration.path))?;
+        .map_err(|err| Error::new(err.into(), None, dir_path))?;
+
+    // Install each migration that is not already installed.
+    for migration in
+        read_migrations(dir_path).map_err(|err| Error::new(err.into(), None, dir_path))?
+    {
+        let migration_not_installed = !is_installed(client, &migration.timestamp, &migration.name)
+            .await
+            .map_err(|err| Error::new(err.into(), None, &migration.path))?;
         if migration_not_installed {
             install_migration(
                 client,
@@ -19,13 +27,13 @@ pub(crate) async fn run_migrations(client: &Object, path: &str) -> Result<(), Er
                 &migration.sql,
             )
             .await
-            .map_err(|err| Error::new(err, &migration.sql, &migration.path))?;
+            .map_err(|err| Error::new(err.into(), Some(&migration.sql), &migration.path))?;
         }
     }
     Ok(())
 }
 
-async fn create_migration_table(client: &Object) -> Result<(), ErrorVariant> {
+async fn create_migration_table(client: &Object) -> Result<(), tokio_postgres::Error> {
     client
         .execute(
             "CREATE TABLE IF NOT EXISTS _cornucopia_migrations (
@@ -40,11 +48,11 @@ async fn create_migration_table(client: &Object) -> Result<(), ErrorVariant> {
     Ok(())
 }
 
-async fn migration_is_installed(
+async fn is_installed(
     client: &Object,
     timestamp: &i64,
     name: &str,
-) -> Result<bool, ErrorVariant> {
+) -> Result<bool, tokio_postgres::Error> {
     let is_installed: bool = client
         .query_one(
             "select EXISTS(
@@ -62,7 +70,7 @@ async fn install_migration(
     timestamp: &i64,
     name: &str,
     sql: &str,
-) -> Result<(), ErrorVariant> {
+) -> Result<(), tokio_postgres::Error> {
     client.batch_execute(sql).await?;
     client
         .execute(
@@ -95,22 +103,26 @@ pub(crate) mod error {
     }
 
     impl Error {
-        pub fn new(err: ErrorVariant, sql: &str, path: &str) -> Self {
+        pub fn new(err: ErrorVariant, sql: Option<&str>, path: &str) -> Self {
             let path = path.to_string();
             let mut line = None;
-            if let ErrorVariant::Db(e) = &err {
-                if let Some(db_err) = e.as_db_error() {
-                    if let Some(ErrorPosition::Original(position)) = db_err.position() {
-                        line = Some(
-                            sql[..*position as usize]
-                                .chars()
-                                .filter(|&c| c == '\n')
-                                .count()
-                                + 1,
-                        );
+            if let Some(sql) = sql {
+                if let ErrorVariant::Db(e) = &err {
+                    if let Some(db_err) = e.as_db_error() {
+                        if let Some(ErrorPosition::Original(position)) = db_err.position() {
+                            // Count new lines up to the position where to error occured.
+                            line = Some(
+                                sql[..*position as usize]
+                                    .chars()
+                                    .filter(|&c| c == '\n')
+                                    .count()
+                                    + 1,
+                            );
+                        }
                     }
-                }
-            };
+                };
+            }
+
             Error { err, path, line }
         }
     }
@@ -140,16 +152,5 @@ pub(crate) mod error {
         }
     }
 
-    impl std::error::Error for Error {
-        fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-            match &self.err {
-                ErrorVariant::ReadMigration(e) => Some(e),
-                ErrorVariant::Db(e) => Some(e),
-            }
-        }
-
-        fn cause(&self) -> Option<&dyn std::error::Error> {
-            self.source()
-        }
-    }
+    impl std::error::Error for Error {}
 }
