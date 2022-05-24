@@ -64,7 +64,7 @@ impl CornucopiaType {
             }
             Kind::Domain(_) | Kind::Composite(_) => format!("{var_name}.into()"),
             _ => {
-                if is_nullable && self.pg_ty == Type::BYTEA {
+                if is_nullable {
                     format!("{var_name}.map(|v| v.into())")
                 } else {
                     format!("{var_name}.into()")
