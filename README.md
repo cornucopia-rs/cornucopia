@@ -212,9 +212,6 @@ Generated queries take a `GenericClient` as parameter, which accepts both connec
 ## Automatically generate queries
 You can make use of Rust's build script feature to automatically regenerate your Cornucopia queries upon building your crate, only when your SQL has changed. The simplest way to achieve this is simply to call Cornucopia's CLI inside your `build.rs` file. You can learn more about this feature in this [example](examples/auto_build/README.md).
 
-## Formatting
-By default, Cornucopia will run `rustfmt` on your your queries to facilitate manual inspection of the code. If you don't want this, or you don't have access to `rustfmt` you can use the `--no-formatting` CLI flag.
-
 ## Supported types
 ### Base types
 | PostgrsQL type                               | Rust type                 |
