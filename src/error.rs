@@ -19,12 +19,5 @@ pub(crate) enum Error {
     PoolCreation(#[from] CreatePoolError),
     Pool(#[from] deadpool_postgres::PoolError),
     PoolBuilder(#[from] PoolBuilderError),
-    Fmt(#[from] FmtError),
 }
 
-#[derive(Debug, ThisError)]
-#[error("Unable to properly format the generated code.")]
-pub(crate) enum FmtError {
-    IO(#[from] std::io::Error),
-    RustFmt,
-}

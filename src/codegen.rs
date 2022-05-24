@@ -646,7 +646,7 @@ pub(crate) fn generate(
     modules: Vec<PreparedModule>,
     destination: &str,
 ) -> Result<(), Error> {
-    let type_modules = generate_type_modules(type_registrar)?;
+    let type_modules_str = generate_type_modules(type_registrar)?;
     let mut query_modules = Vec::new();
     for module in modules {
         let mut query_strings = Vec::new();
@@ -662,9 +662,11 @@ pub(crate) fn generate(
     let query_modules_string = format!("pub mod queries {{ {} }}", query_modules.join("\n\n"));
     let top_level_comment = "// This file was generated with `cornucopia`. Do not modify.";
     let generated_modules =
-        format!("{top_level_comment}\n\n{type_modules}\n\n{query_modules_string}");
+        format!("{top_level_comment}\n\n{type_modules_str}\n\n{query_modules_string}");
 
-    std::fs::write(destination, generated_modules).map_err(|err| {
+    let formatted = prettyplease::unparse(&syn::parse_str(&generated_modules)?);
+
+    std::fs::write(destination, formatted).map_err(|err| {
         Error::Io(WriteFileError {
             err,
             path: String::from(destination),
@@ -681,6 +683,7 @@ pub(crate) mod error {
     #[error("{0}")]
     pub(crate) enum Error {
         Io(#[from] WriteFileError),
+        Fmt(#[from] syn::parse::Error),
     }
 
     #[derive(Debug, ThisError)]

@@ -38,3 +38,6 @@ pest_derive = "2.1.0"
 heck = "0.4.0"
 async-recursion = "1.0.0"
 indexmap = "1.8.1"
+
+prettyplease = "0.1.10"
+syn = { version = "1.0.95", features = ["parsing"] }
