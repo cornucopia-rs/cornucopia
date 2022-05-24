@@ -91,7 +91,7 @@ pub(crate) mod error {
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError)]
-    pub(crate) enum ErrorVariants {
+    pub enum ErrorVariants {
         #[error("{0}")]
         Io(#[from] std::io::Error),
         #[error("Migrations must be named with this pattern '<timestamp>_<name>' where <timestamp> is a unix timestamp and <name> is a valid identifier")]
@@ -102,7 +102,7 @@ pub(crate) mod error {
 
     #[derive(Debug, ThisError)]
     #[error("Error while reading migration [file: \"{path}\"]: {err}.")]
-    pub(crate) struct Error {
+    pub struct Error {
         pub(crate) err: ErrorVariants,
         pub(crate) path: String,
     }

@@ -74,7 +74,7 @@ pub(crate) mod error {
 
     #[derive(Debug, ThisError)]
     #[error("Error while reading queries [path: \"{path}\"]: {err}.")]
-    pub(crate) struct Error {
+    pub struct Error {
         pub(crate) err: ErrorVariants,
         pub(crate) path: String,
     }
