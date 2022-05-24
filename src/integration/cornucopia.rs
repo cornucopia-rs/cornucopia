@@ -311,44 +311,28 @@ pub mod queries {
         use futures::{StreamExt, TryStreamExt};
 
         pub struct AuthorNameStartingWithParams<'a> {
-            pub s: &'a str,
+            pub start_str: &'a str,
         }
         impl<'a> AuthorNameStartingWithParams<'a> {
-            pub fn author_name_starting_with<C: cornucopia_client::GenericClient>(
+            pub fn query<C: cornucopia_client::GenericClient>(
                 &'a self,
                 client: &'a C,
             ) -> AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith> {
-                author_name_starting_with(client, &self.s)
+                author_name_starting_with(client, &self.start_str)
             }
         }
         pub struct AuthorNameStartingWithBorrowed<'a> {
-            pub authorid: Option<i32>,
             pub name: &'a str,
-            pub bookid: i32,
-            pub title: &'a str,
         }
         #[derive(Debug, Clone, PartialEq)]
         pub struct AuthorNameStartingWith {
-            pub authorid: Option<i32>,
             pub name: String,
-            pub bookid: i32,
-            pub title: String,
         }
         impl<'a> From<AuthorNameStartingWithBorrowed<'a>> for AuthorNameStartingWith {
             fn from(
-                AuthorNameStartingWithBorrowed {
-                    authorid,
-                    name,
-                    bookid,
-                    title,
-                }: AuthorNameStartingWithBorrowed<'a>,
+                AuthorNameStartingWithBorrowed { name }: AuthorNameStartingWithBorrowed<'a>,
             ) -> Self {
-                Self {
-                    authorid,
-                    name: name.into(),
-                    bookid,
-                    title: title.into(),
-                }
+                Self { name: name.into() }
             }
         }
         pub struct AuthorNameStartingWithQuery<'a, C: cornucopia_client::GenericClient, T> {
@@ -373,28 +357,18 @@ pub mod queries {
             }
 
             pub fn extractor(row: &tokio_postgres::row::Row) -> AuthorNameStartingWithBorrowed {
-                AuthorNameStartingWithBorrowed {
-                    authorid: row.get(0),
-                    name: row.get(1),
-                    bookid: row.get(2),
-                    title: row.get(3),
-                }
+                AuthorNameStartingWithBorrowed { name: row.get(0) }
             }
 
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client
                     .prepare(
                         "SELECT
-    BookAuthor.AuthorId,
-    Author.Name,
-    BookAuthor.BookId,
-    Book.Title
+    name
 FROM
-    BookAuthor
-    INNER JOIN Author ON Author.id = BookAuthor.AuthorId
-    INNER JOIN Book ON Book.Id = BookAuthor.BookId
+    Author
 WHERE
-    Author.Name LIKE CONCAT($1::text, '%');",
+    name LIKE CONCAT($1::text, '%');",
                     )
                     .await
             }
@@ -435,11 +409,11 @@ WHERE
         }
         pub fn author_name_starting_with<'a, C: cornucopia_client::GenericClient>(
             client: &'a C,
-            s: &'a &str,
+            start_str: &'a &str,
         ) -> AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith> {
             AuthorNameStartingWithQuery {
                 client,
-                params: [s],
+                params: [start_str],
                 mapper: |it| AuthorNameStartingWith::from(it),
             }
         }
@@ -816,7 +790,7 @@ FROM
             pub macaddr_: eui48::MacAddress,
         }
         impl<'a> InsertEverythingParams<'a> {
-            pub fn insert_everything<C: cornucopia_client::GenericClient>(
+            pub fn query<C: cornucopia_client::GenericClient>(
                 &'a self,
                 client: &'a C,
             ) -> InsertEverythingQuery<'a, C> {
@@ -976,7 +950,7 @@ FROM
             pub book_name: &'a str,
         }
         impl<'a> InsertBookParams<'a> {
-            pub fn insert_book<C: cornucopia_client::GenericClient>(
+            pub fn query<C: cornucopia_client::GenericClient>(
                 &'a self,
                 client: &'a C,
             ) -> InsertBookQuery<'a, C> {
