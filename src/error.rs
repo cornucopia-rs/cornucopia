@@ -20,4 +20,3 @@ pub(crate) enum Error {
     Pool(#[from] deadpool_postgres::PoolError),
     PoolBuilder(#[from] PoolBuilderError),
 }
-
