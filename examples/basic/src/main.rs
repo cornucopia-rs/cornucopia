@@ -18,8 +18,6 @@ pub mod cornucopia;
 
 #[tokio::main]
 pub async fn main() {
-
-
     // Connection pool configuration
     // Please look at `tokio_postgres` and `deadpool_postgres` for details.
     let mut cfg = Config::new();
