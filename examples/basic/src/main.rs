@@ -1,8 +1,11 @@
+// Take a look at the generated `cornucopia.rs` file if you want to
+// see what it looks like under the hood.
+#[rustfmt::skip]
+pub mod cornucopia;
+
 use deadpool_postgres::{Config, Runtime};
 use tokio_postgres::NoTls;
 
-// Take a look at the generated `cornucopia.rs` file if you want to
-// see what it looks like under the hood.
 use crate::cornucopia::{
     queries::{
         module_1::insert_book,
@@ -13,8 +16,6 @@ use crate::cornucopia::{
     },
     types::public::SpongebobCharacter,
 };
-
-pub mod cornucopia;
 
 #[tokio::main]
 pub async fn main() {

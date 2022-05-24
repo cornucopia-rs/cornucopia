@@ -1,9 +1,9 @@
-use std::{path::Path, process::Command};
+use std::path::Path;
 
 use crate::{
     codegen::generate,
     container,
-    error::{Error, FmtError},
+    error::Error,
     pool::{self, cornucopia_pool, from_url},
     prepare_queries::prepare,
     read_queries::{read_query_modules, Module},
@@ -32,9 +32,6 @@ enum Action {
     },
     /// Generate Rust modules from queries
     Generate {
-        /// Folder containing the migrations
-        #[clap(short, long)]
-        no_formatting: bool,
         /// Use `podman` instead of `docker`
         #[clap(short, long)]
         podman: bool,
@@ -102,7 +99,6 @@ pub(crate) async fn run() -> Result<(), Error> {
             }
         },
         Action::Generate {
-            no_formatting,
             action,
             podman,
             migrations_path,
@@ -133,32 +129,11 @@ pub(crate) async fn run() -> Result<(), Error> {
                         container::cleanup(podman)?;
                         return Err(e);
                     }
-
-                    // Format file, unless `--no-formatting option is enabled`
-                    if !no_formatting {
-                        format_generated_file(&destination)?
-                    }
                 }
             }
 
             Ok(())
         }
-    }
-}
-
-/// Format the file at the target path using `rustfmt`
-fn format_generated_file(path: &str) -> Result<(), FmtError> {
-    if Command::new("rustfmt")
-        .arg("--edition")
-        .arg("2021")
-        .arg(path)
-        .spawn()?
-        .wait()?
-        .success()
-    {
-        Ok(())
-    } else {
-        Err(FmtError::RustFmt)
     }
 }
 
