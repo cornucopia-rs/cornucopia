@@ -40,6 +40,9 @@ enum Action {
         destination: String,
         #[clap(subcommand)]
         action: Option<GenerateLiveAction>,
+        /// Generate synchronous rust code
+        #[clap(long)]
+        sync: bool,
     },
 }
 
@@ -66,7 +69,7 @@ enum GenerateLiveAction {
 }
 
 // Main entrypoint of the CLI. Parses the args and calls the appropriate routines.
-pub async fn run() -> Result<(), Error> {
+pub fn run() -> Result<(), Error> {
     let args = Args::parse();
 
     match args.action {
@@ -74,10 +77,10 @@ pub async fn run() -> Result<(), Error> {
             action,
             migrations_path,
         } => match action {
-            MigrationsAction::New { name } => new_migration(&migrations_path, &name).await,
+            MigrationsAction::New { name } => new_migration(&migrations_path, &name),
             MigrationsAction::Run { url } => {
-                let client = conn::from_url(&url).await?;
-                run_migrations(&client, &migrations_path).await
+                let mut client = conn::from_url(&url)?;
+                run_migrations(&mut client, &migrations_path)
             }
         },
         Action::Generate {
@@ -86,25 +89,25 @@ pub async fn run() -> Result<(), Error> {
             migrations_path,
             queries_path,
             destination,
+            sync,
         } => {
             match action {
                 Some(GenerateLiveAction::Live { url }) => {
-                    let client = conn::from_url(&url).await?;
-                    generate_live(&client, &queries_path, Some(&destination)).await?;
+                    let mut client = conn::from_url(&url)?;
+                    generate_live(&mut client, &queries_path, Some(&destination), !sync)?;
                 }
                 None => {
-                    let client = cornucopia_conn().await?;
+                    let mut client = cornucopia_conn()?;
 
                     // Run the generate command. If the command is unsuccessful, cleanup Cornucopia's container
                     if let Err(e) = generate_managed(
-                        &client,
+                        &mut client,
                         &queries_path,
                         &migrations_path,
                         Some(&destination),
                         podman,
-                    )
-                    .await
-                    {
+                        !sync,
+                    ) {
                         container::cleanup(podman)?;
                         return Err(e);
                     }

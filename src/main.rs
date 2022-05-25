@@ -1,8 +1,7 @@
 use cornucopia::{run, Error};
 
-#[tokio::main]
-async fn main() -> Result<(), Error> {
-    let result = run().await;
+fn main() -> Result<(), Error> {
+    let result = run();
     if let Err(e) = &result {
         eprintln!("{e}");
     }

@@ -1,23 +1,20 @@
 use crate::read_migrations::read_migrations;
 use error::Error;
-use tokio_postgres::Client;
+use postgres::Client;
 
 /// Runs all migrations in the specified directory. Only `.sql` files are considered.
 ///
 /// # Errors
 /// Returns an error if a migration can't be read or installed.
-pub(crate) async fn run_migrations(client: &Client, dir_path: &str) -> Result<(), Error> {
+pub(crate) fn run_migrations(client: &mut Client, dir_path: &str) -> Result<(), Error> {
     // Create the table holding Cornucopia migrations
-    create_migration_table(client)
-        .await
-        .map_err(|err| Error::new(err.into(), None, dir_path))?;
+    create_migration_table(client).map_err(|err| Error::new(err.into(), None, dir_path))?;
 
     // Install each migration that is not already installed.
     for migration in
         read_migrations(dir_path).map_err(|err| Error::new(err.into(), None, dir_path))?
     {
         let migration_not_installed = !is_installed(client, &migration.timestamp, &migration.name)
-            .await
             .map_err(|err| Error::new(err.into(), None, &migration.path))?;
         if migration_not_installed {
             install_migration(
@@ -26,58 +23,48 @@ pub(crate) async fn run_migrations(client: &Client, dir_path: &str) -> Result<()
                 &migration.name,
                 &migration.sql,
             )
-            .await
             .map_err(|err| Error::new(err.into(), Some(&migration.sql), &migration.path))?;
         }
     }
     Ok(())
 }
 
-async fn create_migration_table(client: &Client) -> Result<(), tokio_postgres::Error> {
-    client
-        .execute(
-            "CREATE TABLE IF NOT EXISTS _cornucopia_migrations (
+fn create_migration_table(client: &mut Client) -> Result<(), postgres::Error> {
+    client.execute(
+        "CREATE TABLE IF NOT EXISTS _cornucopia_migrations (
     unix_timestamp BIGINT NOT NULL,
     name TEXT NOT NULL,
     installed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (unix_timestamp, name)
 )",
-            &[],
-        )
-        .await?;
+        &[],
+    )?;
     Ok(())
 }
 
-async fn is_installed(
-    client: &Client,
-    timestamp: &i64,
-    name: &str,
-) -> Result<bool, tokio_postgres::Error> {
+fn is_installed(client: &mut Client, timestamp: &i64, name: &str) -> Result<bool, postgres::Error> {
     let is_installed: bool = client
         .query_one(
             "select EXISTS(
     SELECT 1 from _cornucopia_migrations 
     WHERE (unix_timestamp, name) = ($1, $2))",
             &[&timestamp, &name],
-        )
-        .await?
+        )?
         .get(0);
     Ok(is_installed)
 }
 
-async fn install_migration(
-    client: &Client,
+fn install_migration(
+    client: &mut Client,
     timestamp: &i64,
     name: &str,
     sql: &str,
-) -> Result<(), tokio_postgres::Error> {
-    client.batch_execute(sql).await?;
-    client
-        .execute(
-            "INSERT INTO _cornucopia_migrations VALUES ($1, $2)",
-            &[&timestamp, &name],
-        )
-        .await?;
+) -> Result<(), postgres::Error> {
+    client.batch_execute(sql)?;
+    client.execute(
+        "INSERT INTO _cornucopia_migrations VALUES ($1, $2)",
+        &[&timestamp, &name],
+    )?;
     Ok(())
 }
 
@@ -85,14 +72,14 @@ pub(crate) mod error {
     use std::{error::Error as ErrorTrait, fmt::Display};
 
     use super::super::read_migrations::error::Error as MigrationError;
+    use postgres::error::ErrorPosition;
     use thiserror::Error as ThisError;
-    use tokio_postgres::error::ErrorPosition;
 
     #[derive(Debug, ThisError)]
     #[error("{0}")]
     pub enum ErrorVariant {
         ReadMigration(#[from] MigrationError),
-        Db(#[from] tokio_postgres::Error),
+        Db(#[from] postgres::Error),
     }
 
     #[derive(Debug)]

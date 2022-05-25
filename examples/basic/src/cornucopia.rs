@@ -127,52 +127,9 @@ pub mod types {
     }
 }
 pub mod queries {
-    pub mod module_1 {
-        use futures::{StreamExt, TryStreamExt};
-        pub struct InsertBookParams<'a> {
-            pub title: &'a str,
-        }
-        impl<'a> InsertBookParams<'a> {
-            pub fn query<C: cornucopia_client::GenericClient>(
-                &'a self,
-                client: &'a C,
-            ) -> InsertBookQuery<'a, C> {
-                insert_book(client, &self.title)
-            }
-        }
-        pub struct InsertBookQuery<'a, C: cornucopia_client::GenericClient> {
-            client: &'a C,
-            params: [&'a (dyn tokio_postgres::types::ToSql + Sync); 1],
-        }
-        impl<'a, C> InsertBookQuery<'a, C>
-        where
-            C: cornucopia_client::GenericClient,
-        {
-            pub async fn stmt(
-                &self,
-            ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
-                self.client.prepare("INSERT INTO Book (title)
-  VALUES ($1);
-
-").await
-            }
-            pub async fn exec(self) -> Result<u64, tokio_postgres::Error> {
-                let stmt = self.stmt().await?;
-                self.client.execute(&stmt, &self.params).await
-            }
-        }
-        pub fn insert_book<'a, C: cornucopia_client::GenericClient>(
-            client: &'a C,
-            title: &'a &str,
-        ) -> InsertBookQuery<'a, C> {
-            InsertBookQuery {
-                client,
-                params: [title],
-            }
-        }
-    }
     pub mod module_2 {
         use futures::{StreamExt, TryStreamExt};
+        use cornucopia_client::GenericClient;
         pub struct AuthorsBorrowed<'a> {
             pub id: i32,
             pub name: &'a str,
@@ -193,9 +150,9 @@ pub mod queries {
                 }
             }
         }
-        pub struct AuthorsQuery<'a, C: cornucopia_client::GenericClient, T> {
+        pub struct AuthorsQuery<'a, C: GenericClient, T> {
             client: &'a C,
-            params: [&'a (dyn tokio_postgres::types::ToSql + Sync); 0],
+            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
             mapper: fn(AuthorsBorrowed) -> T,
         }
         impl<'a, C, T> AuthorsQuery<'a, C, T>
@@ -260,7 +217,7 @@ FROM
                 Ok(stream.into_stream())
             }
         }
-        pub fn authors<'a, C: cornucopia_client::GenericClient>(
+        pub fn authors<'a, C: GenericClient>(
             client: &'a C,
         ) -> AuthorsQuery<'a, C, Authors> {
             AuthorsQuery {
@@ -281,9 +238,9 @@ FROM
                 Self { title: title.into() }
             }
         }
-        pub struct BooksQuery<'a, C: cornucopia_client::GenericClient, T> {
+        pub struct BooksQuery<'a, C: GenericClient, T> {
             client: &'a C,
-            params: [&'a (dyn tokio_postgres::types::ToSql + Sync); 0],
+            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
             mapper: fn(BooksBorrowed) -> T,
         }
         impl<'a, C, T> BooksQuery<'a, C, T>
@@ -341,9 +298,7 @@ FROM
                 Ok(stream.into_stream())
             }
         }
-        pub fn books<'a, C: cornucopia_client::GenericClient>(
-            client: &'a C,
-        ) -> BooksQuery<'a, C, Books> {
+        pub fn books<'a, C: GenericClient>(client: &'a C) -> BooksQuery<'a, C, Books> {
             BooksQuery {
                 client,
                 params: [],
@@ -366,9 +321,9 @@ FROM
                 }
             }
         }
-        pub struct BooksOptRetParamQuery<'a, C: cornucopia_client::GenericClient, T> {
+        pub struct BooksOptRetParamQuery<'a, C: GenericClient, T> {
             client: &'a C,
-            params: [&'a (dyn tokio_postgres::types::ToSql + Sync); 0],
+            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
             mapper: fn(BooksOptRetParamBorrowed) -> T,
         }
         impl<'a, C, T> BooksOptRetParamQuery<'a, C, T>
@@ -433,7 +388,7 @@ FROM
                 Ok(stream.into_stream())
             }
         }
-        pub fn books_opt_ret_param<'a, C: cornucopia_client::GenericClient>(
+        pub fn books_opt_ret_param<'a, C: GenericClient>(
             client: &'a C,
         ) -> BooksOptRetParamQuery<'a, C, BooksOptRetParam> {
             BooksOptRetParamQuery {
@@ -447,7 +402,7 @@ FROM
             pub id: i32,
         }
         impl AuthorNameByIdParams {
-            pub fn query<'a, C: cornucopia_client::GenericClient>(
+            pub fn query<'a, C: GenericClient>(
                 &'a self,
                 client: &'a C,
             ) -> AuthorNameByIdQuery<'a, C, AuthorNameById> {
@@ -468,9 +423,9 @@ FROM
                 Self { name: name.into() }
             }
         }
-        pub struct AuthorNameByIdQuery<'a, C: cornucopia_client::GenericClient, T> {
+        pub struct AuthorNameByIdQuery<'a, C: GenericClient, T> {
             client: &'a C,
-            params: [&'a (dyn tokio_postgres::types::ToSql + Sync); 1],
+            params: [&'a (dyn postgres_types::ToSql + Sync); 1],
             mapper: fn(AuthorNameByIdBorrowed) -> T,
         }
         impl<'a, C, T> AuthorNameByIdQuery<'a, C, T>
@@ -539,7 +494,7 @@ WHERE
                 Ok(stream.into_stream())
             }
         }
-        pub fn author_name_by_id<'a, C: cornucopia_client::GenericClient>(
+        pub fn author_name_by_id<'a, C: GenericClient>(
             client: &'a C,
             id: &'a i32,
         ) -> AuthorNameByIdQuery<'a, C, AuthorNameById> {
@@ -553,7 +508,7 @@ WHERE
             pub start_str: &'a str,
         }
         impl<'a> AuthorNameStartingWithParams<'a> {
-            pub fn query<C: cornucopia_client::GenericClient>(
+            pub fn query<C: GenericClient>(
                 &'a self,
                 client: &'a C,
             ) -> AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith> {
@@ -590,13 +545,9 @@ WHERE
                 }
             }
         }
-        pub struct AuthorNameStartingWithQuery<
-            'a,
-            C: cornucopia_client::GenericClient,
-            T,
-        > {
+        pub struct AuthorNameStartingWithQuery<'a, C: GenericClient, T> {
             client: &'a C,
-            params: [&'a (dyn tokio_postgres::types::ToSql + Sync); 1],
+            params: [&'a (dyn postgres_types::ToSql + Sync); 1],
             mapper: fn(AuthorNameStartingWithBorrowed) -> T,
         }
         impl<'a, C, T> AuthorNameStartingWithQuery<'a, C, T>
@@ -675,7 +626,7 @@ WHERE
                 Ok(stream.into_stream())
             }
         }
-        pub fn author_name_starting_with<'a, C: cornucopia_client::GenericClient>(
+        pub fn author_name_starting_with<'a, C: GenericClient>(
             client: &'a C,
             start_str: &'a &str,
         ) -> AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith> {
@@ -699,9 +650,9 @@ WHERE
                 Self { col1: col1.into() }
             }
         }
-        pub struct ReturnCustomTypeQuery<'a, C: cornucopia_client::GenericClient, T> {
+        pub struct ReturnCustomTypeQuery<'a, C: GenericClient, T> {
             client: &'a C,
-            params: [&'a (dyn tokio_postgres::types::ToSql + Sync); 0],
+            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
             mapper: fn(ReturnCustomTypeBorrowed) -> T,
         }
         impl<'a, C, T> ReturnCustomTypeQuery<'a, C, T>
@@ -766,7 +717,7 @@ FROM
                 Ok(stream.into_stream())
             }
         }
-        pub fn return_custom_type<'a, C: cornucopia_client::GenericClient>(
+        pub fn return_custom_type<'a, C: GenericClient>(
             client: &'a C,
         ) -> ReturnCustomTypeQuery<'a, C, ReturnCustomType> {
             ReturnCustomTypeQuery {
@@ -780,7 +731,7 @@ FROM
             pub spongebob_character: super::super::types::public::SpongebobCharacter,
         }
         impl SelectWhereCustomTypeParams {
-            pub fn query<'a, C: cornucopia_client::GenericClient>(
+            pub fn query<'a, C: GenericClient>(
                 &'a self,
                 client: &'a C,
             ) -> SelectWhereCustomTypeQuery<'a, C, SelectWhereCustomType> {
@@ -791,13 +742,9 @@ FROM
         pub struct SelectWhereCustomType {
             pub col2: super::super::types::public::SpongebobCharacter,
         }
-        pub struct SelectWhereCustomTypeQuery<
-            'a,
-            C: cornucopia_client::GenericClient,
-            T,
-        > {
+        pub struct SelectWhereCustomTypeQuery<'a, C: GenericClient, T> {
             client: &'a C,
-            params: [&'a (dyn tokio_postgres::types::ToSql + Sync); 1],
+            params: [&'a (dyn postgres_types::ToSql + Sync); 1],
             mapper: fn(SelectWhereCustomType) -> T,
         }
         impl<'a, C, T> SelectWhereCustomTypeQuery<'a, C, T>
@@ -865,7 +812,7 @@ WHERE (col1).persona = $1;",
                 Ok(stream.into_stream())
             }
         }
-        pub fn select_where_custom_type<'a, C: cornucopia_client::GenericClient>(
+        pub fn select_where_custom_type<'a, C: GenericClient>(
             client: &'a C,
             spongebob_character: &'a super::super::types::public::SpongebobCharacter,
         ) -> SelectWhereCustomTypeQuery<'a, C, SelectWhereCustomType> {
@@ -893,9 +840,9 @@ WHERE (col1).persona = $1;",
                 }
             }
         }
-        pub struct SelectTranslationsQuery<'a, C: cornucopia_client::GenericClient, T> {
+        pub struct SelectTranslationsQuery<'a, C: GenericClient, T> {
             client: &'a C,
-            params: [&'a (dyn tokio_postgres::types::ToSql + Sync); 0],
+            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
             mapper: fn(SelectTranslationsBorrowed) -> T,
         }
         impl<'a, C, T> SelectTranslationsQuery<'a, C, T>
@@ -962,13 +909,58 @@ FROM
                 Ok(stream.into_stream())
             }
         }
-        pub fn select_translations<'a, C: cornucopia_client::GenericClient>(
+        pub fn select_translations<'a, C: GenericClient>(
             client: &'a C,
         ) -> SelectTranslationsQuery<'a, C, SelectTranslations> {
             SelectTranslationsQuery {
                 client,
                 params: [],
                 mapper: |it| SelectTranslations::from(it),
+            }
+        }
+    }
+    pub mod module_1 {
+        use futures::{StreamExt, TryStreamExt};
+        use cornucopia_client::GenericClient;
+        pub struct InsertBookParams<'a> {
+            pub title: &'a str,
+        }
+        impl<'a> InsertBookParams<'a> {
+            pub fn query<C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> InsertBookQuery<'a, C> {
+                insert_book(client, &self.title)
+            }
+        }
+        pub struct InsertBookQuery<'a, C: GenericClient> {
+            client: &'a C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); 1],
+        }
+        impl<'a, C> InsertBookQuery<'a, C>
+        where
+            C: cornucopia_client::GenericClient,
+        {
+            pub async fn stmt(
+                &self,
+            ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+                self.client.prepare("INSERT INTO Book (title)
+  VALUES ($1);
+
+").await
+            }
+            pub async fn exec(self) -> Result<u64, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                self.client.execute(&stmt, &self.params).await
+            }
+        }
+        pub fn insert_book<'a, C: GenericClient>(
+            client: &'a C,
+            title: &'a &str,
+        ) -> InsertBookQuery<'a, C> {
+            InsertBookQuery {
+                client,
+                params: [title],
             }
         }
     }

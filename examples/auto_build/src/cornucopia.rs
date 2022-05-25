@@ -2,6 +2,7 @@ pub mod types {}
 pub mod queries {
     pub mod module_1 {
         use futures::{StreamExt, TryStreamExt};
+        use cornucopia_client::GenericClient;
         pub struct ExampleQueryBorrowed<'a> {
             pub col1: &'a str,
         }
@@ -14,9 +15,9 @@ pub mod queries {
                 Self { col1: col1.into() }
             }
         }
-        pub struct ExampleQueryQuery<'a, C: cornucopia_client::GenericClient, T> {
+        pub struct ExampleQueryQuery<'a, C: GenericClient, T> {
             client: &'a C,
-            params: [&'a (dyn tokio_postgres::types::ToSql + Sync); 0],
+            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
             mapper: fn(ExampleQueryBorrowed) -> T,
         }
         impl<'a, C, T> ExampleQueryQuery<'a, C, T>
@@ -81,7 +82,7 @@ FROM
                 Ok(stream.into_stream())
             }
         }
-        pub fn example_query<'a, C: cornucopia_client::GenericClient>(
+        pub fn example_query<'a, C: GenericClient>(
             client: &'a C,
         ) -> ExampleQueryQuery<'a, C, ExampleQuery> {
             ExampleQueryQuery {

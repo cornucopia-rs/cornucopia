@@ -11,7 +11,18 @@ CREATE TYPE custom_composite AS (
     nice spongebob_character
 );
 
+CREATE TYPE copy_composite AS (
+    first integer,
+    second float
+);
+
 CREATE DOMAIN my_domain AS TEXT CHECK (value ~ '^\w{5}$');
+CREATE DOMAIN copy_domain AS INTEGER CHECK (value > 42);
+
+CREATE TABLE Copy (
+    composite copy_composite,
+    domain copy_domain
+);
 
 CREATE DOMAIN custom_domain AS custom_composite[];
 

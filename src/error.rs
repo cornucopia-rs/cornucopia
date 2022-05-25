@@ -14,7 +14,7 @@ pub enum Error {
     PrepareQueries(#[from] PrepareQueriesError),
     NewMigration(#[from] NewMigrationError),
     Migration(#[from] MigrationError),
-    Db(#[from] tokio_postgres::Error),
+    Db(#[from] postgres::Error),
     WriteCodeGenFile(#[from] WriteCodeGenFileError),
 }
 
