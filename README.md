@@ -53,22 +53,21 @@
 
 <br />
 
-Cornucopia is a small CLI utility resting on `tokio-postgres` designed to facilitate PostgreSQL workflows in Rust.
+Cornucopia is a small CLI utility resting on `postgres` designed to facilitate PostgreSQL workflows in Rust.
 
 Cornucopia aims to get out of your way, **transpiling your PostgreSQL queries to Rust on demand**. Each query is prepared against your schema, ensuring that the query statements are valid SQL. These prepared statements are then be used to generate properly type-checked Rust code for this query.
 
 ##### Features
 * SQL-first. Your database schema is the source of truth. No ORM.
 * Custom user types (composites, enums and domains).
-* Strongly-typed async row streams.
-* Ergonomic type mapping
+* Async (`tokio_postgres`) and sync drivers (`postgres`).
+* Ergonomic type mapping.
 * One-dimensional array types.
 * Nullable return columns.
 * Optional migration management.
 * Build your queries against your own live database, or let Cornucopia manage that for you.
 * Use the connection type that you want (pooled or not, transaction or not). You can mix and match them freely.
-* Compatible with `build.rs` to rebuild Rust queries whenever SQL files change.
-* No macros, respects your compile times.
+* Compatible with build scripts to generate whenever your SQL changes.
 
 Keep reading for more info, or take a look at the [basic example](/examples/basic/README.md) for a quickstart 🚀.
 
@@ -84,16 +83,18 @@ No special installation steps are needed for `podman`, but note that you will ne
 
 ### Dependencies
 #### Required
+* Client code: `cornucopia_client`.
+* Postgres type utils: `postgres_types`.
+
+#### (Optional) Async
 * Runtime: `tokio`.
 * Database driver: `tokio_postgres` .
 * Async tools: `futures`.
-* Client code: `cornucopia_client`.
 
-#### Optional
+#### (Optional) Connection pooling
 * Pooled connections: `deadpool-postgres`. 
-* Custom PostgreSQL user types: `postgres_types`.
 
-#### Extra types using `tokio_postgres` features
+#### (Optional) Extra types using `tokio_postgres` features
 | Crate        | available types                                    | `tokio_postgres` feature |
 | ------------ | -------------------------------------------------- | ------------------------ |
 | `serde_json` | `Value`                                            | `with-serde_json-1`      |
@@ -217,9 +218,6 @@ Column indexes are brittle, but you can use them if needed `?{nullable_column, 4
 
 ### Transactions
 Generated queries take a `GenericClient` as parameter, which accepts both `Client`s and `Transaction`s. That means you can use the same generated queries for both single statements and transactions.
-
-### Connection pools
-Generated queries take a `GenericClient` as parameter, which accepts both connections from `tokio-postgres` (non-pooled) and `deadpool_postgres` (pooled).
 
 ## Automatically generate queries
 You can make use of Rust's build script feature to automatically regenerate your Cornucopia queries upon building your crate, only when your SQL has changed. The simplest way to achieve this is simply to call Cornucopia's CLI inside your `build.rs` file. You can learn more about this feature in this [example](examples/auto_build/README.md).
