@@ -2,8 +2,8 @@ pub mod types {
     pub mod public {
         #[derive(
             Debug,
-            postgres_types::ToSql,
-            postgres_types::FromSql,
+            cornucopia_client::types::ToSql,
+            cornucopia_client::types::FromSql,
             Clone,
             Copy,
             PartialEq,
@@ -15,16 +15,16 @@ pub mod types {
             Patrick,
             Squidward,
         }
-        #[derive(Debug, postgres_types::ToSql, Clone, PartialEq)]
+        #[derive(Debug, cornucopia_client::types::ToSql, Clone, PartialEq)]
         #[postgres(name = "custom_composite")]
         pub struct CustomComposite {
             pub name: String,
             pub age: i32,
             pub persona: super::public::SpongebobCharacter,
         }
-        impl<'a> postgres_types::FromSql<'a> for CustomComposite {
+        impl<'a> cornucopia_client::types::FromSql<'a> for CustomComposite {
             fn from_sql(
-                _type: &postgres_types::Type,
+                _type: &cornucopia_client::types::Type,
                 buf: &'a [u8],
             ) -> std::result::Result<
                     CustomComposite,
@@ -33,23 +33,25 @@ pub mod types {
                     >,
                 > {
                 let fields = match *_type.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
+                    cornucopia_client::types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
                 };
                 let mut buf = buf;
-                let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let name = postgres_types::private::read_value(
+                let num_fields = cornucopia_client::types::private::read_be_i32(
+                    &mut buf,
+                )?;
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
+                let name = cornucopia_client::types::private::read_value(
                     fields[0].type_(),
                     &mut buf,
                 )?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let age = postgres_types::private::read_value(
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
+                let age = cornucopia_client::types::private::read_value(
                     fields[1].type_(),
                     &mut buf,
                 )?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let persona = postgres_types::private::read_value(
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
+                let persona = cornucopia_client::types::private::read_value(
                     fields[2].type_(),
                     &mut buf,
                 )?;
@@ -59,7 +61,7 @@ pub mod types {
                     persona,
                 })
             }
-            fn accepts(type_: &postgres_types::Type) -> bool {
+            fn accepts(type_: &cornucopia_client::types::Type) -> bool {
                 type_.name() == "custom_composite" && type_.schema() == "public"
             }
         }
@@ -68,9 +70,9 @@ pub mod types {
             pub age: i32,
             pub persona: super::super::types::public::SpongebobCharacter,
         }
-        impl<'a> postgres_types::FromSql<'a> for CustomCompositeBorrowed<'a> {
+        impl<'a> cornucopia_client::types::FromSql<'a> for CustomCompositeBorrowed<'a> {
             fn from_sql(
-                _type: &postgres_types::Type,
+                _type: &cornucopia_client::types::Type,
                 buf: &'a [u8],
             ) -> std::result::Result<
                     CustomCompositeBorrowed<'a>,
@@ -79,23 +81,25 @@ pub mod types {
                     >,
                 > {
                 let fields = match *_type.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
+                    cornucopia_client::types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
                 };
                 let mut buf = buf;
-                let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let name = postgres_types::private::read_value(
+                let num_fields = cornucopia_client::types::private::read_be_i32(
+                    &mut buf,
+                )?;
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
+                let name = cornucopia_client::types::private::read_value(
                     fields[0].type_(),
                     &mut buf,
                 )?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let age = postgres_types::private::read_value(
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
+                let age = cornucopia_client::types::private::read_value(
                     fields[1].type_(),
                     &mut buf,
                 )?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let persona = postgres_types::private::read_value(
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
+                let persona = cornucopia_client::types::private::read_value(
                     fields[2].type_(),
                     &mut buf,
                 )?;
@@ -105,7 +109,7 @@ pub mod types {
                     persona,
                 })
             }
-            fn accepts(type_: &postgres_types::Type) -> bool {
+            fn accepts(type_: &cornucopia_client::types::Type) -> bool {
                 type_.name() == "custom_composite" && type_.schema() == "public"
             }
         }
@@ -152,7 +156,7 @@ pub mod queries {
         }
         pub struct AuthorsQuery<'a, C: GenericClient, T> {
             client: &'a C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
+            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 0],
             mapper: fn(AuthorsBorrowed) -> T,
         }
         impl<'a, C, T> AuthorsQuery<'a, C, T>
@@ -240,7 +244,7 @@ FROM
         }
         pub struct BooksQuery<'a, C: GenericClient, T> {
             client: &'a C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
+            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 0],
             mapper: fn(BooksBorrowed) -> T,
         }
         impl<'a, C, T> BooksQuery<'a, C, T>
@@ -323,7 +327,7 @@ FROM
         }
         pub struct BooksOptRetParamQuery<'a, C: GenericClient, T> {
             client: &'a C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
+            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 0],
             mapper: fn(BooksOptRetParamBorrowed) -> T,
         }
         impl<'a, C, T> BooksOptRetParamQuery<'a, C, T>
@@ -425,7 +429,7 @@ FROM
         }
         pub struct AuthorNameByIdQuery<'a, C: GenericClient, T> {
             client: &'a C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); 1],
+            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 1],
             mapper: fn(AuthorNameByIdBorrowed) -> T,
         }
         impl<'a, C, T> AuthorNameByIdQuery<'a, C, T>
@@ -547,7 +551,7 @@ WHERE
         }
         pub struct AuthorNameStartingWithQuery<'a, C: GenericClient, T> {
             client: &'a C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); 1],
+            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 1],
             mapper: fn(AuthorNameStartingWithBorrowed) -> T,
         }
         impl<'a, C, T> AuthorNameStartingWithQuery<'a, C, T>
@@ -652,7 +656,7 @@ WHERE
         }
         pub struct ReturnCustomTypeQuery<'a, C: GenericClient, T> {
             client: &'a C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
+            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 0],
             mapper: fn(ReturnCustomTypeBorrowed) -> T,
         }
         impl<'a, C, T> ReturnCustomTypeQuery<'a, C, T>
@@ -744,7 +748,7 @@ FROM
         }
         pub struct SelectWhereCustomTypeQuery<'a, C: GenericClient, T> {
             client: &'a C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); 1],
+            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 1],
             mapper: fn(SelectWhereCustomType) -> T,
         }
         impl<'a, C, T> SelectWhereCustomTypeQuery<'a, C, T>
@@ -842,7 +846,7 @@ WHERE (col1).persona = $1;",
         }
         pub struct SelectTranslationsQuery<'a, C: GenericClient, T> {
             client: &'a C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
+            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 0],
             mapper: fn(SelectTranslationsBorrowed) -> T,
         }
         impl<'a, C, T> SelectTranslationsQuery<'a, C, T>
@@ -926,42 +930,24 @@ FROM
             pub title: &'a str,
         }
         impl<'a> InsertBookParams<'a> {
-            pub fn query<C: GenericClient>(
+            pub async fn query<C: GenericClient>(
                 &'a self,
                 client: &'a C,
-            ) -> InsertBookQuery<'a, C> {
-                insert_book(client, &self.title)
+            ) -> Result<u64, tokio_postgres::Error> {
+                insert_book(client, &self.title).await
             }
         }
-        pub struct InsertBookQuery<'a, C: GenericClient> {
-            client: &'a C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); 1],
-        }
-        impl<'a, C> InsertBookQuery<'a, C>
-        where
-            C: cornucopia_client::GenericClient,
-        {
-            pub async fn stmt(
-                &self,
-            ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
-                self.client.prepare("INSERT INTO Book (title)
-  VALUES ($1);
-
-").await
-            }
-            pub async fn exec(self) -> Result<u64, tokio_postgres::Error> {
-                let stmt = self.stmt().await?;
-                self.client.execute(&stmt, &self.params).await
-            }
-        }
-        pub fn insert_book<'a, C: GenericClient>(
+        pub async fn insert_book<'a, C: GenericClient>(
             client: &'a C,
             title: &'a &str,
-        ) -> InsertBookQuery<'a, C> {
-            InsertBookQuery {
-                client,
-                params: [title],
-            }
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare("INSERT INTO Book (title)
+  VALUES ($1);
+
+")
+                .await?;
+            client.execute(&stmt, &[title]).await
         }
     }
 }

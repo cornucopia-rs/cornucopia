@@ -2,12 +2,14 @@ use std::marker::PhantomData;
 
 use async_trait::async_trait;
 use deadpool_postgres::{Client, ClientWrapper, Transaction};
-use fallible_iterator::FallibleIterator;
+use postgres::fallible_iterator::FallibleIterator;
 use postgres_protocol::types::{array_from_sql, ArrayValues};
 use tokio_postgres::{
     types::{BorrowToSql, FromSql, Kind, ToSql, Type},
     Client as PgClient, Error, RowStream, Statement, ToStatement, Transaction as PgTransaction,
 };
+
+pub use postgres_types as types;
 
 #[async_trait]
 pub trait GenericClient {

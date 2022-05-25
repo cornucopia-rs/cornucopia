@@ -15,7 +15,6 @@ members = ["examples/*", "cornucopia_client"]
 
 [dependencies]
 cornucopia_client = { path = "cornucopia_client" }
-fallible-iterator = "0.2.0"
 postgres = { version = "0.19.3", features = [
     "with-serde_json-1",
     "with-time-0_3",

@@ -84,7 +84,6 @@ No special installation steps are needed for `podman`, but note that you will ne
 ### Dependencies
 #### Required
 * Client code: `cornucopia_client`.
-* Postgres type utils: `postgres_types`.
 
 #### (Optional) Async
 * Runtime: `tokio`.
@@ -109,7 +108,6 @@ The code block below shows what your dependencies might look like with every fea
 [dependencies]
 tokio = { version = "1.18.1", features = ["full"] }
 deadpool-postgres = { version = "0.10.2" }
-postgres-types = { version = "0.2.3", features = ["derive"] }
 cornucopia_client = "0.2.2"
 futures = "0.3.21"
 tokio-postgres = { version = "0.7.6", features = [

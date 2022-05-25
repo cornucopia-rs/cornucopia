@@ -1,9 +1,9 @@
 use std::net::{IpAddr, Ipv4Addr};
 
 //use error::Error;
+use cornucopia_client::types::Json;
 use eui48::MacAddress;
 use postgres::Client;
-use postgres_types::Json;
 use serde_json::Map;
 use time::{OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;

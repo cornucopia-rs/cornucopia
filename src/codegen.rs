@@ -4,9 +4,9 @@ use crate::{
     prepare_queries::{PreparedColumn, PreparedParameter, PreparedQuery},
     type_registrar::{CornucopiaType, TypeRegistrar},
 };
+use cornucopia_client::types::{Field, Kind};
 use error::Error;
 use heck::ToUpperCamelCase;
-use postgres_types::{Field, Kind};
 use std::collections::HashMap;
 
 /// Utils functions to make codegen clearer
@@ -75,24 +75,24 @@ fn domain_fromsql(struct_name: &str, ty_name: &str, ty_schema: &str, borrowed: b
     };
     format!(
         r#"
-    impl<'a> postgres_types::FromSql<'a> for {struct_name}{borrowed_str}{generic_lifetime} {{
+    impl<'a> cornucopia_client::types::FromSql<'a> for {struct_name}{borrowed_str}{generic_lifetime} {{
         fn from_sql(
-            _type: &postgres_types::Type,
+            _type: &cornucopia_client::types::Type,
             buf: &'a [u8],
         ) -> std::result::Result<
             {struct_name}{borrowed_str}{generic_lifetime},
             std::boxed::Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>,
         > {{
             let inner = match *_type.kind() {{
-                postgres_types::Kind::Domain(ref inner) => inner,
+                cornucopia_client::types::Kind::Domain(ref inner) => inner,
                 _ => unreachable!(),
             }};
             let mut buf = buf;
-            let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+            let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
             std::result::Result::Ok({struct_name}{borrowed_str}(
-                postgres_types::private::read_value(inner, &mut buf)?))
+                cornucopia_client::types::private::read_value(inner, &mut buf)?))
         }}
-        fn accepts(type_: &postgres_types::Type) -> bool {{
+        fn accepts(type_: &cornucopia_client::types::Type) -> bool {{
             type_.name() == "{ty_name}" && type_.schema() == "{ty_schema}"
         }}
     }}"#
@@ -115,8 +115,8 @@ fn composite_fromsql(
 
     let read_fields = join_ln(fields.iter().enumerate(), |(index, f)| {
         format!(
-            "let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-    let {} = postgres_types::private::read_value(fields[{}].type_(), &mut buf)?;",
+            "let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
+    let {} = cornucopia_client::types::private::read_value(fields[{}].type_(), &mut buf)?;",
             f.name(),
             index
         )
@@ -124,27 +124,27 @@ fn composite_fromsql(
 
     format!(
         r#"
-    impl<'a> postgres_types::FromSql<'a> for {struct_name}{borrowed_str}{generic_lifetime} {{
+    impl<'a> cornucopia_client::types::FromSql<'a> for {struct_name}{borrowed_str}{generic_lifetime} {{
         fn from_sql(
-            _type: &postgres_types::Type,
+            _type: &cornucopia_client::types::Type,
             buf: &'a [u8],
         ) -> std::result::Result<
             {struct_name}{borrowed_str}{generic_lifetime},
             std::boxed::Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>,
         > {{
             let fields = match *_type.kind() {{
-                postgres_types::Kind::Composite(ref fields) => fields,
+                cornucopia_client::types::Kind::Composite(ref fields) => fields,
                 _ => unreachable!(),
             }};
             let mut buf = buf;
-            let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
+            let num_fields = cornucopia_client::types::private::read_be_i32(&mut buf)?;
             {read_fields}
             std::result::Result::Ok({struct_name}{borrowed_str}  {{
                 {field_names}
             }})
         }}
 
-        fn accepts(type_: &postgres_types::Type) -> bool {{
+        fn accepts(type_: &cornucopia_client::types::Type) -> bool {{
             type_.name() == "{ty_name}" && type_.schema() == "{ty_schema}"
         }}
     }}"#
@@ -195,7 +195,7 @@ fn generate_query_struct(
     let query_struct = format!(
         "pub struct {query_struct_name}Query<'a, C: GenericClient, T> {{
                 client: &'a {client_mut} C,
-                params: [&'a (dyn postgres_types::ToSql + Sync); {params_len}],
+                params: [&'a (dyn cornucopia_client::types::ToSql + Sync); {params_len}],
                 mapper: fn({query_struct_name}{borrowed_str}) -> T,
             }}",
     );
@@ -346,20 +346,38 @@ fn generate_params_struct(
 
     let params_is_copy = params.iter().all(|a| a.ty.is_copy);
     let client_mut = if is_async { "" } else { "mut" };
-    let params_struct_impl = if params_is_copy {
-        format!(
+    let params_struct_impl = if is_async && execute {
+        if params_is_copy {
+            format!(
+                    "impl {query_struct_name}Params {{
+                        pub async fn query<'a, C: GenericClient>(&'a self, client: &'a {client_mut} C) -> {ret_type} {{
+                            {query_name}(client, {param_values}).await
+                        }}
+                    }}")
+        } else {
+            format!(
+                    "impl<'a> {query_struct_name}Params<'a> {{
+                        pub async fn query<C: GenericClient>(&'a self, client: &'a {client_mut} C) -> {ret_type} {{
+                            {query_name}(client, {param_values}).await
+                        }}
+                    }}")
+        }
+    } else {
+        if params_is_copy {
+            format!(
                 "impl {query_struct_name}Params {{
                     pub fn query<'a, C: GenericClient>(&'a self, client: &'a {client_mut} C) -> {ret_type} {{
                         {query_name}(client, {param_values})
                     }}
                 }}")
-    } else {
-        format!(
+        } else {
+            format!(
                 "impl<'a> {query_struct_name}Params<'a> {{
                     pub fn query<C: GenericClient>(&'a self, client: &'a {client_mut} C) -> {ret_type} {{
                         {query_name}(client, {param_values})
                     }}
                 }}")
+        }
     };
     let debug_clone_derive = if params_is_copy {
         "#[derive(Debug, Clone)]"
@@ -481,7 +499,7 @@ fn generate_custom_type(type_registrar: &TypeRegistrar, ty: &CornucopiaType) -> 
         Kind::Enum(variants) => {
             let variants_str = variants.join(",");
             format!(
-                "#[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, Copy, PartialEq, Eq)]
+                "#[derive(Debug, cornucopia_client::types::ToSql, cornucopia_client::types::FromSql, Clone, Copy, PartialEq, Eq)]
                 #[postgres(name = \"{ty_name}\")]
                 pub enum {struct_name} {{ {variants_str} }}",
             )
@@ -492,7 +510,7 @@ fn generate_custom_type(type_registrar: &TypeRegistrar, ty: &CornucopiaType) -> 
             let own_fromsql = domain_fromsql(struct_name, ty_name, ty_schema, false);
             if ty.is_copy {
                 format!(
-                    "#[derive(Debug, Copy,Clone, PartialEq, postgres_types::ToSql)]#[postgres(name = \"{ty_name}\")]
+                    "#[derive(Debug, Copy,Clone, PartialEq, cornucopia_client::types::ToSql)]#[postgres(name = \"{ty_name}\")]
                     pub struct {struct_name} (pub {inner_rust_path_from_ty});{own_fromsql}"
                 )
             } else {
@@ -500,7 +518,7 @@ fn generate_custom_type(type_registrar: &TypeRegistrar, ty: &CornucopiaType) -> 
                 let brw_fromsql = domain_fromsql(struct_name, ty_name, ty_schema, true);
                 let inner_value = inner_ty.owning_call("inner", false);
                 format!(
-                    "#[derive(Debug, Clone, PartialEq, postgres_types::ToSql)]#[postgres(name = \"{ty_name}\")]
+                    "#[derive(Debug, Clone, PartialEq, cornucopia_client::types::ToSql)]#[postgres(name = \"{ty_name}\")]
                     pub struct {struct_name} (pub {inner_rust_path_from_ty});{own_fromsql}
                     pub struct {struct_name}Borrowed<'a> (pub {brw_fields_str});{brw_fromsql}
                     impl<'a> From<{struct_name}Borrowed<'a>> for {struct_name} {{
@@ -526,7 +544,7 @@ fn generate_custom_type(type_registrar: &TypeRegistrar, ty: &CornucopiaType) -> 
 
             if ty.is_copy {
                 format!(
-                    "#[derive(Copy,Debug, postgres_types::ToSql, Clone, PartialEq)]#[postgres(name = \"{ty_name}\")]
+                    "#[derive(Copy,Debug, cornucopia_client::types::ToSql, Clone, PartialEq)]#[postgres(name = \"{ty_name}\")]
                     pub struct {struct_name} {{ {fields_str} }}{own_fromsql}"
                 )
             } else {
@@ -555,7 +573,7 @@ fn generate_custom_type(type_registrar: &TypeRegistrar, ty: &CornucopiaType) -> 
                     )
                 });
                 format!(
-                    "#[derive(Debug, postgres_types::ToSql, Clone, PartialEq)]
+                    "#[derive(Debug, cornucopia_client::types::ToSql, Clone, PartialEq)]
                     #[postgres(name = \"{ty_name}\")]
                     pub struct {struct_name} {{ {fields_str} }}
                     \n{own_fromsql}\n{brw_struct}\n{brw_fromsql}
