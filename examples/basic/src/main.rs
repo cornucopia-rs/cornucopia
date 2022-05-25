@@ -39,7 +39,6 @@ pub async fn main() {
         let transaction = client.transaction().await.unwrap();
         // Insert a book
         insert_book(&transaction, &"The Great Gatsby")
-            .exec()
             .await
             .unwrap();
         // Use a map if needed

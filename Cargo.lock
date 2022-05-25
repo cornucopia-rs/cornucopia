@@ -151,7 +151,6 @@ dependencies = [
  "clap",
  "cornucopia_client",
  "eui48",
- "fallible-iterator",
  "heck",
  "indexmap",
  "pest",
@@ -197,9 +196,9 @@ version = "0.2.2"
 dependencies = [
  "async-trait",
  "deadpool-postgres",
- "fallible-iterator",
  "postgres",
  "postgres-protocol",
+ "postgres-types",
  "tokio",
  "tokio-postgres",
 ]

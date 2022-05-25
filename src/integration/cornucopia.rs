@@ -2,8 +2,8 @@ pub mod types {
     pub mod public {
         #[derive(
             Debug,
-            postgres_types::ToSql,
-            postgres_types::FromSql,
+            cornucopia_client::types::ToSql,
+            cornucopia_client::types::FromSql,
             Clone,
             Copy,
             PartialEq,
@@ -15,16 +15,16 @@ pub mod types {
             Patrick,
             Squidward,
         }
-        #[derive(Debug, postgres_types::ToSql, Clone, PartialEq)]
+        #[derive(Debug, cornucopia_client::types::ToSql, Clone, PartialEq)]
         #[postgres(name = "custom_composite")]
         pub struct CustomComposite {
             pub wow: String,
             pub such_cool: i32,
             pub nice: super::public::SpongebobCharacter,
         }
-        impl<'a> postgres_types::FromSql<'a> for CustomComposite {
+        impl<'a> cornucopia_client::types::FromSql<'a> for CustomComposite {
             fn from_sql(
-                _type: &postgres_types::Type,
+                _type: &cornucopia_client::types::Type,
                 buf: &'a [u8],
             ) -> std::result::Result<
                     CustomComposite,
@@ -33,23 +33,25 @@ pub mod types {
                     >,
                 > {
                 let fields = match *_type.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
+                    cornucopia_client::types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
                 };
                 let mut buf = buf;
-                let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let wow = postgres_types::private::read_value(
+                let num_fields = cornucopia_client::types::private::read_be_i32(
+                    &mut buf,
+                )?;
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
+                let wow = cornucopia_client::types::private::read_value(
                     fields[0].type_(),
                     &mut buf,
                 )?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let such_cool = postgres_types::private::read_value(
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
+                let such_cool = cornucopia_client::types::private::read_value(
                     fields[1].type_(),
                     &mut buf,
                 )?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let nice = postgres_types::private::read_value(
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
+                let nice = cornucopia_client::types::private::read_value(
                     fields[2].type_(),
                     &mut buf,
                 )?;
@@ -59,7 +61,7 @@ pub mod types {
                     nice,
                 })
             }
-            fn accepts(type_: &postgres_types::Type) -> bool {
+            fn accepts(type_: &cornucopia_client::types::Type) -> bool {
                 type_.name() == "custom_composite" && type_.schema() == "public"
             }
         }
@@ -68,9 +70,9 @@ pub mod types {
             pub such_cool: i32,
             pub nice: super::super::types::public::SpongebobCharacter,
         }
-        impl<'a> postgres_types::FromSql<'a> for CustomCompositeBorrowed<'a> {
+        impl<'a> cornucopia_client::types::FromSql<'a> for CustomCompositeBorrowed<'a> {
             fn from_sql(
-                _type: &postgres_types::Type,
+                _type: &cornucopia_client::types::Type,
                 buf: &'a [u8],
             ) -> std::result::Result<
                     CustomCompositeBorrowed<'a>,
@@ -79,23 +81,25 @@ pub mod types {
                     >,
                 > {
                 let fields = match *_type.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
+                    cornucopia_client::types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
                 };
                 let mut buf = buf;
-                let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let wow = postgres_types::private::read_value(
+                let num_fields = cornucopia_client::types::private::read_be_i32(
+                    &mut buf,
+                )?;
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
+                let wow = cornucopia_client::types::private::read_value(
                     fields[0].type_(),
                     &mut buf,
                 )?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let such_cool = postgres_types::private::read_value(
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
+                let such_cool = cornucopia_client::types::private::read_value(
                     fields[1].type_(),
                     &mut buf,
                 )?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let nice = postgres_types::private::read_value(
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
+                let nice = cornucopia_client::types::private::read_value(
                     fields[2].type_(),
                     &mut buf,
                 )?;
@@ -105,7 +109,7 @@ pub mod types {
                     nice,
                 })
             }
-            fn accepts(type_: &postgres_types::Type) -> bool {
+            fn accepts(type_: &cornucopia_client::types::Type) -> bool {
                 type_.name() == "custom_composite" && type_.schema() == "public"
             }
         }
@@ -124,12 +128,12 @@ pub mod types {
                 }
             }
         }
-        #[derive(Debug, Clone, PartialEq, postgres_types::ToSql)]
+        #[derive(Debug, Clone, PartialEq, cornucopia_client::types::ToSql)]
         #[postgres(name = "custom_domain")]
         pub struct CustomDomain(pub Vec<super::super::types::public::CustomComposite>);
-        impl<'a> postgres_types::FromSql<'a> for CustomDomain {
+        impl<'a> cornucopia_client::types::FromSql<'a> for CustomDomain {
             fn from_sql(
-                _type: &postgres_types::Type,
+                _type: &cornucopia_client::types::Type,
                 buf: &'a [u8],
             ) -> std::result::Result<
                     CustomDomain,
@@ -138,16 +142,18 @@ pub mod types {
                     >,
                 > {
                 let inner = match *_type.kind() {
-                    postgres_types::Kind::Domain(ref inner) => inner,
+                    cornucopia_client::types::Kind::Domain(ref inner) => inner,
                     _ => unreachable!(),
                 };
                 let mut buf = buf;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
                 std::result::Result::Ok(
-                    CustomDomain(postgres_types::private::read_value(inner, &mut buf)?),
+                    CustomDomain(
+                        cornucopia_client::types::private::read_value(inner, &mut buf)?,
+                    ),
                 )
             }
-            fn accepts(type_: &postgres_types::Type) -> bool {
+            fn accepts(type_: &cornucopia_client::types::Type) -> bool {
                 type_.name() == "custom_domain" && type_.schema() == "public"
             }
         }
@@ -157,9 +163,9 @@ pub mod types {
                 super::super::types::public::CustomCompositeBorrowed<'a>,
             >,
         );
-        impl<'a> postgres_types::FromSql<'a> for CustomDomainBorrowed<'a> {
+        impl<'a> cornucopia_client::types::FromSql<'a> for CustomDomainBorrowed<'a> {
             fn from_sql(
-                _type: &postgres_types::Type,
+                _type: &cornucopia_client::types::Type,
                 buf: &'a [u8],
             ) -> std::result::Result<
                     CustomDomainBorrowed<'a>,
@@ -168,18 +174,18 @@ pub mod types {
                     >,
                 > {
                 let inner = match *_type.kind() {
-                    postgres_types::Kind::Domain(ref inner) => inner,
+                    cornucopia_client::types::Kind::Domain(ref inner) => inner,
                     _ => unreachable!(),
                 };
                 let mut buf = buf;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
                 std::result::Result::Ok(
                     CustomDomainBorrowed(
-                        postgres_types::private::read_value(inner, &mut buf)?,
+                        cornucopia_client::types::private::read_value(inner, &mut buf)?,
                     ),
                 )
             }
-            fn accepts(type_: &postgres_types::Type) -> bool {
+            fn accepts(type_: &cornucopia_client::types::Type) -> bool {
                 type_.name() == "custom_domain" && type_.schema() == "public"
             }
         }
@@ -188,12 +194,12 @@ pub mod types {
                 Self(inner.map(|v| v.into()).collect())
             }
         }
-        #[derive(Debug, Clone, PartialEq, postgres_types::ToSql)]
+        #[derive(Debug, Clone, PartialEq, cornucopia_client::types::ToSql)]
         #[postgres(name = "my_domain")]
         pub struct MyDomain(pub String);
-        impl<'a> postgres_types::FromSql<'a> for MyDomain {
+        impl<'a> cornucopia_client::types::FromSql<'a> for MyDomain {
             fn from_sql(
-                _type: &postgres_types::Type,
+                _type: &cornucopia_client::types::Type,
                 buf: &'a [u8],
             ) -> std::result::Result<
                     MyDomain,
@@ -202,23 +208,25 @@ pub mod types {
                     >,
                 > {
                 let inner = match *_type.kind() {
-                    postgres_types::Kind::Domain(ref inner) => inner,
+                    cornucopia_client::types::Kind::Domain(ref inner) => inner,
                     _ => unreachable!(),
                 };
                 let mut buf = buf;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
                 std::result::Result::Ok(
-                    MyDomain(postgres_types::private::read_value(inner, &mut buf)?),
+                    MyDomain(
+                        cornucopia_client::types::private::read_value(inner, &mut buf)?,
+                    ),
                 )
             }
-            fn accepts(type_: &postgres_types::Type) -> bool {
+            fn accepts(type_: &cornucopia_client::types::Type) -> bool {
                 type_.name() == "my_domain" && type_.schema() == "public"
             }
         }
         pub struct MyDomainBorrowed<'a>(pub &'a str);
-        impl<'a> postgres_types::FromSql<'a> for MyDomainBorrowed<'a> {
+        impl<'a> cornucopia_client::types::FromSql<'a> for MyDomainBorrowed<'a> {
             fn from_sql(
-                _type: &postgres_types::Type,
+                _type: &cornucopia_client::types::Type,
                 buf: &'a [u8],
             ) -> std::result::Result<
                     MyDomainBorrowed<'a>,
@@ -227,18 +235,18 @@ pub mod types {
                     >,
                 > {
                 let inner = match *_type.kind() {
-                    postgres_types::Kind::Domain(ref inner) => inner,
+                    cornucopia_client::types::Kind::Domain(ref inner) => inner,
                     _ => unreachable!(),
                 };
                 let mut buf = buf;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
                 std::result::Result::Ok(
                     MyDomainBorrowed(
-                        postgres_types::private::read_value(inner, &mut buf)?,
+                        cornucopia_client::types::private::read_value(inner, &mut buf)?,
                     ),
                 )
             }
-            fn accepts(type_: &postgres_types::Type) -> bool {
+            fn accepts(type_: &cornucopia_client::types::Type) -> bool {
                 type_.name() == "my_domain" && type_.schema() == "public"
             }
         }
@@ -247,15 +255,15 @@ pub mod types {
                 Self(inner.into())
             }
         }
-        #[derive(Debug, postgres_types::ToSql, Clone, PartialEq)]
+        #[derive(Debug, cornucopia_client::types::ToSql, Clone, PartialEq)]
         #[postgres(name = "nightmare_composite")]
         pub struct NightmareComposite {
             pub custom: Vec<super::super::types::public::CustomComposite>,
             pub spongebob: Vec<super::super::types::public::SpongebobCharacter>,
         }
-        impl<'a> postgres_types::FromSql<'a> for NightmareComposite {
+        impl<'a> cornucopia_client::types::FromSql<'a> for NightmareComposite {
             fn from_sql(
-                _type: &postgres_types::Type,
+                _type: &cornucopia_client::types::Type,
                 buf: &'a [u8],
             ) -> std::result::Result<
                     NightmareComposite,
@@ -264,18 +272,20 @@ pub mod types {
                     >,
                 > {
                 let fields = match *_type.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
+                    cornucopia_client::types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
                 };
                 let mut buf = buf;
-                let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let custom = postgres_types::private::read_value(
+                let num_fields = cornucopia_client::types::private::read_be_i32(
+                    &mut buf,
+                )?;
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
+                let custom = cornucopia_client::types::private::read_value(
                     fields[0].type_(),
                     &mut buf,
                 )?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let spongebob = postgres_types::private::read_value(
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
+                let spongebob = cornucopia_client::types::private::read_value(
                     fields[1].type_(),
                     &mut buf,
                 )?;
@@ -284,7 +294,7 @@ pub mod types {
                     spongebob,
                 })
             }
-            fn accepts(type_: &postgres_types::Type) -> bool {
+            fn accepts(type_: &cornucopia_client::types::Type) -> bool {
                 type_.name() == "nightmare_composite" && type_.schema() == "public"
             }
         }
@@ -298,9 +308,10 @@ pub mod types {
                 super::super::types::public::SpongebobCharacter,
             >,
         }
-        impl<'a> postgres_types::FromSql<'a> for NightmareCompositeBorrowed<'a> {
+        impl<'a> cornucopia_client::types::FromSql<'a>
+        for NightmareCompositeBorrowed<'a> {
             fn from_sql(
-                _type: &postgres_types::Type,
+                _type: &cornucopia_client::types::Type,
                 buf: &'a [u8],
             ) -> std::result::Result<
                     NightmareCompositeBorrowed<'a>,
@@ -309,18 +320,20 @@ pub mod types {
                     >,
                 > {
                 let fields = match *_type.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
+                    cornucopia_client::types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
                 };
                 let mut buf = buf;
-                let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let custom = postgres_types::private::read_value(
+                let num_fields = cornucopia_client::types::private::read_be_i32(
+                    &mut buf,
+                )?;
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
+                let custom = cornucopia_client::types::private::read_value(
                     fields[0].type_(),
                     &mut buf,
                 )?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let spongebob = postgres_types::private::read_value(
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
+                let spongebob = cornucopia_client::types::private::read_value(
                     fields[1].type_(),
                     &mut buf,
                 )?;
@@ -329,7 +342,7 @@ pub mod types {
                     spongebob,
                 })
             }
-            fn accepts(type_: &postgres_types::Type) -> bool {
+            fn accepts(type_: &cornucopia_client::types::Type) -> bool {
                 type_.name() == "nightmare_composite" && type_.schema() == "public"
             }
         }
@@ -346,15 +359,15 @@ pub mod types {
                 }
             }
         }
-        #[derive(Copy, Debug, postgres_types::ToSql, Clone, PartialEq)]
+        #[derive(Copy, Debug, cornucopia_client::types::ToSql, Clone, PartialEq)]
         #[postgres(name = "copy_composite")]
         pub struct CopyComposite {
             pub first: i32,
             pub second: f64,
         }
-        impl<'a> postgres_types::FromSql<'a> for CopyComposite {
+        impl<'a> cornucopia_client::types::FromSql<'a> for CopyComposite {
             fn from_sql(
-                _type: &postgres_types::Type,
+                _type: &cornucopia_client::types::Type,
                 buf: &'a [u8],
             ) -> std::result::Result<
                     CopyComposite,
@@ -363,24 +376,26 @@ pub mod types {
                     >,
                 > {
                 let fields = match *_type.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
+                    cornucopia_client::types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
                 };
                 let mut buf = buf;
-                let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let first = postgres_types::private::read_value(
+                let num_fields = cornucopia_client::types::private::read_be_i32(
+                    &mut buf,
+                )?;
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
+                let first = cornucopia_client::types::private::read_value(
                     fields[0].type_(),
                     &mut buf,
                 )?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let second = postgres_types::private::read_value(
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
+                let second = cornucopia_client::types::private::read_value(
                     fields[1].type_(),
                     &mut buf,
                 )?;
                 std::result::Result::Ok(CopyComposite { first, second })
             }
-            fn accepts(type_: &postgres_types::Type) -> bool {
+            fn accepts(type_: &cornucopia_client::types::Type) -> bool {
                 type_.name() == "copy_composite" && type_.schema() == "public"
             }
         }
@@ -419,7 +434,7 @@ pub mod queries {
         }
         pub struct AuthorNameStartingWithQuery<'a, C: GenericClient, T> {
             client: &'a mut C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); 1],
+            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 1],
             mapper: fn(AuthorNameStartingWithBorrowed) -> T,
         }
         impl<'a, C, T: 'a> AuthorNameStartingWithQuery<'a, C, T>
@@ -536,8 +551,8 @@ WHERE
             pub timestamp_with_time_zone_: time::OffsetDateTime,
             pub date_: time::Date,
             pub time_: time::Time,
-            pub json_: postgres_types::Json<&'a serde_json::value::RawValue>,
-            pub jsonb_: postgres_types::Json<&'a serde_json::value::RawValue>,
+            pub json_: cornucopia_client::types::Json<&'a serde_json::value::RawValue>,
+            pub jsonb_: cornucopia_client::types::Json<&'a serde_json::value::RawValue>,
             pub uuid_: uuid::Uuid,
             pub inet_: std::net::IpAddr,
             pub macaddr_: eui48::MacAddress,
@@ -577,8 +592,8 @@ WHERE
             pub timestamp_with_time_zone_: time::OffsetDateTime,
             pub date_: time::Date,
             pub time_: time::Time,
-            pub json_: postgres_types::Json<serde_json::Value>,
-            pub jsonb_: postgres_types::Json<serde_json::Value>,
+            pub json_: cornucopia_client::types::Json<serde_json::Value>,
+            pub jsonb_: cornucopia_client::types::Json<serde_json::Value>,
             pub uuid_: uuid::Uuid,
             pub inet_: std::net::IpAddr,
             pub macaddr_: eui48::MacAddress,
@@ -660,10 +675,10 @@ WHERE
                     timestamp_with_time_zone_,
                     date_,
                     time_,
-                    json_: postgres_types::Json(
+                    json_: cornucopia_client::types::Json(
                         serde_json::from_str(json_.0.get()).unwrap(),
                     ),
-                    jsonb_: postgres_types::Json(
+                    jsonb_: cornucopia_client::types::Json(
                         serde_json::from_str(jsonb_.0.get()).unwrap(),
                     ),
                     uuid_,
@@ -674,7 +689,7 @@ WHERE
         }
         pub struct SelectEverythingQuery<'a, C: GenericClient, T> {
             client: &'a mut C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
+            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 0],
             mapper: fn(SelectEverythingBorrowed) -> T,
         }
         impl<'a, C, T: 'a> SelectEverythingQuery<'a, C, T>
@@ -853,8 +868,8 @@ FROM
             pub timestamp_with_time_zone_: time::OffsetDateTime,
             pub date_: time::Date,
             pub time_: time::Time,
-            pub json_: postgres_types::Json<&'a serde_json::value::RawValue>,
-            pub jsonb_: postgres_types::Json<&'a serde_json::value::RawValue>,
+            pub json_: cornucopia_client::types::Json<&'a serde_json::value::RawValue>,
+            pub jsonb_: cornucopia_client::types::Json<&'a serde_json::value::RawValue>,
             pub uuid_: uuid::Uuid,
             pub inet_: std::net::IpAddr,
             pub macaddr_: eui48::MacAddress,
@@ -940,8 +955,8 @@ FROM
             timestamp_with_time_zone_: &'a time::OffsetDateTime,
             date_: &'a time::Date,
             time_: &'a time::Time,
-            json_: &'a postgres_types::Json<&serde_json::value::RawValue>,
-            jsonb_: &'a postgres_types::Json<&serde_json::value::RawValue>,
+            json_: &'a cornucopia_client::types::Json<&serde_json::value::RawValue>,
+            jsonb_: &'a cornucopia_client::types::Json<&serde_json::value::RawValue>,
             uuid_: &'a uuid::Uuid,
             inet_: &'a std::net::IpAddr,
             macaddr_: &'a eui48::MacAddress,
@@ -1056,7 +1071,7 @@ FROM
         }
         pub struct NightmareQuery<'a, C: GenericClient, T> {
             client: &'a mut C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
+            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 0],
             mapper: fn(NightmareBorrowed) -> T,
         }
         impl<'a, C, T: 'a> NightmareQuery<'a, C, T>
@@ -1136,7 +1151,7 @@ FROM
         }
         pub struct CopiesQuery<'a, C: GenericClient, T> {
             client: &'a mut C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
+            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 0],
             mapper: fn(Copies) -> T,
         }
         impl<'a, C, T: 'a> CopiesQuery<'a, C, T>

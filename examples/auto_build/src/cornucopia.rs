@@ -17,7 +17,7 @@ pub mod queries {
         }
         pub struct ExampleQueryQuery<'a, C: GenericClient, T> {
             client: &'a C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
+            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 0],
             mapper: fn(ExampleQueryBorrowed) -> T,
         }
         impl<'a, C, T> ExampleQueryQuery<'a, C, T>
