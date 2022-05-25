@@ -359,7 +359,7 @@ pub mod types {
                 }
             }
         }
-        #[derive(Copy, Debug, cornucopia_client::types::ToSql, Clone, PartialEq)]
+        #[derive(Debug, cornucopia_client::types::ToSql, Copy, Clone, PartialEq)]
         #[postgres(name = "copy_composite")]
         pub struct CopyComposite {
             pub first: i32,
