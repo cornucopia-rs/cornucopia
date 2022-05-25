@@ -134,16 +134,16 @@ pub mod queries {
     pub mod module_2 {
         use futures::{StreamExt, TryStreamExt};
         use cornucopia_client::GenericClient;
-        pub struct AuthorsBorrowed<'a> {
-            pub id: i32,
-            pub name: &'a str,
-            pub country: &'a str,
-        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct Authors {
             pub id: i32,
             pub name: String,
             pub country: String,
+        }
+        pub struct AuthorsBorrowed<'a> {
+            pub id: i32,
+            pub name: &'a str,
+            pub country: &'a str,
         }
         impl<'a> From<AuthorsBorrowed<'a>> for Authors {
             fn from(AuthorsBorrowed { id, name, country }: AuthorsBorrowed<'a>) -> Self {
@@ -230,12 +230,12 @@ FROM
                 mapper: |it| Authors::from(it),
             }
         }
-        pub struct BooksBorrowed<'a> {
-            pub title: &'a str,
-        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct Books {
             pub title: String,
+        }
+        pub struct BooksBorrowed<'a> {
+            pub title: &'a str,
         }
         impl<'a> From<BooksBorrowed<'a>> for Books {
             fn from(BooksBorrowed { title }: BooksBorrowed<'a>) -> Self {
@@ -309,12 +309,12 @@ FROM
                 mapper: |it| Books::from(it),
             }
         }
-        pub struct BooksOptRetParamBorrowed<'a> {
-            pub title: Option<&'a str>,
-        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct BooksOptRetParam {
             pub title: Option<String>,
+        }
+        pub struct BooksOptRetParamBorrowed<'a> {
+            pub title: Option<&'a str>,
         }
         impl<'a> From<BooksOptRetParamBorrowed<'a>> for BooksOptRetParam {
             fn from(
@@ -413,12 +413,12 @@ FROM
                 author_name_by_id(client, &self.id)
             }
         }
-        pub struct AuthorNameByIdBorrowed<'a> {
-            pub name: &'a str,
-        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct AuthorNameById {
             pub name: String,
+        }
+        pub struct AuthorNameByIdBorrowed<'a> {
+            pub name: &'a str,
         }
         impl<'a> From<AuthorNameByIdBorrowed<'a>> for AuthorNameById {
             fn from(
@@ -519,18 +519,18 @@ WHERE
                 author_name_starting_with(client, &self.start_str)
             }
         }
-        pub struct AuthorNameStartingWithBorrowed<'a> {
-            pub authorid: i32,
-            pub name: &'a str,
-            pub bookid: i32,
-            pub title: &'a str,
-        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct AuthorNameStartingWith {
             pub authorid: i32,
             pub name: String,
             pub bookid: i32,
             pub title: String,
+        }
+        pub struct AuthorNameStartingWithBorrowed<'a> {
+            pub authorid: i32,
+            pub name: &'a str,
+            pub bookid: i32,
+            pub title: &'a str,
         }
         impl<'a> From<AuthorNameStartingWithBorrowed<'a>> for AuthorNameStartingWith {
             fn from(
@@ -640,12 +640,12 @@ WHERE
                 mapper: |it| AuthorNameStartingWith::from(it),
             }
         }
-        pub struct ReturnCustomTypeBorrowed<'a> {
-            pub col1: super::super::types::public::CustomCompositeBorrowed<'a>,
-        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct ReturnCustomType {
             pub col1: super::super::types::public::CustomComposite,
+        }
+        pub struct ReturnCustomTypeBorrowed<'a> {
+            pub col1: super::super::types::public::CustomCompositeBorrowed<'a>,
         }
         impl<'a> From<ReturnCustomTypeBorrowed<'a>> for ReturnCustomType {
             fn from(
@@ -826,12 +826,12 @@ WHERE (col1).persona = $1;",
                 mapper: |it| SelectWhereCustomType::from(it),
             }
         }
-        pub struct SelectTranslationsBorrowed<'a> {
-            pub translations: cornucopia_client::ArrayIterator<'a, &'a str>,
-        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct SelectTranslations {
             pub translations: Vec<String>,
+        }
+        pub struct SelectTranslationsBorrowed<'a> {
+            pub translations: cornucopia_client::ArrayIterator<'a, &'a str>,
         }
         impl<'a> From<SelectTranslationsBorrowed<'a>> for SelectTranslations {
             fn from(

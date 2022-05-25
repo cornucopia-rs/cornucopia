@@ -7,7 +7,7 @@ use postgres::Client;
 use serde_json::Map;
 use time::{OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;
-/*
+
 use self::error::Error;
 
 use crate::integration::cornucopia::{
@@ -105,7 +105,7 @@ fn select_everything_test(client: &mut Client) -> Result<(), Error> {
         macaddr_: MacAddress::new([8, 0, 43, 1, 2, 3]),
     };
 
-    assert_eq!(1, params.query(client).exec()?, "inserting one row");
+    assert_eq!(1, params.query(client)?, "inserting one row");
 
     let expected = SelectEverything {
         custom_domain_: vec![CustomComposite {
@@ -185,4 +185,3 @@ mod error {
         Cornucopia(#[from] CornucopiaError),
     }
 }
-*/

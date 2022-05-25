@@ -10,3 +10,7 @@ FROM
 
 --! copies
 SELECT * FROM copy;
+
+--! insert_copy
+INSERT INTO Copy (composite, domain)
+  VALUES (:composite, :domain);

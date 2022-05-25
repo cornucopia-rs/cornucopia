@@ -399,6 +399,35 @@ pub mod types {
                 type_.name() == "copy_composite" && type_.schema() == "public"
             }
         }
+        #[derive(Debug, Copy, Clone, PartialEq, cornucopia_client::types::ToSql)]
+        #[postgres(name = "copy_domain")]
+        pub struct CopyDomain(pub i32);
+        impl<'a> cornucopia_client::types::FromSql<'a> for CopyDomain {
+            fn from_sql(
+                _type: &cornucopia_client::types::Type,
+                buf: &'a [u8],
+            ) -> std::result::Result<
+                    CopyDomain,
+                    std::boxed::Box<
+                        dyn std::error::Error + std::marker::Sync + std::marker::Send,
+                    >,
+                > {
+                let inner = match *_type.kind() {
+                    cornucopia_client::types::Kind::Domain(ref inner) => inner,
+                    _ => unreachable!(),
+                };
+                let mut buf = buf;
+                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
+                std::result::Result::Ok(
+                    CopyDomain(
+                        cornucopia_client::types::private::read_value(inner, &mut buf)?,
+                    ),
+                )
+            }
+            fn accepts(type_: &cornucopia_client::types::Type) -> bool {
+                type_.name() == "copy_domain" && type_.schema() == "public"
+            }
+        }
     }
 }
 pub mod queries {
@@ -416,12 +445,12 @@ pub mod queries {
                 author_name_starting_with(client, &self.start_str)
             }
         }
-        pub struct AuthorNameStartingWithBorrowed<'a> {
-            pub name: &'a str,
-        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct AuthorNameStartingWith {
             pub name: String,
+        }
+        pub struct AuthorNameStartingWithBorrowed<'a> {
+            pub name: &'a str,
         }
         impl<'a> From<AuthorNameStartingWithBorrowed<'a>> for AuthorNameStartingWith {
             fn from(
@@ -511,6 +540,47 @@ WHERE
                 mapper: |it| AuthorNameStartingWith::from(it),
             }
         }
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct SelectEverything {
+            pub custom_domain_: Vec<super::super::types::public::CustomComposite>,
+            pub custom_array_: Vec<super::super::types::public::SpongebobCharacter>,
+            pub domain_: String,
+            pub array_: Vec<bool>,
+            pub bool_: bool,
+            pub bool_opt: Option<bool>,
+            pub boolean_: bool,
+            pub char_: i8,
+            pub smallint_: i16,
+            pub int2_: i16,
+            pub smallserial_: i16,
+            pub serial2_: i16,
+            pub int_: i32,
+            pub int4_: i32,
+            pub serial_: i32,
+            pub serial4_: i32,
+            pub bingint_: i64,
+            pub int8_: i64,
+            pub bigserial_: i64,
+            pub serial8_: i64,
+            pub float4_: f32,
+            pub real_: f32,
+            pub float8_: f64,
+            pub double_precision_: f64,
+            pub text_: String,
+            pub varchar_: String,
+            pub bytea_: Vec<u8>,
+            pub timestamp_: time::PrimitiveDateTime,
+            pub timestamp_without_time_zone_: time::PrimitiveDateTime,
+            pub timestamptz_: time::OffsetDateTime,
+            pub timestamp_with_time_zone_: time::OffsetDateTime,
+            pub date_: time::Date,
+            pub time_: time::Time,
+            pub json_: cornucopia_client::types::Json<serde_json::Value>,
+            pub jsonb_: cornucopia_client::types::Json<serde_json::Value>,
+            pub uuid_: uuid::Uuid,
+            pub inet_: std::net::IpAddr,
+            pub macaddr_: eui48::MacAddress,
+        }
         pub struct SelectEverythingBorrowed<'a> {
             pub custom_domain_: cornucopia_client::ArrayIterator<
                 'a,
@@ -553,47 +623,6 @@ WHERE
             pub time_: time::Time,
             pub json_: cornucopia_client::types::Json<&'a serde_json::value::RawValue>,
             pub jsonb_: cornucopia_client::types::Json<&'a serde_json::value::RawValue>,
-            pub uuid_: uuid::Uuid,
-            pub inet_: std::net::IpAddr,
-            pub macaddr_: eui48::MacAddress,
-        }
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct SelectEverything {
-            pub custom_domain_: Vec<super::super::types::public::CustomComposite>,
-            pub custom_array_: Vec<super::super::types::public::SpongebobCharacter>,
-            pub domain_: String,
-            pub array_: Vec<bool>,
-            pub bool_: bool,
-            pub bool_opt: Option<bool>,
-            pub boolean_: bool,
-            pub char_: i8,
-            pub smallint_: i16,
-            pub int2_: i16,
-            pub smallserial_: i16,
-            pub serial2_: i16,
-            pub int_: i32,
-            pub int4_: i32,
-            pub serial_: i32,
-            pub serial4_: i32,
-            pub bingint_: i64,
-            pub int8_: i64,
-            pub bigserial_: i64,
-            pub serial8_: i64,
-            pub float4_: f32,
-            pub real_: f32,
-            pub float8_: f64,
-            pub double_precision_: f64,
-            pub text_: String,
-            pub varchar_: String,
-            pub bytea_: Vec<u8>,
-            pub timestamp_: time::PrimitiveDateTime,
-            pub timestamp_without_time_zone_: time::PrimitiveDateTime,
-            pub timestamptz_: time::OffsetDateTime,
-            pub timestamp_with_time_zone_: time::OffsetDateTime,
-            pub date_: time::Date,
-            pub time_: time::Time,
-            pub json_: cornucopia_client::types::Json<serde_json::Value>,
-            pub jsonb_: cornucopia_client::types::Json<serde_json::Value>,
             pub uuid_: uuid::Uuid,
             pub inet_: std::net::IpAddr,
             pub macaddr_: eui48::MacAddress,
@@ -1035,13 +1064,6 @@ FROM
   VALUES ($1);")?;
             client.execute(&stmt, &[book_name])
         }
-        pub struct NightmareBorrowed<'a> {
-            pub composite: super::super::types::public::NightmareCompositeBorrowed<'a>,
-            pub name: &'a str,
-            pub names: cornucopia_client::ArrayIterator<'a, &'a str>,
-            pub data: Option<&'a [u8]>,
-            pub datas: Option<cornucopia_client::ArrayIterator<'a, &'a [u8]>>,
-        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct Nightmare {
             pub composite: super::super::types::public::NightmareComposite,
@@ -1049,6 +1071,13 @@ FROM
             pub names: Vec<String>,
             pub data: Option<Vec<u8>>,
             pub datas: Option<Vec<Vec<u8>>>,
+        }
+        pub struct NightmareBorrowed<'a> {
+            pub composite: super::super::types::public::NightmareCompositeBorrowed<'a>,
+            pub name: &'a str,
+            pub names: cornucopia_client::ArrayIterator<'a, &'a str>,
+            pub data: Option<&'a [u8]>,
+            pub datas: Option<cornucopia_client::ArrayIterator<'a, &'a [u8]>>,
         }
         impl<'a> From<NightmareBorrowed<'a>> for Nightmare {
             fn from(
@@ -1214,6 +1243,30 @@ FROM
                 params: [],
                 mapper: |it| Copies::from(it),
             }
+        }
+        #[derive(Debug, Clone)]
+        pub struct InsertCopyParams {
+            pub composite: super::super::types::public::CopyComposite,
+            pub domain: super::super::types::public::CopyDomain,
+        }
+        impl InsertCopyParams {
+            pub fn query<'a, C: GenericClient>(
+                &'a self,
+                client: &'a mut C,
+            ) -> Result<u64, postgres::Error> {
+                insert_copy(client, &self.composite, &self.domain)
+            }
+        }
+        pub fn insert_copy<'a, C: GenericClient>(
+            client: &'a mut C,
+            composite: &'a super::super::types::public::CopyComposite,
+            domain: &'a super::super::types::public::CopyDomain,
+        ) -> Result<u64, postgres::Error> {
+            let stmt = client
+                .prepare("INSERT INTO Copy (composite, domain)
+  VALUES ($1, $2);
+")?;
+            client.execute(&stmt, &[composite, domain])
         }
     }
 }
