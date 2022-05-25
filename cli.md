@@ -79,6 +79,9 @@ OPTIONS:
     -q, --queries-path <QUERIES_PATH>
             Folder containing the queries [default: queries/]
 
+        --sync
+            Generate synchronous rust code
+
 SUBCOMMANDS:
     help    Print this message or the help of the given subcommand(s)
     live    Generate your modules against your own db
