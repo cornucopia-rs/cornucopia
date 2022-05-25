@@ -102,7 +102,7 @@ fn run_test(
                 cornucopia::generate_live(client, "queries", None, false)?;
                 Ok(())
             })();
-            
+
             let err = result.err().map(|e| e.to_string()).unwrap_or_default();
             if err.trim() != test.error.trim() {
                 successful = false;
