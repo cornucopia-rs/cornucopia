@@ -30,7 +30,7 @@ pub struct Test<'a> {
 
 fn main() -> ExitCode {
     let args = Args::parse();
-    if run_test(args.apply) {
+    if test(args.apply) {
         ExitCode::SUCCESS
     } else {
         ExitCode::FAILURE
@@ -38,7 +38,19 @@ fn main() -> ExitCode {
 }
 
 // Run test, return true if all test are successful
-fn run_test(apply: bool) -> bool {
+fn test(apply: bool) -> bool {
+    cornucopia::container::setup(false).unwrap();
+    let mut client = cornucopia::conn::cornucopia_conn().unwrap();
+    let result = run_test(&mut client, apply);
+    cornucopia::container::cleanup(false).unwrap();
+    return result.unwrap();
+}
+
+// Run test, return true if all test are successful
+fn run_test(
+    client: &mut postgres::Client,
+    apply: bool,
+) -> Result<bool, Box<dyn std::error::Error>> {
     let mut successful = true;
 
     let got_msg = if apply {
@@ -52,44 +64,46 @@ fn run_test(apply: bool) -> bool {
         "Expected:".bright_black()
     };
 
-    // TODO reuse same connection using cornucopia lib API
-
     let original_pwd = std::env::current_dir().unwrap();
-    for file in std::fs::read_dir("fixtures").unwrap() {
-        let file = file.unwrap();
+    for file in std::fs::read_dir("fixtures")? {
+        let file = file?;
         let name = file.file_name().to_string_lossy().to_string();
-        let content = std::fs::read_to_string(file.path()).unwrap();
-        let mut suite: TestSuite = toml::from_str(&content).unwrap();
+        let content = std::fs::read_to_string(file.path())?;
+        let mut suite: TestSuite = toml::from_str(&content)?;
 
         println!("{}", name.magenta());
         for test in &mut suite.test {
             // Generate file tree path
-            let temp_dir = tempfile::tempdir().unwrap();
+            let temp_dir = tempfile::tempdir()?;
+
+            // Reset db
+            client.batch_execute("DROP SCHEMA public CASCADE;CREATE SCHEMA public;")?;
 
             // We need to change current dir for error path to always be the same
-            std::env::set_current_dir(&temp_dir).unwrap();
+            std::env::set_current_dir(&temp_dir)?;
 
             // Generate migrations files
-            std::fs::create_dir("migrations").unwrap();
+            std::fs::create_dir("migrations")?;
             if let Some(migration) = test.migration {
                 let name = test.migration_name.unwrap_or("1653210840_first.sql");
-                std::fs::write(&format!("migrations/{name}"), migration).unwrap();
+                std::fs::write(&format!("migrations/{name}"), migration)?;
             }
 
             // generate queries files
-            std::fs::create_dir("queries").unwrap();
+            std::fs::create_dir("queries")?;
             if let Some(query) = test.query {
                 let name = test.query_name.unwrap_or("module_1.sql");
-                std::fs::write(&format!("queries/{name}"), query).unwrap();
+                std::fs::write(&format!("queries/{name}"), query)?;
             }
 
-            // Run command
-            let output = std::process::Command::new("cornucopia")
-                .arg("generate")
-                .output()
-                .unwrap();
-
-            let err = String::from_utf8(output.stderr).unwrap();
+            // Run codegen
+            let result: Result<(), cornucopia::Error> = (|| {
+                cornucopia::run_migrations(client, "migrations")?;
+                cornucopia::generate_live(client, "queries", None, false)?;
+                Ok(())
+            })();
+            
+            let err = result.err().map(|e| e.to_string()).unwrap_or_default();
             if err.trim() != test.error.trim() {
                 successful = false;
                 println!(
@@ -107,24 +121,24 @@ fn run_test(apply: bool) -> bool {
             if apply {
                 test.error = Cow::Owned(err.trim().to_string())
             }
-            std::env::set_current_dir(&original_pwd).unwrap();
+            std::env::set_current_dir(&original_pwd)?;
         }
 
         if apply {
             // Format test descriptor and update error message if needed
-            let edited = toml::to_string_pretty(&suite).unwrap();
-            std::fs::write(file.path(), edited).unwrap()
+            let edited = toml::to_string_pretty(&suite)?;
+            std::fs::write(file.path(), edited)?;
         }
     }
-    return successful;
+    Ok(successful)
 }
 
 #[cfg(test)]
 mod test {
-    use crate::run_test;
+    use crate::test;
 
     #[test]
     fn run() {
-        assert!(run_test(false))
+        assert!(test(false))
     }
 }

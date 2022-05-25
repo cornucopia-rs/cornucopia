@@ -11,3 +11,5 @@ toml = "0.5.9"
 serde = { version = "1.0.137", features = ["derive"] }
 owo-colors = "3.4.0"
 clap = { version = "3.1.18", features = ["derive"] }
+cornucopia = { path = "../" }
+postgres = "0.19.3"

@@ -480,7 +480,9 @@ name = "integration"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "cornucopia",
  "owo-colors",
+ "postgres",
  "serde",
  "tempfile",
  "toml",
