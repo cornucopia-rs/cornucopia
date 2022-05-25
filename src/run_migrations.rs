@@ -42,11 +42,7 @@ fn create_migration_table(client: &mut Client) -> Result<(), postgres::Error> {
     Ok(())
 }
 
-fn is_installed(
-    client: &mut Client,
-    timestamp: &i64,
-    name: &str,
-) -> Result<bool, postgres::Error> {
+fn is_installed(client: &mut Client, timestamp: &i64, name: &str) -> Result<bool, postgres::Error> {
     let is_installed: bool = client
         .query_one(
             "select EXISTS(
@@ -76,8 +72,8 @@ pub(crate) mod error {
     use std::{error::Error as ErrorTrait, fmt::Display};
 
     use super::super::read_migrations::error::Error as MigrationError;
-    use thiserror::Error as ThisError;
     use postgres::error::ErrorPosition;
+    use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError)]
     #[error("{0}")]
