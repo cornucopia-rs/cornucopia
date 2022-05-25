@@ -77,13 +77,13 @@ pub(crate) mod error {
 
     #[derive(Debug, ThisError)]
     #[error("{0}")]
-    pub(crate) enum ErrorVariant {
+    pub enum ErrorVariant {
         ReadMigration(#[from] MigrationError),
         Db(#[from] postgres::Error),
     }
 
     #[derive(Debug)]
-    pub(crate) struct Error {
+    pub struct Error {
         path: String,
         line: Option<usize>,
         err: ErrorVariant,

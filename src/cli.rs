@@ -1,17 +1,8 @@
-use std::path::Path;
-
 use crate::{
-    codegen::generate,
-    conn::{self, cornucopia_conn, from_url},
-    container,
-    error::Error,
-    prepare_queries::prepare,
-    read_queries::{read_query_modules, Module},
-    run_migrations::run_migrations,
-    type_registrar::TypeRegistrar,
+    conn, container, error::Error, generate_live, generate_managed, new_migration, run_migrations,
 };
 use clap::{Parser, Subcommand};
-use time::OffsetDateTime;
+
 /// Command line interface to interact with Cornucopia SQL.
 #[derive(Parser, Debug)]
 #[clap(version)]
@@ -75,7 +66,7 @@ enum GenerateLiveAction {
 }
 
 // Main entrypoint of the CLI. Parses the args and calls the appropriate routines.
-pub(crate) fn run() -> Result<(), Error> {
+pub fn run() -> Result<(), Error> {
     let args = Args::parse();
 
     match args.action {
@@ -83,22 +74,10 @@ pub(crate) fn run() -> Result<(), Error> {
             action,
             migrations_path,
         } => match action {
-            MigrationsAction::New { name } => {
-                // Create a timestamp of the current time.
-                let unix_ts = OffsetDateTime::now_utc().unix_timestamp();
-                // Format the target file name
-                let file_path =
-                    Path::new(&migrations_path).join(format!("{}_{}.sql", unix_ts, name));
-                // Write file with header
-                std::fs::write(file_path, "-- Write your migration SQL here\n")?;
-                Ok(())
-            }
+            MigrationsAction::New { name } => new_migration(&migrations_path, &name),
             MigrationsAction::Run { url } => {
-                // Runs all migrations at the target url
                 let mut client = conn::from_url(&url)?;
-                run_migrations(&mut client, &migrations_path)?;
-
-                Ok(())
+                run_migrations(&mut client, &migrations_path)
             }
         },
         Action::Generate {
@@ -109,24 +88,18 @@ pub(crate) fn run() -> Result<(), Error> {
             destination,
             sync,
         } => {
-            let mut type_registrar = TypeRegistrar::default();
             match action {
                 Some(GenerateLiveAction::Live { url }) => {
-                    let modules = read_query_modules(&queries_path)?;
-                    let mut client = from_url(&url)?;
-                    let modules = prepare(&mut client, &mut type_registrar, modules)?;
-                    generate(&type_registrar, modules, &destination, !sync)?;
+                    let mut client = conn::from_url(&url)?;
+                    generate_live(&mut client, &queries_path, Some(&destination), !sync)?;
                 }
                 None => {
-                    let modules = read_query_modules(&queries_path)?;
-                    container::setup(podman)?;
                     // Run the generate command. If the command is unsuccessful, cleanup Cornucopia's container
-                    if let Err(e) = generate_action(
-                        &mut type_registrar,
-                        modules,
-                        podman,
+                    if let Err(e) = generate_managed(
+                        &queries_path,
                         &migrations_path,
-                        &destination,
+                        Some(&destination),
+                        podman,
                         !sync,
                     ) {
                         container::cleanup(podman)?;
@@ -138,22 +111,4 @@ pub(crate) fn run() -> Result<(), Error> {
             Ok(())
         }
     }
-}
-
-/// Performs the `generate` CLI command
-fn generate_action(
-    type_registrar: &mut TypeRegistrar,
-    modules: Vec<Module>,
-    podman: bool,
-    migrations_path: &str,
-    destination: &str,
-    is_async: bool,
-) -> Result<(), Error> {
-    let mut client = cornucopia_conn()?;
-    run_migrations(&mut client, migrations_path)?;
-    let prepared_modules = prepare(&mut client, type_registrar, modules)?;
-    generate(type_registrar, prepared_modules, destination, is_async)?;
-    container::cleanup(podman)?;
-
-    Ok(())
 }

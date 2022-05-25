@@ -11,3 +11,4 @@ tokio-postgres = "0.7.6"
 cornucopia_client = { path = "../../cornucopia_client" }
 deadpool-postgres = "0.10.2"
 futures = "0.3.21"
+postgres-types = "0.2.3"

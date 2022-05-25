@@ -1,7 +1,4 @@
-use self::{
-    error::WriteFileError,
-    utils::{join_comma, join_comma_iter, join_ln},
-};
+use self::utils::{join_comma, join_comma_iter, join_ln};
 use super::prepare_queries::PreparedModule;
 use crate::{
     prepare_queries::{PreparedColumn, PreparedParameter, PreparedQuery},
@@ -653,9 +650,8 @@ fn generate_query(type_registrar: &TypeRegistrar, query: &PreparedQuery, is_asyn
 pub(crate) fn generate(
     type_registrar: &TypeRegistrar,
     modules: Vec<PreparedModule>,
-    destination: &str,
     is_async: bool,
-) -> Result<(), Error> {
+) -> Result<String, Error> {
     let import = if is_async {
         "use futures::{{StreamExt, TryStreamExt}};use cornucopia_client::GenericClient;"
     } else {
@@ -673,16 +669,7 @@ pub(crate) fn generate(
     let generated_modules =
         format!("{top_level_comment}\n\n{type_modules_str}\n\n{query_modules_string}");
 
-    let formatted = prettyplease::unparse(&syn::parse_str(&generated_modules)?);
-
-    std::fs::write(destination, formatted).map_err(|err| {
-        Error::Io(WriteFileError {
-            err,
-            path: String::from(destination),
-        })
-    })?;
-
-    Ok(())
+    Ok(prettyplease::unparse(&syn::parse_str(&generated_modules)?))
 }
 
 pub(crate) mod error {
@@ -690,14 +677,14 @@ pub(crate) mod error {
 
     #[derive(Debug, ThisError)]
     #[error("{0}")]
-    pub(crate) enum Error {
+    pub enum Error {
         Io(#[from] WriteFileError),
         Fmt(#[from] syn::parse::Error),
     }
 
     #[derive(Debug, ThisError)]
     #[error("Error while trying to write to destination file \"{path}\": {err}.")]
-    pub(crate) struct WriteFileError {
+    pub struct WriteFileError {
         pub(crate) err: std::io::Error,
         pub(crate) path: String,
     }

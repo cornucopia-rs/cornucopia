@@ -4,14 +4,14 @@ use std::process::{Command, Stdio};
 use self::error::{RemoveContainerError, RunContainerError, StopContainerError};
 
 /// Starts Cornucopia's database container and wait until it reports healthy.
-pub(crate) fn setup(podman: bool) -> Result<(), Error> {
+pub fn setup(podman: bool) -> Result<(), Error> {
     spawn_container(podman)?;
     healthcheck(podman, 120, 1000)?;
     Ok(())
 }
 
 /// Stop and remove a container and its volume.
-pub(crate) fn cleanup(podman: bool) -> Result<(), Error> {
+pub fn cleanup(podman: bool) -> Result<(), Error> {
     stop_container(podman)?;
     remove_container(podman)?;
     Ok(())
@@ -117,7 +117,7 @@ pub(crate) mod error {
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError)]
-    pub(crate) enum Error {
+    pub enum Error {
         #[error("Couldn't start database container ({0}). If you are using `docker`, please check that the daemon is up-and-running.")]
         RunContainer(#[from] RunContainerError),
         #[error("Encountered error while probing database container health. If you are using `docker`, please check that the daemon is up-and-running.")]
@@ -131,7 +131,7 @@ pub(crate) mod error {
     }
 
     #[derive(Debug, ThisError)]
-    pub(crate) enum RunContainerError {
+    pub enum RunContainerError {
         #[error("{0}")]
         Io(#[from] std::io::Error),
         #[error("command returned with an error status")]
@@ -139,7 +139,7 @@ pub(crate) mod error {
     }
 
     #[derive(Debug, ThisError)]
-    pub(crate) enum StopContainerError {
+    pub enum StopContainerError {
         #[error("{0}")]
         Io(#[from] std::io::Error),
         #[error("command returned with an error status")]
@@ -147,7 +147,7 @@ pub(crate) mod error {
     }
 
     #[derive(Debug, ThisError)]
-    pub(crate) enum RemoveContainerError {
+    pub enum RemoveContainerError {
         #[error("{0}")]
         Io(#[from] std::io::Error),
         #[error("command returned with an error status")]

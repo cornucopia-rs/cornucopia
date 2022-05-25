@@ -262,7 +262,7 @@ pub(crate) mod error {
     }
 
     #[derive(Debug)]
-    pub(crate) struct Error {
+    pub struct Error {
         pub(crate) query_name: String,
         pub(crate) query_start_line: Option<usize>,
         pub(crate) err: ErrorVariant,
