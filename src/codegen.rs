@@ -362,22 +362,20 @@ fn generate_params_struct(
                         }}
                     }}")
         }
-    } else {
-        if params_is_copy {
-            format!(
+    } else if params_is_copy {
+        format!(
                 "impl {query_struct_name}Params {{
                     pub fn query<'a, C: GenericClient>(&'a self, client: &'a {client_mut} C) -> {ret_type} {{
                         {query_name}(client, {param_values})
                     }}
                 }}")
-        } else {
-            format!(
+    } else {
+        format!(
                 "impl<'a> {query_struct_name}Params<'a> {{
                     pub fn query<C: GenericClient>(&'a self, client: &'a {client_mut} C) -> {ret_type} {{
                         {query_name}(client, {param_values})
                     }}
                 }}")
-        }
     };
     let debug_clone_derive = if params_is_copy {
         "#[derive(Debug, Clone)]"
