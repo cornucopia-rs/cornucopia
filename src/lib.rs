@@ -1,7 +1,10 @@
-pub(crate) mod cli;
+pub mod cli;
+pub mod conn;
+pub mod container;
+
+pub use error::Error;
+
 pub(crate) mod codegen;
-pub(crate) mod conn;
-pub(crate) mod container;
 pub(crate) mod error;
 pub(crate) mod integration;
 pub(crate) mod parser;
@@ -21,10 +24,7 @@ use std::path::Path;
 use time::OffsetDateTime;
 use type_registrar::TypeRegistrar;
 
-pub use cli::run;
-pub use error::Error;
-
-/// Runs the migrations given at `migrations_path` at the specified `url`.
+/// Runs the migrations at `migrations_path`.
 pub fn run_migrations(client: &mut Client, migrations_path: &str) -> Result<(), Error> {
     Ok(crate::run_migrations::run_migrations(
         client,
@@ -51,8 +51,8 @@ pub fn new_migration(migrations_path: &str, name: &str) -> Result<(), Error> {
     )
 }
 
-/// Generates your cornucopia queries residing in `queries_path` against the database
-/// at `url`. If some `destination` is given, the generated code will be written at that path.
+/// Generates your cornucopia queries residing in `queries_path`.
+/// If some `destination` is given, the generated code will be written at that path.
 pub fn generate_live(
     client: &mut Client,
     queries_path: &str,
@@ -77,7 +77,6 @@ pub fn generate_live(
 /// `migrations_path` folder.
 /// If some `destination` is given, the generated code will be written at that path.
 pub fn generate_managed(
-    client: &mut Client,
     queries_path: &str,
     migrations_path: &str,
     destination: Option<&str>,
@@ -88,8 +87,9 @@ pub fn generate_managed(
 
     let modules = read_query_modules(queries_path)?;
     container::setup(podman)?;
-    run_migrations_internal(client, migrations_path)?;
-    let prepared_modules = prepare(client, &mut type_registrar, modules)?;
+    let mut client = conn::cornucopia_conn()?;
+    run_migrations_internal(&mut client, migrations_path)?;
+    let prepared_modules = prepare(&mut client, &mut type_registrar, modules)?;
     let generated_code = generate_internal(&type_registrar, prepared_modules, is_async)?;
     container::cleanup(podman)?;
 
