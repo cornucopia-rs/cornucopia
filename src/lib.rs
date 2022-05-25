@@ -12,22 +12,21 @@ pub(crate) mod run_migrations;
 pub(crate) mod type_registrar;
 
 use codegen::generate as generate_internal;
-use conn::cornucopia_conn;
 use error::{NewMigrationError, WriteCodeGenFileError};
 use prepare_queries::prepare;
 use read_queries::read_query_modules;
 use run_migrations::run_migrations as run_migrations_internal;
 use std::path::Path;
 use time::OffsetDateTime;
+use tokio_postgres::Client;
 use type_registrar::TypeRegistrar;
 
 pub use cli::run;
 pub use error::Error;
 
 /// Runs the migrations given at `migrations_path` at the specified `url`.
-pub async fn run_migrations(url: &str, migrations_path: &str) -> Result<(), Error> {
-    let client = conn::from_url(url).await?;
-    Ok(crate::run_migrations::run_migrations(&client, migrations_path).await?)
+pub async fn run_migrations(client: &Client, migrations_path: &str) -> Result<(), Error> {
+    Ok(crate::run_migrations::run_migrations(client, migrations_path).await?)
 }
 
 /// Creates a new migration file at the specified `migrations_path`.
@@ -52,15 +51,14 @@ pub async fn new_migration(migrations_path: &str, name: &str) -> Result<(), Erro
 /// Generates your cornucopia queries residing in `queries_path` against the database
 /// at `url`. If some `destination` is given, the generated code will be written at that path.
 pub async fn generate_live(
-    url: &str,
+    client: &Client,
     queries_path: &str,
     destination: Option<&str>,
 ) -> Result<String, Error> {
     let mut type_registrar = TypeRegistrar::default();
 
     let modules = read_query_modules(queries_path)?;
-    let client = conn::from_url(url).await?;
-    let prepared_modules = prepare(&client, &mut type_registrar, modules).await?;
+    let prepared_modules = prepare(client, &mut type_registrar, modules).await?;
     let generated_code = generate_internal(&type_registrar, prepared_modules)?;
 
     if let Some(d) = destination {
@@ -75,6 +73,7 @@ pub async fn generate_live(
 /// `migrations_path` folder.
 /// If some `destination` is given, the generated code will be written at that path.
 pub async fn generate_managed(
+    client: &Client,
     queries_path: &str,
     migrations_path: &str,
     destination: Option<&str>,
@@ -84,9 +83,8 @@ pub async fn generate_managed(
 
     let modules = read_query_modules(queries_path)?;
     container::setup(podman)?;
-    let client = cornucopia_conn().await?;
-    run_migrations_internal(&client, migrations_path).await?;
-    let prepared_modules = prepare(&client, &mut type_registrar, modules).await?;
+    run_migrations_internal(client, migrations_path).await?;
+    let prepared_modules = prepare(client, &mut type_registrar, modules).await?;
     let generated_code = generate_internal(&type_registrar, prepared_modules)?;
     container::cleanup(podman)?;
 

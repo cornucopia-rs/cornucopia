@@ -1,5 +1,8 @@
 use crate::{
-    container, error::Error, generate_live, generate_managed, new_migration, run_migrations,
+    conn::{self, cornucopia_conn},
+    container,
+    error::Error,
+    generate_live, generate_managed, new_migration, run_migrations,
 };
 use clap::{Parser, Subcommand};
 
@@ -72,7 +75,10 @@ pub async fn run() -> Result<(), Error> {
             migrations_path,
         } => match action {
             MigrationsAction::New { name } => new_migration(&migrations_path, &name).await,
-            MigrationsAction::Run { url } => run_migrations(&url, &migrations_path).await,
+            MigrationsAction::Run { url } => {
+                let client = conn::from_url(&url).await?;
+                run_migrations(&client, &migrations_path).await
+            }
         },
         Action::Generate {
             action,
@@ -83,11 +89,15 @@ pub async fn run() -> Result<(), Error> {
         } => {
             match action {
                 Some(GenerateLiveAction::Live { url }) => {
-                    generate_live(&url, &queries_path, Some(&destination)).await?;
+                    let client = conn::from_url(&url).await?;
+                    generate_live(&client, &queries_path, Some(&destination)).await?;
                 }
                 None => {
+                    let client = cornucopia_conn().await?;
+
                     // Run the generate command. If the command is unsuccessful, cleanup Cornucopia's container
                     if let Err(e) = generate_managed(
+                        &client,
                         &queries_path,
                         &migrations_path,
                         Some(&destination),
