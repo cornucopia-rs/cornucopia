@@ -4,14 +4,14 @@ use std::process::{Command, Stdio};
 use self::error::{RemoveContainerError, RunContainerError, StopContainerError};
 
 /// Starts Cornucopia's database container and wait until it reports healthy.
-pub(crate) fn setup(podman: bool) -> Result<(), Error> {
+pub fn setup(podman: bool) -> Result<(), Error> {
     spawn_container(podman)?;
     healthcheck(podman, 120, 1000)?;
     Ok(())
 }
 
 /// Stop and remove a container and its volume.
-pub(crate) fn cleanup(podman: bool) -> Result<(), Error> {
+pub fn cleanup(podman: bool) -> Result<(), Error> {
     stop_container(podman)?;
     remove_container(podman)?;
     Ok(())

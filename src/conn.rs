@@ -6,7 +6,7 @@ pub(crate) fn from_url(url: &str) -> Result<Client, Error> {
 }
 
 /// Create a non-TLS connection for usage internal to Cornucopia.
-pub(crate) fn cornucopia_conn() -> Result<Client, Error> {
+pub fn cornucopia_conn() -> Result<Client, Error> {
     Config::new()
         .user("postgres")
         .password("postgres")
