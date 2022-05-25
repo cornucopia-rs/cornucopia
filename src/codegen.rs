@@ -643,7 +643,7 @@ pub(crate) fn generate(
         gen!(w, "pub mod {} {{ {import} {queries_string} }}", module.name)
     });
     gen!(&mut buff, "pub mod queries {{ {} }}", query_modules);
-    
+
     Ok(prettyplease::unparse(&syn::parse_str(&buff)?))
 }
 
