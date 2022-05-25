@@ -1,8 +1,5 @@
 use crate::{
-    conn::{self, cornucopia_conn},
-    container,
-    error::Error,
-    generate_live, generate_managed, new_migration, run_migrations,
+    conn, container, error::Error, generate_live, generate_managed, new_migration, run_migrations,
 };
 use clap::{Parser, Subcommand};
 
@@ -97,11 +94,8 @@ pub fn run() -> Result<(), Error> {
                     generate_live(&mut client, &queries_path, Some(&destination), !sync)?;
                 }
                 None => {
-                    let mut client = cornucopia_conn()?;
-
                     // Run the generate command. If the command is unsuccessful, cleanup Cornucopia's container
                     if let Err(e) = generate_managed(
-                        &mut client,
                         &queries_path,
                         &migrations_path,
                         Some(&destination),
