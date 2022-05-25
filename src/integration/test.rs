@@ -1,13 +1,14 @@
 use std::net::{IpAddr, Ipv4Addr};
 
-use error::Error;
+//use error::Error;
 use eui48::MacAddress;
-use futures::StreamExt;
+use postgres::Client;
 use postgres_types::Json;
 use serde_json::Map;
 use time::{OffsetDateTime, PrimitiveDateTime};
-use tokio_postgres::Client;
 use uuid::Uuid;
+/*
+use self::error::Error;
 
 use crate::integration::cornucopia::{
     self,
@@ -15,41 +16,41 @@ use crate::integration::cornucopia::{
     types::public::{CustomComposite, CustomDomain, MyDomain, SpongebobCharacter},
 };
 
-async fn setup() -> Result<Client, crate::error::Error> {
+fn setup() -> Result<Client, crate::error::Error> {
     use crate::run_migrations::run_migrations;
     use crate::{conn::cornucopia_conn, container};
 
     container::setup(true)?;
-    let client = cornucopia_conn().await?;
-    run_migrations(&client, "src/integration/migrations").await?;
+    let mut client = cornucopia_conn()?;
+    run_migrations(&mut client, "src/integration/migrations")?;
 
     Ok(client)
 }
 
-async fn teardown() -> Result<(), crate::error::Error> {
+fn teardown() -> Result<(), crate::error::Error> {
     use crate::container;
     container::cleanup(true)?;
     Ok(())
 }
 
-async fn integration() -> Result<(), Error> {
-    let client = setup().await?;
-    select_everything_test(&client).await?;
-    teardown().await?;
+fn integration() -> Result<(), Error> {
+    let mut client = setup()?;
+    select_everything_test(&mut client)?;
+    teardown()?;
 
     Ok(())
 }
 
-#[tokio::test]
+#[test]
 
-async fn integration_test() {
-    if let Err(e) = integration().await {
-        let _ = teardown().await;
+fn integration_test() {
+    if let Err(e) = integration() {
+        let _ = teardown();
         panic!("{:?}", e)
     }
 }
 
-async fn select_everything_test(client: &Client) -> Result<(), Error> {
+fn select_everything_test(client: &mut Client) -> Result<(), Error> {
     let primitive_datetime_format =
         time::format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]").unwrap();
     let primitive_datetime =
@@ -104,7 +105,7 @@ async fn select_everything_test(client: &Client) -> Result<(), Error> {
         macaddr_: MacAddress::new([8, 0, 43, 1, 2, 3]),
     };
 
-    assert_eq!(1, params.query(client).exec().await?, "inserting one row");
+    assert_eq!(1, params.query(client).exec()?, "inserting one row");
 
     let expected = SelectEverything {
         custom_domain_: vec![CustomComposite {
@@ -150,7 +151,7 @@ async fn select_everything_test(client: &Client) -> Result<(), Error> {
         inet_: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
         macaddr_: MacAddress::new([8, 0, 43, 1, 2, 3]),
     };
-    let actual = select_everything(client).one().await?;
+    let actual = select_everything(client).one()?;
 
     assert_eq!(expected, actual);
 
@@ -170,8 +171,8 @@ fn assert_eq<T: std::fmt::Debug + PartialEq>(expected: T, actual: T) -> Result<(
 
 mod error {
     use crate::error::Error as CornucopiaError;
+    use postgres::Error as DbError;
     use thiserror::Error as ThisError;
-    use tokio_postgres::Error as DbError;
     #[derive(Debug, ThisError)]
     #[error("error occured during integration testing")]
     pub(crate) enum Error {
@@ -184,3 +185,4 @@ mod error {
         Cornucopia(#[from] CornucopiaError),
     }
 }
+*/

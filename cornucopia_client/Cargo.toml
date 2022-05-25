@@ -16,6 +16,7 @@ keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 tokio = { version = "1.18.1", features = ["full"] }
 deadpool-postgres = "0.10.2"
 tokio-postgres = "0.7.6"
+postgres = "0.19.3"
 async-trait = "0.1.53"
 fallible-iterator = "0.2.0"
 postgres-protocol = "0.6.4"

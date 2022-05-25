@@ -14,9 +14,8 @@ pub(crate) mod type_registrar;
 use crate::cli::run;
 use crate::error::Error;
 
-#[tokio::main]
-async fn main() -> Result<(), Error> {
-    let result = run().await;
+fn main() -> Result<(), Error> {
+    let result = run();
     if let Err(e) = &result {
         eprintln!("{e}");
         std::process::exit(1);

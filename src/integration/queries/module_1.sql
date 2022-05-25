@@ -8,3 +8,5 @@ SELECT
 FROM
   nightmare;
 
+--! copies
+SELECT * FROM copy;

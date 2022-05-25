@@ -9,7 +9,7 @@ use crate::{
 };
 use error::Error;
 use error::ErrorVariant;
-use tokio_postgres::Client;
+use postgres::Client;
 
 /// This data structure is used by Cornucopia to generate all constructs related to this particular query.
 #[derive(Debug)]
@@ -58,27 +58,27 @@ where
 }
 
 /// Prepares all modules
-pub(crate) async fn prepare(
-    client: &Client,
+pub(crate) fn prepare(
+    client: &mut Client,
     type_registrar: &mut TypeRegistrar,
     modules: Vec<Module>,
 ) -> Result<Vec<PreparedModule>, Error> {
     let mut prepared_modules = Vec::new();
     for module in modules {
-        prepared_modules.push(prepare_module(client, module, type_registrar).await?);
+        prepared_modules.push(prepare_module(client, module, type_registrar)?);
     }
     Ok(prepared_modules)
 }
 
 /// Prepares all queries in this module
-async fn prepare_module(
-    client: &Client,
+fn prepare_module(
+    client: &mut Client,
     module: Module,
     type_registrar: &mut TypeRegistrar,
 ) -> Result<PreparedModule, Error> {
     let mut queries = Vec::new();
     for query in module.queries {
-        queries.push(prepare_query(client, type_registrar, query, &module.path).await?);
+        queries.push(prepare_query(client, type_registrar, query, &module.path)?);
     }
     Ok(PreparedModule {
         name: module.name,
@@ -87,8 +87,8 @@ async fn prepare_module(
 }
 
 /// Prepares a query
-async fn prepare_query(
-    client: &Client,
+fn prepare_query(
+    client: &mut Client,
     type_registrar: &mut TypeRegistrar,
     query: ParsedQuery,
     module_path: &str,
@@ -96,7 +96,6 @@ async fn prepare_query(
     // Prepare the statement
     let stmt = client
         .prepare(&query.sql_str)
-        .await
         .map_err(|e| Error::new(e, &query, module_path))?;
 
     // Get parameter parameters
@@ -105,7 +104,6 @@ async fn prepare_query(
         // Register type
         let ty = type_registrar
             .register(client, ty)
-            .await
             .map_err(|e| Error::new(e, &query, module_path))?;
         let name = name.value.to_owned();
         params.push(PreparedParameter {
@@ -133,26 +131,25 @@ async fn prepare_query(
         match &nullable_col.value {
             crate::parser::NullableColumn::Index(index) => {
                 // Get name from column index
-                let name = match stmt_cols.get(*index as usize - 1) {
-                    Some(col) => col.name(),
-                    None => {
-                        return Err(Error {
-                            err: ErrorVariant::Validation(
-                                ValidationError::InvalidNullableColumnIndex {
-                                    index: *index as usize,
-                                    max_col_index: stmt_cols.len(),
-                                    pos: ErrorPosition {
-                                        line: nullable_col.line,
-                                        col: nullable_col.col,
-                                        line_str: nullable_col.line_str,
-                                    },
+                let name = if let Some(col) = stmt_cols.get(*index as usize - 1) {
+                    col.name()
+                } else {
+                    return Err(Error {
+                        err: ErrorVariant::Validation(
+                            ValidationError::InvalidNullableColumnIndex {
+                                index: *index as usize,
+                                max_col_index: stmt_cols.len(),
+                                pos: ErrorPosition {
+                                    line: nullable_col.line,
+                                    col: nullable_col.col,
+                                    line_str: nullable_col.line_str,
                                 },
-                            ),
-                            query_name: query.name,
-                            query_start_line: Some(query.line),
-                            path: module_path.to_owned(),
-                        })
-                    }
+                            },
+                        ),
+                        query_name: query.name,
+                        query_start_line: Some(query.line),
+                        path: module_path.to_owned(),
+                    });
                 };
 
                 // Check if `nullable_cols` already contains this column. If not, add it.
@@ -222,7 +219,6 @@ async fn prepare_query(
     for column in stmt_cols {
         let ty = type_registrar
             .register(client, column.type_())
-            .await
             .map_err(|e| Error {
                 query_start_line: Some(query.line),
                 err: e.into(),
@@ -256,7 +252,7 @@ pub(crate) mod error {
     #[derive(Debug, ThisError)]
     #[error("{0}")]
     pub(crate) enum ErrorVariant {
-        Db(#[from] tokio_postgres::Error),
+        Db(#[from] postgres::Error),
         PostgresType(#[from] PostgresTypeError),
         Validation(#[from] ValidationError),
         #[error("Two or more columns have the same name: `{name}`. Consider disambiguing the column names with `AS` clauses.")]
