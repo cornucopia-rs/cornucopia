@@ -1,4 +1,7 @@
-use std::{borrow::Cow, process::ExitCode};
+use std::{
+    borrow::Cow,
+    process::{Command, ExitCode},
+};
 
 use clap::Parser;
 use owo_colors::OwoColorize;
@@ -41,13 +44,19 @@ fn main() -> ExitCode {
 fn test(apply: bool) -> bool {
     cornucopia::container::setup(false).unwrap();
     let mut client = cornucopia::conn::cornucopia_conn().unwrap();
-    let result = run_test(&mut client, apply);
+    let result = run_errors_test(&mut client, apply);
+    let result2 = run_example_test(&mut client);
     cornucopia::container::cleanup(false).unwrap();
-    return result.unwrap();
+    return result.unwrap() && result2.unwrap();
 }
 
-// Run test, return true if all test are successful
-fn run_test(
+// Reset the current database
+fn reset_db(client: &mut postgres::Client) -> Result<(), postgres::Error> {
+    client.batch_execute("DROP SCHEMA public CASCADE;CREATE SCHEMA public;")
+}
+
+// Run errors test, return true if all test are successful
+fn run_errors_test(
     client: &mut postgres::Client,
     apply: bool,
 ) -> Result<bool, Box<dyn std::error::Error>> {
@@ -71,13 +80,13 @@ fn run_test(
         let content = std::fs::read_to_string(file.path())?;
         let mut suite: TestSuite = toml::from_str(&content)?;
 
-        println!("{}", name.magenta());
+        println!("{} {}", "[error]".magenta(), name.magenta());
         for test in &mut suite.test {
             // Generate file tree path
             let temp_dir = tempfile::tempdir()?;
 
             // Reset db
-            client.batch_execute("DROP SCHEMA public CASCADE;CREATE SCHEMA public;")?;
+            reset_db(client)?;
 
             // We need to change current dir for error path to always be the same
             std::env::set_current_dir(&temp_dir)?;
@@ -129,6 +138,49 @@ fn run_test(
             let edited = toml::to_string_pretty(&suite)?;
             std::fs::write(file.path(), edited)?;
         }
+    }
+    Ok(successful)
+}
+
+// Run example test, return true if all test are successful
+fn run_example_test(client: &mut postgres::Client) -> Result<bool, Box<dyn std::error::Error>> {
+    let mut successful = true;
+    let original_pwd = std::env::current_dir().unwrap();
+    for file in std::fs::read_dir("../examples")? {
+        let file = file?;
+        let name = file.file_name().to_string_lossy().to_string();
+        let path = file.path();
+
+        print!("{} {}", "[example]".magenta(), name.magenta());
+
+        std::env::set_current_dir(path)?;
+        // Reset db
+        reset_db(client)?;
+
+        // Run codegen
+        cornucopia::run_migrations(client, "migrations")?;
+        cornucopia::generate_live(
+            client,
+            "queries",
+            Some("src/cornucopia.rs"),
+            !name.contains("sync"),
+        )?;
+
+        // Run example
+        let result = Command::new("cargo").arg("run").output()?;
+        if !result.status.success() {
+            successful = false;
+            println!(
+                " {}\n{}",
+                "ERR".red(),
+                String::from_utf8_lossy(&result.stderr)
+                    .as_ref()
+                    .bright_black()
+            );
+        } else {
+            println!(" {}", "OK".green());
+        }
+        std::env::set_current_dir(&original_pwd)?;
     }
     Ok(successful)
 }
