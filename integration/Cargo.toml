@@ -1,0 +1,15 @@
+[package]
+name = "integration"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tempfile = "3.3.0"
+toml = "0.5.9"
+serde = { version = "1.0.137", features = ["derive"] }
+owo-colors = "3.4.0"
+clap = { version = "3.1.18", features = ["derive"] }
+cornucopia = { path = "../" }
+postgres = "0.19.3"

@@ -3,8 +3,7 @@
 #[rustfmt::skip]
 mod cornucopia;
 
-use deadpool_postgres::{Config, Runtime};
-use tokio_postgres::NoTls;
+use postgres::{Config, NoTls};
 
 use crate::cornucopia::{
     queries::{
@@ -17,38 +16,36 @@ use crate::cornucopia::{
     types::public::SpongebobCharacter,
 };
 
-#[tokio::main]
-pub async fn main() {
+pub fn main() {
     // Connection pool configuration
     // Please look at `tokio_postgres` and `deadpool_postgres` for details.
-    let mut cfg = Config::new();
-    cfg.user = Some(String::from("postgres"));
-    cfg.password = Some(String::from("postgres"));
-    cfg.host = Some(String::from("127.0.0.1"));
-    cfg.port = Some(5432);
-    cfg.dbname = Some(String::from("postgres"));
-    let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
-    let mut client = pool.get().await.unwrap();
+
+    let mut client = Config::new()
+        .user("postgres")
+        .password("postgres")
+        .host("127.0.0.1")
+        .port(5432)
+        .dbname("postgres")
+        .connect(NoTls)
+        .unwrap();
 
     // Queries accept regular clients.
-    println!("{:?}", authors(&client).vec().await.unwrap());
+    println!("{:?}", authors(&mut client).vec().unwrap());
 
     // Queries also accept transactions
     // Don't forget to `.commit()` when you're done!
     {
-        let transaction = client.transaction().await.unwrap();
+        let mut transaction = client.transaction().unwrap();
         // Insert a book
-        insert_book(&transaction, &"The Great Gatsby")
-            .await
-            .unwrap();
+        insert_book(&mut transaction, &"The Great Gatsby").unwrap();
         // Use a map if needed
-        let books = books(&transaction).vec().await.unwrap();
+        let books = books(&mut transaction).vec().unwrap();
         println!("{books:?}");
-        transaction.commit().await.unwrap();
+        transaction.commit().unwrap();
     }
 
     // Using opt returns an optional row (zero or one).
-    println!("{:?}", author_name_by_id(&client, &0).opt().await.unwrap());
+    println!("{:?}", author_name_by_id(&mut client, &0).opt().unwrap());
 
     // The param struct can be more convenient
     // and less error-prone in some cases
@@ -56,18 +53,16 @@ pub async fn main() {
     println!(
         "{:?}",
         AuthorNameStartingWithParams { start_str: &"Jo" }
-            .query(&client)
+            .query(&mut client)
             .vec()
-            .await
             .unwrap()
     );
 
     // Custom types from your queries also work!
     println!(
         "{:?}",
-        select_where_custom_type(&client, &SpongebobCharacter::Patrick)
+        select_where_custom_type(&mut client, &SpongebobCharacter::Patrick)
             .one()
-            .await
             .unwrap()
     );
 }

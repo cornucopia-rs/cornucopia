@@ -1,0 +1,18 @@
+[[test]]
+name = 'Syntax'
+migration = '''
+CREATE TABLE syntax {};
+'''
+error = 'Error while running migration ["migrations/1653210840_first.sql", line: 1] (ERROR: syntax error at or near "{")'
+
+[[test]]
+name = 'InvalidMigrationFilename'
+migration = ''
+migration_name = 'first.sql'
+error = '''Error while reading migration [file: "migrations/first.sql"]: Migrations must be named with this pattern '<timestamp>_<name>' where <timestamp> is a unix timestamp and <name> is a valid identifier.'''
+
+[[test]]
+name = 'InvalidTimestamp'
+migration = ''
+migration_name = 'hello_first.sql'
+error = 'Error while reading migration [file: "migrations/hello_first.sql"]: timestamp "hello" is not a valid unix timestamp.'

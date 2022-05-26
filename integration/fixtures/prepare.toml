@@ -1,0 +1,15 @@
+[[test]]
+name = 'ColumnNameAlreadyTaken'
+query = '''
+--! items
+SELECT name, price AS name FROM item;
+'''
+migration = '''
+CREATE TABLE item (
+  name TEXT,
+  price INTEGER
+);
+'''
+error = '''
+Error while preparing query "items" [file: "queries/module_1.sql", line: 1]:
+Two or more columns have the same name: `name`. Consider disambiguing the column names with `AS` clauses.'''

@@ -1,0 +1,154 @@
+[[test]]
+name = 'PgParamInExtendedQuery'
+query = '''
+--! new_author
+INSERT INTO Author (id, name) VALUES (:id, $1);
+'''
+error = '''
+Error while reading queries [path: "queries/module_1.sql"]:  --> 2:45
+  | 
+  | INSERT INTO Author (id, name) VALUES (:id, $1);
+  |                                             ^---
+  | 
+  = Indexed bind parameters (`$index`) are not allowed when using the extended syntax.
+  = Consider using a named bind parameter like `:identifier`, or use the PostgreSQL-compatible syntax..'''
+
+[[test]]
+name = 'ExtendedParamInPgQuery'
+query = '''
+--! new_author(id, name)
+INSERT INTO Author (id, name) VALUES ($1, :name);
+'''
+error = '''
+Error while reading queries [path: "queries/module_1.sql"]:  --> 2:44
+  | 
+  | INSERT INTO Author (id, name) VALUES ($1, :name);
+  |                                            ^---
+  | 
+  = Named bind parameters like `:identifier` are not allowed when using the PostgreSQL-compatible syntax.
+  = Consider using an indexed bind parameter like `$index`, or use the extended syntax..'''
+
+[[test]]
+name = 'InvalidI16Index'
+query = '''
+--! new_author(id, name)
+INSERT INTO Author (id, name) VALUES ($1, $10000);
+'''
+error = '''
+Error while reading queries [path: "queries/module_1.sql"]:  --> 2:44
+  | 
+  | INSERT INTO Author (id, name) VALUES ($1, $10000);
+  |                                            ^---
+  | 
+  = Index is higher than the number of parameters supplied (2)..'''
+
+[[test]]
+name = 'DuplicateParam'
+query = '''
+--! new_author(id, id)
+INSERT INTO Author (id, name) VALUES ($1, $2);
+'''
+migration = '''
+CREATE TABLE author (
+  id SERIAL,
+  name TEXT
+);
+'''
+error = '''
+Error while reading queries [path: "queries/module_1.sql"]:  --> 1:20
+  | 
+  | --! new_author(id, id)
+  |                    ^---
+  | 
+  = Parameter is already used in parameter list..'''
+
+[[test]]
+name = 'MoreBindParamsThanParams'
+query = '''
+--! new_author(id, name)
+INSERT INTO Author (id, name) VALUES ($1, $3);
+'''
+error = '''
+Error while reading queries [path: "queries/module_1.sql"]:  --> 2:44
+  | 
+  | INSERT INTO Author (id, name) VALUES ($1, $3);
+  |                                            ^---
+  | 
+  = Index is higher than the number of parameters supplied (2)..'''
+
+[[test]]
+name = 'UnusedParam'
+query = '''
+--! new_author(id, name, other)
+INSERT INTO Author (id, name) VALUES ($1, $2);
+'''
+error = '''
+Error while reading queries [path: "queries/module_1.sql"]:  --> 1:26
+  | 
+  | --! new_author(id, name, other)
+  |                          ^---
+  | 
+  = Parameter `$3` is never used in the query..'''
+
+[[test]]
+name = 'ColumnAlreadyNullable'
+query = '''
+--! new_author ?{id, 1}
+SELECT id FROM Author;
+'''
+migration = '''
+CREATE TABLE author (
+  id SERIAL,
+  name TEXT
+);
+'''
+error = '''
+Error while preparing query "new_author" [file: "queries/module_1.sql", line: 1]:
+ --> 1:18
+  | 
+  | --! new_author ?{id, 1}
+  |                  ^---
+  | 
+  = Column `id` is already marked as nullable.'''
+
+[[test]]
+name = 'InvalidNullableColumnIndex'
+query = '''
+--! new_author ?{2}
+SELECT id FROM Author;
+'''
+migration = '''
+CREATE TABLE author (
+  id SERIAL,
+  name TEXT
+);
+'''
+error = '''
+Error while preparing query "new_author" [file: "queries/module_1.sql", line: 1]:
+ --> 1:18
+  | 
+  | --! new_author ?{2}
+  |                  ^---
+  | 
+  = Bind parameter `$2` is invalid (must be between $1 and $1).'''
+
+[[test]]
+name = 'InvalidNullableColumnName'
+query = '''
+--! new_author ?{name}
+SELECT id FROM Author;
+'''
+migration = '''
+CREATE TABLE author (
+  id SERIAL,
+  name TEXT
+);
+'''
+error = '''
+Error while preparing query "new_author" [file: "queries/module_1.sql", line: 1]:
+ --> 1:18
+  | 
+  | --! new_author ?{name}
+  |                  ^---
+  | 
+  = No column named `name` found for this query.'''
