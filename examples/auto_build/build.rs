@@ -14,22 +14,15 @@ fn main() -> Result<(), std::io::Error> {
     println!("cargo:rerun-if-changed={queries_path}");
     println!("cargo:rerun-if-changed={migrations_path}");
 
-    // Call cornucopia. Use whatever CLI command you need.
-    let output = std::process::Command::new("cornucopia")
-        .arg("generate")
-        .arg("-q")
-        .arg(queries_path)
-        .arg("-m")
-        .arg(migrations_path)
-        .arg("-d")
-        .arg(destination)
-        .arg("--podman") //<-- Comment this line if you want Docker instead.
-        .output()?;
-
-    // If Cornucopia couldn't run properly, try to display the error.
-    if !output.status.success() {
-        panic!("{}", &std::str::from_utf8(&output.stderr).unwrap());
-    }
+    // Run cornucopia codegen
+    cornucopia::generate_managed(
+        queries_path,
+        migrations_path,
+        Some(destination),
+        false,
+        true,
+    )
+    .unwrap();
 
     Ok(())
 }

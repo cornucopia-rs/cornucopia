@@ -3,12 +3,12 @@ pub mod queries {
     pub mod module_1 {
         use futures::{StreamExt, TryStreamExt};
         use cornucopia_client::GenericClient;
-        pub struct ExampleQueryBorrowed<'a> {
-            pub col1: &'a str,
-        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct ExampleQuery {
             pub col1: String,
+        }
+        pub struct ExampleQueryBorrowed<'a> {
+            pub col1: &'a str,
         }
         impl<'a> From<ExampleQueryBorrowed<'a>> for ExampleQuery {
             fn from(ExampleQueryBorrowed { col1 }: ExampleQueryBorrowed<'a>) -> Self {
@@ -20,9 +20,9 @@ pub mod queries {
             params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 0],
             mapper: fn(ExampleQueryBorrowed) -> T,
         }
-        impl<'a, C, T> ExampleQueryQuery<'a, C, T>
+        impl<'a, C, T: 'a> ExampleQueryQuery<'a, C, T>
         where
-            C: cornucopia_client::GenericClient,
+            C: GenericClient,
         {
             pub fn map<R>(
                 self,
@@ -70,7 +70,7 @@ FROM
             pub async fn stream(
                 self,
             ) -> Result<
-                    impl futures::Stream<Item = Result<T, tokio_postgres::Error>>,
+                    impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
                 let stmt = self.stmt().await?;
@@ -78,8 +78,9 @@ FROM
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
                     .await?
-                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))));
-                Ok(stream.into_stream())
+                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))))
+                    .into_stream();
+                Ok(stream)
             }
         }
         pub fn example_query<'a, C: GenericClient>(
