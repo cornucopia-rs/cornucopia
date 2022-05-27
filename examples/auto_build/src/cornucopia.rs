@@ -1,3 +1,7 @@
+#![allow(clippy::all)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
+#![allow(dead_code)]
 pub mod types {}
 pub mod queries {
     pub mod module_1 {

@@ -1,3 +1,7 @@
+#![allow(clippy::all)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
+#![allow(dead_code)]
 pub mod types {
     pub mod public {
         #[derive(
@@ -40,9 +44,7 @@ pub mod types {
                 buf: &'a [u8],
             ) -> Result<
                 CustomCompositeBorrowed<'a>,
-                std::boxed::Box<
-                    dyn std::error::Error + std::marker::Sync + std::marker::Send,
-                >,
+                std::boxed::Box<dyn std::error::Error + Sync + Send>,
             > {
                 let fields = match *_type.kind() {
                     postgres_types::Kind::Composite(ref fields) => fields,
@@ -805,7 +807,7 @@ FROM
                 select_where_custom_type(client, &self.spongebob_character)
             }
         }
-        #[derive(Debug, Copy, Clone, PartialEq)]
+        #[derive(Debug, Clone, PartialEq, Copy)]
         pub struct SelectWhereCustomType {
             pub col2: super::super::types::public::SpongebobCharacter,
         }

@@ -74,8 +74,7 @@ fn is_reserved_keyword(s: &str) -> bool {
 fn domain_brw_fromsql(w: &mut impl Write, struct_name: &str, ty_name: &str, ty_schema: &str) {
     gen!(
         w,
-        r#"
-    impl<'a> postgres_types::FromSql<'a> for {struct_name}Borrowed<'a> {{
+        r#"impl<'a> postgres_types::FromSql<'a> for {struct_name}Borrowed<'a> {{
         fn from_sql(
             _type: &postgres_types::Type,
             buf: &'a [u8],
@@ -109,8 +108,7 @@ fn domain_params_tosql(
     let accept_ty = inner_ty.borrowed_rust_ty(type_registrar, Some("'a"), true);
     gen!(
         w,
-        r#"
-    impl <'a> postgres_types::ToSql for {struct_name}Params<'a> {{
+        r#"impl <'a> postgres_types::ToSql for {struct_name}Params<'a> {{
         fn to_sql(
             &self,
             _type: &postgres_types::Type,
@@ -146,8 +144,7 @@ fn domain_params_tosql(
         > {{
             postgres_types::__to_sql_checked(self, ty, out)
         }}
-    }}
-    "#
+    }}"#
     )
 }
 
@@ -181,16 +178,12 @@ fn composite_params_tosql(
 
     gen!(
         w,
-        r#"
-    impl<'a> postgres_types::ToSql for {struct_name}Params<'a> {{
+        r#"impl<'a> postgres_types::ToSql for {struct_name}Params<'a> {{
         fn to_sql(
             &self,
             _type: &postgres_types::Type,
             buf: &mut postgres_types::private::BytesMut,
-        ) -> std::result::Result<
-            postgres_types::IsNull,
-            std::boxed::Box<std::error::Error + Sync + Send>,
-        > {{
+        ) -> std::result::Result<postgres_types::IsNull, std::boxed::Box<std::error::Error + Sync + Send>,> {{
             let fields = match *_type.kind() {{
                 postgres_types::Kind::Composite(ref fields) => fields,
                 _ => unreachable!(),
@@ -241,10 +234,7 @@ fn composite_params_tosql(
             &self,
             ty: &postgres_types::Type,
             out: &mut postgres_types::private::BytesMut,
-        ) -> std::result::Result<
-            postgres_types::IsNull,
-            Box<dyn std::error::Error + Sync + Send>,
-        > {{
+        ) -> std::result::Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {{
             postgres_types::__to_sql_checked(self, ty, out)
         }}
     }}"#
@@ -270,14 +260,11 @@ fn composite_fromsql(
 
     gen!(
         w,
-        r#"
-    impl<'a> postgres_types::FromSql<'a> for {struct_name}Borrowed<'a> {{
+        r#"impl<'a> postgres_types::FromSql<'a> for {struct_name}Borrowed<'a> {{
         fn from_sql(
             _type: &postgres_types::Type,
             buf: &'a [u8],
-        ) -> Result<{struct_name}Borrowed<'a>,
-            std::boxed::Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>,
-        > {{
+        ) -> Result<{struct_name}Borrowed<'a>, std::boxed::Box<dyn std::error::Error + Sync + Send>> {{
             let fields = match *_type.kind() {{
                 postgres_types::Kind::Composite(ref fields) => fields,
                 _ => unreachable!(),
@@ -498,14 +485,10 @@ fn gen_ret_structs(
         };
         gen!(w, "pub {col_name} : {col_ty}")
     });
-    let derive = if is_copy {
-        "Debug, Copy, Clone, PartialEq"
-    } else {
-        "Debug, Clone, PartialEq"
-    };
+    let copy = if is_copy { "Copy" } else { "" };
     gen!(
         w,
-        "#[derive({derive})] pub struct {name} {{ {struct_fields} }}",
+        "#[derive(Debug, Clone, PartialEq,{copy})] pub struct {name} {{ {struct_fields} }}",
     );
 
     if !is_copy {
@@ -786,7 +769,13 @@ pub(crate) fn generate(
     } else {
         "use postgres::fallible_iterator::FallibleIterator;use postgres::GenericClient;"
     };
-    let mut buff = "// This file was generated with `cornucopia`. Do not modify.\n".to_string();
+    let mut buff = "// This file was generated with `cornucopia`. Do not modify.
+    #![allow(clippy::all)]
+    #![allow(unused_variables)]
+    #![allow(unused_imports)]
+    #![allow(dead_code)]
+    "
+    .to_string();
     // Generate database type
     gen_type_modules(&mut buff, type_registrar)?;
     // Generate queries
