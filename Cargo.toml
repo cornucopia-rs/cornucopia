@@ -11,10 +11,9 @@ categories = ["database"]
 keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 
 [workspace]
-members = ["examples/*", "cornucopia_client", "integration"]
+members = ["examples/*", "cornucopia_client", "integration", "codegen_test"]
 
 [dependencies]
-cornucopia_client = { path = "cornucopia_client" }
 postgres = { version = "0.19.3", features = [
     "with-serde_json-1",
     "with-time-0_3",
@@ -22,11 +21,7 @@ postgres = { version = "0.19.3", features = [
     "with-eui48-1",
 ] }
 postgres-types = { version = "0.2.3", features = ["derive"] }
-serde = "1.0.137"
-serde_json = { version = "1.0.81", features = ["raw_value"] }
 time = { version = "0.3.9", features = ["parsing"] }
-uuid = "1.0.0"
-eui48 = "1.1.0"
 
 thiserror = "1.0.31"
 clap = { version = "3.1.18", features = ["derive"] }

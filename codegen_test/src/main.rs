@@ -1,56 +1,68 @@
 use std::net::{IpAddr, Ipv4Addr};
 
-//use error::Error;
-use cornucopia_client::types::Json;
+use cornucopia_sync::{
+    queries::copy::{select_copy, InsertCloneParams, InsertCopyParams},
+    types::public::{CloneCompositeParams, CopyComposite},
+};
 use eui48::MacAddress;
-use postgres::Client;
-use serde_json::Map;
+use postgres::{Client, Config, NoTls};
+use postgres_types::Json;
 use time::{OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;
 
-use self::error::Error;
-
-use crate::integration::cornucopia::{
-    self,
-    queries::module_2::{select_everything, InsertEverythingParams, SelectEverything},
-    types::public::{CustomComposite, CustomDomain, MyDomain, SpongebobCharacter},
+use crate::cornucopia_sync::{
+    queries::stress::{nightmare, select_everything, InsertEverythingParams, SelectEverything},
+    types::public::{
+        CustomComposite, CustomCompositeParams, CustomDomainParams, MyDomainParams,
+        SpongebobCharacter,
+    },
 };
 
-fn setup() -> Result<Client, crate::error::Error> {
-    use crate::run_migrations::run_migrations;
-    use crate::{conn::cornucopia_conn, container};
+mod cornucopia_async;
+mod cornucopia_sync;
 
-    container::setup(true)?;
-    let mut client = cornucopia_conn()?;
-    run_migrations(&mut client, "src/integration/migrations")?;
-
-    Ok(client)
+pub fn main() {
+    let client = &mut Config::new()
+        .user("postgres")
+        .password("postgres")
+        .host("127.0.0.1")
+        .port(5432)
+        .dbname("postgres")
+        .connect(NoTls)
+        .unwrap();
+    test_copy(client);
+    test_stress(client);
 }
 
-fn teardown() -> Result<(), crate::error::Error> {
-    use crate::container;
-    container::cleanup(true)?;
-    Ok(())
+// Test we correctly implement borrowed version and copy derive
+pub fn test_copy(client: &mut Client) {
+    // Test copy
+    let copy_params = InsertCopyParams {
+        composite: CopyComposite {
+            first: 42,
+            second: 4.2,
+        },
+    };
+    std::mem::drop(copy_params); // Ignore if copied
+    copy_params.query(client).unwrap();
+    let copy_row = select_copy(client).one().unwrap();
+    std::mem::drop(copy_row); // Ignore if copied
+    std::mem::drop(copy_row);
+
+    // Test clone
+    let clone_params = InsertCloneParams {
+        composite: CloneCompositeParams {
+            first: 42,
+            second: "Hello world",
+        },
+    };
+    std::mem::drop(copy_params); // Ignore if copied
+    clone_params.query(client).unwrap();
+    select_copy(client).one().unwrap();
 }
 
-fn integration() -> Result<(), Error> {
-    let mut client = setup()?;
-    select_everything_test(&mut client)?;
-    teardown()?;
-
-    Ok(())
-}
-
-#[test]
-
-fn integration_test() {
-    if let Err(e) = integration() {
-        let _ = teardown();
-        panic!("{:?}", e)
-    }
-}
-
-fn select_everything_test(client: &mut Client) -> Result<(), Error> {
+// Test hard cases
+pub fn test_stress(client: &mut Client) {
     let primitive_datetime_format =
         time::format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]").unwrap();
     let primitive_datetime =
@@ -60,14 +72,14 @@ fn select_everything_test(client: &mut Client) -> Result<(), Error> {
         &time::format_description::well_known::Rfc3339,
     )
     .unwrap();
-
+    let tmp = &[CustomCompositeParams {
+        wow: &"",
+        such_cool: 3,
+        nice: SpongebobCharacter::Bob,
+    }];
     let params = InsertEverythingParams {
-        custom_domain_: CustomDomain(vec![CustomComposite {
-            wow: String::from(""),
-            such_cool: 3,
-            nice: SpongebobCharacter::Bob,
-        }]),
-        domain_: MyDomain(String::from("hello")),
+        custom_domain_: CustomDomainParams(tmp),
+        domain_: MyDomainParams(&"hello"),
         array_: &[true, false],
         custom_array_: &[SpongebobCharacter::Bob, SpongebobCharacter::Patrick],
         bool_: true,
@@ -105,7 +117,7 @@ fn select_everything_test(client: &mut Client) -> Result<(), Error> {
         macaddr_: MacAddress::new([8, 0, 43, 1, 2, 3]),
     };
 
-    assert_eq!(1, params.query(client)?, "inserting one row");
+    assert_eq!(1, params.query(client).unwrap());
 
     let expected = SelectEverything {
         custom_domain_: vec![CustomComposite {
@@ -151,37 +163,9 @@ fn select_everything_test(client: &mut Client) -> Result<(), Error> {
         inet_: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
         macaddr_: MacAddress::new([8, 0, 43, 1, 2, 3]),
     };
-    let actual = select_everything(client).one()?;
+    let actual = select_everything(client).one().unwrap();
 
     assert_eq!(expected, actual);
 
-    Ok(())
-}
-
-fn assert_eq<T: std::fmt::Debug + PartialEq>(expected: T, actual: T) -> Result<(), Error> {
-    if actual != expected {
-        Err(Error::Integration {
-            expected: format!("{:?}", expected),
-            actual: format!("{:?}", actual),
-        })
-    } else {
-        Ok(())
-    }
-}
-
-mod error {
-    use crate::error::Error as CornucopiaError;
-    use postgres::Error as DbError;
-    use thiserror::Error as ThisError;
-    #[derive(Debug, ThisError)]
-    #[error("error occured during integration testing")]
-    pub(crate) enum Error {
-        #[error("expected {expected}, got {actual}")]
-        Integration {
-            expected: String,
-            actual: String,
-        },
-        Db(#[from] DbError),
-        Cornucopia(#[from] CornucopiaError),
-    }
+    nightmare(client).one().unwrap();
 }

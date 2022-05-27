@@ -1,8 +1,8 @@
-use cornucopia_client::types::{Kind, Type};
 use error::{Error, UnsupportedPostgresTypeError};
 use heck::ToUpperCamelCase;
 use indexmap::{Equivalent, IndexMap};
 use postgres::Client;
+use postgres_types::{Kind, Type};
 
 /// A struct containing a postgres type and its Rust-equivalent.
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -45,9 +45,9 @@ impl CornucopiaType {
             return "".into();
         }
 
-        if self.rust_path_from_queries == "cornucopia_client::types::Json<serde_json::Value>" {
+        if self.rust_path_from_queries == "postgres_types::Json<serde_json::Value>" {
             return format!(
-                "cornucopia_client::types::Json(serde_json::from_str({var_name}.0.get()).unwrap())"
+                "postgres_types::Json(serde_json::from_str({var_name}.0.get()).unwrap())"
             );
         }
 
@@ -88,7 +88,11 @@ impl CornucopiaType {
         // Special case for domains and composites
         if matches!(self.pg_ty.kind(), Kind::Domain(_) | Kind::Composite(_)) {
             return if is_param {
-                self.rust_path_from_queries.clone()
+                format!(
+                    "{}Params<{}>",
+                    self.rust_path_from_queries,
+                    lifetime.unwrap_or("'a")
+                )
             } else {
                 format!(
                     "{}Borrowed<{}>",
@@ -123,9 +127,9 @@ impl CornucopiaType {
             "String" => {
                 format!("&{} str", lifetime.unwrap_or(""))
             }
-            "cornucopia_client::types::Json<serde_json::Value>" => {
+            "postgres_types::Json<serde_json::Value>" => {
                 format!(
-                    "cornucopia_client::types::Json<&{} serde_json::value::RawValue>",
+                    "postgres_types::Json<&{} serde_json::value::RawValue>",
                     lifetime.unwrap_or("")
                 )
             }
@@ -295,14 +299,10 @@ impl Default for TypeRegistrar {
             (Type::TIMESTAMPTZ, "time::OffsetDateTime", true),
             (Type::DATE, "time::Date", true),
             (Type::TIME, "time::Time", true),
-            (
-                Type::JSON,
-                "cornucopia_client::types::Json<serde_json::Value>",
-                false,
-            ),
+            (Type::JSON, "postgres_types::Json<serde_json::Value>", false),
             (
                 Type::JSONB,
-                "cornucopia_client::types::Json<serde_json::Value>",
+                "postgres_types::Json<serde_json::Value>",
                 false,
             ),
             (Type::UUID, "uuid::Uuid", true),
@@ -324,12 +324,12 @@ impl Default for TypeRegistrar {
             (Type::TIME_ARRAY, "Vec<time::Time>", false),
             (
                 Type::JSON_ARRAY,
-                "Vec<cornucopia_client::types::Json<serde_json::Value>>",
+                "Vec<postgres_types::Json<serde_json::Value>>",
                 false,
             ),
             (
                 Type::JSON_ARRAY,
-                "Vec<cornucopia_client::types::Json<serde_json::Value>>",
+                "Vec<postgres_types::Json<serde_json::Value>>",
                 false,
             ),
             (Type::UUID_ARRAY, "Vec<uuid::Uuid>", false),

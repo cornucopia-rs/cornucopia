@@ -2,8 +2,8 @@ pub mod types {
     pub mod public {
         #[derive(
             Debug,
-            cornucopia_client::types::ToSql,
-            cornucopia_client::types::FromSql,
+            postgres_types::ToSql,
+            postgres_types::FromSql,
             Clone,
             Copy,
             PartialEq,
@@ -15,101 +15,63 @@ pub mod types {
             Patrick,
             Squidward,
         }
-        #[derive(Debug, cornucopia_client::types::ToSql, Clone, PartialEq)]
+        #[derive(
+            Debug,
+            postgres_types::ToSql,
+            postgres_types::FromSql,
+            Clone,
+            PartialEq
+        )]
         #[postgres(name = "custom_composite")]
         pub struct CustomComposite {
             pub name: String,
             pub age: i32,
             pub persona: super::public::SpongebobCharacter,
         }
-        impl<'a> cornucopia_client::types::FromSql<'a> for CustomComposite {
-            fn from_sql(
-                _type: &cornucopia_client::types::Type,
-                buf: &'a [u8],
-            ) -> std::result::Result<
-                    CustomComposite,
-                    std::boxed::Box<
-                        dyn std::error::Error + std::marker::Sync + std::marker::Send,
-                    >,
-                > {
-                let fields = match *_type.kind() {
-                    cornucopia_client::types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                let mut buf = buf;
-                let num_fields = cornucopia_client::types::private::read_be_i32(
-                    &mut buf,
-                )?;
-                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
-                let name = cornucopia_client::types::private::read_value(
-                    fields[0].type_(),
-                    &mut buf,
-                )?;
-                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
-                let age = cornucopia_client::types::private::read_value(
-                    fields[1].type_(),
-                    &mut buf,
-                )?;
-                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
-                let persona = cornucopia_client::types::private::read_value(
-                    fields[2].type_(),
-                    &mut buf,
-                )?;
-                std::result::Result::Ok(CustomComposite {
-                    name,
-                    age,
-                    persona,
-                })
-            }
-            fn accepts(type_: &cornucopia_client::types::Type) -> bool {
-                type_.name() == "custom_composite" && type_.schema() == "public"
-            }
-        }
+        #[derive(Debug)]
         pub struct CustomCompositeBorrowed<'a> {
             pub name: &'a str,
             pub age: i32,
             pub persona: super::super::types::public::SpongebobCharacter,
         }
-        impl<'a> cornucopia_client::types::FromSql<'a> for CustomCompositeBorrowed<'a> {
+        impl<'a> postgres_types::FromSql<'a> for CustomCompositeBorrowed<'a> {
             fn from_sql(
-                _type: &cornucopia_client::types::Type,
+                _type: &postgres_types::Type,
                 buf: &'a [u8],
-            ) -> std::result::Result<
-                    CustomCompositeBorrowed<'a>,
-                    std::boxed::Box<
-                        dyn std::error::Error + std::marker::Sync + std::marker::Send,
-                    >,
-                > {
+            ) -> Result<
+                CustomCompositeBorrowed<'a>,
+                std::boxed::Box<
+                    dyn std::error::Error + std::marker::Sync + std::marker::Send,
+                >,
+            > {
                 let fields = match *_type.kind() {
-                    cornucopia_client::types::Kind::Composite(ref fields) => fields,
+                    postgres_types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
                 };
                 let mut buf = buf;
-                let num_fields = cornucopia_client::types::private::read_be_i32(
-                    &mut buf,
-                )?;
-                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
-                let name = cornucopia_client::types::private::read_value(
+                let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
+                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                let name = postgres_types::private::read_value(
                     fields[0].type_(),
                     &mut buf,
                 )?;
-                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
-                let age = cornucopia_client::types::private::read_value(
+                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                let age = postgres_types::private::read_value(
                     fields[1].type_(),
                     &mut buf,
                 )?;
-                let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
-                let persona = cornucopia_client::types::private::read_value(
+                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                let persona = postgres_types::private::read_value(
                     fields[2].type_(),
                     &mut buf,
                 )?;
-                std::result::Result::Ok(CustomCompositeBorrowed {
+                Result::Ok(CustomCompositeBorrowed {
                     name,
                     age,
                     persona,
                 })
             }
-            fn accepts(type_: &cornucopia_client::types::Type) -> bool {
+            fn accepts(type_: &postgres_types::Type) -> bool {
                 type_.name() == "custom_composite" && type_.schema() == "public"
             }
         }
@@ -128,22 +90,116 @@ pub mod types {
                 }
             }
         }
+        #[derive(Debug, Clone)]
+        pub struct CustomCompositeParams<'a> {
+            pub name: &'a str,
+            pub age: i32,
+            pub persona: super::super::types::public::SpongebobCharacter,
+        }
+        impl<'a> postgres_types::ToSql for CustomCompositeParams<'a> {
+            fn to_sql(
+                &self,
+                _type: &postgres_types::Type,
+                buf: &mut postgres_types::private::BytesMut,
+            ) -> std::result::Result<
+                postgres_types::IsNull,
+                std::boxed::Box<dyn std::error::Error + Sync + Send>,
+            > {
+                let fields = match *_type.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                buf.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {
+                    buf.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = buf.len();
+                    buf.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {
+                        "name" => {
+                            postgres_types::ToSql::to_sql(&self.name, field.type_(), buf)
+                        }
+                        "age" => {
+                            postgres_types::ToSql::to_sql(&self.age, field.type_(), buf)
+                        }
+                        "persona" => {
+                            postgres_types::ToSql::to_sql(
+                                &self.persona,
+                                field.type_(),
+                                buf,
+                            )
+                        }
+                        _ => unreachable!(),
+                    };
+                    let count = match r? {
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {
+                            let len = buf.len() - base - 4;
+                            if len > i32::max_value() as usize {
+                                return std::result::Result::Err(
+                                    std::convert::Into::into("value too large to transmit"),
+                                );
+                            }
+                            len as i32
+                        }
+                    };
+                    buf[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                }
+                std::result::Result::Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(type_: &postgres_types::Type) -> bool {
+                if type_.name() != "custom_composite" {
+                    return false;
+                }
+                match *type_.kind() {
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != 3usize {
+                            return false;
+                        }
+                        fields
+                            .iter()
+                            .all(|f| match f.name() {
+                                "name" => {
+                                    <&'a str as postgres_types::ToSql>::accepts(f.type_())
+                                }
+                                "age" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+                                "persona" => {
+                                    <super::super::types::public::SpongebobCharacter as postgres_types::ToSql>::accepts(
+                                        f.type_(),
+                                    )
+                                }
+                                _ => false,
+                            })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> std::result::Result<
+                postgres_types::IsNull,
+                Box<dyn std::error::Error + Sync + Send>,
+            > {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
     }
 }
 pub mod queries {
     pub mod module_2 {
         use postgres::fallible_iterator::FallibleIterator;
         use postgres::GenericClient;
-        pub struct AuthorsBorrowed<'a> {
-            pub id: i32,
-            pub name: &'a str,
-            pub country: &'a str,
-        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct Authors {
             pub id: i32,
             pub name: String,
             pub country: String,
+        }
+        pub struct AuthorsBorrowed<'a> {
+            pub id: i32,
+            pub name: &'a str,
+            pub country: &'a str,
         }
         impl<'a> From<AuthorsBorrowed<'a>> for Authors {
             fn from(AuthorsBorrowed { id, name, country }: AuthorsBorrowed<'a>) -> Self {
@@ -156,7 +212,7 @@ pub mod queries {
         }
         pub struct AuthorsQuery<'a, C: GenericClient, T> {
             client: &'a mut C,
-            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 0],
+            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
             mapper: fn(AuthorsBorrowed) -> T,
         }
         impl<'a, C, T: 'a> AuthorsQuery<'a, C, T>
@@ -206,9 +262,9 @@ FROM
             pub fn stream(
                 mut self,
             ) -> Result<
-                    impl Iterator<Item = Result<T, postgres::Error>> + 'a,
-                    postgres::Error,
-                > {
+                impl Iterator<Item = Result<T, postgres::Error>> + 'a,
+                postgres::Error,
+            > {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
@@ -227,12 +283,12 @@ FROM
                 mapper: |it| Authors::from(it),
             }
         }
-        pub struct BooksBorrowed<'a> {
-            pub title: &'a str,
-        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct Books {
             pub title: String,
+        }
+        pub struct BooksBorrowed<'a> {
+            pub title: &'a str,
         }
         impl<'a> From<BooksBorrowed<'a>> for Books {
             fn from(BooksBorrowed { title }: BooksBorrowed<'a>) -> Self {
@@ -241,7 +297,7 @@ FROM
         }
         pub struct BooksQuery<'a, C: GenericClient, T> {
             client: &'a mut C,
-            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 0],
+            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
             mapper: fn(BooksBorrowed) -> T,
         }
         impl<'a, C, T: 'a> BooksQuery<'a, C, T>
@@ -284,9 +340,9 @@ FROM
             pub fn stream(
                 mut self,
             ) -> Result<
-                    impl Iterator<Item = Result<T, postgres::Error>> + 'a,
-                    postgres::Error,
-                > {
+                impl Iterator<Item = Result<T, postgres::Error>> + 'a,
+                postgres::Error,
+            > {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
@@ -305,12 +361,12 @@ FROM
                 mapper: |it| Books::from(it),
             }
         }
-        pub struct BooksOptRetParamBorrowed<'a> {
-            pub title: Option<&'a str>,
-        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct BooksOptRetParam {
             pub title: Option<String>,
+        }
+        pub struct BooksOptRetParamBorrowed<'a> {
+            pub title: Option<&'a str>,
         }
         impl<'a> From<BooksOptRetParamBorrowed<'a>> for BooksOptRetParam {
             fn from(
@@ -323,7 +379,7 @@ FROM
         }
         pub struct BooksOptRetParamQuery<'a, C: GenericClient, T> {
             client: &'a mut C,
-            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 0],
+            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
             mapper: fn(BooksOptRetParamBorrowed) -> T,
         }
         impl<'a, C, T: 'a> BooksOptRetParamQuery<'a, C, T>
@@ -371,9 +427,9 @@ FROM
             pub fn stream(
                 mut self,
             ) -> Result<
-                    impl Iterator<Item = Result<T, postgres::Error>> + 'a,
-                    postgres::Error,
-                > {
+                impl Iterator<Item = Result<T, postgres::Error>> + 'a,
+                postgres::Error,
+            > {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
@@ -392,7 +448,7 @@ FROM
                 mapper: |it| BooksOptRetParam::from(it),
             }
         }
-        #[derive(Debug, Clone)]
+        #[derive(Debug, Copy, Clone)]
         pub struct AuthorNameByIdParams {
             pub id: i32,
         }
@@ -404,12 +460,12 @@ FROM
                 author_name_by_id(client, &self.id)
             }
         }
-        pub struct AuthorNameByIdBorrowed<'a> {
-            pub name: &'a str,
-        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct AuthorNameById {
             pub name: String,
+        }
+        pub struct AuthorNameByIdBorrowed<'a> {
+            pub name: &'a str,
         }
         impl<'a> From<AuthorNameByIdBorrowed<'a>> for AuthorNameById {
             fn from(
@@ -420,7 +476,7 @@ FROM
         }
         pub struct AuthorNameByIdQuery<'a, C: GenericClient, T> {
             client: &'a mut C,
-            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 1],
+            params: [&'a (dyn postgres_types::ToSql + Sync); 1],
             mapper: fn(AuthorNameByIdBorrowed) -> T,
         }
         impl<'a, C, T: 'a> AuthorNameByIdQuery<'a, C, T>
@@ -473,9 +529,9 @@ WHERE
             pub fn stream(
                 mut self,
             ) -> Result<
-                    impl Iterator<Item = Result<T, postgres::Error>> + 'a,
-                    postgres::Error,
-                > {
+                impl Iterator<Item = Result<T, postgres::Error>> + 'a,
+                postgres::Error,
+            > {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
@@ -495,6 +551,7 @@ WHERE
                 mapper: |it| AuthorNameById::from(it),
             }
         }
+        #[derive(Debug, Clone)]
         pub struct AuthorNameStartingWithParams<'a> {
             pub start_str: &'a str,
         }
@@ -506,18 +563,18 @@ WHERE
                 author_name_starting_with(client, &self.start_str)
             }
         }
-        pub struct AuthorNameStartingWithBorrowed<'a> {
-            pub authorid: i32,
-            pub name: &'a str,
-            pub bookid: i32,
-            pub title: &'a str,
-        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct AuthorNameStartingWith {
             pub authorid: i32,
             pub name: String,
             pub bookid: i32,
             pub title: String,
+        }
+        pub struct AuthorNameStartingWithBorrowed<'a> {
+            pub authorid: i32,
+            pub name: &'a str,
+            pub bookid: i32,
+            pub title: &'a str,
         }
         impl<'a> From<AuthorNameStartingWithBorrowed<'a>> for AuthorNameStartingWith {
             fn from(
@@ -538,7 +595,7 @@ WHERE
         }
         pub struct AuthorNameStartingWithQuery<'a, C: GenericClient, T> {
             client: &'a mut C,
-            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 1],
+            params: [&'a (dyn postgres_types::ToSql + Sync); 1],
             mapper: fn(AuthorNameStartingWithBorrowed) -> T,
         }
         impl<'a, C, T: 'a> AuthorNameStartingWithQuery<'a, C, T>
@@ -601,9 +658,9 @@ WHERE
             pub fn stream(
                 mut self,
             ) -> Result<
-                    impl Iterator<Item = Result<T, postgres::Error>> + 'a,
-                    postgres::Error,
-                > {
+                impl Iterator<Item = Result<T, postgres::Error>> + 'a,
+                postgres::Error,
+            > {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
@@ -623,12 +680,12 @@ WHERE
                 mapper: |it| AuthorNameStartingWith::from(it),
             }
         }
-        pub struct ReturnCustomTypeBorrowed<'a> {
-            pub col1: super::super::types::public::CustomCompositeBorrowed<'a>,
-        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct ReturnCustomType {
             pub col1: super::super::types::public::CustomComposite,
+        }
+        pub struct ReturnCustomTypeBorrowed<'a> {
+            pub col1: super::super::types::public::CustomCompositeBorrowed<'a>,
         }
         impl<'a> From<ReturnCustomTypeBorrowed<'a>> for ReturnCustomType {
             fn from(
@@ -639,7 +696,7 @@ WHERE
         }
         pub struct ReturnCustomTypeQuery<'a, C: GenericClient, T> {
             client: &'a mut C,
-            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 0],
+            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
             mapper: fn(ReturnCustomTypeBorrowed) -> T,
         }
         impl<'a, C, T: 'a> ReturnCustomTypeQuery<'a, C, T>
@@ -687,9 +744,9 @@ FROM
             pub fn stream(
                 mut self,
             ) -> Result<
-                    impl Iterator<Item = Result<T, postgres::Error>> + 'a,
-                    postgres::Error,
-                > {
+                impl Iterator<Item = Result<T, postgres::Error>> + 'a,
+                postgres::Error,
+            > {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
@@ -708,7 +765,7 @@ FROM
                 mapper: |it| ReturnCustomType::from(it),
             }
         }
-        #[derive(Debug, Clone)]
+        #[derive(Debug, Copy, Clone)]
         pub struct SelectWhereCustomTypeParams {
             pub spongebob_character: super::super::types::public::SpongebobCharacter,
         }
@@ -726,7 +783,7 @@ FROM
         }
         pub struct SelectWhereCustomTypeQuery<'a, C: GenericClient, T> {
             client: &'a mut C,
-            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 1],
+            params: [&'a (dyn postgres_types::ToSql + Sync); 1],
             mapper: fn(SelectWhereCustomType) -> T,
         }
         impl<'a, C, T: 'a> SelectWhereCustomTypeQuery<'a, C, T>
@@ -778,9 +835,9 @@ WHERE (col1).persona = $1;",
             pub fn stream(
                 mut self,
             ) -> Result<
-                    impl Iterator<Item = Result<T, postgres::Error>> + 'a,
-                    postgres::Error,
-                > {
+                impl Iterator<Item = Result<T, postgres::Error>> + 'a,
+                postgres::Error,
+            > {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
@@ -800,12 +857,12 @@ WHERE (col1).persona = $1;",
                 mapper: |it| SelectWhereCustomType::from(it),
             }
         }
-        pub struct SelectTranslationsBorrowed<'a> {
-            pub translations: cornucopia_client::ArrayIterator<'a, &'a str>,
-        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct SelectTranslations {
             pub translations: Vec<String>,
+        }
+        pub struct SelectTranslationsBorrowed<'a> {
+            pub translations: cornucopia_client::ArrayIterator<'a, &'a str>,
         }
         impl<'a> From<SelectTranslationsBorrowed<'a>> for SelectTranslations {
             fn from(
@@ -820,7 +877,7 @@ WHERE (col1).persona = $1;",
         }
         pub struct SelectTranslationsQuery<'a, C: GenericClient, T> {
             client: &'a mut C,
-            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 0],
+            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
             mapper: fn(SelectTranslationsBorrowed) -> T,
         }
         impl<'a, C, T: 'a> SelectTranslationsQuery<'a, C, T>
@@ -870,9 +927,9 @@ FROM
             pub fn stream(
                 mut self,
             ) -> Result<
-                    impl Iterator<Item = Result<T, postgres::Error>> + 'a,
-                    postgres::Error,
-                > {
+                impl Iterator<Item = Result<T, postgres::Error>> + 'a,
+                postgres::Error,
+            > {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
@@ -895,6 +952,7 @@ FROM
     pub mod module_1 {
         use postgres::fallible_iterator::FallibleIterator;
         use postgres::GenericClient;
+        #[derive(Debug, Clone)]
         pub struct InsertBookParams<'a> {
             pub title: &'a str,
         }

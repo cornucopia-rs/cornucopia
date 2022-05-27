@@ -4,9 +4,9 @@ use crate::{
     prepare_queries::{PreparedColumn, PreparedParameter, PreparedQuery},
     type_registrar::{CornucopiaType, TypeRegistrar},
 };
-use cornucopia_client::types::{Field, Kind};
 use error::Error;
 use heck::ToUpperCamelCase;
+use postgres_types::{Field, Kind};
 use std::collections::HashMap;
 use std::fmt::Write;
 
@@ -71,43 +71,184 @@ fn is_reserved_keyword(s: &str) -> bool {
     .contains(&s)
 }
 
-fn domain_fromsql(
-    w: &mut impl Write,
-    struct_name: &str,
-    ty_name: &str,
-    ty_schema: &str,
-    borrowed: bool,
-) {
-    let (borrowed_str, generic_lifetime) = if borrowed {
-        ("Borrowed", "<'a>")
-    } else {
-        ("", "")
-    };
+fn domain_brw_fromsql(w: &mut impl Write, struct_name: &str, ty_name: &str, ty_schema: &str) {
     gen!(
         w,
         r#"
-    impl<'a> cornucopia_client::types::FromSql<'a> for {struct_name}{borrowed_str}{generic_lifetime} {{
+    impl<'a> postgres_types::FromSql<'a> for {struct_name}Borrowed<'a> {{
         fn from_sql(
-            _type: &cornucopia_client::types::Type,
+            _type: &postgres_types::Type,
             buf: &'a [u8],
         ) -> std::result::Result<
-            {struct_name}{borrowed_str}{generic_lifetime},
+            {struct_name}Borrowed<'a>,
             std::boxed::Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>,
         > {{
             let inner = match *_type.kind() {{
-                cornucopia_client::types::Kind::Domain(ref inner) => inner,
+                postgres_types::Kind::Domain(ref inner) => inner,
                 _ => unreachable!(),
             }};
             let mut buf = buf;
-            let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
-            std::result::Result::Ok({struct_name}{borrowed_str}(
-                cornucopia_client::types::private::read_value(inner, &mut buf)?))
+            let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+            std::result::Result::Ok({struct_name}Borrowed(
+                postgres_types::private::read_value(inner, &mut buf)?))
         }}
-        fn accepts(type_: &cornucopia_client::types::Type) -> bool {{
+        fn accepts(type_: &postgres_types::Type) -> bool {{
             type_.name() == "{ty_name}" && type_.schema() == "{ty_schema}"
         }}
     }}"#
     )
+}
+
+fn domain_params_tosql(
+    w: &mut impl Write,
+    type_registrar: &TypeRegistrar,
+    struct_name: &str,
+    inner_ty: &CornucopiaType,
+    ty_name: &str,
+) {
+    let accept_ty = inner_ty.borrowed_rust_ty(type_registrar, Some("'a"), true);
+    gen!(
+        w,
+        r#"
+    impl <'a> postgres_types::ToSql for {struct_name}Params<'a> {{
+        fn to_sql(
+            &self,
+            _type: &postgres_types::Type,
+            buf: &mut postgres_types::private::BytesMut,
+        ) -> std::result::Result<
+            postgres_types::IsNull,
+            std::boxed::Box<dyn std::error::Error + Sync + Send>,
+        > {{
+            let type_ = match *_type.kind() {{
+                postgres_types::Kind::Domain(ref type_) => type_,
+                _ => unreachable!(),
+            }};
+            postgres_types::ToSql::to_sql(&self.0, type_, buf)
+        }}
+        fn accepts(type_: &postgres_types::Type) -> bool {{
+            if type_.name() != "{ty_name}" {{
+                return false;
+            }}
+            match *type_.kind() {{
+                postgres_types::Kind::Domain(ref type_) => <{accept_ty} as postgres_types::ToSql>::accepts(
+                    type_
+                ),
+                _ => false,
+            }}
+        }}
+        fn to_sql_checked(
+            &self,
+            ty: &postgres_types::Type,
+            out: &mut postgres_types::private::BytesMut,
+        ) -> std::result::Result<
+            postgres_types::IsNull,
+            Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>,
+        > {{
+            postgres_types::__to_sql_checked(self, ty, out)
+        }}
+    }}
+    "#
+    )
+}
+
+fn composite_params_tosql(
+    w: &mut impl Write,
+    type_registrar: &TypeRegistrar,
+    struct_name: &str,
+    fields: &[Field],
+    ty_name: &str,
+) {
+    let nb_fields = fields.len();
+    let write_fields = join_ln(fields.iter(), |w, f| {
+        let name = f.name();
+        gen!(
+            w,
+            "\"{name}\" => postgres_types::ToSql::to_sql(&self.{name},field.type_(), buf),",
+        )
+    });
+    let accept_fields = join_ln(fields.iter(), |w, f| {
+        gen!(
+            w,
+            "\"{}\" => <{} as postgres_types::ToSql>::accepts(f.type_()),",
+            f.name(),
+            type_registrar.get(f.type_()).unwrap().borrowed_rust_ty(
+                type_registrar,
+                Some("'a"),
+                true
+            )
+        )
+    });
+
+    gen!(
+        w,
+        r#"
+    impl<'a> postgres_types::ToSql for {struct_name}Params<'a> {{
+        fn to_sql(
+            &self,
+            _type: &postgres_types::Type,
+            buf: &mut postgres_types::private::BytesMut,
+        ) -> std::result::Result<
+            postgres_types::IsNull,
+            std::boxed::Box<std::error::Error + Sync + Send>,
+        > {{
+            let fields = match *_type.kind() {{
+                postgres_types::Kind::Composite(ref fields) => fields,
+                _ => unreachable!(),
+            }};
+            buf.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+            for field in fields {{
+                buf.extend_from_slice(&field.type_().oid().to_be_bytes());
+                let base = buf.len();
+                buf.extend_from_slice(&[0; 4]);
+                let r = match field.name() {{
+                    {write_fields}
+                    _ => unreachable!()
+                }};
+                let count = match r? {{
+                    postgres_types::IsNull::Yes => -1,
+                    postgres_types::IsNull::No => {{
+                        let len = buf.len() - base - 4;
+                        if len > i32::max_value() as usize {{
+                            return std::result::Result::Err(std::convert::Into::into(
+                                "value too large to transmit",
+                            ));
+                        }}
+                        len as i32
+                    }}
+                }};
+                buf[base..base + 4].copy_from_slice(&count.to_be_bytes());
+            }}
+            std::result::Result::Ok(postgres_types::IsNull::No)
+        }}
+        fn accepts(type_: &postgres_types::Type) -> bool {{
+            if type_.name() != "{ty_name}" {{
+                return false;
+            }}
+            match *type_.kind() {{
+                postgres_types::Kind::Composite(ref fields) => {{
+                    if fields.len() != {nb_fields}usize {{
+                        return false;
+                    }}
+                    fields.iter().all(|f| match f.name() {{
+                        {accept_fields}
+                        _ => false,
+                    }})
+                }}
+                _ => false,
+            }}
+        }}
+        fn to_sql_checked(
+            &self,
+            ty: &postgres_types::Type,
+            out: &mut postgres_types::private::BytesMut,
+        ) -> std::result::Result<
+            postgres_types::IsNull,
+            Box<dyn std::error::Error + Sync + Send>,
+        > {{
+            postgres_types::__to_sql_checked(self, ty, out)
+        }}
+    }}"#
+    );
 }
 
 fn composite_fromsql(
@@ -116,19 +257,13 @@ fn composite_fromsql(
     fields: &[Field],
     ty_name: &str,
     ty_schema: &str,
-    borrowed: bool,
 ) {
-    let (borrowed_str, generic_lifetime) = if borrowed {
-        ("Borrowed", "<'a>")
-    } else {
-        ("", "")
-    };
     let field_names = join_comma(fields, |w, f| gen!(w, "{}", f.name()));
     let read_fields = join_ln(fields.iter().enumerate(), |w, (index, f)| {
         gen!(
             w,
-            "let _oid = cornucopia_client::types::private::read_be_i32(&mut buf)?;
-            let {} = cornucopia_client::types::private::read_value(fields[{index}].type_(), &mut buf)?;",
+            "let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+            let {} = postgres_types::private::read_value(fields[{index}].type_(), &mut buf)?;",
             f.name(),
         )
     });
@@ -136,27 +271,24 @@ fn composite_fromsql(
     gen!(
         w,
         r#"
-    impl<'a> cornucopia_client::types::FromSql<'a> for {struct_name}{borrowed_str}{generic_lifetime} {{
+    impl<'a> postgres_types::FromSql<'a> for {struct_name}Borrowed<'a> {{
         fn from_sql(
-            _type: &cornucopia_client::types::Type,
+            _type: &postgres_types::Type,
             buf: &'a [u8],
-        ) -> std::result::Result<
-            {struct_name}{borrowed_str}{generic_lifetime},
+        ) -> Result<{struct_name}Borrowed<'a>,
             std::boxed::Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>,
         > {{
             let fields = match *_type.kind() {{
-                cornucopia_client::types::Kind::Composite(ref fields) => fields,
+                postgres_types::Kind::Composite(ref fields) => fields,
                 _ => unreachable!(),
             }};
             let mut buf = buf;
-            let num_fields = cornucopia_client::types::private::read_be_i32(&mut buf)?;
+            let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
             {read_fields}
-            std::result::Result::Ok({struct_name}{borrowed_str}  {{
-                {field_names}
-            }})
+            Result::Ok({struct_name}Borrowed {{ {field_names} }})
         }}
 
-        fn accepts(type_: &cornucopia_client::types::Type) -> bool {{
+        fn accepts(type_: &postgres_types::Type) -> bool {{
             type_.name() == "{ty_name}" && type_.schema() == "{ty_schema}"
         }}
     }}"#
@@ -228,7 +360,7 @@ fn gen_query_struct(
         w,
         "pub struct {query_struct_name}Query<'a, C: GenericClient, T> {{
             client: &'a {client_mut} C,
-            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); {params_len}],
+            params: [&'a (dyn postgres_types::ToSql + Sync); {params_len}],
             mapper: fn({query_struct_name}{borrowed_str}) -> T,
         }}",
     );
@@ -332,15 +464,16 @@ fn gen_params_struct(
     };
 
     let params_is_copy = params.iter().all(|a| a.ty.is_copy);
-    let (derive, lifetime, fn_lifetime) = if params_is_copy {
-        ("#[derive(Debug, Clone)]", "", "'a,")
+    let (copy, lifetime, fn_lifetime) = if params_is_copy {
+        ("Copy,", "", "'a,")
     } else {
         ("", "<'a>", "")
     };
     // Generate params struct
     gen!(
         w,
-        "{derive} pub struct {query_struct_name}Params{lifetime} {{ {params_struct_fields} }}
+        "#[derive(Debug, {copy} Clone)]
+        pub struct {query_struct_name}Params{lifetime} {{ {params_struct_fields} }}
         impl {lifetime} {query_struct_name}Params {lifetime} {{
             pub {fn_async} fn query<{fn_lifetime}C: GenericClient>(&'a self, client: &'a {client_mut} C) -> {ret_type} {{
                 {query_name}(client, {param_values}){fn_await}
@@ -447,7 +580,7 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
         Kind::Enum(variants) => {
             let variants_str = variants.join(",");
             gen!(w,
-                "#[derive(Debug, cornucopia_client::types::ToSql, cornucopia_client::types::FromSql, Clone, Copy, PartialEq, Eq)]
+                "#[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, Copy, PartialEq, Eq)]
                 #[postgres(name = \"{ty_name}\")]
                 pub enum {struct_name} {{ {variants_str} }}",
             )
@@ -457,18 +590,17 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
             let inner_rust_path_from_ty = &inner_ty.rust_path_from_types;
             gen!(
                 w,
-                "#[derive(Debug, {copy}Clone, PartialEq, cornucopia_client::types::ToSql)]
+                "#[derive(Debug, {copy}Clone, PartialEq, postgres_types::ToSql,postgres_types::FromSql)]
                 #[postgres(name = \"{ty_name}\")]
                 pub struct {struct_name} (pub {inner_rust_path_from_ty});"
             );
-            domain_fromsql(w, struct_name, ty_name, ty_schema, false);
             if !ty.is_copy {
                 let brw_fields_str = inner_ty.borrowed_rust_ty(type_registrar, Some("'a"), false);
                 gen!(
                     w,
-                    "pub struct {struct_name}Borrowed<'a> (pub {brw_fields_str});"
+                    " pub struct {struct_name}Borrowed<'a> (pub {brw_fields_str});"
                 );
-                domain_fromsql(w, struct_name, ty_name, ty_schema, true);
+                domain_brw_fromsql(w, struct_name, ty_name, ty_schema);
                 let inner_value = inner_ty.owning_call("inner", false);
                 gen!(
                     w,
@@ -484,6 +616,13 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
                         }}
                     }}"
                 );
+                let params_fields_str = inner_ty.borrowed_rust_ty(type_registrar, Some("'a"), true);
+                gen!(
+                    w,
+                    "#[derive(Debug, Clone)]
+                    pub struct {struct_name}Params<'a>(pub {params_fields_str});",
+                );
+                domain_params_tosql(w, type_registrar, struct_name, inner_ty, ty_name);
             }
         }
         Kind::Composite(fields) => {
@@ -493,11 +632,10 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
             });
             gen!(
                 w,
-                "#[derive(Debug, cornucopia_client::types::ToSql,{copy} Clone, PartialEq)]
+                "#[derive(Debug,postgres_types::ToSql,postgres_types::FromSql,{copy} Clone, PartialEq)]
                 #[postgres(name = \"{ty_name}\")]
                 pub struct {struct_name} {{ {fields_str} }}"
             );
-            composite_fromsql(w, struct_name, fields, ty_name, ty_schema, false);
             if !ty.is_copy {
                 let borrowed_fields_str = join_comma(fields, |w, f| {
                     let f_ty = type_registrar.get(f.type_()).unwrap();
@@ -524,9 +662,10 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
                 });
                 gen!(
                     w,
-                    "pub struct {struct_name}Borrowed<'a> {{ {borrowed_fields_str} }}",
+                    "#[derive(Debug)]
+                    pub struct {struct_name}Borrowed<'a> {{ {borrowed_fields_str} }}",
                 );
-                composite_fromsql(w, struct_name, fields, ty_name, ty_schema, true);
+                composite_fromsql(w, struct_name, fields, ty_name, ty_schema);
                 gen!(
                     w,
                     "
@@ -538,6 +677,21 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
                         ) -> Self {{ Self {{ {field_values} }} }}
                     }}"
                 );
+                let params_fields_str = join_comma(fields, |w, f| {
+                    let f_ty = type_registrar.get(f.type_()).unwrap();
+                    gen!(
+                        w,
+                        "pub {} : {}",
+                        f.name(),
+                        f_ty.borrowed_rust_ty(type_registrar, Some("'a"), true)
+                    )
+                });
+                gen!(
+                    w,
+                    "#[derive(Debug, Clone)]
+                    pub struct {struct_name}Params<'a> {{ {params_fields_str} }}",
+                );
+                composite_params_tosql(w, type_registrar, struct_name, fields, ty_name);
             }
         }
         _ => unreachable!(),

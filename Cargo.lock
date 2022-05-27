@@ -154,12 +154,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "codegen_test"
+version = "0.1.0"
+dependencies = [
+ "cornucopia_client",
+ "eui48",
+ "futures",
+ "postgres",
+ "postgres-types",
+ "serde",
+ "serde_json",
+ "time",
+ "tokio-postgres",
+ "uuid",
+]
+
+[[package]]
 name = "cornucopia"
 version = "0.7.4"
 dependencies = [
  "clap",
- "cornucopia_client",
- "eui48",
  "heck",
  "indexmap",
  "pest",
@@ -167,12 +181,9 @@ dependencies = [
  "postgres",
  "postgres-types",
  "prettyplease",
- "serde",
- "serde_json",
  "syn",
  "thiserror",
  "time",
- "uuid",
 ]
 
 [[package]]
@@ -208,7 +219,6 @@ dependencies = [
  "deadpool-postgres",
  "postgres",
  "postgres-protocol",
- "postgres-types",
  "tokio",
  "tokio-postgres",
 ]
@@ -781,9 +791,9 @@ checksum = "eb9f9e6e233e5c4a35559a617bf40a4ec447db2e84c20b55a6f83167b7e57872"
 
 [[package]]
 name = "prettyplease"
-version = "0.1.10"
+version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9e07e3a46d0771a8a06b5f4441527802830b43e679ba12f44960f48dd4c6803"
+checksum = "f28f53e8b192565862cf99343194579a022eb9c7dd3a8d03134734803c7b3125"
 dependencies = [
  "proc-macro2",
  "syn",
