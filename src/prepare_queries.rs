@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use crate::{
     parser::{
         error::{ErrorPosition, ValidationError},
@@ -36,7 +34,7 @@ pub(crate) struct PreparedField {
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedParams {
     pub(crate) name: String,
-    pub(crate) fields: BTreeMap<String, PreparedField>,
+    pub(crate) fields: Vec<PreparedField>,
     pub(crate) queries: Vec<usize>,
 }
 
@@ -111,22 +109,25 @@ impl PreparedModule {
         }
     }
 
-    fn add_params(&mut self, name: String, fields: Vec<PreparedField>, query_idx: usize) -> usize {
-        assert!(!fields.is_empty());
-        let (_, query) = self.queries.get_index(query_idx).unwrap();
-        // TODO Error if duplicate
-        let fields: BTreeMap<_, _> = fields.into_iter().map(|f| (f.name.clone(), f)).collect();
-        // TODO return an error
-        assert!(query.params.iter().all(|f| fields.contains_key(&f.name)));
+    fn add_params(&mut self, name: String, query_idx: usize) -> usize {
+        let params = &self.queries.get_index(query_idx).unwrap().1.params;
+        assert!(!params.is_empty());
+
         match self.params.entry(name.clone()) {
             Entry::Occupied(mut o) => {
                 let prev = o.get_mut();
                 // TODO return an error
-                assert!(prev.fields == fields);
+                assert!(prev.fields.len() == params.len());
+                assert!(prev
+                    .fields
+                    .iter()
+                    .all(|f| params.iter().position(|it| it.name == f.name).is_some()));
                 prev.queries.push(query_idx);
                 o.index()
             }
             Entry::Vacant(v) => {
+                let mut fields = params.to_vec();
+                fields.sort_unstable_by(|a, b| a.name.cmp(&b.name));
                 let index = v.index();
                 v.insert(PreparedParams {
                     name,
@@ -336,12 +337,15 @@ fn prepare_query(
         });
     }
 
+    let nb_params = params.len();
+
     let name = query.name.to_upper_camel_case();
     let row_idx = (!row_fields.is_empty()).then(|| module.add_row(name.clone(), &row_fields));
-    let query_idx = module.add_query(query.name.clone(), params.clone(), row_idx, query.sql_str);
-    if !params.is_empty() {
-        module.add_params(format!("{name}Params"), params, query_idx);
+    let query_idx = module.add_query(query.name.clone(), params, row_idx, query.sql_str);
+    if nb_params > 0 {
+        module.add_params(format!("{name}Params"), query_idx);
     }
+
     Ok(())
 }
 

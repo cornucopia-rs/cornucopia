@@ -297,7 +297,7 @@ fn gen_params_struct(
         fields,
         queries,
     } = params;
-    let struct_fields = join_comma(fields.values(), |w, p| {
+    let struct_fields = join_comma(fields, |w, p| {
         gen!(
             w,
             "pub {} : {}",
@@ -305,7 +305,7 @@ fn gen_params_struct(
             p.ty.borrowed_rust_ty(type_registrar, Some("'a"), true)
         )
     });
-    let is_copy = fields.values().all(|a| a.ty.is_copy);
+    let is_copy = fields.iter().all(|a| a.ty.is_copy);
     let (copy, lifetime, fn_lifetime) = if is_copy {
         ("Clone,Copy,", "", "'a,")
     } else {
