@@ -56,7 +56,7 @@ pub async fn main() {
     println!(
         "{:?}",
         AuthorNameStartingWithParams { start_str: &"Jo" }
-            .query(&client)
+            .author_name_starting_with(&client)
             .vec()
             .await
             .unwrap()

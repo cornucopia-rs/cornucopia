@@ -44,7 +44,7 @@ pub fn test_copy(client: &mut Client) {
         },
     };
     std::mem::drop(copy_params); // Ignore if copied
-    copy_params.query(client).unwrap();
+    copy_params.insert_copy(client).unwrap();
     let copy_row = select_copy(client).one().unwrap();
     std::mem::drop(copy_row); // Ignore if copied
     std::mem::drop(copy_row);
@@ -57,7 +57,7 @@ pub fn test_copy(client: &mut Client) {
         },
     };
     std::mem::drop(copy_params); // Ignore if copied
-    clone_params.query(client).unwrap();
+    clone_params.insert_clone(client).unwrap();
     select_copy(client).one().unwrap();
 }
 
@@ -117,7 +117,7 @@ pub fn test_stress(client: &mut Client) {
         macaddr_: MacAddress::new([8, 0, 43, 1, 2, 3]),
     };
 
-    assert_eq!(1, params.query(client).unwrap());
+    assert_eq!(1, params.insert_everything(client).unwrap());
 
     let expected = SelectEverything {
         custom_domain_: vec![CustomComposite {

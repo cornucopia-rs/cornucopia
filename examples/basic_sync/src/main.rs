@@ -53,7 +53,7 @@ pub fn main() {
     println!(
         "{:?}",
         AuthorNameStartingWithParams { start_str: &"Jo" }
-            .query(&mut client)
+            .author_name_starting_with(&mut client)
             .vec()
             .unwrap()
     );

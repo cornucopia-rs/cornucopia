@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use crate::{
     parser::{
         error::{ErrorPosition, ValidationError},
@@ -9,36 +11,128 @@ use crate::{
 };
 use error::Error;
 use error::ErrorVariant;
+use heck::ToUpperCamelCase;
+use indexmap::{map::Entry, IndexMap};
 use postgres::Client;
 
 /// This data structure is used by Cornucopia to generate all constructs related to this particular query.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct PreparedQuery {
     pub(crate) name: String,
-    pub(crate) params: Vec<PreparedParameter>,
-    pub(crate) ret_fields: Vec<PreparedColumn>,
+    pub(crate) params: Vec<PreparedField>,
+    pub(crate) row: Option<usize>, // None if execute
     pub(crate) sql: String,
 }
 
-#[derive(Debug)]
-pub(crate) struct PreparedParameter {
-    pub(crate) name: String,
-    pub(crate) ty: CornucopiaType,
-}
-
-#[derive(Debug)]
-pub(crate) struct PreparedColumn {
+/// A row or params field
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct PreparedField {
     pub(crate) name: String,
     pub(crate) ty: CornucopiaType,
     pub(crate) is_nullable: bool,
 }
 
+/// A params struct
+#[derive(Debug, Clone)]
+pub(crate) struct PreparedParams {
+    pub(crate) name: String,
+    pub(crate) fields: BTreeMap<String, PreparedField>,
+    pub(crate) queries: Vec<usize>,
+}
+
+/// A returned row
+#[derive(Debug, Clone)]
+pub(crate) struct PreparedRow {
+    pub(crate) name: String,
+    pub(crate) fields: Vec<PreparedField>,
+    pub(crate) is_copy: bool,
+}
+
 /// A struct containing the module name and the list of all
 /// the queries it contains.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct PreparedModule {
     pub(crate) name: String,
-    pub(crate) queries: Vec<PreparedQuery>,
+    pub(crate) queries: IndexMap<String, PreparedQuery>,
+    pub(crate) params: IndexMap<String, PreparedParams>,
+    pub(crate) rows: IndexMap<String, PreparedRow>,
+}
+
+impl PreparedModule {
+    fn add_row(&mut self, name: String, fields: Vec<PreparedField>) -> Option<usize> {
+        if fields.len() == 0 {
+            return None;
+        }
+        let is_copy = fields.iter().all(|f| f.ty.is_copy);
+        Some(match self.rows.entry(name.clone()) {
+            Entry::Occupied(o) => {
+                // TODO return an error
+                assert!(o.get().fields == fields);
+                o.index()
+            }
+            Entry::Vacant(v) => {
+                let index = v.index();
+                v.insert(PreparedRow {
+                    name,
+                    fields,
+                    is_copy,
+                });
+                index
+            }
+        })
+    }
+
+    fn add_query(
+        &mut self,
+        name: String,
+        params: Vec<PreparedField>,
+        row_idx: Option<usize>,
+        sql: String,
+    ) -> usize {
+        match self.queries.entry(name.clone()) {
+            Entry::Occupied(_o) => {
+                // TODO return an error
+                unreachable!()
+            }
+            Entry::Vacant(v) => {
+                let index = v.index();
+                v.insert(PreparedQuery {
+                    name,
+                    params,
+                    row: row_idx,
+                    sql,
+                });
+                index
+            }
+        }
+    }
+
+    fn add_params(&mut self, name: String, fields: Vec<PreparedField>, query_idx: usize) -> usize {
+        assert!(!fields.is_empty());
+        let (_, query) = self.queries.get_index(query_idx).unwrap();
+        // TODO Error if duplicate
+        let fields: BTreeMap<_, _> = fields.into_iter().map(|f| (f.name.clone(), f)).collect();
+        // TODO return an error
+        assert!(query.params.iter().all(|f| fields.contains_key(&f.name)));
+        match self.params.entry(name.clone()) {
+            Entry::Occupied(mut o) => {
+                let prev = o.get_mut();
+                // TODO return an error
+                assert!(prev.fields == fields);
+                prev.queries.push(query_idx);
+                o.index()
+            }
+            Entry::Vacant(v) => {
+                let index = v.index();
+                v.insert(PreparedParams {
+                    name,
+                    fields,
+                    queries: vec![query_idx],
+                });
+                index
+            }
+        }
+    }
 }
 
 fn has_duplicate<T, U>(
@@ -76,23 +170,26 @@ fn prepare_module(
     module: Module,
     type_registrar: &mut TypeRegistrar,
 ) -> Result<PreparedModule, Error> {
-    let mut queries = Vec::new();
-    for query in module.queries {
-        queries.push(prepare_query(client, type_registrar, query, &module.path)?);
-    }
-    Ok(PreparedModule {
+    let mut tmp = PreparedModule {
         name: module.name,
-        queries,
-    })
+        queries: IndexMap::new(),
+        params: IndexMap::new(),
+        rows: IndexMap::new(),
+    };
+    for query in module.queries {
+        prepare_query(client, &mut tmp, type_registrar, query, &module.path)?;
+    }
+    Ok(tmp)
 }
 
 /// Prepares a query
 fn prepare_query(
     client: &mut Client,
+    module: &mut PreparedModule,
     type_registrar: &mut TypeRegistrar,
     query: ParsedQuery,
     module_path: &str,
-) -> Result<PreparedQuery, Error> {
+) -> Result<(), Error> {
     // Prepare the statement
     let stmt = client
         .prepare(&query.sql_str)
@@ -106,9 +203,10 @@ fn prepare_query(
             .register(client, ty)
             .map_err(|e| Error::new(e, &query, module_path))?;
         let name = name.value.to_owned();
-        params.push(PreparedParameter {
+        params.push(PreparedField {
             name,
             ty: ty.to_owned(),
+            is_nullable: false, // TODO used when support null everywhere
         });
     }
 
@@ -227,19 +325,20 @@ fn prepare_query(
             })?;
         let name = column.name().to_owned();
         let is_nullable = nullable_cols.iter().any(|(_, n)| *n == name);
-        ret_fields.push(PreparedColumn {
+        ret_fields.push(PreparedField {
             is_nullable,
             name,
             ty: ty.clone(),
         });
     }
 
-    Ok(PreparedQuery {
-        name: query.name,
-        params,
-        ret_fields,
-        sql: query.sql_str,
-    })
+    let name = query.name.to_upper_camel_case();
+    let row_idx = module.add_row(name.clone(), ret_fields);
+    let query_idx = module.add_query(query.name.clone(), params.clone(), row_idx, query.sql_str);
+    if !params.is_empty() {
+        module.add_params(format!("{name}Params"), params, query_idx);
+    }
+    Ok(())
 }
 
 pub(crate) mod error {

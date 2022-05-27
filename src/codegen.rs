@@ -1,11 +1,10 @@
 use self::utils::{join_comma, join_comma_iter, join_ln};
 use super::prepare_queries::PreparedModule;
 use crate::{
-    prepare_queries::{PreparedColumn, PreparedParameter, PreparedQuery},
+    prepare_queries::{PreparedParams, PreparedQuery, PreparedRow},
     type_registrar::{CornucopiaType, TypeRegistrar},
 };
 use error::Error;
-use heck::ToUpperCamelCase;
 use postgres_types::{Field, Kind};
 use std::collections::HashMap;
 use std::fmt::Write;
@@ -286,150 +285,19 @@ fn composite_fromsql(
     )
 }
 
-fn gen_execute(
-    w: &mut impl Write,
-    type_registrar: &TypeRegistrar,
-    query_name: &str,
-    params: &[PreparedParameter],
-    query_sql: &str,
-    is_async: bool,
-) {
-    let param_list = join_comma(params, |w, p| {
-        let borrowed_rust_ty = p.ty.borrowed_rust_ty(type_registrar, None, true);
-        gen!(w, "{} : &'a {borrowed_rust_ty}", p.name)
-    });
-    let param_names = join_comma(params, |w, p| gen!(w, "{}", p.name));
-    let (fn_async, fn_await, backend, client_mut) = if is_async {
-        ("async", ".await", "tokio_postgres", "")
-    } else {
-        ("", "", "postgres", "mut")
-    };
-    gen!(w,
-        "pub {fn_async} fn {query_name}<'a, C: GenericClient>(client: &'a {client_mut} C, {param_list}) -> Result<u64, {backend}::Error> {{
-            let stmt = client.prepare(\"{query_sql}\"){fn_await}?;
-            client.execute(&stmt, &[{param_names}]){fn_await}
-        }}"
-    )
-}
-
-fn gen_query_struct(
-    w: &mut impl Write,
-    query_struct_name: &str,
-    params_len: usize,
-    ret_fields: &[PreparedColumn],
-    ret_is_copy: bool,
-    query_sql: &str,
-    is_async: bool,
-) {
-    let borrowed_str = if ret_is_copy { "" } else { "Borrowed" };
-    let (client_mut, async_fn, fn_await, backend, collect, raw_type, raw_pre, raw_post) =
-        if is_async {
-            (
-                "",
-                "async",
-                ".await",
-                "tokio_postgres",
-                "try_collect().await",
-                "futures::Stream",
-                "",
-                ".into_stream()",
-            )
-        } else {
-            (
-                "mut",
-                "",
-                "",
-                "postgres",
-                "collect()",
-                "Iterator",
-                ".iterator()",
-                "",
-            )
-        };
-
-    gen!(
-        w,
-        "pub struct {query_struct_name}Query<'a, C: GenericClient, T> {{
-            client: &'a {client_mut} C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); {params_len}],
-            mapper: fn({query_struct_name}{borrowed_str}) -> T,
-        }}",
-    );
-
-    let get_fields = join_comma_iter(ret_fields, |w, (index, f)| {
-        gen!(w, "{}: row.get({index})", f.name)
-    });
-
-    gen!(w,"
-        impl<'a, C, T:'a> {query_struct_name}Query<'a, C, T>
-        where
-            C: GenericClient,
-        {{
-            pub fn map<R>(self, mapper: fn({query_struct_name}{borrowed_str}) -> R) -> {query_struct_name}Query<'a,C,R> {{
-                {query_struct_name}Query {{
-                    client: self.client,
-                    params: self.params,
-                    mapper,
-                }}
-            }}
-
-            pub fn extractor(row: &{backend}::row::Row) -> {query_struct_name}{borrowed_str} {{
-                {query_struct_name}{borrowed_str} {{ {get_fields} }}
-            }}
-        
-            pub {async_fn} fn stmt(&{client_mut} self) -> Result<{backend}::Statement, {backend}::Error> {{
-                self.client.prepare(\"{query_sql}\"){fn_await}
-            }}
-        
-            pub {async_fn} fn one({client_mut} self) -> Result<T, {backend}::Error> {{
-                let stmt = self.stmt(){fn_await}?;
-                let row = self.client.query_one(&stmt, &self.params){fn_await}?;
-                Ok((self.mapper)(Self::extractor(&row)))
-            }}
-        
-            pub {async_fn} fn vec(self) -> Result<Vec<T>, {backend}::Error> {{
-                self.stream(){fn_await}?.{collect}
-            }}
-        
-            pub {async_fn} fn opt({client_mut} self) -> Result<Option<T>, {backend}::Error> {{
-                let stmt = self.stmt(){fn_await}?;
-                Ok(self
-                    .client
-                    .query_opt(&stmt, &self.params)
-                    {fn_await}?
-                    .map(|row| (self.mapper)(Self::extractor(&row))))
-            }}
-        
-            pub {async_fn} fn stream(
-                {client_mut} self,
-            ) -> Result<impl {raw_type}<Item = Result<T, {backend}::Error>> + 'a, {backend}::Error> {{
-                let stmt = self.stmt(){fn_await}?;
-                let stream = self
-                    .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
-                    {fn_await}?
-                    {raw_pre}
-                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))))
-                    {raw_post};
-                Ok(stream)
-            }}
-        }}")
-}
-
 fn gen_params_struct(
     w: &mut impl Write,
     type_registrar: &TypeRegistrar,
-    params: &[PreparedParameter],
-    query_name: &str,
-    query_struct_name: &str,
-    execute: bool,
+    module: &PreparedModule,
+    params: &PreparedParams,
     is_async: bool,
 ) {
-    if params.is_empty() {
-        return;
-    }
-
-    let params_struct_fields = join_comma(params, |w, p| {
+    let PreparedParams {
+        name,
+        fields,
+        queries,
+    } = params;
+    let struct_fields = join_comma(fields.values(), |w, p| {
         gen!(
             w,
             "pub {} : {}",
@@ -437,49 +305,63 @@ fn gen_params_struct(
             p.ty.borrowed_rust_ty(type_registrar, Some("'a"), true)
         )
     });
-    let param_values = join_comma(params, |w, p| gen!(w, "&self.{}", p.name));
-    let (fn_async, fn_await) = if execute && is_async {
-        ("async", ".await")
+    let is_copy = fields.values().all(|a| a.ty.is_copy);
+    let (copy, lifetime, fn_lifetime) = if is_copy {
+        ("Clone,Copy,", "", "'a,")
     } else {
-        ("", "")
+        ("", "<'a>", "")
     };
     let (backend, client_mut) = if is_async {
         ("tokio_postgres", "")
     } else {
         ("postgres", "mut")
     };
-    let ret_type = if execute {
-        format!("Result<u64, {backend}::Error>")
-    } else {
-        format!("{query_struct_name}Query<'a, C, {query_struct_name}>")
-    };
-
-    let params_is_copy = params.iter().all(|a| a.ty.is_copy);
-    let (copy, lifetime, fn_lifetime) = if params_is_copy {
-        ("Clone,Copy,", "", "'a,")
-    } else {
-        ("", "<'a>", "")
-    };
-    // Generate params struct
     gen!(
         w,
         "#[derive(Debug, {copy})]
-        pub struct {query_struct_name}Params{lifetime} {{ {params_struct_fields} }}
-        impl {lifetime} {query_struct_name}Params {lifetime} {{
-            pub {fn_async} fn query<{fn_lifetime}C: GenericClient>(&'a self, client: &'a {client_mut} C) -> {ret_type} {{
-                {query_name}(client, {param_values}){fn_await}
-            }}
+        pub struct {name}{lifetime} {{ {struct_fields} }}
+        impl {lifetime} {name} {lifetime} {{"
+    );
+    for idx in queries {
+        let PreparedQuery {
+            name, params, row, ..
+        } = module.queries.get_index(*idx).unwrap().1;
+
+        let param_values = join_comma(params, |w, p| gen!(w, "&self.{}", p.name));
+        let (fn_async, fn_await) = if row.is_none() && is_async {
+            ("async", ".await")
+        } else {
+            ("", "")
+        };
+        let ret_type = if let Some(idx) = row {
+            let name = &module.rows.get_index(*idx).unwrap().1.name;
+            let nb_params = params.len();
+            format!("{name}Query<'a, C, {name}, {nb_params}>")
+        } else {
+            format!("Result<u64, {backend}::Error>")
+        };
+        // Generate params struct
+        gen!(
+        w,
+        "pub {fn_async} fn {name}<{fn_lifetime}C: GenericClient>(&'a self, client: &'a {client_mut} C) -> {ret_type} {{
+            {name}(client, {param_values}){fn_await}
         }}"
     )
+    }
+    gen!(w, "}}");
 }
 
-fn gen_ret_structs(
+fn gen_row_structs(
     w: &mut impl Write,
     type_registrar: &TypeRegistrar,
-    fields: &[PreparedColumn],
-    name: &str,
-    is_copy: bool,
+    row: &PreparedRow,
+    is_async: bool,
 ) {
+    let PreparedRow {
+        name,
+        fields,
+        is_copy,
+    } = row;
     let struct_fields = join_comma(fields, |w, col| {
         let col_name = &col.name;
         let col_ty = if col.is_nullable {
@@ -489,7 +371,7 @@ fn gen_ret_structs(
         };
         gen!(w, "pub {col_name} : {col_ty}")
     });
-    let copy = if is_copy { "Copy" } else { "" };
+    let copy = if *is_copy { "Copy" } else { "" };
     gen!(
         w,
         "#[derive(Debug, Clone, PartialEq,{copy})] pub struct {name} {{ {struct_fields} }}",
@@ -528,32 +410,160 @@ fn gen_ret_structs(
             }}"
         );
     };
+    // Query struct
+    let borrowed_str = if *is_copy { "" } else { "Borrowed" };
+    let (client_mut, fn_async, fn_await, backend, collect, raw_type, raw_pre, raw_post) =
+        if is_async {
+            (
+                "",
+                "async",
+                ".await",
+                "tokio_postgres",
+                "try_collect().await",
+                "futures::Stream",
+                "",
+                ".into_stream()",
+            )
+        } else {
+            (
+                "mut",
+                "",
+                "",
+                "postgres",
+                "collect()",
+                "Iterator",
+                ".iterator()",
+                "",
+            )
+        };
+
+    gen!(
+        w,
+        "pub struct {name}Query<'a, C: GenericClient, T, const N: usize> {{
+            client: &'a {client_mut} C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            mapper: fn({name}{borrowed_str}) -> T,
+        }}",
+    );
+
+    // TODO allow column reordering
+    let get_fields = join_comma_iter(fields, |w, (index, f)| {
+        gen!(w, "{}: row.get({index})", f.name)
+    });
+
+    gen!(w,"
+        impl<'a, C, T:'a, const N: usize> {name}Query<'a, C, T, N>
+        where
+            C: GenericClient,
+        {{
+            pub fn map<R>(self, mapper: fn({name}{borrowed_str}) -> R) -> {name}Query<'a,C,R,N> {{
+                {name}Query {{
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    mapper,
+                }}
+            }}
+
+            pub fn extractor(row: &{backend}::row::Row) -> {name}{borrowed_str} {{
+                {name}{borrowed_str} {{ {get_fields} }}
+            }}
+        
+            pub {fn_async} fn stmt(&{client_mut} self) -> Result<{backend}::Statement, {backend}::Error> {{
+                self.client.prepare(self.query){fn_await}
+            }}
+        
+            pub {fn_async} fn one({client_mut} self) -> Result<T, {backend}::Error> {{
+                let stmt = self.stmt(){fn_await}?;
+                let row = self.client.query_one(&stmt, &self.params){fn_await}?;
+                Ok((self.mapper)(Self::extractor(&row)))
+            }}
+        
+            pub {fn_async} fn vec(self) -> Result<Vec<T>, {backend}::Error> {{
+                self.stream(){fn_await}?.{collect}
+            }}
+        
+            pub {fn_async} fn opt({client_mut} self) -> Result<Option<T>, {backend}::Error> {{
+                let stmt = self.stmt(){fn_await}?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    {fn_await}?
+                    .map(|row| (self.mapper)(Self::extractor(&row))))
+            }}
+        
+            pub {fn_async} fn stream(
+                {client_mut} self,
+            ) -> Result<impl {raw_type}<Item = Result<T, {backend}::Error>> + 'a, {backend}::Error> {{
+                let stmt = self.stmt(){fn_await}?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    {fn_await}?
+                    {raw_pre}
+                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))))
+                    {raw_post};
+                Ok(stream)
+            }}
+        }}")
 }
 
 fn gen_query_fn(
     w: &mut impl Write,
     type_registrar: &TypeRegistrar,
-    query_struct_name: &str,
-    query_name: &str,
-    params: &[PreparedParameter],
+    module: &PreparedModule,
+    query: &PreparedQuery,
     is_async: bool,
 ) {
-    let param_list = join_comma(params, |w, p| {
-        let param_name = &p.name;
-        let borrowed_rust_ty = p.ty.borrowed_rust_ty(type_registrar, None, true);
-        gen!(w, "{param_name} : &'a {borrowed_rust_ty}",)
-    });
-    let param_names = join_comma(params, |w, p| gen!(w, "{}", p.name));
-    let client_mut = if is_async { "" } else { "mut" };
-    gen!(w,
-        "pub fn {query_name}<'a, C: GenericClient>(client: &'a {client_mut} C, {param_list}) -> {query_struct_name}Query<'a,C, {query_struct_name}> {{
-        {query_struct_name}Query {{
-            client,
-            params: [{param_names}],
-            mapper: |it| {query_struct_name}::from(it),
-        }}
-    }}",
-    )
+    let PreparedQuery {
+        name,
+        params,
+        row,
+        sql,
+    } = query;
+
+    let (client_mut, fn_async, fn_await, backend) = if is_async {
+        ("", "async", ".await", "tokio_postgres")
+    } else {
+        ("mut", "", "", "postgres")
+    };
+
+    if let Some(idx) = row {
+        let row_name = &module.rows.get_index(*idx).unwrap().1.name;
+        // Query fn
+        let param_list = join_comma(params, |w, p| {
+            let param_name = &p.name;
+            let borrowed_rust_ty = p.ty.borrowed_rust_ty(type_registrar, None, true);
+            gen!(w, "{param_name} : &'a {borrowed_rust_ty}",)
+        });
+        let nb_params = params.len();
+        let param_names = join_comma(params, |w, p| gen!(w, "{}", p.name));
+        let client_mut = if is_async { "" } else { "mut" };
+        gen!(w,
+            "pub fn {name}<'a, C: GenericClient>(client: &'a {client_mut} C, {param_list}) -> {row_name}Query<'a,C, {row_name}, {nb_params}> {{
+            {row_name}Query {{
+                client,
+                params: [{param_names}],
+                query: \"{sql}\",
+                mapper: |it| {row_name}::from(it),
+            }}
+        }}",
+        );
+    } else {
+        // Execute fn
+        let param_list = join_comma(params, |w, p| {
+            let borrowed_rust_ty = p.ty.borrowed_rust_ty(type_registrar, None, true);
+            gen!(w, "{} : &'a {borrowed_rust_ty}", p.name)
+        });
+        let param_names = join_comma(params, |w, p| gen!(w, "{}", p.name));
+        gen!(w,
+            "pub {fn_async} fn {name}<'a, C: GenericClient>(client: &'a {client_mut} C, {param_list}) -> Result<u64, {backend}::Error> {{
+                let stmt = client.prepare(\"{sql}\"){fn_await}?;
+                client.execute(&stmt, &[{param_names}]){fn_await}
+            }}"
+        )
+    }
 }
 
 /// Generates type definitions for custom user types. This includes domains, composites and enums.
@@ -725,61 +735,6 @@ fn gen_type_modules(w: &mut impl Write, type_registrar: &TypeRegistrar) -> Resul
     Ok(())
 }
 
-fn gen_query(
-    w: &mut impl Write,
-    type_registrar: &TypeRegistrar,
-    query: &PreparedQuery,
-    is_async: bool,
-) {
-    let query_struct_name = query.name.to_upper_camel_case();
-    let ret_is_copy = query.ret_fields.iter().all(|a| a.ty.is_copy);
-    gen_params_struct(
-        w,
-        type_registrar,
-        &query.params,
-        &query.name,
-        &query_struct_name,
-        query.ret_fields.is_empty(),
-        is_async,
-    );
-
-    if query.ret_fields.is_empty() {
-        gen_execute(
-            w,
-            type_registrar,
-            &query.name,
-            &query.params,
-            &query.sql,
-            is_async,
-        )
-    } else {
-        gen_ret_structs(
-            w,
-            type_registrar,
-            &query.ret_fields,
-            &query_struct_name,
-            ret_is_copy,
-        );
-        gen_query_struct(
-            w,
-            &query_struct_name,
-            query.params.len(),
-            &query.ret_fields,
-            ret_is_copy,
-            &query.sql,
-            is_async,
-        );
-        gen_query_fn(
-            w,
-            type_registrar,
-            &query_struct_name,
-            &query.name,
-            &query.params,
-            is_async,
-        )
-    }
-}
-
 pub(crate) fn generate(
     type_registrar: &TypeRegistrar,
     modules: Vec<PreparedModule>,
@@ -801,10 +756,20 @@ pub(crate) fn generate(
     gen_type_modules(&mut buff, type_registrar)?;
     // Generate queries
     let query_modules = join_ln(modules, |w, module| {
-        let queries_string = join_ln(module.queries, |w, query| {
-            gen_query(w, type_registrar, &query, is_async)
+        let queries_string = join_ln(module.queries.values(), |w, query| {
+            gen_query_fn(w, type_registrar, &module, &query, is_async)
         });
-        gen!(w, "pub mod {} {{ {import} {queries_string} }}", module.name)
+        let params_string = join_ln(module.params.values(), |w, it| {
+            gen_params_struct(w, type_registrar, &module, &it, is_async)
+        });
+        let rows_string = join_ln(module.rows.values(), |w, query| {
+            gen_row_structs(w, type_registrar, &query, is_async)
+        });
+        gen!(
+            w,
+            "pub mod {} {{ {import} {params_string} {rows_string} {queries_string} }}",
+            module.name
+        )
     });
     gen!(&mut buff, "pub mod queries {{ {} }}", query_modules);
 
