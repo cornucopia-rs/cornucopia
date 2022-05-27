@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{fmt::Debug, marker::PhantomData};
 
 use async_trait::async_trait;
 use deadpool_postgres::{Client, ClientWrapper, Transaction};
@@ -8,8 +8,6 @@ use tokio_postgres::{
     types::{BorrowToSql, FromSql, Kind, ToSql, Type},
     Client as PgClient, Error, RowStream, Statement, ToStatement, Transaction as PgTransaction,
 };
-
-pub use postgres_types as types;
 
 #[async_trait]
 pub trait GenericClient {
@@ -305,6 +303,16 @@ pub struct ArrayIterator<'a, T: FromSql<'a>> {
     values: ArrayValues<'a>,
     ty: Type,
     _type: PhantomData<T>,
+}
+
+impl<'a, T: FromSql<'a>> Debug for ArrayIterator<'a, T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ArrayIterator")
+            .field("values", &"[T]")
+            .field("ty", &self.ty)
+            .field("_type", &self._type)
+            .finish()
+    }
 }
 
 impl<'a, T: FromSql<'a>> Iterator for ArrayIterator<'a, T> {

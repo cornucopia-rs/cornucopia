@@ -44,10 +44,11 @@ fn main() -> ExitCode {
 fn test(apply: bool) -> bool {
     cornucopia::container::setup(false).unwrap();
     let mut client = cornucopia::conn::cornucopia_conn().unwrap();
-    let result = run_errors_test(&mut client, apply);
-    let result2 = run_example_test(&mut client);
+    let errors = run_errors_test(&mut client, apply);
+    let examples = run_examples_test(&mut client);
+    let codegen = run_codegen_test(&mut client);
     cornucopia::container::cleanup(false).unwrap();
-    return result.unwrap() && result2.unwrap();
+    return errors.unwrap() && examples.unwrap() && codegen.unwrap();
 }
 
 // Reset the current database
@@ -142,8 +143,42 @@ fn run_errors_test(
     Ok(successful)
 }
 
+// Run codegen test, return true if all test are successful
+fn run_codegen_test(client: &mut postgres::Client) -> Result<bool, Box<dyn std::error::Error>> {
+    let mut successful = true;
+    let original_pwd = std::env::current_dir().unwrap();
+
+    std::env::set_current_dir("../codegen_test")?;
+    // Reset db
+    reset_db(client)?;
+
+    // Run codegen
+    cornucopia::run_migrations(client, "migrations")?;
+    cornucopia::generate_live(client, "queries", Some("src/cornucopia_async.rs"), true)?;
+    cornucopia::generate_live(client, "queries", Some("src/cornucopia_sync.rs"), false)?;
+
+    // Run test
+    print!("{}", "[codegen]".magenta(),);
+    let result = Command::new("cargo").arg("run").output()?;
+    if !result.status.success() {
+        successful = false;
+        println!(
+            " {}\n{}",
+            "ERR".red(),
+            String::from_utf8_lossy(&result.stderr)
+                .as_ref()
+                .bright_black()
+        );
+    } else {
+        println!(" {}", "OK".green());
+    }
+
+    std::env::set_current_dir(&original_pwd)?;
+    Ok(successful)
+}
+
 // Run example test, return true if all test are successful
-fn run_example_test(client: &mut postgres::Client) -> Result<bool, Box<dyn std::error::Error>> {
+fn run_examples_test(client: &mut postgres::Client) -> Result<bool, Box<dyn std::error::Error>> {
     let mut successful = true;
     let original_pwd = std::env::current_dir().unwrap();
     for file in std::fs::read_dir("../examples")? {

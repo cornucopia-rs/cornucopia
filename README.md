@@ -84,6 +84,7 @@ No special installation steps are needed for `podman`, but note that you will ne
 ### Dependencies
 #### Required
 * Client code: `cornucopia_client`.
+* Postgres type utils: `postgres_types`.
 
 #### (Optional) Async
 * Runtime: `tokio`.

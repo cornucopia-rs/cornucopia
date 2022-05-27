@@ -14,7 +14,6 @@ keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 
 [dependencies]
 tokio = { version = "1.18.1", features = ["full"] }
-postgres-types = { version = "0.2.3", features = ["derive"] }
 deadpool-postgres = "0.10.2"
 tokio-postgres = "0.7.6"
 postgres = "0.19.3"

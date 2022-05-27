@@ -1,3 +1,7 @@
+#![allow(clippy::all)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
+#![allow(dead_code)]
 pub mod types {}
 pub mod queries {
     pub mod module_1 {
@@ -17,7 +21,7 @@ pub mod queries {
         }
         pub struct ExampleQueryQuery<'a, C: GenericClient, T> {
             client: &'a C,
-            params: [&'a (dyn cornucopia_client::types::ToSql + Sync); 0],
+            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
             mapper: fn(ExampleQueryBorrowed) -> T,
         }
         impl<'a, C, T: 'a> ExampleQueryQuery<'a, C, T>
@@ -70,9 +74,9 @@ FROM
             pub async fn stream(
                 self,
             ) -> Result<
-                    impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
-                    tokio_postgres::Error,
-                > {
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
                 let stmt = self.stmt().await?;
                 let stream = self
                     .client

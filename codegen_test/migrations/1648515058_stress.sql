@@ -11,39 +11,8 @@ CREATE TYPE custom_composite AS (
     nice spongebob_character
 );
 
-CREATE TYPE copy_composite AS (
-    first integer,
-    second float
-);
-
 CREATE DOMAIN my_domain AS TEXT CHECK (value ~ '^\w{5}$');
-CREATE DOMAIN copy_domain AS INTEGER CHECK (value > 42);
-
-CREATE TABLE Copy (
-    composite copy_composite,
-    domain copy_domain
-);
-
 CREATE DOMAIN custom_domain AS custom_composite[];
-
-CREATE TABLE Author (
-    Id serial NOT NULL,
-    Name varchar(70) NOT NULL,
-    Country varchar(100) NOT NULL,
-    PRIMARY KEY (Id)
-);
-
-INSERT INTO Author (Name, Country)
-    VALUES ('Agatha Christie', 'United Kingdom'), ('John Ronald Reuel Tolkien', 'United Kingdom');
-
-CREATE TABLE Book (
-    Id serial NOT NULL,
-    Title varchar(50) NOT NULL,
-    PRIMARY KEY (Id)
-);
-
-INSERT INTO Book (Title)
-    VALUES ('Murder on the Orient Express'), ('Death on the Nile'), ('The Hobbit'), ('The Silmarillion');
 
 CREATE TABLE Everything (
     custom_domain_ custom_domain,
@@ -55,7 +24,7 @@ CREATE TABLE Everything (
     char_ "char",
     smallint_ smallint,
     int2_ int2,
-    smallserial_ smallserial,
+  smallserial_ smallserial,
     serial2_ serial2,
     int_ int,
     int4_ int4,
@@ -85,3 +54,25 @@ CREATE TABLE Everything (
     macaddr_ macaddr
 );
 
+CREATE TYPE nightmare_composite AS (
+    custom custom_composite[],
+    spongebob spongebob_character[]
+);
+
+CREATE TABLE nightmare (
+    composite nightmare_composite NOT NULL,
+    name TEXT NOT NULL,
+    names TEXT[] NOT NULL,
+    data BYTEA,
+    datas BYTEA[]
+);
+
+INSERT INTO nightmare (composite, name, names)
+    VALUES (
+        ROW(
+            CAST (ARRAY[ROW('incredible', 42, 'Patrick')] as custom_composite[]),
+            CAST (ARRAY['Bob', 'Patrick'] as spongebob_character[])
+            ), 
+        'Bob', 
+        ARRAY['I', 'Love', 'Chocolate']
+    );
