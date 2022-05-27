@@ -2,7 +2,7 @@ use std::net::{IpAddr, Ipv4Addr};
 
 use cornucopia_sync::{
     queries::copy::{select_copy, InsertCloneParams, InsertCopyParams},
-    types::public::{CloneCompositeParams, CopyComposite},
+    types::public::{CloneCompositeBorrowed, CopyComposite},
 };
 use eui48::MacAddress;
 use postgres::{Client, Config, NoTls};
@@ -13,7 +13,7 @@ use uuid::Uuid;
 use crate::cornucopia_sync::{
     queries::stress::{nightmare, select_everything, InsertEverythingParams, SelectEverything},
     types::public::{
-        CustomComposite, CustomCompositeParams, CustomDomainParams, MyDomainParams,
+        CustomComposite, CustomCompositeBorrowed, CustomDomainParams, MyDomainBorrowed,
         SpongebobCharacter,
     },
 };
@@ -51,7 +51,7 @@ pub fn test_copy(client: &mut Client) {
 
     // Test clone
     let clone_params = InsertCloneParams {
-        composite: CloneCompositeParams {
+        composite: CloneCompositeBorrowed {
             first: 42,
             second: "Hello world",
         },
@@ -72,14 +72,14 @@ pub fn test_stress(client: &mut Client) {
         &time::format_description::well_known::Rfc3339,
     )
     .unwrap();
-    let tmp = &[CustomCompositeParams {
+    let tmp = &[CustomCompositeBorrowed {
         wow: &"",
         such_cool: 3,
         nice: SpongebobCharacter::Bob,
     }];
     let params = InsertEverythingParams {
         custom_domain_: CustomDomainParams(tmp),
-        domain_: MyDomainParams(&"hello"),
+        domain_: MyDomainBorrowed(&"hello"),
         array_: &[true, false],
         custom_array_: &[SpongebobCharacter::Bob, SpongebobCharacter::Patrick],
         bool_: true,

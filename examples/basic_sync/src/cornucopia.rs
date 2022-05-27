@@ -92,13 +92,7 @@ pub mod types {
                 }
             }
         }
-        #[derive(Debug, Clone)]
-        pub struct CustomCompositeParams<'a> {
-            pub name: &'a str,
-            pub age: i32,
-            pub persona: super::super::types::public::SpongebobCharacter,
-        }
-        impl<'a> postgres_types::ToSql for CustomCompositeParams<'a> {
+        impl<'a> postgres_types::ToSql for CustomCompositeBorrowed<'a> {
             fn to_sql(
                 &self,
                 _type: &postgres_types::Type,
@@ -450,7 +444,7 @@ FROM
                 mapper: |it| BooksOptRetParam::from(it),
             }
         }
-        #[derive(Debug, Copy, Clone)]
+        #[derive(Debug, Clone, Copy)]
         pub struct AuthorNameByIdParams {
             pub id: i32,
         }
@@ -553,7 +547,7 @@ WHERE
                 mapper: |it| AuthorNameById::from(it),
             }
         }
-        #[derive(Debug, Clone)]
+        #[derive(Debug)]
         pub struct AuthorNameStartingWithParams<'a> {
             pub start_str: &'a str,
         }
@@ -767,7 +761,7 @@ FROM
                 mapper: |it| ReturnCustomType::from(it),
             }
         }
-        #[derive(Debug, Copy, Clone)]
+        #[derive(Debug, Clone, Copy)]
         pub struct SelectWhereCustomTypeParams {
             pub spongebob_character: super::super::types::public::SpongebobCharacter,
         }
@@ -954,7 +948,7 @@ FROM
     pub mod module_1 {
         use postgres::fallible_iterator::FallibleIterator;
         use postgres::GenericClient;
-        #[derive(Debug, Clone)]
+        #[derive(Debug)]
         pub struct InsertBookParams<'a> {
             pub title: &'a str,
         }

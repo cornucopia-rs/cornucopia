@@ -71,13 +71,7 @@ pub mod types {
                 }
             }
         }
-        #[derive(Debug, Clone)]
-        pub struct CustomCompositeParams<'a> {
-            pub wow: &'a str,
-            pub such_cool: i32,
-            pub nice: super::super::types::public::SpongebobCharacter,
-        }
-        impl<'a> postgres_types::ToSql for CustomCompositeParams<'a> {
+        impl<'a> postgres_types::ToSql for CustomCompositeBorrowed<'a> {
             fn to_sql(
                 &self,
                 _type: &postgres_types::Type,
@@ -160,6 +154,7 @@ pub mod types {
         #[derive(Debug, Clone, PartialEq, postgres_types::ToSql, postgres_types::FromSql)]
         #[postgres(name = "custom_domain")]
         pub struct CustomDomain(pub Vec<super::super::types::public::CustomComposite>);
+        #[derive(Debug)]
         pub struct CustomDomainBorrowed<'a>(
             pub  cornucopia_client::ArrayIterator<
                 'a,
@@ -195,7 +190,7 @@ pub mod types {
         }
         #[derive(Debug, Clone)]
         pub struct CustomDomainParams<'a>(
-            pub &'a [super::super::types::public::CustomCompositeParams<'a>],
+            pub &'a [super::super::types::public::CustomCompositeBorrowed<'a>],
         );
         impl<'a> postgres_types::ToSql for CustomDomainParams<'a> {
             fn to_sql(
@@ -218,7 +213,7 @@ pub mod types {
                 }
                 match *type_.kind() {
                     postgres_types::Kind::Domain(ref type_) => {
-                        <&'a [super::super::types::public::CustomCompositeParams<
+                        <&'a [super::super::types::public::CustomCompositeBorrowed<
                             'a,
                         >] as postgres_types::ToSql>::accepts(type_)
                     }
@@ -239,6 +234,7 @@ pub mod types {
         #[derive(Debug, Clone, PartialEq, postgres_types::ToSql, postgres_types::FromSql)]
         #[postgres(name = "my_domain")]
         pub struct MyDomain(pub String);
+        #[derive(Debug)]
         pub struct MyDomainBorrowed<'a>(pub &'a str);
         impl<'a> postgres_types::FromSql<'a> for MyDomainBorrowed<'a> {
             fn from_sql(
@@ -267,9 +263,7 @@ pub mod types {
                 Self(inner.into())
             }
         }
-        #[derive(Debug, Clone)]
-        pub struct MyDomainParams<'a>(pub &'a str);
-        impl<'a> postgres_types::ToSql for MyDomainParams<'a> {
+        impl<'a> postgres_types::ToSql for MyDomainBorrowed<'a> {
             fn to_sql(
                 &self,
                 _type: &postgres_types::Type,
@@ -359,7 +353,7 @@ pub mod types {
         }
         #[derive(Debug, Clone)]
         pub struct NightmareCompositeParams<'a> {
-            pub custom: &'a [super::super::types::public::CustomCompositeParams<'a>],
+            pub custom: &'a [super::super::types::public::CustomCompositeBorrowed<'a>],
             pub spongebob: &'a [super::super::types::public::SpongebobCharacter],
         }
         impl<'a> postgres_types::ToSql for NightmareCompositeParams<'a> {
@@ -416,7 +410,7 @@ pub mod types {
                             .iter()
                             .all(|f| match f.name() {
                                 "custom" => {
-                                    <&'a [super::super::types::public::CustomCompositeParams<
+                                    <&'a [super::super::types::public::CustomCompositeBorrowed<
                                         'a,
                                     >] as postgres_types::ToSql>::accepts(f.type_())
                                 }
@@ -483,12 +477,7 @@ pub mod types {
                 }
             }
         }
-        #[derive(Debug, Clone)]
-        pub struct CloneCompositeParams<'a> {
-            pub first: i32,
-            pub second: &'a str,
-        }
-        impl<'a> postgres_types::ToSql for CloneCompositeParams<'a> {
+        impl<'a> postgres_types::ToSql for CloneCompositeBorrowed<'a> {
             fn to_sql(
                 &self,
                 _type: &postgres_types::Type,
@@ -881,11 +870,11 @@ FROM
                 mapper: |it| SelectEverything::from(it),
             }
         }
-        #[derive(Debug, Clone)]
+        #[derive(Debug)]
         pub struct InsertEverythingParams<'a> {
             pub custom_domain_: super::super::types::public::CustomDomainParams<'a>,
             pub custom_array_: &'a [super::super::types::public::SpongebobCharacter],
-            pub domain_: super::super::types::public::MyDomainParams<'a>,
+            pub domain_: super::super::types::public::MyDomainBorrowed<'a>,
             pub array_: &'a [bool],
             pub bool_: bool,
             pub boolean_: bool,
@@ -972,7 +961,7 @@ FROM
             client: &'a mut C,
             custom_domain_: &'a super::super::types::public::CustomDomainParams<'a>,
             custom_array_: &'a &'a [super::super::types::public::SpongebobCharacter],
-            domain_: &'a super::super::types::public::MyDomainParams<'a>,
+            domain_: &'a super::super::types::public::MyDomainBorrowed<'a>,
             array_: &'a &'a [bool],
             bool_: &'a bool,
             boolean_: &'a bool,
@@ -1162,9 +1151,9 @@ FROM
     pub mod copy {
         use postgres::fallible_iterator::FallibleIterator;
         use postgres::GenericClient;
-        #[derive(Debug, Clone)]
+        #[derive(Debug)]
         pub struct InsertCloneParams<'a> {
-            pub composite: super::super::types::public::CloneCompositeParams<'a>,
+            pub composite: super::super::types::public::CloneCompositeBorrowed<'a>,
         }
         impl<'a> InsertCloneParams<'a> {
             pub fn query<C: GenericClient>(
@@ -1176,7 +1165,7 @@ FROM
         }
         pub fn insert_clone<'a, C: GenericClient>(
             client: &'a mut C,
-            composite: &'a super::super::types::public::CloneCompositeParams<'a>,
+            composite: &'a super::super::types::public::CloneCompositeBorrowed<'a>,
         ) -> Result<u64, postgres::Error> {
             let stmt = client.prepare("INSERT INTO clone (composite) VALUES ($1);")?;
             client.execute(&stmt, &[composite])
@@ -1259,7 +1248,7 @@ FROM
                 mapper: |it| SelectClone::from(it),
             }
         }
-        #[derive(Debug, Copy, Clone)]
+        #[derive(Debug, Clone, Copy)]
         pub struct InsertCopyParams {
             pub composite: super::super::types::public::CopyComposite,
         }

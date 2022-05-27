@@ -98,17 +98,19 @@ fn domain_brw_fromsql(w: &mut impl Write, struct_name: &str, ty_name: &str, ty_s
     )
 }
 
-fn domain_params_tosql(
+fn domain_tosql(
     w: &mut impl Write,
     type_registrar: &TypeRegistrar,
     struct_name: &str,
     inner_ty: &CornucopiaType,
     ty_name: &str,
+    is_params: bool,
 ) {
     let accept_ty = inner_ty.borrowed_rust_ty(type_registrar, Some("'a"), true);
+    let post = if is_params { "Borrowed" } else { "Params" };
     gen!(
         w,
-        r#"impl <'a> postgres_types::ToSql for {struct_name}Params<'a> {{
+        r#"impl <'a> postgres_types::ToSql for {struct_name}{post}<'a> {{
         fn to_sql(
             &self,
             _type: &postgres_types::Type,
@@ -148,13 +150,15 @@ fn domain_params_tosql(
     )
 }
 
-fn composite_params_tosql(
+fn composite_tosql(
     w: &mut impl Write,
     type_registrar: &TypeRegistrar,
     struct_name: &str,
     fields: &[Field],
     ty_name: &str,
+    is_params: bool,
 ) {
+    let post = if is_params { "Borrowed" } else { "Params" };
     let nb_fields = fields.len();
     let write_fields = join_ln(fields.iter(), |w, f| {
         let name = f.name();
@@ -178,7 +182,7 @@ fn composite_params_tosql(
 
     gen!(
         w,
-        r#"impl<'a> postgres_types::ToSql for {struct_name}Params<'a> {{
+        r#"impl<'a> postgres_types::ToSql for {struct_name}{post}<'a> {{
         fn to_sql(
             &self,
             _type: &postgres_types::Type,
@@ -452,14 +456,14 @@ fn gen_params_struct(
 
     let params_is_copy = params.iter().all(|a| a.ty.is_copy);
     let (copy, lifetime, fn_lifetime) = if params_is_copy {
-        ("Copy,", "", "'a,")
+        ("Clone,Copy,", "", "'a,")
     } else {
         ("", "<'a>", "")
     };
     // Generate params struct
     gen!(
         w,
-        "#[derive(Debug, {copy} Clone)]
+        "#[derive(Debug, {copy})]
         pub struct {query_struct_name}Params{lifetime} {{ {params_struct_fields} }}
         impl {lifetime} {query_struct_name}Params {lifetime} {{
             pub {fn_async} fn query<{fn_lifetime}C: GenericClient>(&'a self, client: &'a {client_mut} C) -> {ret_type} {{
@@ -581,7 +585,7 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
                 let brw_fields_str = inner_ty.borrowed_rust_ty(type_registrar, Some("'a"), false);
                 gen!(
                     w,
-                    " pub struct {struct_name}Borrowed<'a> (pub {brw_fields_str});"
+                    "#[derive(Debug)]pub struct {struct_name}Borrowed<'a> (pub {brw_fields_str});"
                 );
                 domain_brw_fromsql(w, struct_name, ty_name, ty_schema);
                 let inner_value = inner_ty.owning_call("inner", false);
@@ -599,13 +603,22 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
                         }}
                     }}"
                 );
-                let params_fields_str = inner_ty.borrowed_rust_ty(type_registrar, Some("'a"), true);
-                gen!(
+                if !ty.is_params {
+                    let params_fields_str =
+                        inner_ty.borrowed_rust_ty(type_registrar, Some("'a"), true);
+                    gen!(
+                        w,
+                        "#[derive(Debug, Clone)]pub struct {struct_name}Params<'a>(pub {params_fields_str});",
+                    );
+                }
+                domain_tosql(
                     w,
-                    "#[derive(Debug, Clone)]
-                    pub struct {struct_name}Params<'a>(pub {params_fields_str});",
+                    type_registrar,
+                    struct_name,
+                    inner_ty,
+                    ty_name,
+                    ty.is_params,
                 );
-                domain_params_tosql(w, type_registrar, struct_name, inner_ty, ty_name);
             }
         }
         Kind::Composite(fields) => {
@@ -645,8 +658,7 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
                 });
                 gen!(
                     w,
-                    "#[derive(Debug)]
-                    pub struct {struct_name}Borrowed<'a> {{ {borrowed_fields_str} }}",
+                    "#[derive(Debug)]pub struct {struct_name}Borrowed<'a> {{ {borrowed_fields_str} }}",
                 );
                 composite_fromsql(w, struct_name, fields, ty_name, ty_schema);
                 gen!(
@@ -660,21 +672,30 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
                         ) -> Self {{ Self {{ {field_values} }} }}
                     }}"
                 );
-                let params_fields_str = join_comma(fields, |w, f| {
-                    let f_ty = type_registrar.get(f.type_()).unwrap();
+                if !ty.is_params {
+                    let params_fields_str = join_comma(fields, |w, f| {
+                        let f_ty = type_registrar.get(f.type_()).unwrap();
+                        gen!(
+                            w,
+                            "pub {} : {}",
+                            f.name(),
+                            f_ty.borrowed_rust_ty(type_registrar, Some("'a"), true)
+                        )
+                    });
                     gen!(
                         w,
-                        "pub {} : {}",
-                        f.name(),
-                        f_ty.borrowed_rust_ty(type_registrar, Some("'a"), true)
-                    )
-                });
-                gen!(
-                    w,
-                    "#[derive(Debug, Clone)]
+                        "#[derive(Debug, Clone)]
                     pub struct {struct_name}Params<'a> {{ {params_fields_str} }}",
+                    );
+                }
+                composite_tosql(
+                    w,
+                    type_registrar,
+                    struct_name,
+                    fields,
+                    ty_name,
+                    ty.is_params,
                 );
-                composite_params_tosql(w, type_registrar, struct_name, fields, ty_name);
             }
         }
         _ => unreachable!(),
