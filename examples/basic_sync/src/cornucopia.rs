@@ -224,27 +224,28 @@ pub mod queries {
         }
         #[derive(Debug, Clone, PartialEq)]
         pub struct Authors {
+            pub country: String,
             pub id: i32,
             pub name: String,
-            pub country: String,
         }
         pub struct AuthorsBorrowed<'a> {
+            pub country: &'a str,
             pub id: i32,
             pub name: &'a str,
-            pub country: &'a str,
         }
         impl<'a> From<AuthorsBorrowed<'a>> for Authors {
-            fn from(AuthorsBorrowed { id, name, country }: AuthorsBorrowed<'a>) -> Self {
+            fn from(AuthorsBorrowed { country, id, name }: AuthorsBorrowed<'a>) -> Self {
                 Self {
+                    country: country.into(),
                     id,
                     name: name.into(),
-                    country: country.into(),
                 }
             }
         }
         pub struct AuthorsQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            indexes: &'static [usize; 3],
             query: &'static str,
             mapper: fn(AuthorsBorrowed) -> T,
         }
@@ -260,14 +261,18 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
+                    indexes: self.indexes,
                     mapper,
                 }
             }
-            pub fn extractor(row: &postgres::row::Row) -> AuthorsBorrowed {
+            pub fn extractor<'b>(
+                row: &'b postgres::row::Row,
+                indexes: &'static [usize; 3],
+            ) -> AuthorsBorrowed<'b> {
                 AuthorsBorrowed {
-                    id: row.get(0),
-                    name: row.get(1),
-                    country: row.get(2),
+                    country: row.get(indexes[0]),
+                    id: row.get(indexes[1]),
+                    name: row.get(indexes[2]),
                 }
             }
             pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
@@ -276,7 +281,7 @@ pub mod queries {
             pub fn one(mut self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt()?;
                 let row = self.client.query_one(&stmt, &self.params)?;
-                Ok((self.mapper)(Self::extractor(&row)))
+                Ok((self.mapper)(Self::extractor(&row, self.indexes)))
             }
             pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
                 self.stream()?.collect()
@@ -287,7 +292,7 @@ pub mod queries {
                     self
                         .client
                         .query_opt(&stmt, &self.params)?
-                        .map(|row| (self.mapper)(Self::extractor(&row))),
+                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))),
                 )
             }
             pub fn stream(
@@ -301,7 +306,8 @@ pub mod queries {
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
                     .iterator()
-                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))));
+                    .map(move |res| res
+                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))));
                 Ok(stream)
             }
         }
@@ -320,6 +326,7 @@ pub mod queries {
         pub struct BooksQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            indexes: &'static [usize; 1],
             query: &'static str,
             mapper: fn(BooksBorrowed) -> T,
         }
@@ -335,11 +342,17 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
+                    indexes: self.indexes,
                     mapper,
                 }
             }
-            pub fn extractor(row: &postgres::row::Row) -> BooksBorrowed {
-                BooksBorrowed { title: row.get(0) }
+            pub fn extractor<'b>(
+                row: &'b postgres::row::Row,
+                indexes: &'static [usize; 1],
+            ) -> BooksBorrowed<'b> {
+                BooksBorrowed {
+                    title: row.get(indexes[0]),
+                }
             }
             pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
                 self.client.prepare(self.query)
@@ -347,7 +360,7 @@ pub mod queries {
             pub fn one(mut self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt()?;
                 let row = self.client.query_one(&stmt, &self.params)?;
-                Ok((self.mapper)(Self::extractor(&row)))
+                Ok((self.mapper)(Self::extractor(&row, self.indexes)))
             }
             pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
                 self.stream()?.collect()
@@ -358,7 +371,7 @@ pub mod queries {
                     self
                         .client
                         .query_opt(&stmt, &self.params)?
-                        .map(|row| (self.mapper)(Self::extractor(&row))),
+                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))),
                 )
             }
             pub fn stream(
@@ -372,7 +385,8 @@ pub mod queries {
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
                     .iterator()
-                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))));
+                    .map(move |res| res
+                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))));
                 Ok(stream)
             }
         }
@@ -395,6 +409,7 @@ pub mod queries {
         pub struct BooksOptRetParamQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            indexes: &'static [usize; 1],
             query: &'static str,
             mapper: fn(BooksOptRetParamBorrowed) -> T,
         }
@@ -410,12 +425,16 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
+                    indexes: self.indexes,
                     mapper,
                 }
             }
-            pub fn extractor(row: &postgres::row::Row) -> BooksOptRetParamBorrowed {
+            pub fn extractor<'b>(
+                row: &'b postgres::row::Row,
+                indexes: &'static [usize; 1],
+            ) -> BooksOptRetParamBorrowed<'b> {
                 BooksOptRetParamBorrowed {
-                    title: row.get(0),
+                    title: row.get(indexes[0]),
                 }
             }
             pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
@@ -424,7 +443,7 @@ pub mod queries {
             pub fn one(mut self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt()?;
                 let row = self.client.query_one(&stmt, &self.params)?;
-                Ok((self.mapper)(Self::extractor(&row)))
+                Ok((self.mapper)(Self::extractor(&row, self.indexes)))
             }
             pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
                 self.stream()?.collect()
@@ -435,7 +454,7 @@ pub mod queries {
                     self
                         .client
                         .query_opt(&stmt, &self.params)?
-                        .map(|row| (self.mapper)(Self::extractor(&row))),
+                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))),
                 )
             }
             pub fn stream(
@@ -449,7 +468,8 @@ pub mod queries {
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
                     .iterator()
-                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))));
+                    .map(move |res| res
+                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))));
                 Ok(stream)
             }
         }
@@ -470,6 +490,7 @@ pub mod queries {
         pub struct AuthorNameByIdQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            indexes: &'static [usize; 1],
             query: &'static str,
             mapper: fn(AuthorNameByIdBorrowed) -> T,
         }
@@ -485,12 +506,16 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
+                    indexes: self.indexes,
                     mapper,
                 }
             }
-            pub fn extractor(row: &postgres::row::Row) -> AuthorNameByIdBorrowed {
+            pub fn extractor<'b>(
+                row: &'b postgres::row::Row,
+                indexes: &'static [usize; 1],
+            ) -> AuthorNameByIdBorrowed<'b> {
                 AuthorNameByIdBorrowed {
-                    name: row.get(0),
+                    name: row.get(indexes[0]),
                 }
             }
             pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
@@ -499,7 +524,7 @@ pub mod queries {
             pub fn one(mut self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt()?;
                 let row = self.client.query_one(&stmt, &self.params)?;
-                Ok((self.mapper)(Self::extractor(&row)))
+                Ok((self.mapper)(Self::extractor(&row, self.indexes)))
             }
             pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
                 self.stream()?.collect()
@@ -510,7 +535,7 @@ pub mod queries {
                     self
                         .client
                         .query_opt(&stmt, &self.params)?
-                        .map(|row| (self.mapper)(Self::extractor(&row))),
+                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))),
                 )
             }
             pub fn stream(
@@ -524,36 +549,37 @@ pub mod queries {
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
                     .iterator()
-                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))));
+                    .map(move |res| res
+                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))));
                 Ok(stream)
             }
         }
         #[derive(Debug, Clone, PartialEq)]
         pub struct AuthorNameStartingWith {
             pub authorid: i32,
-            pub name: String,
             pub bookid: i32,
+            pub name: String,
             pub title: String,
         }
         pub struct AuthorNameStartingWithBorrowed<'a> {
             pub authorid: i32,
-            pub name: &'a str,
             pub bookid: i32,
+            pub name: &'a str,
             pub title: &'a str,
         }
         impl<'a> From<AuthorNameStartingWithBorrowed<'a>> for AuthorNameStartingWith {
             fn from(
                 AuthorNameStartingWithBorrowed {
                     authorid,
-                    name,
                     bookid,
+                    name,
                     title,
                 }: AuthorNameStartingWithBorrowed<'a>,
             ) -> Self {
                 Self {
                     authorid,
-                    name: name.into(),
                     bookid,
+                    name: name.into(),
                     title: title.into(),
                 }
             }
@@ -561,6 +587,7 @@ pub mod queries {
         pub struct AuthorNameStartingWithQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            indexes: &'static [usize; 4],
             query: &'static str,
             mapper: fn(AuthorNameStartingWithBorrowed) -> T,
         }
@@ -576,17 +603,19 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
+                    indexes: self.indexes,
                     mapper,
                 }
             }
-            pub fn extractor(
-                row: &postgres::row::Row,
-            ) -> AuthorNameStartingWithBorrowed {
+            pub fn extractor<'b>(
+                row: &'b postgres::row::Row,
+                indexes: &'static [usize; 4],
+            ) -> AuthorNameStartingWithBorrowed<'b> {
                 AuthorNameStartingWithBorrowed {
-                    authorid: row.get(0),
-                    name: row.get(1),
-                    bookid: row.get(2),
-                    title: row.get(3),
+                    authorid: row.get(indexes[0]),
+                    bookid: row.get(indexes[1]),
+                    name: row.get(indexes[2]),
+                    title: row.get(indexes[3]),
                 }
             }
             pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
@@ -595,7 +624,7 @@ pub mod queries {
             pub fn one(mut self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt()?;
                 let row = self.client.query_one(&stmt, &self.params)?;
-                Ok((self.mapper)(Self::extractor(&row)))
+                Ok((self.mapper)(Self::extractor(&row, self.indexes)))
             }
             pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
                 self.stream()?.collect()
@@ -606,7 +635,7 @@ pub mod queries {
                     self
                         .client
                         .query_opt(&stmt, &self.params)?
-                        .map(|row| (self.mapper)(Self::extractor(&row))),
+                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))),
                 )
             }
             pub fn stream(
@@ -620,7 +649,8 @@ pub mod queries {
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
                     .iterator()
-                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))));
+                    .map(move |res| res
+                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))));
                 Ok(stream)
             }
         }
@@ -641,6 +671,7 @@ pub mod queries {
         pub struct ReturnCustomTypeQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            indexes: &'static [usize; 1],
             query: &'static str,
             mapper: fn(ReturnCustomTypeBorrowed) -> T,
         }
@@ -656,12 +687,16 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
+                    indexes: self.indexes,
                     mapper,
                 }
             }
-            pub fn extractor(row: &postgres::row::Row) -> ReturnCustomTypeBorrowed {
+            pub fn extractor<'b>(
+                row: &'b postgres::row::Row,
+                indexes: &'static [usize; 1],
+            ) -> ReturnCustomTypeBorrowed<'b> {
                 ReturnCustomTypeBorrowed {
-                    col1: row.get(0),
+                    col1: row.get(indexes[0]),
                 }
             }
             pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
@@ -670,7 +705,7 @@ pub mod queries {
             pub fn one(mut self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt()?;
                 let row = self.client.query_one(&stmt, &self.params)?;
-                Ok((self.mapper)(Self::extractor(&row)))
+                Ok((self.mapper)(Self::extractor(&row, self.indexes)))
             }
             pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
                 self.stream()?.collect()
@@ -681,7 +716,7 @@ pub mod queries {
                     self
                         .client
                         .query_opt(&stmt, &self.params)?
-                        .map(|row| (self.mapper)(Self::extractor(&row))),
+                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))),
                 )
             }
             pub fn stream(
@@ -695,7 +730,8 @@ pub mod queries {
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
                     .iterator()
-                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))));
+                    .map(move |res| res
+                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))));
                 Ok(stream)
             }
         }
@@ -706,6 +742,7 @@ pub mod queries {
         pub struct SelectWhereCustomTypeQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            indexes: &'static [usize; 1],
             query: &'static str,
             mapper: fn(SelectWhereCustomType) -> T,
         }
@@ -721,12 +758,16 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
+                    indexes: self.indexes,
                     mapper,
                 }
             }
-            pub fn extractor(row: &postgres::row::Row) -> SelectWhereCustomType {
+            pub fn extractor<'b>(
+                row: &'b postgres::row::Row,
+                indexes: &'static [usize; 1],
+            ) -> SelectWhereCustomType {
                 SelectWhereCustomType {
-                    col2: row.get(0),
+                    col2: row.get(indexes[0]),
                 }
             }
             pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
@@ -735,7 +776,7 @@ pub mod queries {
             pub fn one(mut self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt()?;
                 let row = self.client.query_one(&stmt, &self.params)?;
-                Ok((self.mapper)(Self::extractor(&row)))
+                Ok((self.mapper)(Self::extractor(&row, self.indexes)))
             }
             pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
                 self.stream()?.collect()
@@ -746,7 +787,7 @@ pub mod queries {
                     self
                         .client
                         .query_opt(&stmt, &self.params)?
-                        .map(|row| (self.mapper)(Self::extractor(&row))),
+                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))),
                 )
             }
             pub fn stream(
@@ -760,7 +801,8 @@ pub mod queries {
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
                     .iterator()
-                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))));
+                    .map(move |res| res
+                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))));
                 Ok(stream)
             }
         }
@@ -785,6 +827,7 @@ pub mod queries {
         pub struct SelectTranslationsQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            indexes: &'static [usize; 1],
             query: &'static str,
             mapper: fn(SelectTranslationsBorrowed) -> T,
         }
@@ -800,12 +843,16 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
+                    indexes: self.indexes,
                     mapper,
                 }
             }
-            pub fn extractor(row: &postgres::row::Row) -> SelectTranslationsBorrowed {
+            pub fn extractor<'b>(
+                row: &'b postgres::row::Row,
+                indexes: &'static [usize; 1],
+            ) -> SelectTranslationsBorrowed<'b> {
                 SelectTranslationsBorrowed {
-                    translations: row.get(0),
+                    translations: row.get(indexes[0]),
                 }
             }
             pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
@@ -814,7 +861,7 @@ pub mod queries {
             pub fn one(mut self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt()?;
                 let row = self.client.query_one(&stmt, &self.params)?;
-                Ok((self.mapper)(Self::extractor(&row)))
+                Ok((self.mapper)(Self::extractor(&row, self.indexes)))
             }
             pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
                 self.stream()?.collect()
@@ -825,7 +872,7 @@ pub mod queries {
                     self
                         .client
                         .query_opt(&stmt, &self.params)?
-                        .map(|row| (self.mapper)(Self::extractor(&row))),
+                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))),
                 )
             }
             pub fn stream(
@@ -839,7 +886,8 @@ pub mod queries {
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
                     .iterator()
-                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))));
+                    .map(move |res| res
+                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))));
                 Ok(stream)
             }
         }
@@ -853,6 +901,7 @@ pub mod queries {
     *
 FROM
     Author;",
+                indexes: &[2, 0, 1],
                 mapper: |it| Authors::from(it),
             }
         }
@@ -866,6 +915,7 @@ FROM
     Title
 FROM
     Book;",
+                indexes: &[0],
                 mapper: |it| Books::from(it),
             }
         }
@@ -879,6 +929,7 @@ FROM
     Title
 FROM
     Book;",
+                indexes: &[0],
                 mapper: |it| BooksOptRetParam::from(it),
             }
         }
@@ -895,6 +946,7 @@ FROM
     Author
 WHERE
     Author.Id = $1;",
+                indexes: &[0],
                 mapper: |it| AuthorNameById::from(it),
             }
         }
@@ -916,6 +968,7 @@ FROM
     INNER JOIN Book ON Book.Id = BookAuthor.BookId
 WHERE
     Author.Name LIKE CONCAT($1::text, '%');",
+                indexes: &[0, 2, 1, 3],
                 mapper: |it| AuthorNameStartingWith::from(it),
             }
         }
@@ -929,6 +982,7 @@ WHERE
     col1
 FROM
     CustomTable;",
+                indexes: &[0],
                 mapper: |it| ReturnCustomType::from(it),
             }
         }
@@ -944,6 +998,7 @@ FROM
 FROM
     CustomTable
 WHERE (col1).persona = $1;",
+                indexes: &[0],
                 mapper: |it| SelectWhereCustomType::from(it),
             }
         }
@@ -959,6 +1014,7 @@ FROM
     Book;
 
 ",
+                indexes: &[0],
                 mapper: |it| SelectTranslations::from(it),
             }
         }

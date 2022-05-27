@@ -22,6 +22,7 @@ pub mod queries {
         pub struct ExampleQueryQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            indexes: &'static [usize; 1],
             query: &'static str,
             mapper: fn(ExampleQueryBorrowed) -> T,
         }
@@ -37,12 +38,16 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
+                    indexes: self.indexes,
                     mapper,
                 }
             }
-            pub fn extractor(row: &tokio_postgres::row::Row) -> ExampleQueryBorrowed {
+            pub fn extractor<'b>(
+                row: &'b tokio_postgres::row::Row,
+                indexes: &'static [usize; 1],
+            ) -> ExampleQueryBorrowed<'b> {
                 ExampleQueryBorrowed {
-                    col1: row.get(0),
+                    col1: row.get(indexes[0]),
                 }
             }
             pub async fn stmt(
@@ -53,7 +58,7 @@ pub mod queries {
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
-                Ok((self.mapper)(Self::extractor(&row)))
+                Ok((self.mapper)(Self::extractor(&row, self.indexes)))
             }
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
@@ -65,7 +70,7 @@ pub mod queries {
                         .client
                         .query_opt(&stmt, &self.params)
                         .await?
-                        .map(|row| (self.mapper)(Self::extractor(&row))),
+                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))),
                 )
             }
             pub async fn stream(
@@ -79,7 +84,8 @@ pub mod queries {
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
                     .await?
-                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))))
+                    .map(move |res| res
+                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))))
                     .into_stream();
                 Ok(stream)
             }
@@ -96,6 +102,7 @@ FROM
     example_table;
 
 ",
+                indexes: &[0],
                 mapper: |it| ExampleQuery::from(it),
             }
         }

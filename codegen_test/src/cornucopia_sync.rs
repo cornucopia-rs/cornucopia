@@ -644,179 +644,180 @@ pub mod queries {
         }
         #[derive(Debug, Clone, PartialEq)]
         pub struct SelectEverything {
-            pub custom_domain_: Vec<super::super::types::public::CustomComposite>,
-            pub custom_array_: Vec<super::super::types::public::SpongebobCharacter>,
-            pub domain_: String,
             pub array_: Vec<bool>,
+            pub bigserial_: i64,
+            pub bingint_: i64,
             pub bool_: bool,
             pub bool_opt: Option<bool>,
             pub boolean_: bool,
-            pub char_: i8,
-            pub smallint_: i16,
-            pub int2_: i16,
-            pub smallserial_: i16,
-            pub serial2_: i16,
-            pub int_: i32,
-            pub int4_: i32,
-            pub serial_: i32,
-            pub serial4_: i32,
-            pub bingint_: i64,
-            pub int8_: i64,
-            pub bigserial_: i64,
-            pub serial8_: i64,
-            pub float4_: f32,
-            pub real_: f32,
-            pub float8_: f64,
-            pub double_precision_: f64,
-            pub text_: String,
-            pub varchar_: String,
             pub bytea_: Vec<u8>,
-            pub timestamp_: time::PrimitiveDateTime,
-            pub timestamp_without_time_zone_: time::PrimitiveDateTime,
-            pub timestamptz_: time::OffsetDateTime,
-            pub timestamp_with_time_zone_: time::OffsetDateTime,
+            pub char_: i8,
+            pub custom_array_: Vec<super::super::types::public::SpongebobCharacter>,
+            pub custom_domain_: Vec<super::super::types::public::CustomComposite>,
             pub date_: time::Date,
-            pub time_: time::Time,
+            pub domain_: String,
+            pub double_precision_: f64,
+            pub float4_: f32,
+            pub float8_: f64,
+            pub inet_: std::net::IpAddr,
+            pub int2_: i16,
+            pub int4_: i32,
+            pub int8_: i64,
+            pub int_: i32,
             pub json_: postgres_types::Json<serde_json::Value>,
             pub jsonb_: postgres_types::Json<serde_json::Value>,
-            pub uuid_: uuid::Uuid,
-            pub inet_: std::net::IpAddr,
             pub macaddr_: eui48::MacAddress,
+            pub real_: f32,
+            pub serial2_: i16,
+            pub serial4_: i32,
+            pub serial8_: i64,
+            pub serial_: i32,
+            pub smallint_: i16,
+            pub smallserial_: i16,
+            pub text_: String,
+            pub time_: time::Time,
+            pub timestamp_: time::PrimitiveDateTime,
+            pub timestamp_with_time_zone_: time::OffsetDateTime,
+            pub timestamp_without_time_zone_: time::PrimitiveDateTime,
+            pub timestamptz_: time::OffsetDateTime,
+            pub uuid_: uuid::Uuid,
+            pub varchar_: String,
         }
         pub struct SelectEverythingBorrowed<'a> {
-            pub custom_domain_: cornucopia_client::ArrayIterator<
-                'a,
-                super::super::types::public::CustomCompositeBorrowed<'a>,
-            >,
+            pub array_: cornucopia_client::ArrayIterator<'a, bool>,
+            pub bigserial_: i64,
+            pub bingint_: i64,
+            pub bool_: bool,
+            pub bool_opt: Option<bool>,
+            pub boolean_: bool,
+            pub bytea_: &'a [u8],
+            pub char_: i8,
             pub custom_array_: cornucopia_client::ArrayIterator<
                 'a,
                 super::super::types::public::SpongebobCharacter,
             >,
-            pub domain_: &'a str,
-            pub array_: cornucopia_client::ArrayIterator<'a, bool>,
-            pub bool_: bool,
-            pub bool_opt: Option<bool>,
-            pub boolean_: bool,
-            pub char_: i8,
-            pub smallint_: i16,
-            pub int2_: i16,
-            pub smallserial_: i16,
-            pub serial2_: i16,
-            pub int_: i32,
-            pub int4_: i32,
-            pub serial_: i32,
-            pub serial4_: i32,
-            pub bingint_: i64,
-            pub int8_: i64,
-            pub bigserial_: i64,
-            pub serial8_: i64,
-            pub float4_: f32,
-            pub real_: f32,
-            pub float8_: f64,
-            pub double_precision_: f64,
-            pub text_: &'a str,
-            pub varchar_: &'a str,
-            pub bytea_: &'a [u8],
-            pub timestamp_: time::PrimitiveDateTime,
-            pub timestamp_without_time_zone_: time::PrimitiveDateTime,
-            pub timestamptz_: time::OffsetDateTime,
-            pub timestamp_with_time_zone_: time::OffsetDateTime,
+            pub custom_domain_: cornucopia_client::ArrayIterator<
+                'a,
+                super::super::types::public::CustomCompositeBorrowed<'a>,
+            >,
             pub date_: time::Date,
-            pub time_: time::Time,
+            pub domain_: &'a str,
+            pub double_precision_: f64,
+            pub float4_: f32,
+            pub float8_: f64,
+            pub inet_: std::net::IpAddr,
+            pub int2_: i16,
+            pub int4_: i32,
+            pub int8_: i64,
+            pub int_: i32,
             pub json_: postgres_types::Json<&'a serde_json::value::RawValue>,
             pub jsonb_: postgres_types::Json<&'a serde_json::value::RawValue>,
-            pub uuid_: uuid::Uuid,
-            pub inet_: std::net::IpAddr,
             pub macaddr_: eui48::MacAddress,
+            pub real_: f32,
+            pub serial2_: i16,
+            pub serial4_: i32,
+            pub serial8_: i64,
+            pub serial_: i32,
+            pub smallint_: i16,
+            pub smallserial_: i16,
+            pub text_: &'a str,
+            pub time_: time::Time,
+            pub timestamp_: time::PrimitiveDateTime,
+            pub timestamp_with_time_zone_: time::OffsetDateTime,
+            pub timestamp_without_time_zone_: time::PrimitiveDateTime,
+            pub timestamptz_: time::OffsetDateTime,
+            pub uuid_: uuid::Uuid,
+            pub varchar_: &'a str,
         }
         impl<'a> From<SelectEverythingBorrowed<'a>> for SelectEverything {
             fn from(
                 SelectEverythingBorrowed {
-                    custom_domain_,
-                    custom_array_,
-                    domain_,
                     array_,
+                    bigserial_,
+                    bingint_,
                     bool_,
                     bool_opt,
                     boolean_,
-                    char_,
-                    smallint_,
-                    int2_,
-                    smallserial_,
-                    serial2_,
-                    int_,
-                    int4_,
-                    serial_,
-                    serial4_,
-                    bingint_,
-                    int8_,
-                    bigserial_,
-                    serial8_,
-                    float4_,
-                    real_,
-                    float8_,
-                    double_precision_,
-                    text_,
-                    varchar_,
                     bytea_,
-                    timestamp_,
-                    timestamp_without_time_zone_,
-                    timestamptz_,
-                    timestamp_with_time_zone_,
+                    char_,
+                    custom_array_,
+                    custom_domain_,
                     date_,
-                    time_,
+                    domain_,
+                    double_precision_,
+                    float4_,
+                    float8_,
+                    inet_,
+                    int2_,
+                    int4_,
+                    int8_,
+                    int_,
                     json_,
                     jsonb_,
-                    uuid_,
-                    inet_,
                     macaddr_,
+                    real_,
+                    serial2_,
+                    serial4_,
+                    serial8_,
+                    serial_,
+                    smallint_,
+                    smallserial_,
+                    text_,
+                    time_,
+                    timestamp_,
+                    timestamp_with_time_zone_,
+                    timestamp_without_time_zone_,
+                    timestamptz_,
+                    uuid_,
+                    varchar_,
                 }: SelectEverythingBorrowed<'a>,
             ) -> Self {
                 Self {
-                    custom_domain_: custom_domain_.map(|v| v.into()).collect(),
-                    custom_array_: custom_array_.map(|v| v.into()).collect(),
-                    domain_: domain_.into(),
                     array_: array_.map(|v| v.into()).collect(),
+                    bigserial_,
+                    bingint_,
                     bool_,
                     bool_opt,
                     boolean_,
-                    char_,
-                    smallint_,
-                    int2_,
-                    smallserial_,
-                    serial2_,
-                    int_,
-                    int4_,
-                    serial_,
-                    serial4_,
-                    bingint_,
-                    int8_,
-                    bigserial_,
-                    serial8_,
-                    float4_,
-                    real_,
-                    float8_,
-                    double_precision_,
-                    text_: text_.into(),
-                    varchar_: varchar_.into(),
                     bytea_: bytea_.into(),
-                    timestamp_,
-                    timestamp_without_time_zone_,
-                    timestamptz_,
-                    timestamp_with_time_zone_,
+                    char_,
+                    custom_array_: custom_array_.map(|v| v.into()).collect(),
+                    custom_domain_: custom_domain_.map(|v| v.into()).collect(),
                     date_,
-                    time_,
+                    domain_: domain_.into(),
+                    double_precision_,
+                    float4_,
+                    float8_,
+                    inet_,
+                    int2_,
+                    int4_,
+                    int8_,
+                    int_,
                     json_: postgres_types::Json(serde_json::from_str(json_.0.get()).unwrap()),
                     jsonb_: postgres_types::Json(serde_json::from_str(jsonb_.0.get()).unwrap()),
-                    uuid_,
-                    inet_,
                     macaddr_,
+                    real_,
+                    serial2_,
+                    serial4_,
+                    serial8_,
+                    serial_,
+                    smallint_,
+                    smallserial_,
+                    text_: text_.into(),
+                    time_,
+                    timestamp_,
+                    timestamp_with_time_zone_,
+                    timestamp_without_time_zone_,
+                    timestamptz_,
+                    uuid_,
+                    varchar_: varchar_.into(),
                 }
             }
         }
         pub struct SelectEverythingQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            indexes: &'static [usize; 38],
             query: &'static str,
             mapper: fn(SelectEverythingBorrowed) -> T,
         }
@@ -832,49 +833,53 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
+                    indexes: self.indexes,
                     mapper,
                 }
             }
-            pub fn extractor(row: &postgres::row::Row) -> SelectEverythingBorrowed {
+            pub fn extractor<'b>(
+                row: &'b postgres::row::Row,
+                indexes: &'static [usize; 38],
+            ) -> SelectEverythingBorrowed<'b> {
                 SelectEverythingBorrowed {
-                    custom_domain_: row.get(0),
-                    custom_array_: row.get(1),
-                    domain_: row.get(2),
-                    array_: row.get(3),
-                    bool_: row.get(4),
-                    bool_opt: row.get(5),
-                    boolean_: row.get(6),
-                    char_: row.get(7),
-                    smallint_: row.get(8),
-                    int2_: row.get(9),
-                    smallserial_: row.get(10),
-                    serial2_: row.get(11),
-                    int_: row.get(12),
-                    int4_: row.get(13),
-                    serial_: row.get(14),
-                    serial4_: row.get(15),
-                    bingint_: row.get(16),
-                    int8_: row.get(17),
-                    bigserial_: row.get(18),
-                    serial8_: row.get(19),
-                    float4_: row.get(20),
-                    real_: row.get(21),
-                    float8_: row.get(22),
-                    double_precision_: row.get(23),
-                    text_: row.get(24),
-                    varchar_: row.get(25),
-                    bytea_: row.get(26),
-                    timestamp_: row.get(27),
-                    timestamp_without_time_zone_: row.get(28),
-                    timestamptz_: row.get(29),
-                    timestamp_with_time_zone_: row.get(30),
-                    date_: row.get(31),
-                    time_: row.get(32),
-                    json_: row.get(33),
-                    jsonb_: row.get(34),
-                    uuid_: row.get(35),
-                    inet_: row.get(36),
-                    macaddr_: row.get(37),
+                    array_: row.get(indexes[0]),
+                    bigserial_: row.get(indexes[1]),
+                    bingint_: row.get(indexes[2]),
+                    bool_: row.get(indexes[3]),
+                    bool_opt: row.get(indexes[4]),
+                    boolean_: row.get(indexes[5]),
+                    bytea_: row.get(indexes[6]),
+                    char_: row.get(indexes[7]),
+                    custom_array_: row.get(indexes[8]),
+                    custom_domain_: row.get(indexes[9]),
+                    date_: row.get(indexes[10]),
+                    domain_: row.get(indexes[11]),
+                    double_precision_: row.get(indexes[12]),
+                    float4_: row.get(indexes[13]),
+                    float8_: row.get(indexes[14]),
+                    inet_: row.get(indexes[15]),
+                    int2_: row.get(indexes[16]),
+                    int4_: row.get(indexes[17]),
+                    int8_: row.get(indexes[18]),
+                    int_: row.get(indexes[19]),
+                    json_: row.get(indexes[20]),
+                    jsonb_: row.get(indexes[21]),
+                    macaddr_: row.get(indexes[22]),
+                    real_: row.get(indexes[23]),
+                    serial2_: row.get(indexes[24]),
+                    serial4_: row.get(indexes[25]),
+                    serial8_: row.get(indexes[26]),
+                    serial_: row.get(indexes[27]),
+                    smallint_: row.get(indexes[28]),
+                    smallserial_: row.get(indexes[29]),
+                    text_: row.get(indexes[30]),
+                    time_: row.get(indexes[31]),
+                    timestamp_: row.get(indexes[32]),
+                    timestamp_with_time_zone_: row.get(indexes[33]),
+                    timestamp_without_time_zone_: row.get(indexes[34]),
+                    timestamptz_: row.get(indexes[35]),
+                    uuid_: row.get(indexes[36]),
+                    varchar_: row.get(indexes[37]),
                 }
             }
             pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
@@ -883,7 +888,7 @@ pub mod queries {
             pub fn one(mut self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt()?;
                 let row = self.client.query_one(&stmt, &self.params)?;
-                Ok((self.mapper)(Self::extractor(&row)))
+                Ok((self.mapper)(Self::extractor(&row, self.indexes)))
             }
             pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
                 self.stream()?.collect()
@@ -893,7 +898,7 @@ pub mod queries {
                 Ok(self
                     .client
                     .query_opt(&stmt, &self.params)?
-                    .map(|row| (self.mapper)(Self::extractor(&row))))
+                    .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))))
             }
             pub fn stream(
                 mut self,
@@ -904,47 +909,50 @@ pub mod queries {
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
                     .iterator()
-                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))));
+                    .map(move |res| {
+                        res.map(|row| (self.mapper)(Self::extractor(&row, self.indexes)))
+                    });
                 Ok(stream)
             }
         }
         #[derive(Debug, Clone, PartialEq)]
         pub struct Nightmare {
             pub composite: super::super::types::public::NightmareComposite,
-            pub name: String,
-            pub names: Vec<String>,
             pub data: Option<Vec<u8>>,
             pub datas: Option<Vec<Vec<u8>>>,
+            pub name: String,
+            pub names: Vec<String>,
         }
         pub struct NightmareBorrowed<'a> {
             pub composite: super::super::types::public::NightmareCompositeBorrowed<'a>,
-            pub name: &'a str,
-            pub names: cornucopia_client::ArrayIterator<'a, &'a str>,
             pub data: Option<&'a [u8]>,
             pub datas: Option<cornucopia_client::ArrayIterator<'a, &'a [u8]>>,
+            pub name: &'a str,
+            pub names: cornucopia_client::ArrayIterator<'a, &'a str>,
         }
         impl<'a> From<NightmareBorrowed<'a>> for Nightmare {
             fn from(
                 NightmareBorrowed {
                     composite,
-                    name,
-                    names,
                     data,
                     datas,
+                    name,
+                    names,
                 }: NightmareBorrowed<'a>,
             ) -> Self {
                 Self {
                     composite: composite.into(),
-                    name: name.into(),
-                    names: names.map(|v| v.into()).collect(),
                     data: data.map(|v| v.into()),
                     datas: datas.map(|v| v.map(|v| v.into()).collect()),
+                    name: name.into(),
+                    names: names.map(|v| v.into()).collect(),
                 }
             }
         }
         pub struct NightmareQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            indexes: &'static [usize; 5],
             query: &'static str,
             mapper: fn(NightmareBorrowed) -> T,
         }
@@ -957,16 +965,20 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
+                    indexes: self.indexes,
                     mapper,
                 }
             }
-            pub fn extractor(row: &postgres::row::Row) -> NightmareBorrowed {
+            pub fn extractor<'b>(
+                row: &'b postgres::row::Row,
+                indexes: &'static [usize; 5],
+            ) -> NightmareBorrowed<'b> {
                 NightmareBorrowed {
-                    composite: row.get(0),
-                    name: row.get(1),
-                    names: row.get(2),
-                    data: row.get(3),
-                    datas: row.get(4),
+                    composite: row.get(indexes[0]),
+                    data: row.get(indexes[1]),
+                    datas: row.get(indexes[2]),
+                    name: row.get(indexes[3]),
+                    names: row.get(indexes[4]),
                 }
             }
             pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
@@ -975,7 +987,7 @@ pub mod queries {
             pub fn one(mut self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt()?;
                 let row = self.client.query_one(&stmt, &self.params)?;
-                Ok((self.mapper)(Self::extractor(&row)))
+                Ok((self.mapper)(Self::extractor(&row, self.indexes)))
             }
             pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
                 self.stream()?.collect()
@@ -985,7 +997,7 @@ pub mod queries {
                 Ok(self
                     .client
                     .query_opt(&stmt, &self.params)?
-                    .map(|row| (self.mapper)(Self::extractor(&row))))
+                    .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))))
             }
             pub fn stream(
                 mut self,
@@ -996,7 +1008,9 @@ pub mod queries {
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
                     .iterator()
-                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))));
+                    .map(move |res| {
+                        res.map(|row| (self.mapper)(Self::extractor(&row, self.indexes)))
+                    });
                 Ok(stream)
             }
         }
@@ -1047,6 +1061,10 @@ pub mod queries {
     macaddr_
 FROM
     Everything;",
+                indexes: &[
+                    3, 18, 16, 4, 5, 6, 26, 7, 1, 0, 31, 2, 23, 20, 22, 36, 9, 13, 17, 12, 33, 34,
+                    37, 21, 11, 15, 19, 14, 8, 10, 24, 32, 27, 30, 28, 29, 35, 25,
+                ],
                 mapper: |it| SelectEverything::from(it),
             }
         }
@@ -1146,6 +1164,7 @@ FROM
                 params: [],
                 query: "SELECT * FROM nightmare;
 ",
+                indexes: &[0, 3, 4, 1, 2],
                 mapper: |it| Nightmare::from(it),
             }
         }
@@ -1194,6 +1213,7 @@ FROM
         pub struct SelectCloneQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            indexes: &'static [usize; 1],
             query: &'static str,
             mapper: fn(SelectCloneBorrowed) -> T,
         }
@@ -1209,12 +1229,16 @@ FROM
                     client: self.client,
                     params: self.params,
                     query: self.query,
+                    indexes: self.indexes,
                     mapper,
                 }
             }
-            pub fn extractor(row: &postgres::row::Row) -> SelectCloneBorrowed {
+            pub fn extractor<'b>(
+                row: &'b postgres::row::Row,
+                indexes: &'static [usize; 1],
+            ) -> SelectCloneBorrowed<'b> {
                 SelectCloneBorrowed {
-                    composite: row.get(0),
+                    composite: row.get(indexes[0]),
                 }
             }
             pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
@@ -1223,7 +1247,7 @@ FROM
             pub fn one(mut self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt()?;
                 let row = self.client.query_one(&stmt, &self.params)?;
-                Ok((self.mapper)(Self::extractor(&row)))
+                Ok((self.mapper)(Self::extractor(&row, self.indexes)))
             }
             pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
                 self.stream()?.collect()
@@ -1233,7 +1257,7 @@ FROM
                 Ok(self
                     .client
                     .query_opt(&stmt, &self.params)?
-                    .map(|row| (self.mapper)(Self::extractor(&row))))
+                    .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))))
             }
             pub fn stream(
                 mut self,
@@ -1244,7 +1268,9 @@ FROM
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
                     .iterator()
-                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))));
+                    .map(move |res| {
+                        res.map(|row| (self.mapper)(Self::extractor(&row, self.indexes)))
+                    });
                 Ok(stream)
             }
         }
@@ -1255,6 +1281,7 @@ FROM
         pub struct SelectCopyQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            indexes: &'static [usize; 1],
             query: &'static str,
             mapper: fn(SelectCopy) -> T,
         }
@@ -1267,12 +1294,16 @@ FROM
                     client: self.client,
                     params: self.params,
                     query: self.query,
+                    indexes: self.indexes,
                     mapper,
                 }
             }
-            pub fn extractor(row: &postgres::row::Row) -> SelectCopy {
+            pub fn extractor<'b>(
+                row: &'b postgres::row::Row,
+                indexes: &'static [usize; 1],
+            ) -> SelectCopy {
                 SelectCopy {
-                    composite: row.get(0),
+                    composite: row.get(indexes[0]),
                 }
             }
             pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
@@ -1281,7 +1312,7 @@ FROM
             pub fn one(mut self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt()?;
                 let row = self.client.query_one(&stmt, &self.params)?;
-                Ok((self.mapper)(Self::extractor(&row)))
+                Ok((self.mapper)(Self::extractor(&row, self.indexes)))
             }
             pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
                 self.stream()?.collect()
@@ -1291,7 +1322,7 @@ FROM
                 Ok(self
                     .client
                     .query_opt(&stmt, &self.params)?
-                    .map(|row| (self.mapper)(Self::extractor(&row))))
+                    .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))))
             }
             pub fn stream(
                 mut self,
@@ -1302,7 +1333,9 @@ FROM
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
                     .iterator()
-                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))));
+                    .map(move |res| {
+                        res.map(|row| (self.mapper)(Self::extractor(&row, self.indexes)))
+                    });
                 Ok(stream)
             }
         }
@@ -1320,6 +1353,7 @@ FROM
                 client,
                 params: [],
                 query: "SELECT * FROM clone;",
+                indexes: &[0],
                 mapper: |it| SelectClone::from(it),
             }
         }
@@ -1337,6 +1371,7 @@ FROM
                 client,
                 params: [],
                 query: "SELECT * FROM copy;",
+                indexes: &[0],
                 mapper: |it| SelectCopy::from(it),
             }
         }

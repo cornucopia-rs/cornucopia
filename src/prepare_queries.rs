@@ -20,7 +20,7 @@ use postgres::Client;
 pub(crate) struct PreparedQuery {
     pub(crate) name: String,
     pub(crate) params: Vec<PreparedField>,
-    pub(crate) row: Option<usize>, // None if execute
+    pub(crate) row: Option<(usize, Vec<usize>)>, // None if execute
     pub(crate) sql: String,
 }
 
@@ -59,34 +59,38 @@ pub(crate) struct PreparedModule {
 }
 
 impl PreparedModule {
-    fn add_row(&mut self, name: String, fields: Vec<PreparedField>) -> Option<usize> {
-        if fields.len() == 0 {
-            return None;
-        }
-        let is_copy = fields.iter().all(|f| f.ty.is_copy);
-        Some(match self.rows.entry(name.clone()) {
+    fn add_row(&mut self, name: String, fields: &[PreparedField]) -> (usize, Vec<usize>) {
+        assert!(!fields.is_empty());
+        match self.rows.entry(name.clone()) {
             Entry::Occupied(o) => {
                 // TODO return an error
-                assert!(o.get().fields == fields);
-                o.index()
+                let prev = &o.get().fields;
+                assert!(prev.len() == fields.len());
+                let indexes: Option<Vec<_>> = prev
+                    .iter()
+                    .map(|f| fields.iter().position(|it| it.name == f.name))
+                    .collect();
+                (o.index(), indexes.unwrap())
             }
             Entry::Vacant(v) => {
-                let index = v.index();
+                let is_copy = fields.iter().all(|f| f.ty.is_copy);
+                let mut tmp = fields.to_vec();
+                tmp.sort_unstable_by(|a, b| a.name.cmp(&b.name));
                 v.insert(PreparedRow {
-                    name,
-                    fields,
+                    name: name.clone(),
+                    fields: tmp,
                     is_copy,
                 });
-                index
+                self.add_row(name, fields)
             }
-        })
+        }
     }
 
     fn add_query(
         &mut self,
         name: String,
         params: Vec<PreparedField>,
-        row_idx: Option<usize>,
+        row_idx: Option<(usize, Vec<usize>)>,
         sql: String,
     ) -> usize {
         match self.queries.entry(name.clone()) {
@@ -313,7 +317,7 @@ fn prepare_query(
     };
 
     // Get return columns
-    let mut ret_fields = Vec::new();
+    let mut row_fields = Vec::new();
     for column in stmt_cols {
         let ty = type_registrar
             .register(client, column.type_())
@@ -325,7 +329,7 @@ fn prepare_query(
             })?;
         let name = column.name().to_owned();
         let is_nullable = nullable_cols.iter().any(|(_, n)| *n == name);
-        ret_fields.push(PreparedField {
+        row_fields.push(PreparedField {
             is_nullable,
             name,
             ty: ty.clone(),
@@ -333,7 +337,7 @@ fn prepare_query(
     }
 
     let name = query.name.to_upper_camel_case();
-    let row_idx = module.add_row(name.clone(), ret_fields);
+    let row_idx = (!row_fields.is_empty()).then(|| module.add_row(name.clone(), &row_fields));
     let query_idx = module.add_query(query.name.clone(), params.clone(), row_idx, query.sql_str);
     if !params.is_empty() {
         module.add_params(format!("{name}Params"), params, query_idx);
