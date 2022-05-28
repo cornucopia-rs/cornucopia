@@ -26,6 +26,21 @@ pub mod types {
             pub such_cool: i32,
             pub nice: super::super::types::public::SpongebobCharacter,
         }
+        impl<'a> From<CustomCompositeBorrowed<'a>> for CustomComposite {
+            fn from(
+                CustomCompositeBorrowed {
+                    wow,
+                    such_cool,
+                    nice,
+                }: CustomCompositeBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    wow: wow.into(),
+                    such_cool,
+                    nice,
+                }
+            }
+        }
         impl<'a> postgres_types::FromSql<'a> for CustomCompositeBorrowed<'a> {
             fn from_sql(
                 _type: &postgres_types::Type,
@@ -54,21 +69,6 @@ pub mod types {
             }
             fn accepts(type_: &postgres_types::Type) -> bool {
                 type_.name() == "custom_composite" && type_.schema() == "public"
-            }
-        }
-        impl<'a> From<CustomCompositeBorrowed<'a>> for CustomComposite {
-            fn from(
-                CustomCompositeBorrowed {
-                    wow,
-                    such_cool,
-                    nice,
-                }: CustomCompositeBorrowed<'a>,
-            ) -> Self {
-                Self {
-                    wow: wow.into(),
-                    such_cool,
-                    nice,
-                }
             }
         }
         impl<'a> postgres_types::ToSql for CustomCompositeBorrowed<'a> {
@@ -161,6 +161,11 @@ pub mod types {
                 super::super::types::public::CustomCompositeBorrowed<'a>,
             >,
         );
+        impl<'a> From<CustomDomainBorrowed<'a>> for CustomDomain {
+            fn from(CustomDomainBorrowed(inner): CustomDomainBorrowed<'a>) -> Self {
+                Self(inner.map(|v| v.into()).collect())
+            }
+        }
         impl<'a> postgres_types::FromSql<'a> for CustomDomainBorrowed<'a> {
             fn from_sql(
                 _type: &postgres_types::Type,
@@ -181,11 +186,6 @@ pub mod types {
             }
             fn accepts(type_: &postgres_types::Type) -> bool {
                 type_.name() == "custom_domain" && type_.schema() == "public"
-            }
-        }
-        impl<'a> From<CustomDomainBorrowed<'a>> for CustomDomain {
-            fn from(CustomDomainBorrowed(inner): CustomDomainBorrowed<'a>) -> Self {
-                Self(inner.map(|v| v.into()).collect())
             }
         }
         #[derive(Debug, Clone)]
@@ -236,6 +236,11 @@ pub mod types {
         pub struct MyDomain(pub String);
         #[derive(Debug)]
         pub struct MyDomainBorrowed<'a>(pub &'a str);
+        impl<'a> From<MyDomainBorrowed<'a>> for MyDomain {
+            fn from(MyDomainBorrowed(inner): MyDomainBorrowed<'a>) -> Self {
+                Self(inner.into())
+            }
+        }
         impl<'a> postgres_types::FromSql<'a> for MyDomainBorrowed<'a> {
             fn from_sql(
                 _type: &postgres_types::Type,
@@ -256,11 +261,6 @@ pub mod types {
             }
             fn accepts(type_: &postgres_types::Type) -> bool {
                 type_.name() == "my_domain" && type_.schema() == "public"
-            }
-        }
-        impl<'a> From<MyDomainBorrowed<'a>> for MyDomain {
-            fn from(MyDomainBorrowed(inner): MyDomainBorrowed<'a>) -> Self {
-                Self(inner.into())
             }
         }
         impl<'a> postgres_types::ToSql for MyDomainBorrowed<'a> {
@@ -317,6 +317,16 @@ pub mod types {
                 super::super::types::public::SpongebobCharacter,
             >,
         }
+        impl<'a> From<NightmareCompositeBorrowed<'a>> for NightmareComposite {
+            fn from(
+                NightmareCompositeBorrowed { custom, spongebob }: NightmareCompositeBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    custom: custom.map(|v| v.into()).collect(),
+                    spongebob: spongebob.map(|v| v.into()).collect(),
+                }
+            }
+        }
         impl<'a> postgres_types::FromSql<'a> for NightmareCompositeBorrowed<'a> {
             fn from_sql(
                 _type: &postgres_types::Type,
@@ -339,16 +349,6 @@ pub mod types {
             }
             fn accepts(type_: &postgres_types::Type) -> bool {
                 type_.name() == "nightmare_composite" && type_.schema() == "public"
-            }
-        }
-        impl<'a> From<NightmareCompositeBorrowed<'a>> for NightmareComposite {
-            fn from(
-                NightmareCompositeBorrowed { custom, spongebob }: NightmareCompositeBorrowed<'a>,
-            ) -> Self {
-                Self {
-                    custom: custom.map(|v| v.into()).collect(),
-                    spongebob: spongebob.map(|v| v.into()).collect(),
-                }
             }
         }
         #[derive(Debug, Clone)]
@@ -445,6 +445,14 @@ pub mod types {
             pub first: i32,
             pub second: &'a str,
         }
+        impl<'a> From<CloneCompositeBorrowed<'a>> for CloneComposite {
+            fn from(CloneCompositeBorrowed { first, second }: CloneCompositeBorrowed<'a>) -> Self {
+                Self {
+                    first,
+                    second: second.into(),
+                }
+            }
+        }
         impl<'a> postgres_types::FromSql<'a> for CloneCompositeBorrowed<'a> {
             fn from_sql(
                 _type: &postgres_types::Type,
@@ -467,14 +475,6 @@ pub mod types {
             }
             fn accepts(type_: &postgres_types::Type) -> bool {
                 type_.name() == "clone_composite" && type_.schema() == "public"
-            }
-        }
-        impl<'a> From<CloneCompositeBorrowed<'a>> for CloneComposite {
-            fn from(CloneCompositeBorrowed { first, second }: CloneCompositeBorrowed<'a>) -> Self {
-                Self {
-                    first,
-                    second: second.into(),
-                }
             }
         }
         impl<'a> postgres_types::ToSql for CloneCompositeBorrowed<'a> {

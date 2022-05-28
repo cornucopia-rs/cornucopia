@@ -38,6 +38,21 @@ pub mod types {
             pub age: i32,
             pub persona: super::super::types::public::SpongebobCharacter,
         }
+        impl<'a> From<CustomCompositeBorrowed<'a>> for CustomComposite {
+            fn from(
+                CustomCompositeBorrowed {
+                    name,
+                    age,
+                    persona,
+                }: CustomCompositeBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    name: name.into(),
+                    age,
+                    persona,
+                }
+            }
+        }
         impl<'a> postgres_types::FromSql<'a> for CustomCompositeBorrowed<'a> {
             fn from_sql(
                 _type: &postgres_types::Type,
@@ -75,21 +90,6 @@ pub mod types {
             }
             fn accepts(type_: &postgres_types::Type) -> bool {
                 type_.name() == "custom_composite" && type_.schema() == "public"
-            }
-        }
-        impl<'a> From<CustomCompositeBorrowed<'a>> for CustomComposite {
-            fn from(
-                CustomCompositeBorrowed {
-                    name,
-                    age,
-                    persona,
-                }: CustomCompositeBorrowed<'a>,
-            ) -> Self {
-                Self {
-                    name: name.into(),
-                    age,
-                    persona,
-                }
             }
         }
         impl<'a> postgres_types::ToSql for CustomCompositeBorrowed<'a> {
