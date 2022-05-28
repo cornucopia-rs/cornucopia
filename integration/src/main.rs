@@ -43,12 +43,14 @@ fn main() -> ExitCode {
 // Run test, return true if all test are successful
 fn test(apply: bool) -> bool {
     cornucopia::container::setup(false).unwrap();
-    let mut client = cornucopia::conn::cornucopia_conn().unwrap();
-    let errors = run_errors_test(&mut client, apply);
-    let examples = run_examples_test(&mut client);
-    let codegen = run_codegen_test(&mut client);
+    let successful = std::panic::catch_unwind(|| {
+        let mut client = cornucopia::conn::cornucopia_conn().unwrap();
+        run_errors_test(&mut client, apply).unwrap()
+            && run_examples_test(&mut client).unwrap()
+            && run_codegen_test(&mut client).unwrap()
+    });
     cornucopia::container::cleanup(false).unwrap();
-    return errors.unwrap() && examples.unwrap() && codegen.unwrap();
+    successful.unwrap()
 }
 
 // Reset the current database

@@ -1,4 +1,4 @@
-use self::utils::{join_comma, join_comma_iter, join_ln};
+use self::utils::{join_comma, join_ln};
 use super::prepare_queries::PreparedModule;
 use crate::{
     prepare_queries::{PreparedParams, PreparedQuery, PreparedRow},
@@ -19,39 +19,57 @@ macro_rules! gen {
 
 /// Utils functions to make codegen clearer
 mod utils {
-    pub fn join<T>(
-        iter: impl IntoIterator<Item = T>,
-        map: impl Fn(&mut String, T),
-        char: char,
-    ) -> String {
-        let mut first = true;
-        iter.into_iter().fold(String::new(), |mut buf, it| {
-            if first {
-                first = false;
-            } else {
-                buf.push(char);
-            }
-            map(&mut buf, it);
-            buf
-        })
+    use std::{
+        cell::RefCell,
+        fmt::{Display, Formatter, Write},
+    };
+
+    pub struct Joiner<T, I: IntoIterator<Item = T>, F: Fn(&mut Formatter, T)> {
+        sep: char,
+        /// FormatWith uses interior mutability because Display::fmt takes &self.
+        inner: RefCell<Option<I>>,
+        mapper: F,
     }
 
-    pub fn join_comma<T>(
-        iter: impl IntoIterator<Item = T>,
-        map: impl Fn(&mut String, T),
-    ) -> String {
+    impl<T, I: IntoIterator<Item = T>, F: Fn(&mut Formatter, T)> Display for Joiner<T, I, F> {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            let mut first = true;
+            for item in self.inner.borrow_mut().take().unwrap().into_iter() {
+                if first {
+                    first = false;
+                } else {
+                    f.write_char(self.sep)?;
+                }
+                (self.mapper)(f, item);
+            }
+            Ok(())
+        }
+    }
+
+    pub fn join<T, I: IntoIterator<Item = T>, F: Fn(&mut Formatter, T)>(
+        iter: I,
+        map: F,
+        sep: char,
+    ) -> Joiner<T, I, F> {
+        Joiner {
+            sep,
+            inner: RefCell::new(Some(iter)),
+            mapper: map,
+        }
+    }
+
+    pub fn join_comma<T, I: IntoIterator<Item = T>, F: Fn(&mut Formatter, T)>(
+        iter: I,
+        map: F,
+    ) -> Joiner<T, I, F> {
         join(iter, map, ',')
     }
 
-    pub fn join_ln<T>(iter: impl IntoIterator<Item = T>, map: impl Fn(&mut String, T)) -> String {
+    pub fn join_ln<T, I: IntoIterator<Item = T>, F: Fn(&mut Formatter, T)>(
+        iter: I,
+        map: F,
+    ) -> Joiner<T, I, F> {
         join(iter, map, '\n')
-    }
-
-    pub fn join_comma_iter<T>(
-        iter: impl IntoIterator<Item = T>,
-        map: impl Fn(&mut String, (usize, T)),
-    ) -> String {
-        join_comma(iter.into_iter().enumerate(), map)
     }
 }
 
@@ -453,7 +471,7 @@ fn gen_row_structs(
         }}",
     );
 
-    let get_fields = join_comma_iter(fields, |w, (index, f)| {
+    let get_fields = join_comma(fields.iter().enumerate(), |w, (index, f)| {
         gen!(w, "{}: row.get(indexes[{index}])", f.name)
     });
 
@@ -765,13 +783,13 @@ pub(crate) fn generate(
     // Generate queries
     let query_modules = join_ln(modules, |w, module| {
         let queries_string = join_ln(module.queries.values(), |w, query| {
-            gen_query_fn(w, type_registrar, &module, &query, is_async)
+            gen_query_fn(w, type_registrar, &module, query, is_async)
         });
         let params_string = join_ln(module.params.values(), |w, it| {
-            gen_params_struct(w, type_registrar, &module, &it, is_async)
+            gen_params_struct(w, type_registrar, &module, it, is_async)
         });
         let rows_string = join_ln(module.rows.values(), |w, query| {
-            gen_row_structs(w, type_registrar, &query, is_async)
+            gen_row_structs(w, type_registrar, query, is_async)
         });
         gen!(
             w,

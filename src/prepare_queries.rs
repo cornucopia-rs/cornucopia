@@ -121,7 +121,7 @@ impl PreparedModule {
                 assert!(prev
                     .fields
                     .iter()
-                    .all(|f| params.iter().position(|it| it.name == f.name).is_some()));
+                    .all(|f| params.iter().any(|it| it.name == f.name)));
                 prev.queries.push(query_idx);
                 o.index()
             }

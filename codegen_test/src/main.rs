@@ -34,6 +34,8 @@ pub fn main() {
     test_stress(client);
 }
 
+pub fn moving<T>(_item: T) {}
+
 // Test we correctly implement borrowed version and copy derive
 pub fn test_copy(client: &mut Client) {
     // Test copy
@@ -43,11 +45,11 @@ pub fn test_copy(client: &mut Client) {
             second: 4.2,
         },
     };
-    std::mem::drop(copy_params); // Ignore if copied
+    moving(copy_params); // Ignore if copied
     copy_params.insert_copy(client).unwrap();
     let copy_row = select_copy(client).one().unwrap();
-    std::mem::drop(copy_row); // Ignore if copied
-    std::mem::drop(copy_row);
+    moving(copy_row); // Ignore if copied
+    moving(copy_row);
 
     // Test clone
     let clone_params = InsertCloneParams {
@@ -56,7 +58,6 @@ pub fn test_copy(client: &mut Client) {
             second: "Hello world",
         },
     };
-    std::mem::drop(copy_params); // Ignore if copied
     clone_params.insert_clone(client).unwrap();
     select_copy(client).one().unwrap();
 }
@@ -73,13 +74,13 @@ pub fn test_stress(client: &mut Client) {
     )
     .unwrap();
     let tmp = &[CustomCompositeBorrowed {
-        wow: &"",
+        wow: "",
         such_cool: 3,
         nice: SpongebobCharacter::Bob,
     }];
     let params = InsertEverythingParams {
         custom_domain_: CustomDomainParams(tmp),
-        domain_: MyDomainBorrowed(&"hello"),
+        domain_: MyDomainBorrowed("hello"),
         array_: &[true, false],
         custom_array_: &[SpongebobCharacter::Bob, SpongebobCharacter::Patrick],
         bool_: true,
@@ -104,9 +105,9 @@ pub fn test_stress(client: &mut Client) {
         text_: "hello",
         varchar_: "hello",
         bytea_: &[222u8, 173u8, 190u8, 239u8],
-        timestamp_: primitive_datetime.clone(),
+        timestamp_: primitive_datetime,
         timestamp_without_time_zone_: primitive_datetime,
-        timestamptz_: offset_datetime.clone(),
+        timestamptz_: offset_datetime,
         timestamp_with_time_zone_: offset_datetime,
         date_: time::Date::from_calendar_date(1999, time::Month::January, 8).unwrap(),
         time_: time::Time::from_hms_milli(4, 5, 6, 789).unwrap(),
@@ -151,9 +152,9 @@ pub fn test_stress(client: &mut Client) {
         text_: String::from("hello"),
         varchar_: String::from("hello"),
         bytea_: vec![222u8, 173u8, 190u8, 239u8],
-        timestamp_: primitive_datetime.clone(),
+        timestamp_: primitive_datetime,
         timestamp_without_time_zone_: primitive_datetime,
-        timestamptz_: offset_datetime.clone(),
+        timestamptz_: offset_datetime,
         timestamp_with_time_zone_: offset_datetime,
         date_: time::Date::from_calendar_date(1999, time::Month::January, 8).unwrap(),
         time_: time::Time::from_hms_milli(4, 5, 6, 789).unwrap(),
