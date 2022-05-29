@@ -245,8 +245,8 @@ pub mod queries {
         pub struct AuthorsQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            indexes: &'static [usize; 3],
             query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> AuthorsBorrowed,
             mapper: fn(AuthorsBorrowed) -> T,
         }
         impl<'a, C, T: 'a, const N: usize> AuthorsQuery<'a, C, T, N>
@@ -261,18 +261,8 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
-                    indexes: self.indexes,
+                    extractor: self.extractor,
                     mapper,
-                }
-            }
-            pub fn extractor<'b>(
-                row: &'b tokio_postgres::row::Row,
-                indexes: &'static [usize; 3],
-            ) -> AuthorsBorrowed<'b> {
-                AuthorsBorrowed {
-                    country: row.get(indexes[0]),
-                    id: row.get(indexes[1]),
-                    name: row.get(indexes[2]),
                 }
             }
             pub async fn stmt(
@@ -283,7 +273,7 @@ pub mod queries {
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
-                Ok((self.mapper)(Self::extractor(&row, self.indexes)))
+                Ok((self.mapper)((self.extractor)(&row)))
             }
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
@@ -295,7 +285,7 @@ pub mod queries {
                         .client
                         .query_opt(&stmt, &self.params)
                         .await?
-                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))),
+                        .map(|row| (self.mapper)((self.extractor)(&row))),
                 )
             }
             pub async fn stream(
@@ -309,8 +299,7 @@ pub mod queries {
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
                     .await?
-                    .map(move |res| res
-                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))))
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
                 Ok(stream)
             }
@@ -330,8 +319,8 @@ pub mod queries {
         pub struct BooksQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            indexes: &'static [usize; 1],
             query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> BooksBorrowed,
             mapper: fn(BooksBorrowed) -> T,
         }
         impl<'a, C, T: 'a, const N: usize> BooksQuery<'a, C, T, N>
@@ -346,16 +335,8 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
-                    indexes: self.indexes,
+                    extractor: self.extractor,
                     mapper,
-                }
-            }
-            pub fn extractor<'b>(
-                row: &'b tokio_postgres::row::Row,
-                indexes: &'static [usize; 1],
-            ) -> BooksBorrowed<'b> {
-                BooksBorrowed {
-                    title: row.get(indexes[0]),
                 }
             }
             pub async fn stmt(
@@ -366,7 +347,7 @@ pub mod queries {
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
-                Ok((self.mapper)(Self::extractor(&row, self.indexes)))
+                Ok((self.mapper)((self.extractor)(&row)))
             }
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
@@ -378,7 +359,7 @@ pub mod queries {
                         .client
                         .query_opt(&stmt, &self.params)
                         .await?
-                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))),
+                        .map(|row| (self.mapper)((self.extractor)(&row))),
                 )
             }
             pub async fn stream(
@@ -392,8 +373,7 @@ pub mod queries {
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
                     .await?
-                    .map(move |res| res
-                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))))
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
                 Ok(stream)
             }
@@ -417,8 +397,8 @@ pub mod queries {
         pub struct BooksOptRetParamQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            indexes: &'static [usize; 1],
             query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> BooksOptRetParamBorrowed,
             mapper: fn(BooksOptRetParamBorrowed) -> T,
         }
         impl<'a, C, T: 'a, const N: usize> BooksOptRetParamQuery<'a, C, T, N>
@@ -433,16 +413,8 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
-                    indexes: self.indexes,
+                    extractor: self.extractor,
                     mapper,
-                }
-            }
-            pub fn extractor<'b>(
-                row: &'b tokio_postgres::row::Row,
-                indexes: &'static [usize; 1],
-            ) -> BooksOptRetParamBorrowed<'b> {
-                BooksOptRetParamBorrowed {
-                    title: row.get(indexes[0]),
                 }
             }
             pub async fn stmt(
@@ -453,7 +425,7 @@ pub mod queries {
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
-                Ok((self.mapper)(Self::extractor(&row, self.indexes)))
+                Ok((self.mapper)((self.extractor)(&row)))
             }
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
@@ -465,7 +437,7 @@ pub mod queries {
                         .client
                         .query_opt(&stmt, &self.params)
                         .await?
-                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))),
+                        .map(|row| (self.mapper)((self.extractor)(&row))),
                 )
             }
             pub async fn stream(
@@ -479,8 +451,7 @@ pub mod queries {
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
                     .await?
-                    .map(move |res| res
-                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))))
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
                 Ok(stream)
             }
@@ -502,8 +473,8 @@ pub mod queries {
         pub struct AuthorNameByIdQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            indexes: &'static [usize; 1],
             query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> AuthorNameByIdBorrowed,
             mapper: fn(AuthorNameByIdBorrowed) -> T,
         }
         impl<'a, C, T: 'a, const N: usize> AuthorNameByIdQuery<'a, C, T, N>
@@ -518,16 +489,8 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
-                    indexes: self.indexes,
+                    extractor: self.extractor,
                     mapper,
-                }
-            }
-            pub fn extractor<'b>(
-                row: &'b tokio_postgres::row::Row,
-                indexes: &'static [usize; 1],
-            ) -> AuthorNameByIdBorrowed<'b> {
-                AuthorNameByIdBorrowed {
-                    name: row.get(indexes[0]),
                 }
             }
             pub async fn stmt(
@@ -538,7 +501,7 @@ pub mod queries {
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
-                Ok((self.mapper)(Self::extractor(&row, self.indexes)))
+                Ok((self.mapper)((self.extractor)(&row)))
             }
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
@@ -550,7 +513,7 @@ pub mod queries {
                         .client
                         .query_opt(&stmt, &self.params)
                         .await?
-                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))),
+                        .map(|row| (self.mapper)((self.extractor)(&row))),
                 )
             }
             pub async fn stream(
@@ -564,8 +527,7 @@ pub mod queries {
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
                     .await?
-                    .map(move |res| res
-                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))))
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
                 Ok(stream)
             }
@@ -603,8 +565,8 @@ pub mod queries {
         pub struct AuthorNameStartingWithQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            indexes: &'static [usize; 4],
             query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> AuthorNameStartingWithBorrowed,
             mapper: fn(AuthorNameStartingWithBorrowed) -> T,
         }
         impl<'a, C, T: 'a, const N: usize> AuthorNameStartingWithQuery<'a, C, T, N>
@@ -619,19 +581,8 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
-                    indexes: self.indexes,
+                    extractor: self.extractor,
                     mapper,
-                }
-            }
-            pub fn extractor<'b>(
-                row: &'b tokio_postgres::row::Row,
-                indexes: &'static [usize; 4],
-            ) -> AuthorNameStartingWithBorrowed<'b> {
-                AuthorNameStartingWithBorrowed {
-                    authorid: row.get(indexes[0]),
-                    bookid: row.get(indexes[1]),
-                    name: row.get(indexes[2]),
-                    title: row.get(indexes[3]),
                 }
             }
             pub async fn stmt(
@@ -642,7 +593,7 @@ pub mod queries {
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
-                Ok((self.mapper)(Self::extractor(&row, self.indexes)))
+                Ok((self.mapper)((self.extractor)(&row)))
             }
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
@@ -654,7 +605,7 @@ pub mod queries {
                         .client
                         .query_opt(&stmt, &self.params)
                         .await?
-                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))),
+                        .map(|row| (self.mapper)((self.extractor)(&row))),
                 )
             }
             pub async fn stream(
@@ -668,8 +619,7 @@ pub mod queries {
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
                     .await?
-                    .map(move |res| res
-                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))))
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
                 Ok(stream)
             }
@@ -691,8 +641,8 @@ pub mod queries {
         pub struct ReturnCustomTypeQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            indexes: &'static [usize; 1],
             query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> ReturnCustomTypeBorrowed,
             mapper: fn(ReturnCustomTypeBorrowed) -> T,
         }
         impl<'a, C, T: 'a, const N: usize> ReturnCustomTypeQuery<'a, C, T, N>
@@ -707,16 +657,8 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
-                    indexes: self.indexes,
+                    extractor: self.extractor,
                     mapper,
-                }
-            }
-            pub fn extractor<'b>(
-                row: &'b tokio_postgres::row::Row,
-                indexes: &'static [usize; 1],
-            ) -> ReturnCustomTypeBorrowed<'b> {
-                ReturnCustomTypeBorrowed {
-                    col1: row.get(indexes[0]),
                 }
             }
             pub async fn stmt(
@@ -727,7 +669,7 @@ pub mod queries {
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
-                Ok((self.mapper)(Self::extractor(&row, self.indexes)))
+                Ok((self.mapper)((self.extractor)(&row)))
             }
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
@@ -739,7 +681,7 @@ pub mod queries {
                         .client
                         .query_opt(&stmt, &self.params)
                         .await?
-                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))),
+                        .map(|row| (self.mapper)((self.extractor)(&row))),
                 )
             }
             pub async fn stream(
@@ -753,8 +695,7 @@ pub mod queries {
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
                     .await?
-                    .map(move |res| res
-                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))))
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
                 Ok(stream)
             }
@@ -766,8 +707,8 @@ pub mod queries {
         pub struct SelectWhereCustomTypeQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            indexes: &'static [usize; 1],
             query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> SelectWhereCustomType,
             mapper: fn(SelectWhereCustomType) -> T,
         }
         impl<'a, C, T: 'a, const N: usize> SelectWhereCustomTypeQuery<'a, C, T, N>
@@ -782,16 +723,8 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
-                    indexes: self.indexes,
+                    extractor: self.extractor,
                     mapper,
-                }
-            }
-            pub fn extractor<'b>(
-                row: &'b tokio_postgres::row::Row,
-                indexes: &'static [usize; 1],
-            ) -> SelectWhereCustomType {
-                SelectWhereCustomType {
-                    col2: row.get(indexes[0]),
                 }
             }
             pub async fn stmt(
@@ -802,7 +735,7 @@ pub mod queries {
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
-                Ok((self.mapper)(Self::extractor(&row, self.indexes)))
+                Ok((self.mapper)((self.extractor)(&row)))
             }
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
@@ -814,7 +747,7 @@ pub mod queries {
                         .client
                         .query_opt(&stmt, &self.params)
                         .await?
-                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))),
+                        .map(|row| (self.mapper)((self.extractor)(&row))),
                 )
             }
             pub async fn stream(
@@ -828,8 +761,7 @@ pub mod queries {
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
                     .await?
-                    .map(move |res| res
-                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))))
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
                 Ok(stream)
             }
@@ -855,8 +787,8 @@ pub mod queries {
         pub struct SelectTranslationsQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            indexes: &'static [usize; 1],
             query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> SelectTranslationsBorrowed,
             mapper: fn(SelectTranslationsBorrowed) -> T,
         }
         impl<'a, C, T: 'a, const N: usize> SelectTranslationsQuery<'a, C, T, N>
@@ -871,16 +803,8 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
-                    indexes: self.indexes,
+                    extractor: self.extractor,
                     mapper,
-                }
-            }
-            pub fn extractor<'b>(
-                row: &'b tokio_postgres::row::Row,
-                indexes: &'static [usize; 1],
-            ) -> SelectTranslationsBorrowed<'b> {
-                SelectTranslationsBorrowed {
-                    translations: row.get(indexes[0]),
                 }
             }
             pub async fn stmt(
@@ -891,7 +815,7 @@ pub mod queries {
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
-                Ok((self.mapper)(Self::extractor(&row, self.indexes)))
+                Ok((self.mapper)((self.extractor)(&row)))
             }
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
@@ -903,7 +827,7 @@ pub mod queries {
                         .client
                         .query_opt(&stmt, &self.params)
                         .await?
-                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))),
+                        .map(|row| (self.mapper)((self.extractor)(&row))),
                 )
             }
             pub async fn stream(
@@ -917,8 +841,7 @@ pub mod queries {
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
                     .await?
-                    .map(move |res| res
-                        .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))))
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
                 Ok(stream)
             }
@@ -933,7 +856,13 @@ pub mod queries {
     *
 FROM
     Author;",
-                indexes: &[2, 0, 1],
+                extractor: |row| {
+                    AuthorsBorrowed {
+                        country: row.get(2),
+                        id: row.get(0),
+                        name: row.get(1),
+                    }
+                },
                 mapper: |it| Authors::from(it),
             }
         }
@@ -947,7 +876,7 @@ FROM
     Title
 FROM
     Book;",
-                indexes: &[0],
+                extractor: |row| { BooksBorrowed { title: row.get(0) } },
                 mapper: |it| Books::from(it),
             }
         }
@@ -961,7 +890,11 @@ FROM
     Title
 FROM
     Book;",
-                indexes: &[0],
+                extractor: |row| {
+                    BooksOptRetParamBorrowed {
+                        title: row.get(0),
+                    }
+                },
                 mapper: |it| BooksOptRetParam::from(it),
             }
         }
@@ -978,7 +911,11 @@ FROM
     Author
 WHERE
     Author.Id = $1;",
-                indexes: &[0],
+                extractor: |row| {
+                    AuthorNameByIdBorrowed {
+                        name: row.get(0),
+                    }
+                },
                 mapper: |it| AuthorNameById::from(it),
             }
         }
@@ -1000,7 +937,14 @@ FROM
     INNER JOIN Book ON Book.Id = BookAuthor.BookId
 WHERE
     Author.Name LIKE CONCAT($1::text, '%');",
-                indexes: &[0, 2, 1, 3],
+                extractor: |row| {
+                    AuthorNameStartingWithBorrowed {
+                        authorid: row.get(0),
+                        bookid: row.get(2),
+                        name: row.get(1),
+                        title: row.get(3),
+                    }
+                },
                 mapper: |it| AuthorNameStartingWith::from(it),
             }
         }
@@ -1014,7 +958,11 @@ WHERE
     col1
 FROM
     CustomTable;",
-                indexes: &[0],
+                extractor: |row| {
+                    ReturnCustomTypeBorrowed {
+                        col1: row.get(0),
+                    }
+                },
                 mapper: |it| ReturnCustomType::from(it),
             }
         }
@@ -1030,7 +978,11 @@ FROM
 FROM
     CustomTable
 WHERE (col1).persona = $1;",
-                indexes: &[0],
+                extractor: |row| {
+                    SelectWhereCustomType {
+                        col2: row.get(0),
+                    }
+                },
                 mapper: |it| SelectWhereCustomType::from(it),
             }
         }
@@ -1046,7 +998,11 @@ FROM
     Book;
 
 ",
-                indexes: &[0],
+                extractor: |row| {
+                    SelectTranslationsBorrowed {
+                        translations: row.get(0),
+                    }
+                },
                 mapper: |it| SelectTranslations::from(it),
             }
         }

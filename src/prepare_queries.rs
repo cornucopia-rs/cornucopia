@@ -57,7 +57,7 @@ pub(crate) struct PreparedModule {
 }
 
 impl PreparedModule {
-    fn add_row(&mut self, name: String, fields: &[PreparedField]) -> (usize, Vec<usize>) {
+    fn add_row(&mut self, name: String, fields: Vec<PreparedField>) -> (usize, Vec<usize>) {
         assert!(!fields.is_empty());
         match self.rows.entry(name.clone()) {
             Entry::Occupied(o) => {
@@ -66,7 +66,7 @@ impl PreparedModule {
                 assert!(prev.len() == fields.len());
                 let indexes: Option<Vec<_>> = prev
                     .iter()
-                    .map(|f| fields.iter().position(|it| it.name == f.name))
+                    .map(|f| fields.iter().position(|it| it == f))
                     .collect();
                 (o.index(), indexes.unwrap())
             }
@@ -118,10 +118,7 @@ impl PreparedModule {
                 let prev = o.get_mut();
                 // TODO return an error
                 assert!(prev.fields.len() == params.len());
-                assert!(prev
-                    .fields
-                    .iter()
-                    .all(|f| params.iter().any(|it| it.name == f.name)));
+                assert!(prev.fields.iter().all(|f| params.contains(f)));
                 prev.queries.push(query_idx);
                 o.index()
             }
@@ -340,7 +337,7 @@ fn prepare_query(
     let nb_params = params.len();
 
     let name = query.name.to_upper_camel_case();
-    let row_idx = (!row_fields.is_empty()).then(|| module.add_row(name.clone(), &row_fields));
+    let row_idx = (!row_fields.is_empty()).then(|| module.add_row(name.clone(), row_fields));
     let query_idx = module.add_query(query.name.clone(), params, row_idx, query.sql_str);
     if nb_params > 0 {
         module.add_params(format!("{name}Params"), query_idx);

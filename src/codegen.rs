@@ -430,12 +430,7 @@ fn gen_row_structs(
     }
     {
         // Generate query struct
-        let nb_fields = fields.len();
-        let (borrowed_str, lifetime) = if *is_copy {
-            ("", "")
-        } else {
-            ("Borrowed", "<'b>")
-        };
+        let borrowed_str = if *is_copy { "" } else { "Borrowed" };
         let (client_mut, fn_async, fn_await, backend, collect, raw_type, raw_pre, raw_post) =
             if is_async {
                 (
@@ -460,16 +455,13 @@ fn gen_row_structs(
                     "",
                 )
             };
-        let get_fields = join_comma(fields.iter().enumerate(), |w, (index, f)| {
-            gen!(w, "{}: row.get(indexes[{index}])", f.name)
-        });
 
         gen!(w,"
         pub struct {name}Query<'a, C: GenericClient, T, const N: usize> {{
             client: &'a {client_mut} C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            indexes: &'static [usize; {nb_fields}], 
             query: &'static str,
+            extractor: fn(&{backend}::Row) -> {name}{borrowed_str},
             mapper: fn({name}{borrowed_str}) -> T,
         }}
         impl<'a, C, T:'a, const N: usize> {name}Query<'a, C, T, N> where C: GenericClient {{
@@ -478,13 +470,9 @@ fn gen_row_structs(
                     client: self.client,
                     params: self.params,
                     query: self.query,
-                    indexes: self.indexes,
+                    extractor: self.extractor,
                     mapper,
                 }}
-            }}
-
-            pub fn extractor<'b>(row: &'b {backend}::row::Row, indexes: &'static [usize;{nb_fields}]) -> {name}{borrowed_str}{lifetime} {{
-                {name}{borrowed_str} {{ {get_fields} }}
             }}
         
             pub {fn_async} fn stmt(&{client_mut} self) -> Result<{backend}::Statement, {backend}::Error> {{
@@ -494,7 +482,7 @@ fn gen_row_structs(
             pub {fn_async} fn one({client_mut} self) -> Result<T, {backend}::Error> {{
                 let stmt = self.stmt(){fn_await}?;
                 let row = self.client.query_one(&stmt, &self.params){fn_await}?;
-                Ok((self.mapper)(Self::extractor(&row, self.indexes)))
+                Ok((self.mapper)((self.extractor)(&row)))
             }}
         
             pub {fn_async} fn vec(self) -> Result<Vec<T>, {backend}::Error> {{
@@ -507,7 +495,7 @@ fn gen_row_structs(
                     .client
                     .query_opt(&stmt, &self.params)
                     {fn_await}?
-                    .map(|row| (self.mapper)(Self::extractor(&row, self.indexes))))
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
             }}
         
             pub {fn_async} fn stream(
@@ -519,7 +507,7 @@ fn gen_row_structs(
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
                     {fn_await}?
                     {raw_pre}
-                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row, self.indexes))))
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     {raw_post};
                 Ok(stream)
             }}
@@ -548,14 +536,21 @@ fn gen_query_fn(
     };
 
     if let Some((idx, index)) = row {
-        let row_name = &module.rows.get_index(*idx).unwrap().1.name;
+        let PreparedRow {
+            name: row_name,
+            fields,
+            is_copy,
+        } = &module.rows.get_index(*idx).unwrap().1;
+        let borrowed_str = if *is_copy { "" } else { "Borrowed" };
         // Query fn
         let param_list = join_comma(params, |w, p| {
             let param_name = &p.name;
             let borrowed_rust_ty = p.ty.borrowed_rust_ty(type_registrar, None, true);
-            gen!(w, "{param_name} : &'a {borrowed_rust_ty}",)
+            gen!(w, "{param_name} : &'a {borrowed_rust_ty}")
         });
-        let index_str = join_comma(index, |w, p| gen!(w, "{p}"));
+        let get_fields = join_comma(fields.iter().enumerate(), |w, (i, f)| {
+            gen!(w, "{}: row.get({})", f.name, index[i])
+        });
         let nb_params = params.len();
         let param_names = join_comma(params, |w, p| gen!(w, "{}", p.name));
         let client_mut = if is_async { "" } else { "mut" };
@@ -565,7 +560,7 @@ fn gen_query_fn(
                 client,
                 params: [{param_names}],
                 query: \"{sql}\",
-                indexes: &[{index_str}],
+                extractor: |row| {{ {row_name}{borrowed_str} {{{get_fields}}} }},
                 mapper: |it| {row_name}::from(it),
             }}
         }}",
