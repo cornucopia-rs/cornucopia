@@ -23,7 +23,7 @@ postgres-types = { version = "0.2.3", features = ["derive"] }
 serde = { version = "1.0.137", features = ["derive"] }
 serde_json = { version = "1.0.81", features = ["raw_value"] }
 time = { version = "0.3.9", features = ["parsing"] }
-uuid = "1.0.0"
+uuid = "1.1.0"
 eui48 = "1.1.0"
 futures = "0.3.21"
 
