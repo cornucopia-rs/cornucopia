@@ -5,13 +5,7 @@
 pub mod types {
     pub mod public {
         #[derive(
-            Debug,
-            postgres_types::ToSql,
-            postgres_types::FromSql,
-            Clone,
-            Copy,
-            PartialEq,
-            Eq
+            Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, Copy, PartialEq, Eq,
         )]
         #[postgres(name = "spongebob_character")]
         pub enum SpongebobCharacter {
@@ -19,13 +13,7 @@ pub mod types {
             Patrick,
             Squidward,
         }
-        #[derive(
-            Debug,
-            postgres_types::ToSql,
-            postgres_types::FromSql,
-            Clone,
-            PartialEq
-        )]
+        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, PartialEq)]
         #[postgres(name = "custom_composite")]
         pub struct CustomComposite {
             pub wow: String,
@@ -68,20 +56,11 @@ pub mod types {
                 let mut buf = buf;
                 let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let wow = postgres_types::private::read_value(
-                    fields[0].type_(),
-                    &mut buf,
-                )?;
+                let wow = postgres_types::private::read_value(fields[0].type_(), &mut buf)?;
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let such_cool = postgres_types::private::read_value(
-                    fields[1].type_(),
-                    &mut buf,
-                )?;
+                let such_cool = postgres_types::private::read_value(fields[1].type_(), &mut buf)?;
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let nice = postgres_types::private::read_value(
-                    fields[2].type_(),
-                    &mut buf,
-                )?;
+                let nice = postgres_types::private::read_value(fields[2].type_(), &mut buf)?;
                 Result::Ok(CustomCompositeBorrowed {
                     wow,
                     such_cool,
@@ -111,19 +90,11 @@ pub mod types {
                     let base = buf.len();
                     buf.extend_from_slice(&[0; 4]);
                     let r = match field.name() {
-                        "wow" => {
-                            postgres_types::ToSql::to_sql(&self.wow, field.type_(), buf)
-                        }
+                        "wow" => postgres_types::ToSql::to_sql(&self.wow, field.type_(), buf),
                         "such_cool" => {
-                            postgres_types::ToSql::to_sql(
-                                &self.such_cool,
-                                field.type_(),
-                                buf,
-                            )
+                            postgres_types::ToSql::to_sql(&self.such_cool, field.type_(), buf)
                         }
-                        "nice" => {
-                            postgres_types::ToSql::to_sql(&self.nice, field.type_(), buf)
-                        }
+                        "nice" => postgres_types::ToSql::to_sql(&self.nice, field.type_(), buf),
                         _ => unreachable!(),
                     };
                     let count = match r? {
@@ -131,9 +102,9 @@ pub mod types {
                         postgres_types::IsNull::No => {
                             let len = buf.len() - base - 4;
                             if len > i32::max_value() as usize {
-                                return std::result::Result::Err(
-                                    std::convert::Into::into("value too large to transmit"),
-                                );
+                                return std::result::Result::Err(std::convert::Into::into(
+                                    "value too large to transmit",
+                                ));
                             }
                             len as i32
                         }
@@ -175,25 +146,17 @@ pub mod types {
                 &self,
                 ty: &postgres_types::Type,
                 out: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<
-                postgres_types::IsNull,
-                Box<dyn std::error::Error + Sync + Send>,
-            > {
+            ) -> std::result::Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(
-            Debug,
-            Clone,
-            PartialEq,
-            postgres_types::ToSql,
-            postgres_types::FromSql
-        )]
+        #[derive(Debug, Clone, PartialEq, postgres_types::ToSql, postgres_types::FromSql)]
         #[postgres(name = "custom_domain")]
         pub struct CustomDomain(pub Vec<super::super::types::public::CustomComposite>);
         #[derive(Debug)]
         pub struct CustomDomainBorrowed<'a>(
-            pub cornucopia_client::ArrayIterator<
+            pub  cornucopia_client::ArrayIterator<
                 'a,
                 super::super::types::public::CustomCompositeBorrowed<'a>,
             >,
@@ -209,9 +172,7 @@ pub mod types {
                 buf: &'a [u8],
             ) -> std::result::Result<
                 CustomDomainBorrowed<'a>,
-                std::boxed::Box<
-                    dyn std::error::Error + std::marker::Sync + std::marker::Send,
-                >,
+                std::boxed::Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>,
             > {
                 let inner = match *_type.kind() {
                     postgres_types::Kind::Domain(ref inner) => inner,
@@ -219,11 +180,9 @@ pub mod types {
                 };
                 let mut buf = buf;
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                std::result::Result::Ok(
-                    CustomDomainBorrowed(
-                        postgres_types::private::read_value(inner, &mut buf)?,
-                    ),
-                )
+                std::result::Result::Ok(CustomDomainBorrowed(postgres_types::private::read_value(
+                    inner, &mut buf,
+                )?))
             }
             fn accepts(type_: &postgres_types::Type) -> bool {
                 type_.name() == "custom_domain" && type_.schema() == "public"
@@ -272,13 +231,7 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(
-            Debug,
-            Clone,
-            PartialEq,
-            postgres_types::ToSql,
-            postgres_types::FromSql
-        )]
+        #[derive(Debug, Clone, PartialEq, postgres_types::ToSql, postgres_types::FromSql)]
         #[postgres(name = "my_domain")]
         pub struct MyDomain(pub String);
         #[derive(Debug)]
@@ -294,9 +247,7 @@ pub mod types {
                 buf: &'a [u8],
             ) -> std::result::Result<
                 MyDomainBorrowed<'a>,
-                std::boxed::Box<
-                    dyn std::error::Error + std::marker::Sync + std::marker::Send,
-                >,
+                std::boxed::Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>,
             > {
                 let inner = match *_type.kind() {
                     postgres_types::Kind::Domain(ref inner) => inner,
@@ -304,11 +255,9 @@ pub mod types {
                 };
                 let mut buf = buf;
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                std::result::Result::Ok(
-                    MyDomainBorrowed(
-                        postgres_types::private::read_value(inner, &mut buf)?,
-                    ),
-                )
+                std::result::Result::Ok(MyDomainBorrowed(postgres_types::private::read_value(
+                    inner, &mut buf,
+                )?))
             }
             fn accepts(type_: &postgres_types::Type) -> bool {
                 type_.name() == "my_domain" && type_.schema() == "public"
@@ -351,13 +300,7 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(
-            Debug,
-            postgres_types::ToSql,
-            postgres_types::FromSql,
-            Clone,
-            PartialEq
-        )]
+        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, PartialEq)]
         #[postgres(name = "nightmare_composite")]
         pub struct NightmareComposite {
             pub custom: Vec<super::super::types::public::CustomComposite>,
@@ -376,10 +319,7 @@ pub mod types {
         }
         impl<'a> From<NightmareCompositeBorrowed<'a>> for NightmareComposite {
             fn from(
-                NightmareCompositeBorrowed {
-                    custom,
-                    spongebob,
-                }: NightmareCompositeBorrowed<'a>,
+                NightmareCompositeBorrowed { custom, spongebob }: NightmareCompositeBorrowed<'a>,
             ) -> Self {
                 Self {
                     custom: custom.map(|v| v.into()).collect(),
@@ -402,19 +342,10 @@ pub mod types {
                 let mut buf = buf;
                 let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let custom = postgres_types::private::read_value(
-                    fields[0].type_(),
-                    &mut buf,
-                )?;
+                let custom = postgres_types::private::read_value(fields[0].type_(), &mut buf)?;
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let spongebob = postgres_types::private::read_value(
-                    fields[1].type_(),
-                    &mut buf,
-                )?;
-                Result::Ok(NightmareCompositeBorrowed {
-                    custom,
-                    spongebob,
-                })
+                let spongebob = postgres_types::private::read_value(fields[1].type_(), &mut buf)?;
+                Result::Ok(NightmareCompositeBorrowed { custom, spongebob })
             }
             fn accepts(type_: &postgres_types::Type) -> bool {
                 type_.name() == "nightmare_composite" && type_.schema() == "public"
@@ -444,19 +375,9 @@ pub mod types {
                     let base = buf.len();
                     buf.extend_from_slice(&[0; 4]);
                     let r = match field.name() {
-                        "custom" => {
-                            postgres_types::ToSql::to_sql(
-                                &self.custom,
-                                field.type_(),
-                                buf,
-                            )
-                        }
+                        "custom" => postgres_types::ToSql::to_sql(&self.custom, field.type_(), buf),
                         "spongebob" => {
-                            postgres_types::ToSql::to_sql(
-                                &self.spongebob,
-                                field.type_(),
-                                buf,
-                            )
+                            postgres_types::ToSql::to_sql(&self.spongebob, field.type_(), buf)
                         }
                         _ => unreachable!(),
                     };
@@ -465,9 +386,9 @@ pub mod types {
                         postgres_types::IsNull::No => {
                             let len = buf.len() - base - 4;
                             if len > i32::max_value() as usize {
-                                return std::result::Result::Err(
-                                    std::convert::Into::into("value too large to transmit"),
-                                );
+                                return std::result::Result::Err(std::convert::Into::into(
+                                    "value too large to transmit",
+                                ));
                             }
                             len as i32
                         }
@@ -508,20 +429,12 @@ pub mod types {
                 &self,
                 ty: &postgres_types::Type,
                 out: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<
-                postgres_types::IsNull,
-                Box<dyn std::error::Error + Sync + Send>,
-            > {
+            ) -> std::result::Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(
-            Debug,
-            postgres_types::ToSql,
-            postgres_types::FromSql,
-            Clone,
-            PartialEq
-        )]
+        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, PartialEq)]
         #[postgres(name = "clone_composite")]
         pub struct CloneComposite {
             pub first: i32,
@@ -533,9 +446,7 @@ pub mod types {
             pub second: &'a str,
         }
         impl<'a> From<CloneCompositeBorrowed<'a>> for CloneComposite {
-            fn from(
-                CloneCompositeBorrowed { first, second }: CloneCompositeBorrowed<'a>,
-            ) -> Self {
+            fn from(CloneCompositeBorrowed { first, second }: CloneCompositeBorrowed<'a>) -> Self {
                 Self {
                     first,
                     second: second.into(),
@@ -557,19 +468,10 @@ pub mod types {
                 let mut buf = buf;
                 let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let first = postgres_types::private::read_value(
-                    fields[0].type_(),
-                    &mut buf,
-                )?;
+                let first = postgres_types::private::read_value(fields[0].type_(), &mut buf)?;
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let second = postgres_types::private::read_value(
-                    fields[1].type_(),
-                    &mut buf,
-                )?;
-                Result::Ok(CloneCompositeBorrowed {
-                    first,
-                    second,
-                })
+                let second = postgres_types::private::read_value(fields[1].type_(), &mut buf)?;
+                Result::Ok(CloneCompositeBorrowed { first, second })
             }
             fn accepts(type_: &postgres_types::Type) -> bool {
                 type_.name() == "clone_composite" && type_.schema() == "public"
@@ -594,20 +496,8 @@ pub mod types {
                     let base = buf.len();
                     buf.extend_from_slice(&[0; 4]);
                     let r = match field.name() {
-                        "first" => {
-                            postgres_types::ToSql::to_sql(
-                                &self.first,
-                                field.type_(),
-                                buf,
-                            )
-                        }
-                        "second" => {
-                            postgres_types::ToSql::to_sql(
-                                &self.second,
-                                field.type_(),
-                                buf,
-                            )
-                        }
+                        "first" => postgres_types::ToSql::to_sql(&self.first, field.type_(), buf),
+                        "second" => postgres_types::ToSql::to_sql(&self.second, field.type_(), buf),
                         _ => unreachable!(),
                     };
                     let count = match r? {
@@ -615,9 +505,9 @@ pub mod types {
                         postgres_types::IsNull::No => {
                             let len = buf.len() - base - 4;
                             if len > i32::max_value() as usize {
-                                return std::result::Result::Err(
-                                    std::convert::Into::into("value too large to transmit"),
-                                );
+                                return std::result::Result::Err(std::convert::Into::into(
+                                    "value too large to transmit",
+                                ));
                             }
                             len as i32
                         }
@@ -635,17 +525,11 @@ pub mod types {
                         if fields.len() != 2usize {
                             return false;
                         }
-                        fields
-                            .iter()
-                            .all(|f| match f.name() {
-                                "first" => {
-                                    <i32 as postgres_types::ToSql>::accepts(f.type_())
-                                }
-                                "second" => {
-                                    <&'a str as postgres_types::ToSql>::accepts(f.type_())
-                                }
-                                _ => false,
-                            })
+                        fields.iter().all(|f| match f.name() {
+                            "first" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+                            "second" => <&'a str as postgres_types::ToSql>::accepts(f.type_()),
+                            _ => false,
+                        })
                     }
                     _ => false,
                 }
@@ -654,21 +538,12 @@ pub mod types {
                 &self,
                 ty: &postgres_types::Type,
                 out: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<
-                postgres_types::IsNull,
-                Box<dyn std::error::Error + Sync + Send>,
-            > {
+            ) -> std::result::Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(
-            Debug,
-            postgres_types::ToSql,
-            postgres_types::FromSql,
-            Copy,
-            Clone,
-            PartialEq
-        )]
+        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Copy, Clone, PartialEq)]
         #[postgres(name = "copy_composite")]
         pub struct CopyComposite {
             pub first: i32,
@@ -678,8 +553,8 @@ pub mod types {
 }
 pub mod queries {
     pub mod stress {
-        use futures::{StreamExt, TryStreamExt};
         use cornucopia_client::GenericClient;
+        use futures::{StreamExt, TryStreamExt};
         #[derive(Debug)]
         pub struct InsertEverythingParams<'a> {
             pub array_: &'a [bool],
@@ -726,46 +601,46 @@ pub mod queries {
                 client: &'a C,
             ) -> Result<u64, tokio_postgres::Error> {
                 insert_everything(
-                        client,
-                        &self.custom_domain_,
-                        &self.custom_array_,
-                        &self.domain_,
-                        &self.array_,
-                        &self.bool_,
-                        &self.boolean_,
-                        &self.char_,
-                        &self.smallint_,
-                        &self.int2_,
-                        &self.smallserial_,
-                        &self.serial2_,
-                        &self.int_,
-                        &self.int4_,
-                        &self.serial_,
-                        &self.serial4_,
-                        &self.bingint_,
-                        &self.int8_,
-                        &self.bigserial_,
-                        &self.serial8_,
-                        &self.float4_,
-                        &self.real_,
-                        &self.float8_,
-                        &self.double_precision_,
-                        &self.text_,
-                        &self.varchar_,
-                        &self.bytea_,
-                        &self.timestamp_,
-                        &self.timestamp_without_time_zone_,
-                        &self.timestamptz_,
-                        &self.timestamp_with_time_zone_,
-                        &self.date_,
-                        &self.time_,
-                        &self.json_,
-                        &self.jsonb_,
-                        &self.uuid_,
-                        &self.inet_,
-                        &self.macaddr_,
-                    )
-                    .await
+                    client,
+                    &self.custom_domain_,
+                    &self.custom_array_,
+                    &self.domain_,
+                    &self.array_,
+                    &self.bool_,
+                    &self.boolean_,
+                    &self.char_,
+                    &self.smallint_,
+                    &self.int2_,
+                    &self.smallserial_,
+                    &self.serial2_,
+                    &self.int_,
+                    &self.int4_,
+                    &self.serial_,
+                    &self.serial4_,
+                    &self.bingint_,
+                    &self.int8_,
+                    &self.bigserial_,
+                    &self.serial8_,
+                    &self.float4_,
+                    &self.real_,
+                    &self.float8_,
+                    &self.double_precision_,
+                    &self.text_,
+                    &self.varchar_,
+                    &self.bytea_,
+                    &self.timestamp_,
+                    &self.timestamp_without_time_zone_,
+                    &self.timestamptz_,
+                    &self.timestamp_with_time_zone_,
+                    &self.date_,
+                    &self.time_,
+                    &self.json_,
+                    &self.jsonb_,
+                    &self.uuid_,
+                    &self.inet_,
+                    &self.macaddr_,
+                )
+                .await
             }
         }
         #[derive(Debug, Clone, PartialEq)]
@@ -919,12 +794,8 @@ pub mod queries {
                     int4_,
                     int8_,
                     int_,
-                    json_: postgres_types::Json(
-                        serde_json::from_str(json_.0.get()).unwrap(),
-                    ),
-                    jsonb_: postgres_types::Json(
-                        serde_json::from_str(jsonb_.0.get()).unwrap(),
-                    ),
+                    json_: postgres_types::Json(serde_json::from_str(json_.0.get()).unwrap()),
+                    jsonb_: postgres_types::Json(serde_json::from_str(jsonb_.0.get()).unwrap()),
                     macaddr_,
                     real_,
                     serial2_,
@@ -967,9 +838,7 @@ pub mod queries {
                     mapper,
                 }
             }
-            pub async fn stmt(
-                &self,
-            ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
@@ -982,13 +851,11 @@ pub mod queries {
             }
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
-                Ok(
-                    self
-                        .client
-                        .query_opt(&stmt, &self.params)
-                        .await?
-                        .map(|row| (self.mapper)((self.extractor)(&row))),
-                )
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
             }
             pub async fn stream(
                 self,
@@ -1051,10 +918,7 @@ pub mod queries {
         where
             C: GenericClient,
         {
-            pub fn map<R>(
-                self,
-                mapper: fn(NightmareBorrowed) -> R,
-            ) -> NightmareQuery<'a, C, R, N> {
+            pub fn map<R>(self, mapper: fn(NightmareBorrowed) -> R) -> NightmareQuery<'a, C, R, N> {
                 NightmareQuery {
                     client: self.client,
                     params: self.params,
@@ -1063,9 +927,7 @@ pub mod queries {
                     mapper,
                 }
             }
-            pub async fn stmt(
-                &self,
-            ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
@@ -1078,13 +940,11 @@ pub mod queries {
             }
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
-                Ok(
-                    self
-                        .client
-                        .query_opt(&stmt, &self.params)
-                        .await?
-                        .map(|row| (self.mapper)((self.extractor)(&row))),
-                )
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
             }
             pub async fn stream(
                 self,
@@ -1149,47 +1009,45 @@ pub mod queries {
     macaddr_
 FROM
     Everything;",
-                extractor: |row| {
-                    SelectEverythingBorrowed {
-                        array_: row.get(3),
-                        bigserial_: row.get(18),
-                        bingint_: row.get(16),
-                        bool_: row.get(4),
-                        bool_opt: row.get(5),
-                        boolean_: row.get(6),
-                        bytea_: row.get(26),
-                        char_: row.get(7),
-                        custom_array_: row.get(1),
-                        custom_domain_: row.get(0),
-                        date_: row.get(31),
-                        domain_: row.get(2),
-                        double_precision_: row.get(23),
-                        float4_: row.get(20),
-                        float8_: row.get(22),
-                        inet_: row.get(36),
-                        int2_: row.get(9),
-                        int4_: row.get(13),
-                        int8_: row.get(17),
-                        int_: row.get(12),
-                        json_: row.get(33),
-                        jsonb_: row.get(34),
-                        macaddr_: row.get(37),
-                        real_: row.get(21),
-                        serial2_: row.get(11),
-                        serial4_: row.get(15),
-                        serial8_: row.get(19),
-                        serial_: row.get(14),
-                        smallint_: row.get(8),
-                        smallserial_: row.get(10),
-                        text_: row.get(24),
-                        time_: row.get(32),
-                        timestamp_: row.get(27),
-                        timestamp_with_time_zone_: row.get(30),
-                        timestamp_without_time_zone_: row.get(28),
-                        timestamptz_: row.get(29),
-                        uuid_: row.get(35),
-                        varchar_: row.get(25),
-                    }
+                extractor: |row| SelectEverythingBorrowed {
+                    array_: row.get(3),
+                    bigserial_: row.get(18),
+                    bingint_: row.get(16),
+                    bool_: row.get(4),
+                    bool_opt: row.get(5),
+                    boolean_: row.get(6),
+                    bytea_: row.get(26),
+                    char_: row.get(7),
+                    custom_array_: row.get(1),
+                    custom_domain_: row.get(0),
+                    date_: row.get(31),
+                    domain_: row.get(2),
+                    double_precision_: row.get(23),
+                    float4_: row.get(20),
+                    float8_: row.get(22),
+                    inet_: row.get(36),
+                    int2_: row.get(9),
+                    int4_: row.get(13),
+                    int8_: row.get(17),
+                    int_: row.get(12),
+                    json_: row.get(33),
+                    jsonb_: row.get(34),
+                    macaddr_: row.get(37),
+                    real_: row.get(21),
+                    serial2_: row.get(11),
+                    serial4_: row.get(15),
+                    serial8_: row.get(19),
+                    serial_: row.get(14),
+                    smallint_: row.get(8),
+                    smallserial_: row.get(10),
+                    text_: row.get(24),
+                    time_: row.get(32),
+                    timestamp_: row.get(27),
+                    timestamp_with_time_zone_: row.get(30),
+                    timestamp_without_time_zone_: row.get(28),
+                    timestamptz_: row.get(29),
+                    uuid_: row.get(35),
+                    varchar_: row.get(25),
                 },
                 mapper: |it| SelectEverything::from(it),
             }
@@ -1293,22 +1151,20 @@ FROM
                 params: [],
                 query: "SELECT * FROM nightmare;
 ",
-                extractor: |row| {
-                    NightmareBorrowed {
-                        composite: row.get(0),
-                        data: row.get(3),
-                        datas: row.get(4),
-                        name: row.get(1),
-                        names: row.get(2),
-                    }
+                extractor: |row| NightmareBorrowed {
+                    composite: row.get(0),
+                    data: row.get(3),
+                    datas: row.get(4),
+                    name: row.get(1),
+                    names: row.get(2),
                 },
                 mapper: |it| Nightmare::from(it),
             }
         }
     }
     pub mod copy {
-        use futures::{StreamExt, TryStreamExt};
         use cornucopia_client::GenericClient;
+        use futures::{StreamExt, TryStreamExt};
         #[derive(Debug)]
         pub struct InsertCloneParams<'a> {
             pub composite: super::super::types::public::CloneCompositeBorrowed<'a>,
@@ -1370,9 +1226,7 @@ FROM
                     mapper,
                 }
             }
-            pub async fn stmt(
-                &self,
-            ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
@@ -1385,13 +1239,11 @@ FROM
             }
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
-                Ok(
-                    self
-                        .client
-                        .query_opt(&stmt, &self.params)
-                        .await?
-                        .map(|row| (self.mapper)((self.extractor)(&row))),
-                )
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
             }
             pub async fn stream(
                 self,
@@ -1424,10 +1276,7 @@ FROM
         where
             C: GenericClient,
         {
-            pub fn map<R>(
-                self,
-                mapper: fn(SelectCopy) -> R,
-            ) -> SelectCopyQuery<'a, C, R, N> {
+            pub fn map<R>(self, mapper: fn(SelectCopy) -> R) -> SelectCopyQuery<'a, C, R, N> {
                 SelectCopyQuery {
                     client: self.client,
                     params: self.params,
@@ -1436,9 +1285,7 @@ FROM
                     mapper,
                 }
             }
-            pub async fn stmt(
-                &self,
-            ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
@@ -1451,13 +1298,11 @@ FROM
             }
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
-                Ok(
-                    self
-                        .client
-                        .query_opt(&stmt, &self.params)
-                        .await?
-                        .map(|row| (self.mapper)((self.extractor)(&row))),
-                )
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
             }
             pub async fn stream(
                 self,
@@ -1491,10 +1336,8 @@ FROM
                 client,
                 params: [],
                 query: "SELECT * FROM clone;",
-                extractor: |row| {
-                    SelectCloneBorrowed {
-                        composite: row.get(0),
-                    }
+                extractor: |row| SelectCloneBorrowed {
+                    composite: row.get(0),
                 },
                 mapper: |it| SelectClone::from(it),
             }
@@ -1515,13 +1358,148 @@ FROM
                 client,
                 params: [],
                 query: "SELECT * FROM copy;",
-                extractor: |row| {
-                    SelectCopy {
-                        composite: row.get(0),
-                    }
+                extractor: |row| SelectCopy {
+                    composite: row.get(0),
                 },
                 mapper: |it| SelectCopy::from(it),
             }
+        }
+    }
+    pub mod params {
+        use cornucopia_client::GenericClient;
+        use futures::{StreamExt, TryStreamExt};
+        #[derive(Debug)]
+        pub struct InsertBookParams<'a> {
+            pub author: &'a str,
+            pub name: &'a str,
+        }
+        impl<'a> InsertBookParams<'a> {
+            pub async fn insert_book<C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> Result<u64, tokio_postgres::Error> {
+                insert_book(client, &self.author, &self.name).await
+            }
+        }
+        #[derive(Debug)]
+        pub struct ParamsUseTwiceParams<'a> {
+            pub name: &'a str,
+        }
+        impl<'a> ParamsUseTwiceParams<'a> {
+            pub async fn params_use_twice<C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> Result<u64, tokio_postgres::Error> {
+                params_use_twice(client, &self.name).await
+            }
+        }
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct SelectBook {
+            pub author: String,
+            pub name: String,
+        }
+        pub struct SelectBookBorrowed<'a> {
+            pub author: &'a str,
+            pub name: &'a str,
+        }
+        impl<'a> From<SelectBookBorrowed<'a>> for SelectBook {
+            fn from(SelectBookBorrowed { author, name }: SelectBookBorrowed<'a>) -> Self {
+                Self {
+                    author: author.into(),
+                    name: name.into(),
+                }
+            }
+        }
+        pub struct SelectBookQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> SelectBookBorrowed,
+            mapper: fn(SelectBookBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> SelectBookQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(
+                self,
+                mapper: fn(SelectBookBorrowed) -> R,
+            ) -> SelectBookQuery<'a, C, R, N> {
+                SelectBookQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+                self.client.prepare(self.query).await
+            }
+            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                let row = self.client.query_one(&stmt, &self.params).await?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.stream().await?.try_collect().await
+            }
+            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub async fn stream(
+                self,
+            ) -> Result<
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
+                let stmt = self.stmt().await?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .await?
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                    .into_stream();
+                Ok(stream)
+            }
+        }
+        pub async fn insert_book<'a, C: GenericClient>(
+            client: &'a C,
+            author: &'a &str,
+            name: &'a &str,
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare("INSERT INTO book (author, name) VALUES ($1, $2);")
+                .await?;
+            client.execute(&stmt, &[author, name]).await
+        }
+        pub fn select_book<'a, C: GenericClient>(
+            client: &'a C,
+        ) -> SelectBookQuery<'a, C, SelectBook, 0> {
+            SelectBookQuery {
+                client,
+                params: [],
+                query: "SELECT * FROM book;",
+                extractor: |row| SelectBookBorrowed {
+                    author: row.get(1),
+                    name: row.get(0),
+                },
+                mapper: |it| SelectBook::from(it),
+            }
+        }
+        pub async fn params_use_twice<'a, C: GenericClient>(
+            client: &'a C,
+            name: &'a &str,
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare("UPDATE book SET name = $1 WHERE length(name) > 42 AND length($1) < 42;")
+                .await?;
+            client.execute(&stmt, &[name]).await
         }
     }
 }
