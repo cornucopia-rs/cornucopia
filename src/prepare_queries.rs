@@ -1,8 +1,5 @@
 use crate::{
-    parser::{
-        error::{ParsedPosition, ValidationError},
-        NullableColumn, Parsed, ParsedQuery,
-    },
+    parser::{error::ValidationError, NullableColumn, Parsed, ParsedQuery},
     read_queries::Module,
     type_registrar::CornucopiaType,
     type_registrar::TypeRegistrar,
@@ -351,7 +348,7 @@ fn prepare_query(
         });
     }
 
-    let row_name = query
+    let row_struct_name = query
         .named_return_struct
         .unwrap_or_else(|| query.name.map(|x| x.to_upper_camel_case()));
     let param_struct_name = query
@@ -359,7 +356,7 @@ fn prepare_query(
         .unwrap_or_else(|| query.name.map(|x| x.to_upper_camel_case()));
 
     let row_idx = if !row_fields.is_empty() {
-        Some(module.add_row(row_name, row_fields).map_err(|e| Error {
+        Some(module.add_row(row_struct_name, row_fields).map_err(|e| Error {
             err: e,
             query_name: query.name.value.clone(),
             query_start_line: Some(query.line),

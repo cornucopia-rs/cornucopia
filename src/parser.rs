@@ -126,20 +126,17 @@ pub(crate) fn parse_queries(input: &str) -> Result<Vec<ParsedQuery>, Error> {
                             Err(_) => {
                                 let bind_params = parse_pg_bind_params(sql_tokens)?;
                                 // Check if the bind parameter's index is greater than the number of parameters
-                                Error::validate_more_bind_params_than_params(
-                                    &bind_params,
-                                    nb_params,
-                                )?;
+                                validate::more_bind_params_than_params(&bind_params, nb_params)?;
                                 // Check that every param is used in the query
-                                Error::validate_unused_param(&params, &bind_params)?;
+                                validate::unused_param(&params, &bind_params)?;
                             }
                         }
                     } else {
                         let bind_params = parse_pg_bind_params(sql_tokens)?;
                         // Check if the bind parameter's index is greater than the number of parameters
-                        Error::validate_more_bind_params_than_params(&bind_params, nb_params)?;
+                        validate::more_bind_params_than_params(&bind_params, nb_params)?;
                         // Check that every param is used in the query
-                        Error::validate_unused_param(&params, &bind_params)?;
+                        validate::unused_param(&params, &bind_params)?;
                     }
                 }
                 // Extended syntax with nullabble columns
@@ -201,7 +198,7 @@ fn parse_params(pair: Pair<Rule>) -> Result<Vec<Parsed<String>>, Error> {
             let it_str = it.as_str().to_owned();
 
             // Check that this parameter is not already in the list, then add it to the list.
-            let (line, col, line_str) = Error::validate_duplicate_param(it, &params, &it_str)?;
+            let (line, col, line_str) = validate::duplicate_param(it, &params, &it_str)?;
             params.push(Parsed {
                 value: it_str,
                 pos: ParsedPosition {
@@ -229,7 +226,7 @@ fn parse_pg_bind_params(pair: Pair<Rule>) -> Result<Vec<Parsed<i16>>, Error> {
             let it_str = it.as_str().to_owned();
 
             // Check that the index can be parsed as a i16 (required by postgres wire protocol)
-            let index = Error::validate_invalid_i16_index(&it_str, line, col, &line_str)?;
+            let index = validate::i16_index(&it_str, line, col, &line_str)?;
 
             // If the bind param has not yet been seen, add it to the list
             if !bind_params.iter().any(|p: &Parsed<i16>| p.value == index) {
@@ -343,7 +340,7 @@ fn parse_nullable_columns(pair: Pair<Rule>) -> Result<Vec<Parsed<NullableColumn>
             // Indexed nullable column
             Rule::number => {
                 // Check that the index can be parsed as a i16 (required by postgres wire protocol)
-                let index = Error::validate_invalid_i16_index(it_str, line, col, &line_str)?;
+                let index = validate::i16_index(it_str, line, col, &line_str)?;
                 NullableColumn::Index(index)
             }
             _ => unreachable!(),
@@ -361,106 +358,112 @@ fn parse_nullable_columns(pair: Pair<Rule>) -> Result<Vec<Parsed<NullableColumn>
     Ok(cols)
 }
 
-pub(crate) mod error {
+pub(crate) mod validate {
+    use super::error::ParsedPosition;
+    use super::Rule;
+    use super::{
+        error::{Error, ValidationError},
+        Parsed,
+    };
     use pest::iterators::Pair;
 
+    pub(crate) fn more_bind_params_than_params(
+        bind_params: &[Parsed<i16>],
+        nb_params: usize,
+    ) -> Result<(), Error> {
+        if let Some(p) = bind_params.iter().find(|p| p.value > nb_params as i16) {
+            Err(Error::Validation(
+                ValidationError::MoreBindParamsThanParams {
+                    nb_params,
+                    pos: p.pos.clone(),
+                },
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub(crate) fn unused_param(
+        params: &[Parsed<String>],
+        bind_params: &[Parsed<i16>],
+    ) -> Result<(), Error> {
+        if let Some((index, p)) = params.iter().enumerate().find(|(index, _)| {
+            !bind_params
+                .iter()
+                .any(|bind_index| bind_index.value == *index as i16 + 1)
+        }) {
+            Err(Error::Validation(ValidationError::UnusedParam {
+                index: index + 1,
+                pos: p.pos.clone(),
+            }))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub(crate) fn duplicate_param(
+        it: Pair<Rule>,
+        params: &[Parsed<String>],
+        param: &str,
+    ) -> Result<(usize, usize, String), Error> {
+        let pos = it.as_span().start_pos();
+        let (line, col) = pos.line_col();
+        let line_str = pos.line_of().to_owned();
+        if params.iter().any(|p: &Parsed<String>| p.value == param) {
+            Err(Error::Validation(ValidationError::DuplicateParam {
+                pos: ParsedPosition {
+                    line,
+                    col,
+                    line_str,
+                },
+            }))
+        } else {
+            Ok((line, col, line_str))
+        }
+    }
+
+    pub(crate) fn i16_index(
+        it_str: &str,
+        line: usize,
+        col: usize,
+        line_str: &str,
+    ) -> Result<i16, Error> {
+        // Check that the index can be parsed as a i16 (required by postgres wire protocol)
+        let index = it_str.parse::<i16>().map_err(|_| {
+            Error::Validation(ValidationError::InvalidI16Index {
+                pos: ParsedPosition {
+                    line,
+                    col,
+                    line_str: line_str.to_owned(),
+                },
+            })
+        })?;
+
+        // Check that the index is also non-zero (postgres bind params are 1-indexed)
+        if index == 0 {
+            return Err(Error::Validation(ValidationError::InvalidI16Index {
+                pos: ParsedPosition {
+                    line,
+                    col,
+                    line_str: line_str.to_owned(),
+                },
+            }));
+        };
+
+        Ok(index)
+    }
+}
+
+pub(crate) mod error {
     use crate::prepare_queries::PreparedField;
 
-    use super::{Parsed, Rule};
+    use super::Rule;
     use std::fmt::Display;
 
     #[derive(Debug)]
     pub(crate) enum Error {
         Parser(pest::error::Error<Rule>),
         Validation(ValidationError),
-    }
-
-    impl Error {
-        pub(crate) fn validate_more_bind_params_than_params(
-            bind_params: &[Parsed<i16>],
-            nb_params: usize,
-        ) -> Result<(), Self> {
-            if let Some(p) = bind_params.iter().find(|p| p.value > nb_params as i16) {
-                return Err(Error::Validation(
-                    ValidationError::MoreBindParamsThanParams {
-                        nb_params,
-                        pos: p.pos.clone(),
-                    },
-                ));
-            } else {
-                Ok(())
-            }
-        }
-
-        pub(crate) fn validate_unused_param(
-            params: &[Parsed<String>],
-            bind_params: &[Parsed<i16>],
-        ) -> Result<(), Self> {
-            if let Some((index, p)) = params.iter().enumerate().find(|(index, _)| {
-                !bind_params
-                    .iter()
-                    .any(|bind_index| bind_index.value == *index as i16 + 1)
-            }) {
-                return Err(Error::Validation(ValidationError::UnusedParam {
-                    index: index + 1,
-                    pos: p.pos.clone(),
-                }));
-            } else {
-                Ok(())
-            }
-        }
-
-        pub(crate) fn validate_duplicate_param(
-            it: Pair<Rule>,
-            params: &[Parsed<String>],
-            param: &str,
-        ) -> Result<(usize, usize, String), Self> {
-            let pos = it.as_span().start_pos();
-            let (line, col) = pos.line_col();
-            let line_str = pos.line_of().to_owned();
-            if params.iter().any(|p: &Parsed<String>| p.value == param) {
-                return Err(Error::Validation(ValidationError::DuplicateParam {
-                    pos: ParsedPosition {
-                        line,
-                        col,
-                        line_str,
-                    },
-                }));
-            } else {
-                Ok((line, col, line_str))
-            }
-        }
-
-        pub(crate) fn validate_invalid_i16_index(
-            it_str: &str,
-            line: usize,
-            col: usize,
-            line_str: &str,
-        ) -> Result<i16, Error> {
-            // Check that the index can be parsed as a i16 (required by postgres wire protocol)
-            let index = it_str.parse::<i16>().map_err(|_| {
-                Error::Validation(ValidationError::InvalidI16Index {
-                    pos: ParsedPosition {
-                        line,
-                        col,
-                        line_str: line_str.to_owned(),
-                    },
-                })
-            })?;
-
-            // Check that the index is also non-zero (postgres bind params are 1-indexed)
-            if index == 0 {
-                return Err(Error::Validation(ValidationError::InvalidI16Index {
-                    pos: ParsedPosition {
-                        line,
-                        col,
-                        line_str: line_str.to_owned(),
-                    },
-                }));
-            };
-
-            Ok(index)
-        }
     }
 
     #[derive(Debug, Clone)]
