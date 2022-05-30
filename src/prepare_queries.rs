@@ -1,6 +1,6 @@
 use crate::{
     parser::{
-        error::{ErrorPosition, ValidationError},
+        error::{ParsedPosition, ValidationError},
         NullableColumn, Parsed, ParsedQuery,
     },
     read_queries::Module,
@@ -57,25 +57,41 @@ pub(crate) struct PreparedModule {
 }
 
 impl PreparedModule {
-    fn add_row(&mut self, name: String, fields: Vec<PreparedField>) -> (usize, Vec<usize>) {
+    fn add_row(
+        &mut self,
+        name: Parsed<String>,
+        fields: Vec<PreparedField>,
+    ) -> Result<(usize, Vec<usize>), ErrorVariant> {
         assert!(!fields.is_empty());
-        match self.rows.entry(name.clone()) {
+        match self.rows.entry(name.value.clone()) {
             Entry::Occupied(o) => {
-                // TODO return an error
                 let prev = &o.get().fields;
-                assert!(prev.len() == fields.len());
+
+                // If the row doesn't contain the same fields as a previously
+                // registered row with the same name...
+                if prev.len() != fields.len() || !prev.iter().all(|f| fields.contains(f)) {
+                    return Err(ErrorVariant::Validation(
+                        ValidationError::NamedRowInvalidFields {
+                            expected: prev.clone(),
+                            actual: fields,
+                            name: name.value,
+                            pos: name.pos,
+                        },
+                    ));
+                }
+
                 let indexes: Option<Vec<_>> = prev
                     .iter()
                     .map(|f| fields.iter().position(|it| it == f))
                     .collect();
-                (o.index(), indexes.unwrap())
+                Ok((o.index(), indexes.unwrap()))
             }
             Entry::Vacant(v) => {
                 let is_copy = fields.iter().all(|f| f.ty.is_copy);
                 let mut tmp = fields.to_vec();
                 tmp.sort_unstable_by(|a, b| a.name.cmp(&b.name));
                 v.insert(PreparedRow {
-                    name: name.clone(),
+                    name: name.value.clone(),
                     fields: tmp,
                     is_copy,
                 });
@@ -86,52 +102,69 @@ impl PreparedModule {
 
     fn add_query(
         &mut self,
-        name: String,
+        name: Parsed<String>,
         params: Vec<PreparedField>,
         row_idx: Option<(usize, Vec<usize>)>,
         sql: String,
-    ) -> usize {
-        match self.queries.entry(name.clone()) {
-            Entry::Occupied(_o) => {
-                // TODO return an error
-                unreachable!()
-            }
+    ) -> Result<usize, ErrorVariant> {
+        match self.queries.entry(name.value.clone()) {
+            Entry::Occupied(_o) => Err(ErrorVariant::Validation(
+                ValidationError::QueryNameAlreadyUsed {
+                    name: name.value,
+                    pos: name.pos,
+                },
+            )),
             Entry::Vacant(v) => {
                 let index = v.index();
                 v.insert(PreparedQuery {
-                    name,
+                    name: name.value,
                     params,
                     row: row_idx,
                     sql,
                 });
-                index
+                Ok(index)
             }
         }
     }
 
-    fn add_params(&mut self, name: String, query_idx: usize) -> usize {
+    fn add_params(
+        &mut self,
+        name: Parsed<String>,
+        query_idx: usize,
+    ) -> Result<usize, ErrorVariant> {
         let params = &self.queries.get_index(query_idx).unwrap().1.params;
         assert!(!params.is_empty());
 
-        match self.params.entry(name.clone()) {
+        match self.params.entry(name.value.clone()) {
             Entry::Occupied(mut o) => {
                 let prev = o.get_mut();
-                // TODO return an error
-                assert!(prev.fields.len() == params.len());
-                assert!(prev.fields.iter().all(|f| params.contains(f)));
+                // If the param struct doesn't contain the same fields as a previously
+                // registered param struct with the same name...
+                if prev.fields.len() != params.len()
+                    || !prev.fields.iter().all(|f| params.contains(f))
+                {
+                    return Err(ErrorVariant::Validation(
+                        ValidationError::NamedParamStructInvalidFields {
+                            name: name.value,
+                            pos: name.pos,
+                            expected: prev.fields.clone(),
+                            actual: params.clone(),
+                        },
+                    ));
+                }
                 prev.queries.push(query_idx);
-                o.index()
+                Ok(o.index())
             }
             Entry::Vacant(v) => {
                 let mut fields = params.to_vec();
                 fields.sort_unstable_by(|a, b| a.name.cmp(&b.name));
                 let index = v.index();
                 v.insert(PreparedParams {
-                    name,
+                    name: name.value,
                     fields,
                     queries: vec![query_idx],
                 });
-                index
+                Ok(index)
             }
         }
     }
@@ -239,14 +272,10 @@ fn prepare_query(
                             ValidationError::InvalidNullableColumnIndex {
                                 index: *index as usize,
                                 max_col_index: stmt_cols.len(),
-                                pos: ErrorPosition {
-                                    line: nullable_col.line,
-                                    col: nullable_col.col,
-                                    line_str: nullable_col.line_str,
-                                },
+                                pos: nullable_col.pos,
                             },
                         ),
-                        query_name: query.name,
+                        query_name: query.name.value,
                         query_start_line: Some(query.line),
                         path: module_path.to_owned(),
                     });
@@ -260,13 +289,9 @@ fn prepare_query(
                     return Err(Error {
                         err: ErrorVariant::Validation(ValidationError::ColumnAlreadyNullable {
                             name: n.to_owned(),
-                            pos: ErrorPosition {
-                                line: p.line,
-                                col: p.col,
-                                line_str: p.line_str.to_owned(),
-                            },
+                            pos: p.pos.clone(),
                         }),
-                        query_name: query.name,
+                        query_name: query.name.value,
                         query_start_line: Some(query.line),
                         path: module_path.to_owned(),
                     });
@@ -282,13 +307,9 @@ fn prepare_query(
                     return Err(Error {
                         err: ErrorVariant::Validation(ValidationError::InvalidNullableColumnName {
                             name: name.to_owned(),
-                            pos: ErrorPosition {
-                                line: nullable_col.line,
-                                col: nullable_col.col,
-                                line_str: nullable_col.line_str,
-                            },
+                            pos: nullable_col.pos,
                         }),
-                        query_name: query.name.to_owned(),
+                        query_name: query.name.value.clone(),
                         query_start_line: Some(query.line),
                         path: module_path.to_owned(),
                     });
@@ -300,15 +321,11 @@ fn prepare_query(
     // Now that we know all the nullable columns by name, check if there are duplicates.
     if let Some((p, u)) = has_duplicate(nullable_cols.iter(), |(_, n)| n) {
         return Err(Error {
-            query_name: query.name,
+            query_name: query.name.value,
             query_start_line: Some(query.line),
             err: ErrorVariant::Validation(ValidationError::ColumnAlreadyNullable {
                 name: u.to_owned(),
-                pos: ErrorPosition {
-                    line: p.line,
-                    col: p.col,
-                    line_str: p.line_str.to_owned(),
-                },
+                pos: p.pos.clone(),
             }),
             path: module_path.to_owned(),
         });
@@ -323,7 +340,7 @@ fn prepare_query(
                 query_start_line: Some(query.line),
                 err: e.into(),
                 path: String::from(module_path),
-                query_name: query.name.clone(),
+                query_name: query.name.value.clone(),
             })?;
         let name = column.name().to_owned();
         let is_nullable = nullable_cols.iter().any(|(_, n)| *n == name);
@@ -334,13 +351,43 @@ fn prepare_query(
         });
     }
 
-    let nb_params = params.len();
+    let row_name = query
+        .named_return_struct
+        .unwrap_or_else(|| query.name.map(|x| x.to_upper_camel_case()));
+    let param_struct_name = query
+        .named_param_struct
+        .unwrap_or_else(|| query.name.map(|x| x.to_upper_camel_case()));
 
-    let name = query.name.to_upper_camel_case();
-    let row_idx = (!row_fields.is_empty()).then(|| module.add_row(name.clone(), row_fields));
-    let query_idx = module.add_query(query.name.clone(), params, row_idx, query.sql_str);
-    if nb_params > 0 {
-        module.add_params(format!("{name}Params"), query_idx);
+    let row_idx = if !row_fields.is_empty() {
+        Some(module.add_row(row_name, row_fields).map_err(|e| Error {
+            err: e,
+            query_name: query.name.value.clone(),
+            query_start_line: Some(query.line),
+            path: module_path.to_owned(),
+        })?)
+    } else {
+        None
+    };
+
+    let params_not_empty = !params.is_empty();
+
+    let query_idx = module
+        .add_query(query.name.clone(), params, row_idx, query.sql_str)
+        .map_err(|e| Error {
+            err: e,
+            query_name: query.name.value.clone(),
+            query_start_line: Some(query.line),
+            path: module_path.to_owned(),
+        })?;
+    if params_not_empty {
+        module
+            .add_params(param_struct_name, query_idx)
+            .map_err(|e| Error {
+                err: e,
+                query_name: query.name.value.clone(),
+                query_start_line: Some(query.line),
+                path: module_path.to_owned(),
+            })?;
     }
 
     Ok(())
@@ -379,7 +426,7 @@ pub(crate) mod error {
                 query_start_line: Some(query.line),
                 err: err.into(),
                 path: String::from(path),
-                query_name: query.name.clone(),
+                query_name: query.name.value.clone(),
             }
         }
     }
