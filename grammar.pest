@@ -1,9 +1,8 @@
 // Whitespace
 comment = _{ NEWLINE ~ (" " | "\t")* ~ "--" ~ !"!" ~ (!NEWLINE ~ ANY)*}
-annotation_token = _{"--!"}
-blank = _{ comment | " " | "\t" | NEWLINE }
-ws = _{ blank | annotation_token }
-significant_whitespace = { blank | annotation_token }
+annotation_token = _{NEWLINE ~ (" " | "\t")* ~ "--!" | "--!" }
+blank = _{ comment | " " | "\t" }
+ws = _{ annotation_token | blank  }
 
 // Numbers
 number = {ASCII_DIGIT+}
@@ -39,8 +38,9 @@ annotation = {
     annotation_token ~ ws+
     ~ ident
     ~ (ws* ~ param_list)?
+    ~ (ws* ~ ident)?
     ~ (ws* ~ nullable_column_list)?
-    ~ ((" " | "\t")* ~ NEWLINE | significant_whitespace* ~ NEWLINE)
+    ~ (ws* ~ NEWLINE)
 }
 
 query = {
@@ -79,7 +79,7 @@ sql = {
 	    sql_string
         | "::" 
 	    | (extended_bind_parameter | pg_bind_parameter)
-	    | (!(NEWLINE ~ blank* ~ annotation_token) ~ ANY)
+	    | (!annotation_token ~ ANY)
 	)+
 }
 
