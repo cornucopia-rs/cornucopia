@@ -353,7 +353,7 @@ fn prepare_query(
         .unwrap_or_else(|| query.name.map(|x| x.to_upper_camel_case()));
     let param_struct_name = query
         .named_param_struct
-        .unwrap_or_else(|| query.name.map(|x| x.to_upper_camel_case()));
+        .unwrap_or_else(|| query.name.map(|x| x.to_upper_camel_case() + "Params"));
 
     let row_idx = if !row_fields.is_empty() {
         Some(

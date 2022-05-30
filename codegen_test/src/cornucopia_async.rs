@@ -1008,7 +1008,8 @@ pub mod queries {
     inet_,
     macaddr_
 FROM
-    Everything;",
+    Everything;
+",
                 extractor: |row| SelectEverythingBorrowed {
                     array_: row.get(3),
                     bigserial_: row.get(18),
@@ -1095,7 +1096,8 @@ FROM
             let stmt = client
                 .prepare(
                     "INSERT INTO Everything (custom_domain_, custom_array_, domain_, array_, bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37);",
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37);
+",
                 )
                 .await?;
             client
@@ -1325,7 +1327,10 @@ FROM
             composite: &'a super::super::types::public::CloneCompositeBorrowed<'a>,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = client
-                .prepare("INSERT INTO clone (composite) VALUES ($1);")
+                .prepare(
+                    "INSERT INTO clone (composite) VALUES ($1);
+",
+                )
                 .await?;
             client.execute(&stmt, &[composite]).await
         }
@@ -1335,7 +1340,8 @@ FROM
             SelectCloneQuery {
                 client,
                 params: [],
-                query: "SELECT * FROM clone;",
+                query: "SELECT * FROM clone;
+",
                 extractor: |row| SelectCloneBorrowed {
                     composite: row.get(0),
                 },
@@ -1347,7 +1353,10 @@ FROM
             composite: &'a super::super::types::public::CopyComposite,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = client
-                .prepare("INSERT INTO copy (composite) VALUES ($1);")
+                .prepare(
+                    "INSERT INTO copy (composite) VALUES ($1);
+",
+                )
                 .await?;
             client.execute(&stmt, &[composite]).await
         }
@@ -1474,7 +1483,10 @@ FROM
             name: &'a &str,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = client
-                .prepare("INSERT INTO book (author, name) VALUES ($1, $2);")
+                .prepare(
+                    "INSERT INTO book (author, name) VALUES ($1, $2);
+",
+                )
                 .await?;
             client.execute(&stmt, &[author, name]).await
         }
@@ -1484,7 +1496,8 @@ FROM
             SelectBookQuery {
                 client,
                 params: [],
-                query: "SELECT * FROM book;",
+                query: "SELECT * FROM book;
+",
                 extractor: |row| SelectBookBorrowed {
                     author: row.get(1),
                     name: row.get(0),
