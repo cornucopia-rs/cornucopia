@@ -356,12 +356,16 @@ fn prepare_query(
         .unwrap_or_else(|| query.name.map(|x| x.to_upper_camel_case()));
 
     let row_idx = if !row_fields.is_empty() {
-        Some(module.add_row(row_struct_name, row_fields).map_err(|e| Error {
-            err: e,
-            query_name: query.name.value.clone(),
-            query_start_line: Some(query.line),
-            path: module_path.to_owned(),
-        })?)
+        Some(
+            module
+                .add_row(row_struct_name, row_fields)
+                .map_err(|e| Error {
+                    err: e,
+                    query_name: query.name.value.clone(),
+                    query_start_line: Some(query.line),
+                    path: module_path.to_owned(),
+                })?,
+        )
     } else {
         None
     };
