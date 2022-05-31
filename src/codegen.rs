@@ -26,7 +26,7 @@ mod utils {
 
     pub struct Joiner<T, I: IntoIterator<Item = T>, F: Fn(&mut Formatter, T)> {
         sep: char,
-        /// FormatWith uses interior mutability because Display::fmt takes &self.
+        /// Use interior mutability because Display::fmt takes &self
         inner: RefCell<Option<I>>,
         mapper: F,
     }

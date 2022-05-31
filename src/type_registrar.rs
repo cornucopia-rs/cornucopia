@@ -62,7 +62,7 @@ impl CornucopiaType {
 
         match self.pg_ty.kind() {
             Kind::Array(inner) => {
-                let into = if *inner == Type::JSON || *inner == Type::JSONB {
+                let into = if matches!(*inner, Type::JSON | Type::JSONB) {
                     from_json("v")
                 } else {
                     "v.into()".to_string()
@@ -77,17 +77,15 @@ impl CornucopiaType {
             Kind::Domain(_) | Kind::Composite(_) => format!("{var_name}.into()"),
             _ => {
                 if is_nullable {
-                    if self.pg_ty == Type::JSON || self.pg_ty == Type::JSONB {
+                    if matches!(self.pg_ty, Type::JSON | Type::JSONB) {
                         format!("{var_name}.map(|v| {}).unwrap()))", from_json("v"))
                     } else {
                         format!("{var_name}.map(|v| v.into())")
                     }
+                } else if matches!(self.pg_ty, Type::JSON | Type::JSONB) {
+                    from_json(var_name)
                 } else {
-                    if self.pg_ty == Type::JSON || self.pg_ty == Type::JSONB {
-                        from_json(var_name)
-                    } else {
-                        format!("{var_name}.into()")
-                    }
+                    format!("{var_name}.into()")
                 }
             }
         }
@@ -104,24 +102,15 @@ impl CornucopiaType {
         if self.is_copy {
             return self.rust_path_from_queries.to_string();
         }
-        // Special case for byte arrays
-        if self.rust_path_from_queries == "Vec<u8>" {
-            return format!("&{} [u8]", lifetime.unwrap_or(""));
-        }
+
+        let lifetime = lifetime.unwrap_or("'a");
+
         // Special case for domains and composites
         if matches!(self.pg_ty.kind(), Kind::Domain(_) | Kind::Composite(_)) {
             return if is_param && !self.is_params {
-                format!(
-                    "{}Params<{}>",
-                    self.rust_path_from_queries,
-                    lifetime.unwrap_or("'a")
-                )
+                format!("{}Params<{lifetime}>", self.rust_path_from_queries)
             } else {
-                format!(
-                    "{}Borrowed<{}>",
-                    self.rust_path_from_queries,
-                    lifetime.unwrap_or("'a")
-                )
+                format!("{}Borrowed<{lifetime}>", self.rust_path_from_queries)
             };
         }
 
@@ -132,29 +121,23 @@ impl CornucopiaType {
             // Its more practical for users to use a slice
             if is_param {
                 return format!(
-                    "&{} [{}]",
-                    lifetime.unwrap_or("'a"),
-                    inner_ty.borrowed_rust_ty(type_registrar, lifetime, is_param)
+                    "&{lifetime} [{}]",
+                    inner_ty.borrowed_rust_ty(type_registrar, Some(lifetime), is_param)
                 );
             } else {
                 return format!(
-                    "cornucopia_client::ArrayIterator<{}, {}>",
-                    lifetime.unwrap_or("'a"),
-                    inner_ty.borrowed_rust_ty(type_registrar, lifetime, is_param)
+                    "cornucopia_client::ArrayIterator<{lifetime}, {}>",
+                    inner_ty.borrowed_rust_ty(type_registrar, Some(lifetime), is_param)
                 );
             }
         }
 
-        // Simple checks
+        // Special case for non copy simple types
         match self.pg_ty {
-            Type::TEXT | Type::VARCHAR => {
-                format!("&{} str", lifetime.unwrap_or(""))
-            }
+            Type::BYTEA => format!("&{lifetime} [u8]"),
+            Type::TEXT | Type::VARCHAR => format!("&{lifetime} str"),
             Type::JSON | Type::JSONB => {
-                format!(
-                    "postgres_types::Json<&{} serde_json::value::RawValue>",
-                    lifetime.unwrap_or("")
-                )
+                format!("postgres_types::Json<&{lifetime} serde_json::value::RawValue>")
             }
             _ => unreachable!(),
         }

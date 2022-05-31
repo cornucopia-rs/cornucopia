@@ -1197,17 +1197,17 @@ pub mod queries {
             real_: &'a f32,
             float8_: &'a f64,
             double_precision_: &'a f64,
-            text_: &'a &str,
-            varchar_: &'a &str,
-            bytea_: &'a &[u8],
+            text_: &'a &'a str,
+            varchar_: &'a &'a str,
+            bytea_: &'a &'a [u8],
             timestamp_: &'a time::PrimitiveDateTime,
             timestamp_without_time_zone_: &'a time::PrimitiveDateTime,
             timestamptz_: &'a time::OffsetDateTime,
             timestamp_with_time_zone_: &'a time::OffsetDateTime,
             date_: &'a time::Date,
             time_: &'a time::Time,
-            json_: &'a postgres_types::Json<&serde_json::value::RawValue>,
-            jsonb_: &'a postgres_types::Json<&serde_json::value::RawValue>,
+            json_: &'a postgres_types::Json<&'a serde_json::value::RawValue>,
+            jsonb_: &'a postgres_types::Json<&'a serde_json::value::RawValue>,
             uuid_: &'a uuid::Uuid,
             inet_: &'a std::net::IpAddr,
             macaddr_: &'a eui48::MacAddress,
@@ -1315,17 +1315,17 @@ pub mod queries {
             real_: &'a &'a [f32],
             float8_: &'a &'a [f64],
             double_precision_: &'a &'a [f64],
-            text_: &'a &'a [&str],
-            varchar_: &'a &'a [&str],
-            bytea_: &'a &'a [&[u8]],
+            text_: &'a &'a [&'a str],
+            varchar_: &'a &'a [&'a str],
+            bytea_: &'a &'a [&'a [u8]],
             timestamp_: &'a &'a [time::PrimitiveDateTime],
             timestamp_without_time_zone_: &'a &'a [time::PrimitiveDateTime],
             timestamptz_: &'a &'a [time::OffsetDateTime],
             timestamp_with_time_zone_: &'a &'a [time::OffsetDateTime],
             date_: &'a &'a [time::Date],
             time_: &'a &'a [time::Time],
-            json_: &'a &'a [postgres_types::Json<&serde_json::value::RawValue>],
-            jsonb_: &'a &'a [postgres_types::Json<&serde_json::value::RawValue>],
+            json_: &'a &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
+            jsonb_: &'a &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
             uuid_: &'a &'a [uuid::Uuid],
             inet_: &'a &'a [std::net::IpAddr],
             macaddr_: &'a &'a [eui48::MacAddress],
@@ -1711,8 +1711,8 @@ pub mod queries {
         }
         pub async fn insert_book<'a, C: GenericClient>(
             client: &'a C,
-            author: &'a &str,
-            name: &'a &str,
+            author: &'a &'a str,
+            name: &'a &'a str,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = client
                 .prepare(
@@ -1739,7 +1739,7 @@ pub mod queries {
         }
         pub async fn params_use_twice<'a, C: GenericClient>(
             client: &'a C,
-            name: &'a &str,
+            name: &'a &'a str,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = client
                 .prepare("UPDATE book SET name = $1 WHERE length(name) > 42 AND length($1) < 42;")

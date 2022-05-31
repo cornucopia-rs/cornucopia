@@ -901,7 +901,7 @@ WHERE
         }
         pub fn author_name_starting_with<'a, C: GenericClient>(
             client: &'a mut C,
-            start_str: &'a &str,
+            start_str: &'a &'a str,
         ) -> AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith, 1> {
             AuthorNameStartingWithQuery {
                 client,
@@ -1007,7 +1007,7 @@ FROM
         }
         pub fn insert_book<'a, C: GenericClient>(
             client: &'a mut C,
-            title: &'a &str,
+            title: &'a &'a str,
         ) -> Result<u64, postgres::Error> {
             let stmt = client.prepare("INSERT INTO Book (title)
   VALUES ($1);
