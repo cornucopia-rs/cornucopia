@@ -46,8 +46,8 @@ fn test(apply: bool) -> bool {
     let successful = std::panic::catch_unwind(|| {
         let mut client = cornucopia::conn::cornucopia_conn().unwrap();
         run_errors_test(&mut client, apply).unwrap()
-            && run_examples_test(&mut client).unwrap()
             && run_codegen_test(&mut client).unwrap()
+            && run_examples_test(&mut client).unwrap()
     });
     cornucopia::container::cleanup(false).unwrap();
     successful.unwrap()

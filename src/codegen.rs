@@ -88,28 +88,34 @@ fn is_reserved_keyword(s: &str) -> bool {
     .contains(&s)
 }
 
-fn domain_brw_fromsql(w: &mut impl Write, struct_name: &str, ty_name: &str, ty_schema: &str) {
+fn domain_brw_fromsql(
+    w: &mut impl Write,
+    struct_name: &str,
+    inner_ty: &str,
+    ty_name: &str,
+    ty_schema: &str,
+) {
     gen!(
         w,
         r#"impl<'a> postgres_types::FromSql<'a> for {struct_name}Borrowed<'a> {{
-        fn from_sql(
-            _type: &postgres_types::Type,
-            buf: &'a [u8],
-        ) -> std::result::Result<
-            {struct_name}Borrowed<'a>,
-            std::boxed::Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>,
+        fn from_sql(_type: &postgres_types::Type, buf: &'a [u8]) -> std::result::Result<
+            {struct_name}Borrowed<'a>, std::boxed::Box<dyn std::error::Error + Sync + Send>,
         > {{
-            let inner = match *_type.kind() {{
-                postgres_types::Kind::Domain(ref inner) => inner,
-                _ => unreachable!(),
-            }};
-            let mut buf = buf;
-            let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-            std::result::Result::Ok({struct_name}Borrowed(
-                postgres_types::private::read_value(inner, &mut buf)?))
+            <{inner_ty} as postgres_types::FromSql>::from_sql(_type, buf).map({struct_name}Borrowed)
         }}
         fn accepts(type_: &postgres_types::Type) -> bool {{
-            type_.name() == "{ty_name}" && type_.schema() == "{ty_schema}"
+            if <{inner_ty} as postgres_types::FromSql>::accepts(type_) {{
+                return true;
+            }}
+            if type_.name() != "{ty_name}" || type_.schema() != "{ty_schema}" {{
+                return false;
+            }}
+            match *type_.kind() {{
+                postgres_types::Kind::Domain(ref type_) => {{
+                    <{inner_ty} as postgres_types::ToSql>::accepts(type_)
+                }}
+                _ => false,
+            }}
         }}
     }}"#
     )
@@ -204,7 +210,7 @@ fn composite_tosql(
             &self,
             _type: &postgres_types::Type,
             buf: &mut postgres_types::private::BytesMut,
-        ) -> std::result::Result<postgres_types::IsNull, std::boxed::Box<std::error::Error + Sync + Send>,> {{
+        ) -> std::result::Result<postgres_types::IsNull, std::boxed::Box<dyn std::error::Error + Sync + Send>,> {{
             let fields = match *_type.kind() {{
                 postgres_types::Kind::Composite(ref fields) => fields,
                 _ => unreachable!(),
@@ -619,7 +625,7 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
                         ) -> Self {{ Self({inner_value}) }}
                     }}"
                 );
-                domain_brw_fromsql(w, struct_name, ty_name, ty_schema);
+                domain_brw_fromsql(w, struct_name, &brw_fields_str, ty_name, ty_schema);
                 if !ty.is_params {
                     let params_fields_str =
                         inner_ty.borrowed_rust_ty(type_registrar, Some("'a"), true);

@@ -253,7 +253,6 @@ pub fn test_stress(client: &mut Client) {
     };
 
     assert_eq!(1, params.insert_nightmare(client).unwrap());
-    // TODO fix to sql for nightmare
-    //let actual = select_nightmare(client).one().unwrap();
-    //assert_eq!(expected, actual);
+    let actual = select_nightmare(client).one().unwrap();
+    assert_eq!(expected, actual);
 }

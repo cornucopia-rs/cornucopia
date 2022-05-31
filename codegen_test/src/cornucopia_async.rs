@@ -167,20 +167,23 @@ pub mod types {
                 buf: &'a [u8],
             ) -> std::result::Result<
                 MyDomainBorrowed<'a>,
-                std::boxed::Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>,
+                std::boxed::Box<dyn std::error::Error + Sync + Send>,
             > {
-                let inner = match *_type.kind() {
-                    postgres_types::Kind::Domain(ref inner) => inner,
-                    _ => unreachable!(),
-                };
-                let mut buf = buf;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                std::result::Result::Ok(MyDomainBorrowed(postgres_types::private::read_value(
-                    inner, &mut buf,
-                )?))
+                <&'a str as postgres_types::FromSql>::from_sql(_type, buf).map(MyDomainBorrowed)
             }
             fn accepts(type_: &postgres_types::Type) -> bool {
-                type_.name() == "my_domain" && type_.schema() == "public"
+                if <&'a str as postgres_types::FromSql>::accepts(type_) {
+                    return true;
+                }
+                if type_.name() != "my_domain" || type_.schema() != "public" {
+                    return false;
+                }
+                match *type_.kind() {
+                    postgres_types::Kind::Domain(ref type_) => {
+                        <&'a str as postgres_types::ToSql>::accepts(type_)
+                    }
+                    _ => false,
+                }
             }
         }
         impl<'a> postgres_types::ToSql for MyDomainBorrowed<'a> {
