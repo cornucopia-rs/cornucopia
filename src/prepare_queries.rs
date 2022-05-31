@@ -25,6 +25,7 @@ pub(crate) struct PreparedField {
     pub(crate) name: String,
     pub(crate) ty: CornucopiaType,
     pub(crate) is_nullable: bool,
+    pub(crate) is_inner_nullable: bool, // Vec only
 }
 
 /// A params struct
@@ -84,7 +85,7 @@ impl PreparedModule {
                 Ok((o.index(), indexes.unwrap()))
             }
             Entry::Vacant(v) => {
-                let is_copy = fields.iter().all(|f| f.ty.is_copy);
+                let is_copy = fields.iter().all(|f| f.ty.is_copy());
                 let mut tmp = fields.to_vec();
                 tmp.sort_unstable_by(|a, b| a.name.cmp(&b.name));
                 v.insert(PreparedRow {
@@ -238,7 +239,8 @@ fn prepare_query(
         params.push(PreparedField {
             name,
             ty: ty.to_owned(),
-            is_nullable: false, // TODO used when support null everywhere
+            is_nullable: false,       // TODO used when support null everywhere
+            is_inner_nullable: false, // TODO used when support null everywhere
         });
     }
 
@@ -341,6 +343,7 @@ fn prepare_query(
         let is_nullable = nullable_cols.iter().any(|(_, n)| *n == name);
         row_fields.push(PreparedField {
             is_nullable,
+            is_inner_nullable: false, // TODO used when support null everywhere
             name,
             ty: ty.clone(),
         });

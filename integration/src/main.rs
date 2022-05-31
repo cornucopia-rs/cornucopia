@@ -42,6 +42,7 @@ fn main() -> ExitCode {
 
 // Run test, return true if all test are successful
 fn test(apply: bool) -> bool {
+    cornucopia::container::cleanup(false).ok();
     cornucopia::container::setup(false).unwrap();
     let successful = std::panic::catch_unwind(|| {
         let mut client = cornucopia::conn::cornucopia_conn().unwrap();

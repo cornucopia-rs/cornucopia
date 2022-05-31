@@ -30,7 +30,7 @@ pub mod types {
         pub struct CustomComposite {
             pub name: String,
             pub age: i32,
-            pub persona: super::public::SpongebobCharacter,
+            pub persona: super::super::types::public::SpongebobCharacter,
         }
         #[derive(Debug)]
         pub struct CustomCompositeBorrowed<'a> {
@@ -48,8 +48,8 @@ pub mod types {
             ) -> Self {
                 Self {
                     name: name.into(),
-                    age,
-                    persona,
+                    age: age,
+                    persona: persona,
                 }
             }
         }

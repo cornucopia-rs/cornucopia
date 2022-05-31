@@ -18,7 +18,7 @@ pub mod types {
         pub struct CustomComposite {
             pub wow: String,
             pub such_cool: i32,
-            pub nice: super::public::SpongebobCharacter,
+            pub nice: super::super::types::public::SpongebobCharacter,
         }
         #[derive(Debug)]
         pub struct CustomCompositeBorrowed<'a> {
@@ -36,8 +36,8 @@ pub mod types {
             ) -> Self {
                 Self {
                     wow: wow.into(),
-                    such_cool,
-                    nice,
+                    such_cool: such_cool,
+                    nice: nice,
                 }
             }
         }
@@ -228,7 +228,7 @@ pub mod types {
         pub struct NightmareComposite {
             pub custom: Vec<super::super::types::public::CustomComposite>,
             pub spongebob: Vec<super::super::types::public::SpongebobCharacter>,
-            pub domain: super::public::MyDomain,
+            pub domain: super::super::types::public::MyDomain,
         }
         #[derive(Debug)]
         pub struct NightmareCompositeBorrowed<'a> {
@@ -391,7 +391,7 @@ pub mod types {
         impl<'a> From<CloneCompositeBorrowed<'a>> for CloneComposite {
             fn from(CloneCompositeBorrowed { first, second }: CloneCompositeBorrowed<'a>) -> Self {
                 Self {
-                    first,
+                    first: first,
                     second: second.into(),
                 }
             }
