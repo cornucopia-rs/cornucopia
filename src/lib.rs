@@ -107,3 +107,7 @@ fn write_generated_code(destination: &str, generated_code: &str) -> Result<(), E
         })?,
     )
 }
+
+fn remove_me() {
+    todo!()
+}
