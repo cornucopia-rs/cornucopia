@@ -384,7 +384,7 @@ fn gen_row_structs(
             let col_ty = if col.is_nullable {
                 format!("Option<{}>", col.ty.rust_path_from_queries)
             } else {
-                col.ty.rust_path_from_queries.clone()
+                col.ty.rust_path_from_queries.to_string()
             };
             gen!(w, "pub {col_name} : {col_ty}")
         });
@@ -623,9 +623,10 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
                 if !ty.is_params {
                     let params_fields_str =
                         inner_ty.borrowed_rust_ty(type_registrar, Some("'a"), true);
+                    let derive = if ty.is_copy { ",Copy,Clone" } else { "" };
                     gen!(
                         w,
-                        "#[derive(Debug, Clone)]
+                        "#[derive(Debug{derive})]
                         pub struct {struct_name}Params<'a>(pub {params_fields_str});",
                     );
                 }
@@ -697,9 +698,10 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
                             f_ty.borrowed_rust_ty(type_registrar, Some("'a"), true)
                         )
                     });
+                    let derive = if ty.is_copy { ",Copy,Clone" } else { "" };
                     gen!(
                         w,
-                        "#[derive(Debug, Clone)]
+                        "#[derive(Debug{derive})]
                         pub struct {struct_name}Params<'a> {{ {params_fields_str} }}",
                     );
                 }
@@ -720,13 +722,18 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
 fn gen_type_modules(w: &mut impl Write, type_registrar: &TypeRegistrar) -> Result<(), Error> {
     // Group the custom types by schema name
     let mut modules = HashMap::<String, Vec<CornucopiaType>>::new();
-    for ((schema, _), ty) in &type_registrar.custom_types {
-        match modules.entry(schema.to_owned()) {
-            std::collections::hash_map::Entry::Occupied(mut entry) => {
-                entry.get_mut().push(ty.clone());
-            }
-            std::collections::hash_map::Entry::Vacant(entry) => {
-                entry.insert(vec![ty.clone()]);
+    for ((schema, _), ty) in &type_registrar.types {
+        if matches!(
+            *ty.pg_ty.kind(),
+            Kind::Enum(_) | Kind::Composite(_) | Kind::Domain(_)
+        ) {
+            match modules.entry(schema.to_owned()) {
+                std::collections::hash_map::Entry::Occupied(mut entry) => {
+                    entry.get_mut().push(ty.clone());
+                }
+                std::collections::hash_map::Entry::Vacant(entry) => {
+                    entry.insert(vec![ty.clone()]);
+                }
             }
         }
     }

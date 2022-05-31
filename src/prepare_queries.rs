@@ -232,7 +232,7 @@ fn prepare_query(
     for (name, ty) in query.params.iter().zip(stmt.params().iter()) {
         // Register type
         let ty = type_registrar
-            .register(client, ty)
+            .register(ty)
             .map_err(|e| Error::new(e, &query, module_path))?;
         let name = name.value.to_owned();
         params.push(PreparedField {
@@ -331,14 +331,12 @@ fn prepare_query(
     // Get return columns
     let mut row_fields = Vec::new();
     for column in stmt_cols {
-        let ty = type_registrar
-            .register(client, column.type_())
-            .map_err(|e| Error {
-                query_start_line: Some(query.line),
-                err: e.into(),
-                path: String::from(module_path),
-                query_name: query.name.value.clone(),
-            })?;
+        let ty = type_registrar.register(column.type_()).map_err(|e| Error {
+            query_start_line: Some(query.line),
+            err: e.into(),
+            path: String::from(module_path),
+            query_name: query.name.value.clone(),
+        })?;
         let name = column.name().to_owned();
         let is_nullable = nullable_cols.iter().any(|(_, n)| *n == name);
         row_fields.push(PreparedField {
