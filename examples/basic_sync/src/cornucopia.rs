@@ -19,14 +19,7 @@ pub mod types {
             Patrick,
             Squidward,
         }
-        #[derive(
-            Debug,
-            postgres_types::ToSql,
-            postgres_types::FromSql,
-            Clone,
-            PartialEq
-        )]
-        #[postgres(name = "custom_composite")]
+        #[derive(Debug, Clone, PartialEq)]
         pub struct CustomComposite {
             pub name: String,
             pub age: i32,

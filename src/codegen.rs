@@ -88,20 +88,26 @@ fn is_reserved_keyword(s: &str) -> bool {
     .contains(&s)
 }
 
-fn domain_brw_fromsql(
+fn domain_fromsql(
     w: &mut impl Write,
     struct_name: &str,
     inner_ty: &str,
     ty_name: &str,
     ty_schema: &str,
+    is_copy: bool,
 ) {
+    let (borrow, lifetime) = if !is_copy {
+        ("Borrowed", "<'a>")
+    } else {
+        ("", "")
+    };
     gen!(
         w,
-        r#"impl<'a> postgres_types::FromSql<'a> for {struct_name}Borrowed<'a> {{
+        r#"impl<'a> postgres_types::FromSql<'a> for {struct_name}{borrow}{lifetime} {{
         fn from_sql(_type: &postgres_types::Type, buf: &'a [u8]) -> std::result::Result<
-            {struct_name}Borrowed<'a>, std::boxed::Box<dyn std::error::Error + Sync + Send>,
+            {struct_name}{borrow}{lifetime}, std::boxed::Box<dyn std::error::Error + Sync + Send>,
         > {{
-            <{inner_ty} as postgres_types::FromSql>::from_sql(_type, buf).map({struct_name}Borrowed)
+            <{inner_ty} as postgres_types::FromSql>::from_sql(_type, buf).map({struct_name}{borrow})
         }}
         fn accepts(type_: &postgres_types::Type) -> bool {{
             if <{inner_ty} as postgres_types::FromSql>::accepts(type_) {{
@@ -128,12 +134,17 @@ fn domain_tosql(
     inner_ty: &CornucopiaType,
     ty_name: &str,
     is_params: bool,
+    is_copy: bool,
 ) {
     let accept_ty = inner_ty.borrowed_rust_ty(type_registrar, Some("'a"), true);
-    let post = if is_params { "Borrowed" } else { "Params" };
+    let (post, lifetime) = if !is_copy {
+        (if is_params { "Borrowed" } else { "Params" }, "<'a>")
+    } else {
+        ("", "")
+    };
     gen!(
         w,
-        r#"impl <'a> postgres_types::ToSql for {struct_name}{post}<'a> {{
+        r#"impl {lifetime} postgres_types::ToSql for {struct_name}{post}{lifetime} {{
         fn to_sql(
             &self,
             _type: &postgres_types::Type,
@@ -180,8 +191,13 @@ fn composite_tosql(
     fields: &[Field],
     ty_name: &str,
     is_params: bool,
+    is_copy: bool,
 ) {
-    let post = if is_params { "Borrowed" } else { "Params" };
+    let (post, lifetime) = if !is_copy {
+        (if is_params { "Borrowed" } else { "Params" }, "<'a>")
+    } else {
+        ("", "")
+    };
     let nb_fields = fields.len();
     let write_fields = join_ln(fields.iter(), |w, f| {
         let name = f.name();
@@ -205,7 +221,7 @@ fn composite_tosql(
 
     gen!(
         w,
-        r#"impl<'a> postgres_types::ToSql for {struct_name}{post}<'a> {{
+        r#"impl{lifetime} postgres_types::ToSql for {struct_name}{post}{lifetime} {{
         fn to_sql(
             &self,
             _type: &postgres_types::Type,
@@ -274,7 +290,13 @@ fn composite_fromsql(
     fields: &[Field],
     ty_name: &str,
     ty_schema: &str,
+    is_copy: bool,
 ) {
+    let (post, lifetime) = if !is_copy {
+        ("Borrowed", "<'a>")
+    } else {
+        ("", "")
+    };
     let field_names = join_comma(fields, |w, f| gen!(w, "{}", f.name()));
     let read_fields = join_ln(fields.iter().enumerate(), |w, (index, f)| {
         gen!(
@@ -287,11 +309,11 @@ fn composite_fromsql(
 
     gen!(
         w,
-        r#"impl<'a> postgres_types::FromSql<'a> for {struct_name}Borrowed<'a> {{
+        r#"impl<'a> postgres_types::FromSql<'a> for {struct_name}{post}{lifetime} {{
         fn from_sql(
             _type: &postgres_types::Type,
             buf: &'a [u8],
-        ) -> Result<{struct_name}Borrowed<'a>, std::boxed::Box<dyn std::error::Error + Sync + Send>> {{
+        ) -> Result<{struct_name}{post}{lifetime}, std::boxed::Box<dyn std::error::Error + Sync + Send>> {{
             let fields = match *_type.kind() {{
                 postgres_types::Kind::Composite(ref fields) => fields,
                 _ => unreachable!(),
@@ -299,7 +321,7 @@ fn composite_fromsql(
             let mut buf = buf;
             let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
             {read_fields}
-            Result::Ok({struct_name}Borrowed {{ {field_names} }})
+            Result::Ok({struct_name}{post} {{ {field_names} }})
         }}
 
         fn accepts(type_: &postgres_types::Type) -> bool {{
@@ -608,11 +630,28 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
             let inner_rust_path_from_ty = &inner_ty.rust_path_from_types;
             gen!(
                 w,
-                "#[derive(Debug, {copy}Clone, PartialEq, postgres_types::ToSql,postgres_types::FromSql)]
-                #[postgres(name = \"{ty_name}\")]
+                "#[derive(Debug, {copy}Clone, PartialEq)]
                 pub struct {struct_name} (pub {inner_rust_path_from_ty});"
             );
-            if !ty.is_copy {
+            if ty.is_copy {
+                domain_fromsql(
+                    w,
+                    struct_name,
+                    &inner_rust_path_from_ty,
+                    ty_name,
+                    ty_schema,
+                    false,
+                );
+                domain_tosql(
+                    w,
+                    type_registrar,
+                    struct_name,
+                    inner_ty,
+                    ty_name,
+                    false,
+                    true,
+                );
+            } else {
                 let brw_fields_str = inner_ty.borrowed_rust_ty(type_registrar, Some("'a"), false);
                 let inner_value = inner_ty.owning_call("inner", false);
                 gen!(
@@ -625,7 +664,7 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
                         ) -> Self {{ Self({inner_value}) }}
                     }}"
                 );
-                domain_brw_fromsql(w, struct_name, &brw_fields_str, ty_name, ty_schema);
+                domain_fromsql(w, struct_name, &brw_fields_str, ty_name, ty_schema, false);
                 if !ty.is_params {
                     let params_fields_str =
                         inner_ty.borrowed_rust_ty(type_registrar, Some("'a"), true);
@@ -643,6 +682,7 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
                     inner_ty,
                     ty_name,
                     ty.is_params,
+                    false,
                 );
             }
         }
@@ -653,11 +693,21 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
             });
             gen!(
                 w,
-                "#[derive(Debug,postgres_types::ToSql,postgres_types::FromSql,{copy} Clone, PartialEq)]
-                #[postgres(name = \"{ty_name}\")]
+                "#[derive(Debug,{copy} Clone, PartialEq)]
                 pub struct {struct_name} {{ {fields_str} }}"
             );
-            if !ty.is_copy {
+            if ty.is_copy {
+                composite_fromsql(w, struct_name, &fields, ty_name, ty_schema, true);
+                composite_tosql(
+                    w,
+                    type_registrar,
+                    struct_name,
+                    &fields,
+                    ty_name,
+                    false,
+                    true,
+                );
+            } else {
                 let borrowed_fields_str = join_comma(fields, |w, f| {
                     let f_ty = type_registrar.get(f.type_()).unwrap();
                     gen!(
@@ -693,7 +743,7 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
                         ) -> Self {{ Self {{ {field_values} }} }}
                     }}",
                 );
-                composite_fromsql(w, struct_name, fields, ty_name, ty_schema);
+                composite_fromsql(w, struct_name, fields, ty_name, ty_schema, false);
                 if !ty.is_params {
                     let params_fields_str = join_comma(fields, |w, f| {
                         let f_ty = type_registrar.get(f.type_()).unwrap();
@@ -718,6 +768,7 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
                     fields,
                     ty_name,
                     ty.is_params,
+                    false,
                 );
             }
         }
