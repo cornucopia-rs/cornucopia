@@ -36,8 +36,8 @@ pub mod types {
             ) -> Self {
                 Self {
                     wow: wow.into(),
-                    such_cool: such_cool,
-                    nice: nice,
+                    such_cool,
+                    nice,
                 }
             }
         }
@@ -391,7 +391,7 @@ pub mod types {
         impl<'a> From<CloneCompositeBorrowed<'a>> for CloneComposite {
             fn from(CloneCompositeBorrowed { first, second }: CloneCompositeBorrowed<'a>) -> Self {
                 Self {
-                    first: first,
+                    first,
                     second: second.into(),
                 }
             }

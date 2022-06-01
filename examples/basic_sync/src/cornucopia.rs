@@ -48,8 +48,8 @@ pub mod types {
             ) -> Self {
                 Self {
                     name: name.into(),
-                    age: age,
-                    persona: persona,
+                    age,
+                    persona,
                 }
             }
         }

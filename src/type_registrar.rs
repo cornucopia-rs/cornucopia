@@ -11,7 +11,10 @@ pub(crate) enum CornucopiaType {
         rust_name: &'static str,
         is_copy: bool,
     },
-    Array(Type),
+    Array {
+        inner_ty: Type,
+        ty_idx: usize,
+    },
     Custom {
         pg_ty: Type,
         struct_name: String,
@@ -27,7 +30,7 @@ impl CornucopiaType {
             CornucopiaType::Simple { is_copy, .. } | CornucopiaType::Custom { is_copy, .. } => {
                 *is_copy
             }
-            CornucopiaType::Array(_) => false,
+            CornucopiaType::Array { .. } => false,
         }
     }
 
@@ -67,7 +70,7 @@ impl CornucopiaType {
                     format!("{var_name}.into()")
                 }
             }
-            CornucopiaType::Array(inner_ty) => {
+            CornucopiaType::Array { inner_ty, .. } => {
                 let into = if matches!(*inner_ty, Type::JSON | Type::JSONB) {
                     from_json("v")
                 } else {
@@ -102,18 +105,13 @@ impl CornucopiaType {
     ) -> String {
         match self {
             CornucopiaType::Simple { rust_name, .. } => rust_name.to_string(),
-            CornucopiaType::Array(inner_ty) => {
-                let inner = type_registrar
-                    .get(inner_ty)
-                    .unwrap()
-                    .own_struct(type_registrar, false);
-
-                let inner = if is_inner_nullable {
-                    format!("Option<{inner}>")
+            CornucopiaType::Array { ty_idx, .. } => {
+                let inner = type_registrar[*ty_idx].own_struct(type_registrar, false);
+                if is_inner_nullable {
+                    format!("Option<Vec<{inner}>>")
                 } else {
-                    inner
-                };
-                format!("Vec<{inner}>")
+                    format!("Vec<{inner}>")
+                }
             }
             CornucopiaType::Custom { struct_path, .. } => struct_path.to_string(),
         }
@@ -139,13 +137,8 @@ impl CornucopiaType {
                 }
                 _ => rust_name.to_string(),
             },
-            CornucopiaType::Array(inner_ty) => {
-                let inner = type_registrar.get(inner_ty).unwrap().brw_struct(
-                    type_registrar,
-                    for_params,
-                    false,
-                );
-
+            CornucopiaType::Array { ty_idx, .. } => {
+                let inner = type_registrar[*ty_idx].brw_struct(type_registrar, for_params, false);
                 let inner = if is_inner_nullable {
                     format!("Option<{inner}>")
                 } else {
@@ -178,21 +171,21 @@ impl CornucopiaType {
 
 /// Allows us to query a hashmap without having to own the key strings
 #[derive(PartialEq, Eq, Hash)]
-pub struct TypeSchemeKey<'a> {
+pub struct SchemaKey<'a> {
     schema: &'a str,
     name: &'a str,
 }
 
-impl<'a> From<&'a Type> for TypeSchemeKey<'a> {
+impl<'a> From<&'a Type> for SchemaKey<'a> {
     fn from(ty: &'a Type) -> Self {
-        TypeSchemeKey {
+        SchemaKey {
             schema: ty.schema(),
             name: ty.name(),
         }
     }
 }
 
-impl<'a> Equivalent<(String, String)> for TypeSchemeKey<'a> {
+impl<'a> Equivalent<(String, String)> for SchemaKey<'a> {
     fn equivalent(&self, key: &(String, String)) -> bool {
         key.0.as_str().equivalent(&self.schema) && key.1.as_str().equivalent(&self.name)
     }
@@ -205,9 +198,9 @@ pub(crate) struct TypeRegistrar {
 }
 
 impl TypeRegistrar {
-    pub(crate) fn register<'a>(&'a mut self, ty: &Type) -> Result<&'a CornucopiaType, Error> {
-        if let Some(idx) = self.types.get_index_of(&TypeSchemeKey::from(ty)) {
-            return Ok(&self.types[idx]);
+    pub(crate) fn register<'a>(&'a mut self, ty: &Type) -> Result<usize, Error> {
+        if let Some(idx) = self.types.get_index_of(&SchemaKey::from(ty)) {
+            return Ok(idx);
         }
 
         fn custom(ty: &Type, is_copy: bool, is_params: bool) -> CornucopiaType {
@@ -224,11 +217,15 @@ impl TypeRegistrar {
         Ok(match ty.kind() {
             Kind::Enum(_) => self.insert(ty, || custom(ty, true, true)),
             Kind::Array(inner_ty) => {
-                self.register(inner_ty)?;
-                self.insert(ty, || CornucopiaType::Array(inner_ty.clone()))
+                let ty_idx = self.register(inner_ty)?;
+                self.insert(ty, || CornucopiaType::Array {
+                    inner_ty: inner_ty.clone(),
+                    ty_idx,
+                })
             }
             Kind::Domain(inner_ty) => {
-                let inner = self.register(inner_ty)?;
+                let idx = self.register(inner_ty)?;
+                let inner = &self[idx];
                 let (is_copy, is_params) = (inner.is_copy(), inner.is_params());
                 self.insert(ty, || custom(ty, is_copy, is_params))
             }
@@ -236,7 +233,8 @@ impl TypeRegistrar {
                 let mut is_copy = true;
                 let mut is_params = true;
                 for field in composite_fields {
-                    let field_ty = self.register(field.type_())?;
+                    let idx = self.register(field.type_())?;
+                    let field_ty = &self[idx];
                     is_copy &= field_ty.is_copy();
                     is_params &= field_ty.is_params();
                 }
@@ -285,12 +283,14 @@ impl TypeRegistrar {
         })
     }
 
-    pub(crate) fn get(&self, ty: &Type) -> Option<&CornucopiaType> {
-        self.types.get(&TypeSchemeKey::from(ty))
+    pub(crate) fn index_of(&self, ty: &Type) -> usize {
+        self.types
+            .get_index_of(&SchemaKey::from(ty))
+            .expect("type must already be registered")
     }
 
-    fn insert(&mut self, ty: &Type, call: impl Fn() -> CornucopiaType) -> &CornucopiaType {
-        let index = match self
+    fn insert(&mut self, ty: &Type, call: impl Fn() -> CornucopiaType) -> usize {
+        match self
             .types
             .entry((ty.schema().to_owned(), ty.name().to_owned()))
         {
@@ -300,9 +300,18 @@ impl TypeRegistrar {
                 v.insert(call());
                 index
             }
-        };
+        }
+    }
+}
 
-        &self.types[index]
+impl std::ops::Index<usize> for TypeRegistrar {
+    type Output = CornucopiaType;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        self.types
+            .get_index(index)
+            .expect("type must already be registered")
+            .1
     }
 }
 

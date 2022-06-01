@@ -2,7 +2,7 @@ use self::utils::{join_comma, join_ln};
 use super::prepare_queries::PreparedModule;
 use crate::{
     prepare_queries::{PreparedField, PreparedParams, PreparedQuery, PreparedRow, PreparedType},
-    type_registrar::{CornucopiaType, TypeRegistrar, TypeSchemeKey},
+    type_registrar::{CornucopiaType, SchemaKey, TypeRegistrar},
 };
 use error::Error;
 use indexmap::{map::Entry, IndexMap};
@@ -74,7 +74,7 @@ mod utils {
 
 impl PreparedField {
     pub fn own_struct(&self, type_registrar: &TypeRegistrar) -> String {
-        let it = self.ty.own_struct(type_registrar, self.is_inner_nullable);
+        let it = type_registrar[self.ty_idx].own_struct(type_registrar, self.is_inner_nullable);
         if self.is_nullable {
             format!("Option<{}>", it)
         } else {
@@ -83,9 +83,11 @@ impl PreparedField {
     }
 
     pub fn brw_struct(&self, type_registrar: &TypeRegistrar, for_params: bool) -> String {
-        let it = self
-            .ty
-            .brw_struct(type_registrar, for_params, self.is_inner_nullable);
+        let it = type_registrar[self.ty_idx].brw_struct(
+            type_registrar,
+            for_params,
+            self.is_inner_nullable,
+        );
         if self.is_nullable {
             format!("Option<{}>", it)
         } else {
@@ -93,16 +95,19 @@ impl PreparedField {
         }
     }
 
-    pub fn owning_call(&self) -> String {
-        self.ty
-            .owning_call(&self.name, self.is_nullable, self.is_inner_nullable)
+    pub fn owning_call(&self, type_registrar: &TypeRegistrar) -> String {
+        type_registrar[self.ty_idx].owning_call(
+            &self.name,
+            self.is_nullable,
+            self.is_inner_nullable,
+        )
     }
-
-    pub fn owning_assign(&self) -> String {
-        if self.ty.is_copy() {
-            self.name.to_string()
+    pub fn owning_assign(&self, type_registrar: &TypeRegistrar) -> String {
+        let call = self.owning_call(type_registrar);
+        if call != self.name {
+            format!("{}: {}", self.name, call)
         } else {
-            format!("{}: {}", self.name, self.owning_call())
+            call
         }
     }
 }
@@ -350,12 +355,12 @@ fn gen_params_struct(
         name,
         fields,
         queries,
+        is_copy,
     } = params;
     let struct_fields = join_comma(fields, |w, p| {
         gen!(w, "pub {} : {}", p.name, p.brw_struct(type_registrar, true))
     });
-    let is_copy = fields.iter().all(|a| a.ty.is_copy());
-    let (copy, lifetime, fn_lifetime) = if is_copy {
+    let (copy, lifetime, fn_lifetime) = if *is_copy {
         ("Clone,Copy,", "", "'a,")
     } else {
         ("", "<'a>", "")
@@ -429,8 +434,9 @@ fn gen_row_structs(
                 )
             });
             let fields_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
-            let borrowed_fields_to_owned =
-                join_comma(fields, |w, f| gen!(w, "{}", f.owning_assign()));
+            let borrowed_fields_to_owned = join_comma(fields, |w, f| {
+                gen!(w, "{}", f.owning_assign(type_registrar))
+            });
             gen!(
                 w,
                 "pub struct {name}Borrowed<'a> {{ {struct_fields} }}
@@ -611,7 +617,7 @@ fn gen_custom_type(
             let ty_name = pg_ty.name();
             let ty_schema = pg_ty.schema();
             let copy = if *is_copy { "Copy," } else { "" };
-            match prepared.get(&TypeSchemeKey::from(pg_ty)).unwrap() {
+            match prepared.get(&SchemaKey::from(pg_ty)).unwrap() {
                 PreparedType::Enum(variants) => {
                     let variants_str = variants.join(",");
                     gen!(w,
@@ -630,7 +636,7 @@ fn gen_custom_type(
                     );
                     if !is_copy {
                         let brw_inner = inner.brw_struct(type_registrar, false);
-                        let inner_value = inner.owning_call();
+                        let inner_value = inner.owning_call(type_registrar);
                         gen!(
                             w,
                             "#[derive(Debug)]
@@ -674,8 +680,9 @@ fn gen_custom_type(
                             )
                         });
                         let field_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
-                        let field_values =
-                            join_comma(fields, |w, f| gen!(w, "{}: {}", f.name, f.owning_call()));
+                        let field_values = join_comma(fields, |w, f| {
+                            gen!(w, "{}", f.owning_assign(type_registrar))
+                        });
                         gen!(
                             w,
                             "#[derive(Debug)]
@@ -712,7 +719,7 @@ fn gen_custom_type(
                 }
             }
         }
-        CornucopiaType::Simple { .. } | CornucopiaType::Array(_) => unreachable!(),
+        CornucopiaType::Simple { .. } | CornucopiaType::Array { .. } => unreachable!(),
     }
 }
 

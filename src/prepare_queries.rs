@@ -24,7 +24,7 @@ pub(crate) struct PreparedQuery {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct PreparedField {
     pub(crate) name: String,
-    pub(crate) ty: CornucopiaType,
+    pub(crate) ty_idx: usize,
     pub(crate) is_nullable: bool,
     pub(crate) is_inner_nullable: bool, // Vec only
 }
@@ -35,6 +35,7 @@ pub(crate) struct PreparedParams {
     pub(crate) name: String,
     pub(crate) fields: Vec<PreparedField>,
     pub(crate) queries: Vec<usize>,
+    pub(crate) is_copy: bool,
 }
 
 /// A returned row
@@ -65,6 +66,7 @@ pub(crate) struct PreparedModule {
 impl PreparedModule {
     fn add_row(
         &mut self,
+        type_registrar: &TypeRegistrar,
         name: Parsed<String>,
         fields: Vec<PreparedField>,
     ) -> Result<(usize, Vec<usize>), ErrorVariant> {
@@ -93,7 +95,7 @@ impl PreparedModule {
                 Ok((o.index(), indexes.unwrap()))
             }
             Entry::Vacant(v) => {
-                let is_copy = fields.iter().all(|f| f.ty.is_copy());
+                let is_copy = fields.iter().all(|f| type_registrar[f.ty_idx].is_copy());
                 let mut tmp = fields.to_vec();
                 tmp.sort_unstable_by(|a, b| a.name.cmp(&b.name));
                 v.insert(PreparedRow {
@@ -101,7 +103,7 @@ impl PreparedModule {
                     fields: tmp,
                     is_copy,
                 });
-                self.add_row(name, fields)
+                self.add_row(type_registrar, name, fields)
             }
         }
     }
@@ -135,6 +137,7 @@ impl PreparedModule {
 
     fn add_params(
         &mut self,
+        type_registrar: &TypeRegistrar,
         name: Parsed<String>,
         query_idx: usize,
     ) -> Result<usize, ErrorVariant> {
@@ -167,6 +170,7 @@ impl PreparedModule {
                 let index = v.index();
                 v.insert(PreparedParams {
                     name: name.value,
+                    is_copy: fields.iter().all(|a| type_registrar[a.ty_idx].is_copy()),
                     fields,
                     queries: vec![query_idx],
                 });
@@ -220,7 +224,7 @@ pub(crate) fn prepare(
                         Kind::Domain(inner) => {
                             PreparedType::Domain(PreparedField {
                                 name: "inner".to_string(),
-                                ty: type_registrar.get(inner).unwrap().clone(),
+                                ty_idx: type_registrar.index_of(inner),
                                 is_nullable: false,
                                 is_inner_nullable: false, // TODO used when support null everywhere
                             })
@@ -231,7 +235,7 @@ pub(crate) fn prepare(
                                 .map(|field| {
                                     PreparedField {
                                         name: field.name().to_string(),
-                                        ty: type_registrar.get(field.type_()).unwrap().clone(),
+                                        ty_idx: type_registrar.index_of(field.type_()),
                                         is_nullable: false, // TODO used when support null everywhere
                                         is_inner_nullable: false, // TODO used when support null everywhere
                                     }
@@ -284,13 +288,11 @@ fn prepare_query(
     let mut params = Vec::new();
     for (name, ty) in query.params.iter().zip(stmt.params().iter()) {
         // Register type
-        let ty = type_registrar
-            .register(ty)
-            .map_err(|e| Error::new(e, &query, module_path))?;
-        let name = name.value.to_owned();
         params.push(PreparedField {
-            name,
-            ty: ty.to_owned(),
+            name: name.value.to_owned(),
+            ty_idx: type_registrar
+                .register(ty)
+                .map_err(|e| Error::new(e, &query, module_path))?,
             is_nullable: false,       // TODO used when support null everywhere
             is_inner_nullable: false, // TODO used when support null everywhere
         });
@@ -385,19 +387,17 @@ fn prepare_query(
     // Get return columns
     let mut row_fields = Vec::new();
     for column in stmt_cols {
-        let ty = type_registrar.register(column.type_()).map_err(|e| Error {
-            query_start_line: Some(query.line),
-            err: e.into(),
-            path: String::from(module_path),
-            query_name: query.name.value.clone(),
-        })?;
         let name = column.name().to_owned();
-        let is_nullable = nullable_cols.iter().any(|(_, n)| *n == name);
         row_fields.push(PreparedField {
-            is_nullable,
+            is_nullable: nullable_cols.iter().any(|(_, n)| *n == name),
             is_inner_nullable: false, // TODO used when support null everywhere
             name,
-            ty: ty.clone(),
+            ty_idx: type_registrar.register(column.type_()).map_err(|e| Error {
+                query_start_line: Some(query.line),
+                err: e.into(),
+                path: String::from(module_path),
+                query_name: query.name.value.clone(),
+            })?,
         });
     }
 
@@ -411,7 +411,7 @@ fn prepare_query(
     let row_idx = if !row_fields.is_empty() {
         Some(
             module
-                .add_row(row_struct_name, row_fields)
+                .add_row(type_registrar, row_struct_name, row_fields)
                 .map_err(|e| Error {
                     err: e,
                     query_name: query.name.value.clone(),
@@ -435,7 +435,7 @@ fn prepare_query(
         })?;
     if params_not_empty {
         module
-            .add_params(param_struct_name, query_idx)
+            .add_params(&type_registrar, param_struct_name, query_idx)
             .map_err(|e| Error {
                 err: e,
                 query_name: query.name.value.clone(),
