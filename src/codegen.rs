@@ -2,11 +2,10 @@ use self::utils::{join_comma, join_ln};
 use super::prepare_queries::PreparedModule;
 use crate::{
     prepare_queries::{PreparedField, PreparedParams, PreparedQuery, PreparedRow},
-    type_registrar::{CornucopiaType, TypeRegistrar},
+    type_registrar::{CornucopiaType, CustomContent, TypeRegistrar},
 };
 use error::Error;
-use postgres_types::{Field, Kind};
-use std::collections::{hash_map::Entry, HashMap};
+use indexmap::{map::Entry, IndexMap};
 use std::fmt::Write;
 
 // write! without errors
@@ -160,11 +159,11 @@ fn domain_tosql(
     w: &mut impl Write,
     type_registrar: &TypeRegistrar,
     struct_name: &str,
-    inner_ty: &CornucopiaType,
+    inner: &PreparedField,
     ty_name: &str,
     is_params: bool,
 ) {
-    let accept_ty = inner_ty.brw_struct(type_registrar, true, false);
+    let accept_ty = inner.brw_struct(type_registrar, true);
     let post = if is_params { "Borrowed" } else { "Params" };
     gen!(
         w,
@@ -212,14 +211,14 @@ fn composite_tosql(
     w: &mut impl Write,
     type_registrar: &TypeRegistrar,
     struct_name: &str,
-    fields: &[Field],
+    fields: &[PreparedField],
     ty_name: &str,
     is_params: bool,
 ) {
     let post = if is_params { "Borrowed" } else { "Params" };
     let nb_fields = fields.len();
     let write_fields = join_ln(fields.iter(), |w, f| {
-        let name = f.name();
+        let name = &f.name;
         gen!(
             w,
             "\"{name}\" => postgres_types::ToSql::to_sql(&self.{name},field.type_(), buf),",
@@ -229,11 +228,8 @@ fn composite_tosql(
         gen!(
             w,
             "\"{}\" => <{} as postgres_types::ToSql>::accepts(f.type_()),",
-            f.name(),
-            type_registrar
-                .get(f.type_())
-                .unwrap()
-                .brw_struct(type_registrar, true, false)
+            f.name,
+            f.brw_struct(type_registrar, true)
         )
     });
 
@@ -305,17 +301,17 @@ fn composite_tosql(
 fn composite_fromsql(
     w: &mut impl Write,
     struct_name: &str,
-    fields: &[Field],
+    fields: &[PreparedField],
     ty_name: &str,
     ty_schema: &str,
 ) {
-    let field_names = join_comma(fields, |w, f| gen!(w, "{}", f.name()));
+    let field_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
     let read_fields = join_ln(fields.iter().enumerate(), |w, (index, f)| {
         gen!(
             w,
             "let _oid = postgres_types::private::read_be_i32(&mut buf)?;
             let {} = postgres_types::private::read_value(fields[{index}].type_(), &mut buf)?;",
-            f.name(),
+            f.name,
         )
     });
 
@@ -605,13 +601,14 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
             struct_name,
             is_copy,
             is_params,
+            content,
             ..
         } => {
             let ty_name = pg_ty.name();
             let ty_schema = pg_ty.schema();
             let copy = if *is_copy { "Copy," } else { "" };
-            match &pg_ty.kind() {
-                Kind::Enum(variants) => {
+            match &**content {
+                CustomContent::Enum(variants) => {
                     let variants_str = variants.join(",");
                     gen!(w,
                         "#[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, Copy, PartialEq, Eq)]
@@ -619,32 +616,30 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
                         pub enum {struct_name} {{ {variants_str} }}",
                     )
                 }
-                Kind::Domain(domain_inner_ty) => {
-                    let inner_ty = type_registrar.get(domain_inner_ty).unwrap();
-                    let inner_rust_path_from_ty = &inner_ty.own_struct(type_registrar, false);
+                CustomContent::Domain(inner) => {
+                    let owned_inner = &inner.own_struct(type_registrar);
                     gen!(
                         w,
                         "#[derive(Debug, {copy}Clone, PartialEq, postgres_types::ToSql,postgres_types::FromSql)]
                         #[postgres(name = \"{ty_name}\")]
-                        pub struct {struct_name} (pub {inner_rust_path_from_ty});"
+                        pub struct {struct_name} (pub {owned_inner});"
                     );
                     if !is_copy {
-                        let brw_fields_str = inner_ty.brw_struct(type_registrar, false, false);
-                        let inner_value = inner_ty.owning_call("inner", false, false);
+                        let brw_inner = inner.brw_struct(type_registrar, false);
+                        let inner_value = inner.owning_call();
                         gen!(
                             w,
                             "#[derive(Debug)]
-                            pub struct {struct_name}Borrowed<'a> (pub {brw_fields_str});
+                            pub struct {struct_name}Borrowed<'a> (pub {brw_inner});
                             impl<'a> From<{struct_name}Borrowed<'a>> for {struct_name} {{
                                 fn from(
                                     {struct_name}Borrowed (inner): {struct_name}Borrowed<'a>,
                                 ) -> Self {{ Self({inner_value}) }}
                             }}"
                         );
-                        domain_brw_fromsql(w, struct_name, &brw_fields_str, ty_name, ty_schema);
+                        domain_brw_fromsql(w, struct_name, &brw_inner, ty_name, ty_schema);
                         if !is_params {
-                            let params_fields_str =
-                                inner_ty.brw_struct(type_registrar, true, false);
+                            let params_fields_str = inner.brw_struct(type_registrar, true);
                             let derive = if *is_copy { ",Copy,Clone" } else { "" };
                             gen!(
                                 w,
@@ -652,25 +647,12 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
                                 pub struct {struct_name}Params<'a>(pub {params_fields_str});",
                             );
                         }
-                        domain_tosql(
-                            w,
-                            type_registrar,
-                            struct_name,
-                            inner_ty,
-                            ty_name,
-                            *is_params,
-                        );
+                        domain_tosql(w, type_registrar, struct_name, inner, ty_name, *is_params);
                     }
                 }
-                Kind::Composite(fields) => {
+                CustomContent::Composite(fields) => {
                     let fields_str = join_comma(fields, |w, f| {
-                        let f_ty = type_registrar.get(f.type_()).unwrap();
-                        gen!(
-                            w,
-                            "pub {} : {}",
-                            f.name(),
-                            f_ty.own_struct(type_registrar, false)
-                        )
+                        gen!(w, "pub {} : {}", f.name, f.own_struct(type_registrar))
                     });
                     gen!(
                         w,
@@ -680,24 +662,16 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
                     );
                     if !is_copy {
                         let borrowed_fields_str = join_comma(fields, |w, f| {
-                            let f_ty = type_registrar.get(f.type_()).unwrap();
                             gen!(
                                 w,
                                 "pub {} : {}",
-                                f.name(),
-                                f_ty.brw_struct(type_registrar, false, false)
+                                f.name,
+                                f.brw_struct(type_registrar, false)
                             )
                         });
-                        let field_names = join_comma(fields, |w, f| gen!(w, "{}", f.name()));
-                        let field_values = join_comma(fields, |w, f| {
-                            let f_ty = type_registrar.get(f.type_()).unwrap();
-                            gen!(
-                                w,
-                                "{}: {}",
-                                f.name(),
-                                f_ty.owning_call(f.name(), false, false)
-                            )
-                        });
+                        let field_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
+                        let field_values =
+                            join_comma(fields, |w, f| gen!(w, "{}: {}", f.name, f.owning_call()));
                         gen!(
                             w,
                             "#[derive(Debug)]
@@ -713,13 +687,7 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
                         composite_fromsql(w, struct_name, fields, ty_name, ty_schema);
                         if !is_params {
                             let params_fields_str = join_comma(fields, |w, f| {
-                                let f_ty = type_registrar.get(f.type_()).unwrap();
-                                gen!(
-                                    w,
-                                    "pub {} : {}",
-                                    f.name(),
-                                    f_ty.brw_struct(type_registrar, true, false)
-                                )
+                                gen!(w, "pub {} : {}", f.name, f.brw_struct(type_registrar, true))
                             });
                             let derive = if *is_copy { ",Copy,Clone" } else { "" };
                             gen!(
@@ -738,16 +706,15 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
                         );
                     }
                 }
-                _ => unreachable!(),
             }
         }
-        CornucopiaType::Simple { .. } | CornucopiaType::Array(_) => {}
+        CornucopiaType::Simple { .. } | CornucopiaType::Array(_) => unreachable!(),
     }
 }
 
 fn gen_type_modules(w: &mut impl Write, type_registrar: &TypeRegistrar) -> Result<(), Error> {
     // Group the custom types by schema name
-    let mut modules = HashMap::<String, Vec<CornucopiaType>>::new();
+    let mut modules = IndexMap::<String, Vec<CornucopiaType>>::new();
     for ((schema, _), ty) in &type_registrar.types {
         if let CornucopiaType::Custom { .. } = ty {
             match modules.entry(schema.to_owned()) {
