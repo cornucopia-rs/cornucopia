@@ -150,7 +150,7 @@ fn prepare_query(
         };
     }
 
-    // Now that we know all the nullable columns by name, check if there are duplicates.
+    // Check if there are duplicate nullable columns
     if let Some((p, u)) = has_duplicate(nullable_cols.iter(), |(_, n)| n) {
         return Err(Error {
             query_name: query.name,

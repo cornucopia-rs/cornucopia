@@ -317,17 +317,12 @@ fn parse_nullable_columns(pair: Pair<Rule>) -> Result<Vec<Parsed<String>>, Error
         let pos = it.as_span().start_pos();
         let (line, col) = pos.line_col();
         let line_str = pos.line_of().to_owned();
-        let it_str = it.as_str();
-        let nullable_column = match it.as_rule() {
-            // Named nullable column
-            Rule::ident => it_str.to_owned(),
-            _ => unreachable!(),
-        };
+        let value = it.as_str().to_owned();
         let parsed = Parsed {
             line,
             col,
             line_str,
-            value: nullable_column,
+            value,
         };
         cols.push(parsed);
     }
