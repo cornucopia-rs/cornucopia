@@ -212,8 +212,7 @@ The extended syntax does not guarantee compatibility with PostgreSQL tools, but 
 select name from authors 
 where first_name = :first_name
 ```
-In addition, both the PostgreSQL-compatible and extended syntaxes can accept a list of nullable columns using the `?{nullable, columns}` notation.
-Column indexes are brittle, but you can use them if needed `?{nullable_column, 4}`.
+In addition, both the PostgreSQL-compatible and extended syntaxes can accept a list of nullable columns using the `?{hello, world}` notation.
 
 ### Transactions
 Generated queries take a `GenericClient` as parameter, which accepts both `Client`s and `Transaction`s. That means you can use the same generated queries for both single statements and transactions.
