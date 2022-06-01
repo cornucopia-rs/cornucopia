@@ -183,6 +183,32 @@ pub mod types {
     }
 }
 pub mod queries {
+    pub mod module_1 {
+        use postgres::fallible_iterator::FallibleIterator;
+        use postgres::GenericClient;
+        #[derive(Debug)]
+        pub struct InsertBookParams<'a> {
+            pub title: &'a str,
+        }
+        impl<'a> InsertBookParams<'a> {
+            pub fn query<C: GenericClient>(
+                &'a self,
+                client: &'a mut C,
+            ) -> Result<u64, postgres::Error> {
+                insert_book(client, &self.title)
+            }
+        }
+        pub fn insert_book<'a, C: GenericClient>(
+            client: &'a mut C,
+            title: &'a &str,
+        ) -> Result<u64, postgres::Error> {
+            let stmt = client.prepare("INSERT INTO Book (title)
+  VALUES ($1);
+
+")?;
+            client.execute(&stmt, &[title])
+        }
+    }
     pub mod module_2 {
         use postgres::fallible_iterator::FallibleIterator;
         use postgres::GenericClient;
@@ -943,32 +969,6 @@ FROM
                 params: [],
                 mapper: |it| SelectTranslations::from(it),
             }
-        }
-    }
-    pub mod module_1 {
-        use postgres::fallible_iterator::FallibleIterator;
-        use postgres::GenericClient;
-        #[derive(Debug)]
-        pub struct InsertBookParams<'a> {
-            pub title: &'a str,
-        }
-        impl<'a> InsertBookParams<'a> {
-            pub fn query<C: GenericClient>(
-                &'a self,
-                client: &'a mut C,
-            ) -> Result<u64, postgres::Error> {
-                insert_book(client, &self.title)
-            }
-        }
-        pub fn insert_book<'a, C: GenericClient>(
-            client: &'a mut C,
-            title: &'a &str,
-        ) -> Result<u64, postgres::Error> {
-            let stmt = client.prepare("INSERT INTO Book (title)
-  VALUES ($1);
-
-")?;
-            client.execute(&stmt, &[title])
         }
     }
 }

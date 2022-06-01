@@ -183,6 +183,34 @@ pub mod types {
     }
 }
 pub mod queries {
+    pub mod module_1 {
+        use futures::{StreamExt, TryStreamExt};
+        use cornucopia_client::GenericClient;
+        #[derive(Debug)]
+        pub struct InsertBookParams<'a> {
+            pub title: &'a str,
+        }
+        impl<'a> InsertBookParams<'a> {
+            pub async fn query<C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> Result<u64, tokio_postgres::Error> {
+                insert_book(client, &self.title).await
+            }
+        }
+        pub async fn insert_book<'a, C: GenericClient>(
+            client: &'a C,
+            title: &'a &str,
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare("INSERT INTO Book (title)
+  VALUES ($1);
+
+")
+                .await?;
+            client.execute(&stmt, &[title]).await
+        }
+    }
     pub mod module_2 {
         use futures::{StreamExt, TryStreamExt};
         use cornucopia_client::GenericClient;
@@ -982,34 +1010,6 @@ FROM
                 params: [],
                 mapper: |it| SelectTranslations::from(it),
             }
-        }
-    }
-    pub mod module_1 {
-        use futures::{StreamExt, TryStreamExt};
-        use cornucopia_client::GenericClient;
-        #[derive(Debug)]
-        pub struct InsertBookParams<'a> {
-            pub title: &'a str,
-        }
-        impl<'a> InsertBookParams<'a> {
-            pub async fn query<C: GenericClient>(
-                &'a self,
-                client: &'a C,
-            ) -> Result<u64, tokio_postgres::Error> {
-                insert_book(client, &self.title).await
-            }
-        }
-        pub async fn insert_book<'a, C: GenericClient>(
-            client: &'a C,
-            title: &'a &str,
-        ) -> Result<u64, tokio_postgres::Error> {
-            let stmt = client
-                .prepare("INSERT INTO Book (title)
-  VALUES ($1);
-
-")
-                .await?;
-            client.execute(&stmt, &[title]).await
         }
     }
 }
