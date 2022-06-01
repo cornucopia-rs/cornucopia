@@ -1,18 +1,19 @@
-pub mod cli;
-pub mod conn;
-pub mod container;
+mod cli;
+mod codegen;
+mod error;
+mod parser;
+mod prepare_queries;
+mod read_migrations;
+mod read_queries;
+mod run_migrations;
+mod type_registrar;
+mod utils;
 
+pub use cli::run;
 pub use error::Error;
 
-pub(crate) mod codegen;
-pub(crate) mod error;
-pub(crate) mod parser;
-pub(crate) mod prepare_queries;
-pub(crate) mod read_migrations;
-pub(crate) mod read_queries;
-pub(crate) mod run_migrations;
-pub(crate) mod type_registrar;
-mod utils;
+pub mod conn;
+pub mod container;
 
 use codegen::generate as generate_internal;
 use error::{NewMigrationError, WriteCodeGenFileError};

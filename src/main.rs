@@ -1,4 +1,4 @@
-use cornucopia::{cli::run, Error};
+use cornucopia::{run, Error};
 
 fn main() -> Result<(), Error> {
     let result = run();
