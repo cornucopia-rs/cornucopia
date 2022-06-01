@@ -66,7 +66,7 @@ pub(crate) struct PreparedModule {
 impl PreparedModule {
     fn add_row(
         &mut self,
-        type_registrar: &TypeRegistrar,
+        registrar: &TypeRegistrar,
         name: Parsed<String>,
         fields: Vec<PreparedField>,
     ) -> Result<(usize, Vec<usize>), ErrorVariant> {
@@ -95,7 +95,7 @@ impl PreparedModule {
                 Ok((o.index(), indexes.unwrap()))
             }
             Entry::Vacant(v) => {
-                let is_copy = fields.iter().all(|f| type_registrar[f.ty_idx].is_copy());
+                let is_copy = fields.iter().all(|f| registrar[f.ty_idx].is_copy());
                 let mut tmp = fields.to_vec();
                 tmp.sort_unstable_by(|a, b| a.name.cmp(&b.name));
                 v.insert(PreparedRow {
@@ -103,7 +103,7 @@ impl PreparedModule {
                     fields: tmp,
                     is_copy,
                 });
-                self.add_row(type_registrar, name, fields)
+                self.add_row(registrar, name, fields)
             }
         }
     }
@@ -137,7 +137,7 @@ impl PreparedModule {
 
     fn add_params(
         &mut self,
-        type_registrar: &TypeRegistrar,
+        registrar: &TypeRegistrar,
         name: Parsed<String>,
         query_idx: usize,
     ) -> Result<usize, ErrorVariant> {
@@ -170,7 +170,7 @@ impl PreparedModule {
                 let index = v.index();
                 v.insert(PreparedParams {
                     name: name.value,
-                    is_copy: fields.iter().all(|a| type_registrar[a.ty_idx].is_copy()),
+                    is_copy: fields.iter().all(|a| registrar[a.ty_idx].is_copy()),
                     fields,
                     queries: vec![query_idx],
                 });
@@ -199,7 +199,7 @@ where
 /// Prepares all modules
 pub(crate) fn prepare(
     client: &mut Client,
-    type_registrar: &mut TypeRegistrar,
+    registrar: &mut TypeRegistrar,
     modules: Vec<Module>,
 ) -> Result<
     (
@@ -210,9 +210,9 @@ pub(crate) fn prepare(
 > {
     let mut prepared_modules = Vec::new();
     for module in modules {
-        prepared_modules.push(prepare_module(client, module, type_registrar)?);
+        prepared_modules.push(prepare_module(client, module, registrar)?);
     }
-    let prepared_types = type_registrar
+    let prepared_types = registrar
         .types
         .iter()
         .filter_map(|(key, ty)| {
@@ -224,7 +224,7 @@ pub(crate) fn prepare(
                         Kind::Domain(inner) => {
                             PreparedType::Domain(PreparedField {
                                 name: "inner".to_string(),
-                                ty_idx: type_registrar.index_of(inner),
+                                ty_idx: registrar.index_of(inner),
                                 is_nullable: false,
                                 is_inner_nullable: false, // TODO used when support null everywhere
                             })
@@ -235,7 +235,7 @@ pub(crate) fn prepare(
                                 .map(|field| {
                                     PreparedField {
                                         name: field.name().to_string(),
-                                        ty_idx: type_registrar.index_of(field.type_()),
+                                        ty_idx: registrar.index_of(field.type_()),
                                         is_nullable: false, // TODO used when support null everywhere
                                         is_inner_nullable: false, // TODO used when support null everywhere
                                     }
@@ -257,7 +257,7 @@ pub(crate) fn prepare(
 fn prepare_module(
     client: &mut Client,
     module: Module,
-    type_registrar: &mut TypeRegistrar,
+    registrar: &mut TypeRegistrar,
 ) -> Result<PreparedModule, Error> {
     let mut tmp = PreparedModule {
         name: module.name,
@@ -266,7 +266,7 @@ fn prepare_module(
         rows: IndexMap::new(),
     };
     for query in module.queries {
-        prepare_query(client, &mut tmp, type_registrar, query, &module.path)?;
+        prepare_query(client, &mut tmp, registrar, query, &module.path)?;
     }
     Ok(tmp)
 }
@@ -275,7 +275,7 @@ fn prepare_module(
 fn prepare_query(
     client: &mut Client,
     module: &mut PreparedModule,
-    type_registrar: &mut TypeRegistrar,
+    registrar: &mut TypeRegistrar,
     query: ParsedQuery,
     module_path: &str,
 ) -> Result<(), Error> {
@@ -290,7 +290,7 @@ fn prepare_query(
         // Register type
         params.push(PreparedField {
             name: name.value.to_owned(),
-            ty_idx: type_registrar
+            ty_idx: registrar
                 .register(ty)
                 .map_err(|e| Error::new(e, &query, module_path))?,
             is_nullable: false,       // TODO used when support null everywhere
@@ -392,7 +392,7 @@ fn prepare_query(
             is_nullable: nullable_cols.iter().any(|(_, n)| *n == name),
             is_inner_nullable: false, // TODO used when support null everywhere
             name,
-            ty_idx: type_registrar.register(column.type_()).map_err(|e| Error {
+            ty_idx: registrar.register(column.type_()).map_err(|e| Error {
                 query_start_line: Some(query.line),
                 err: e.into(),
                 path: String::from(module_path),
@@ -411,7 +411,7 @@ fn prepare_query(
     let row_idx = if !row_fields.is_empty() {
         Some(
             module
-                .add_row(type_registrar, row_struct_name, row_fields)
+                .add_row(registrar, row_struct_name, row_fields)
                 .map_err(|e| Error {
                     err: e,
                     query_name: query.name.value.clone(),
@@ -435,7 +435,7 @@ fn prepare_query(
         })?;
     if params_not_empty {
         module
-            .add_params(&type_registrar, param_struct_name, query_idx)
+            .add_params(&registrar, param_struct_name, query_idx)
             .map_err(|e| Error {
                 err: e,
                 query_name: query.name.value.clone(),

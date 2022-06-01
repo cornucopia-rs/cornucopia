@@ -100,15 +100,11 @@ impl CornucopiaType {
         }
     }
 
-    pub(crate) fn own_struct(
-        &self,
-        type_registrar: &TypeRegistrar,
-        is_inner_nullable: bool,
-    ) -> String {
+    pub(crate) fn own_struct(&self, registrar: &TypeRegistrar, is_inner_nullable: bool) -> String {
         match self {
             CornucopiaType::Simple { rust_name, .. } => rust_name.to_string(),
             CornucopiaType::Array { ty_idx, .. } => {
-                let inner = type_registrar[*ty_idx].own_struct(type_registrar, false);
+                let inner = registrar[*ty_idx].own_struct(registrar, false);
                 if is_inner_nullable {
                     format!("Option<Vec<{inner}>>")
                 } else {
@@ -123,7 +119,7 @@ impl CornucopiaType {
     /// a Rust equivalent is a String or a Vec<T>, it will return a &str and a &[T] respectively.
     pub(crate) fn brw_struct(
         &self,
-        type_registrar: &TypeRegistrar,
+        registrar: &TypeRegistrar,
         for_params: bool,
         is_inner_nullable: bool,
     ) -> String {
@@ -140,7 +136,7 @@ impl CornucopiaType {
                 _ => rust_name.to_string(),
             },
             CornucopiaType::Array { ty_idx, .. } => {
-                let inner = type_registrar[*ty_idx].brw_struct(type_registrar, for_params, false);
+                let inner = registrar[*ty_idx].brw_struct(registrar, for_params, false);
                 let inner = if is_inner_nullable {
                     format!("Option<{inner}>")
                 } else {

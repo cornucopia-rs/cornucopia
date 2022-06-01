@@ -17,8 +17,8 @@ macro_rules! gen {
 }
 
 impl PreparedField {
-    pub fn own_struct(&self, type_registrar: &TypeRegistrar) -> String {
-        let it = type_registrar[self.ty_idx].own_struct(type_registrar, self.is_inner_nullable);
+    pub fn own_struct(&self, registrar: &TypeRegistrar) -> String {
+        let it = registrar[self.ty_idx].own_struct(registrar, self.is_inner_nullable);
         if self.is_nullable {
             format!("Option<{}>", it)
         } else {
@@ -26,12 +26,8 @@ impl PreparedField {
         }
     }
 
-    pub fn brw_struct(&self, type_registrar: &TypeRegistrar, for_params: bool) -> String {
-        let it = type_registrar[self.ty_idx].brw_struct(
-            type_registrar,
-            for_params,
-            self.is_inner_nullable,
-        );
+    pub fn brw_struct(&self, registrar: &TypeRegistrar, for_params: bool) -> String {
+        let it = registrar[self.ty_idx].brw_struct(registrar, for_params, self.is_inner_nullable);
         if self.is_nullable {
             format!("Option<{}>", it)
         } else {
@@ -39,15 +35,12 @@ impl PreparedField {
         }
     }
 
-    pub fn owning_call(&self, type_registrar: &TypeRegistrar) -> String {
-        type_registrar[self.ty_idx].owning_call(
-            &self.name,
-            self.is_nullable,
-            self.is_inner_nullable,
-        )
+    pub fn owning_call(&self, registrar: &TypeRegistrar) -> String {
+        registrar[self.ty_idx].owning_call(&self.name, self.is_nullable, self.is_inner_nullable)
     }
-    pub fn owning_assign(&self, type_registrar: &TypeRegistrar) -> String {
-        let call = self.owning_call(type_registrar);
+
+    pub fn owning_assign(&self, registrar: &TypeRegistrar) -> String {
+        let call = self.owning_call(registrar);
         if call != self.name {
             format!("{}: {}", self.name, call)
         } else {
@@ -106,13 +99,13 @@ fn domain_brw_fromsql(
 
 fn domain_tosql(
     w: &mut impl Write,
-    type_registrar: &TypeRegistrar,
+    registrar: &TypeRegistrar,
     struct_name: &str,
     inner: &PreparedField,
     ty_name: &str,
     is_params: bool,
 ) {
-    let accept_ty = inner.brw_struct(type_registrar, true);
+    let accept_ty = inner.brw_struct(registrar, true);
     let post = if is_params { "Borrowed" } else { "Params" };
     gen!(
         w,
@@ -158,7 +151,7 @@ fn domain_tosql(
 
 fn composite_tosql(
     w: &mut impl Write,
-    type_registrar: &TypeRegistrar,
+    registrar: &TypeRegistrar,
     struct_name: &str,
     fields: &[PreparedField],
     ty_name: &str,
@@ -178,7 +171,7 @@ fn composite_tosql(
             w,
             "\"{}\" => <{} as postgres_types::ToSql>::accepts(f.type_()),",
             f.name,
-            f.brw_struct(type_registrar, true)
+            f.brw_struct(registrar, true)
         )
     });
 
@@ -290,7 +283,7 @@ fn composite_fromsql(
 
 fn gen_params_struct(
     w: &mut impl Write,
-    type_registrar: &TypeRegistrar,
+    registrar: &TypeRegistrar,
     module: &PreparedModule,
     params: &PreparedParams,
     is_async: bool,
@@ -302,7 +295,7 @@ fn gen_params_struct(
         is_copy,
     } = params;
     let struct_fields = join_comma(fields, |w, p| {
-        gen!(w, "pub {} : {}", p.name, p.brw_struct(type_registrar, true))
+        gen!(w, "pub {} : {}", p.name, p.brw_struct(registrar, true))
     });
     let (copy, lifetime, fn_lifetime) = if *is_copy {
         ("Clone,Copy,", "", "'a,")
@@ -348,7 +341,7 @@ fn gen_params_struct(
 
 fn gen_row_structs(
     w: &mut impl Write,
-    type_registrar: &TypeRegistrar,
+    registrar: &TypeRegistrar,
     row: &PreparedRow,
     is_async: bool,
 ) {
@@ -360,7 +353,7 @@ fn gen_row_structs(
     {
         // Generate row struct
         let struct_fields = join_comma(fields, |w, col| {
-            gen!(w, "pub {} : {}", col.name, col.own_struct(type_registrar))
+            gen!(w, "pub {} : {}", col.name, col.own_struct(registrar))
         });
         let copy = if *is_copy { "Copy" } else { "" };
         gen!(
@@ -370,23 +363,17 @@ fn gen_row_structs(
 
         if !is_copy {
             let struct_fields = join_comma(fields, |w, col| {
-                gen!(
-                    w,
-                    "pub {} : {}",
-                    col.name,
-                    col.brw_struct(type_registrar, false)
-                )
+                gen!(w, "pub {} : {}", col.name, col.brw_struct(registrar, false))
             });
             let fields_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
-            let borrowed_fields_to_owned = join_comma(fields, |w, f| {
-                gen!(w, "{}", f.owning_assign(type_registrar))
-            });
+            let fields_owning =
+                join_comma(fields, |w, f| gen!(w, "{}", f.owning_assign(registrar)));
             gen!(
                 w,
                 "pub struct {name}Borrowed<'a> {{ {struct_fields} }}
             impl<'a> From<{name}Borrowed<'a>> for {name} {{
                 fn from({name}Borrowed {{ {fields_names} }}: {name}Borrowed<'a>) -> Self {{
-                    Self {{ {borrowed_fields_to_owned} }}
+                    Self {{ {fields_owning} }}
                 }}
             }}"
             );
@@ -481,7 +468,7 @@ fn gen_row_structs(
 
 fn gen_query_fn(
     w: &mut impl Write,
-    type_registrar: &TypeRegistrar,
+    registrar: &TypeRegistrar,
     module: &PreparedModule,
     query: &PreparedQuery,
     is_async: bool,
@@ -508,7 +495,7 @@ fn gen_query_fn(
         let borrowed_str = if *is_copy { "" } else { "Borrowed" };
         // Query fn
         let param_list = join_comma(params, |w, p| {
-            gen!(w, "{} : &'a {}", p.name, p.brw_struct(type_registrar, true))
+            gen!(w, "{} : &'a {}", p.name, p.brw_struct(registrar, true))
         });
         let get_fields = join_comma(fields.iter().enumerate(), |w, (i, f)| {
             gen!(w, "{}: row.get({})", f.name, index[i])
@@ -530,7 +517,7 @@ fn gen_query_fn(
     } else {
         // Execute fn
         let param_list = join_comma(params, |w, p| {
-            gen!(w, "{} : &'a {}", p.name, p.brw_struct(type_registrar, true))
+            gen!(w, "{} : &'a {}", p.name, p.brw_struct(registrar, true))
         });
         let param_names = join_comma(params, |w, p| gen!(w, "{}", p.name));
         gen!(w,
@@ -546,7 +533,7 @@ fn gen_query_fn(
 /// If the type is not `Copy`, then a Borrowed version will be generated.
 fn gen_custom_type(
     w: &mut impl Write,
-    type_registrar: &TypeRegistrar,
+    registrar: &TypeRegistrar,
     prepared: &IndexMap<(String, String), PreparedType>,
     ty: &CornucopiaType,
 ) {
@@ -571,7 +558,7 @@ fn gen_custom_type(
                     )
                 }
                 PreparedType::Domain(inner) => {
-                    let owned_inner = &inner.own_struct(type_registrar);
+                    let owned_inner = &inner.own_struct(registrar);
                     gen!(
                         w,
                         "#[derive(Debug, {copy}Clone, PartialEq, postgres_types::ToSql,postgres_types::FromSql)]
@@ -579,8 +566,8 @@ fn gen_custom_type(
                         pub struct {struct_name} (pub {owned_inner});"
                     );
                     if !is_copy {
-                        let brw_inner = inner.brw_struct(type_registrar, false);
-                        let inner_value = inner.owning_call(type_registrar);
+                        let brw_inner = inner.brw_struct(registrar, false);
+                        let inner_value = inner.owning_call(registrar);
                         gen!(
                             w,
                             "#[derive(Debug)]
@@ -593,20 +580,20 @@ fn gen_custom_type(
                         );
                         domain_brw_fromsql(w, struct_name, &brw_inner, ty_name, ty_schema);
                         if !is_params {
-                            let params_fields_str = inner.brw_struct(type_registrar, true);
+                            let field = inner.brw_struct(registrar, true);
                             let derive = if *is_copy { ",Copy,Clone" } else { "" };
                             gen!(
                                 w,
                                 "#[derive(Debug{derive})]
-                                pub struct {struct_name}Params<'a>(pub {params_fields_str});",
+                                pub struct {struct_name}Params<'a>(pub {field});",
                             );
                         }
-                        domain_tosql(w, type_registrar, struct_name, inner, ty_name, *is_params);
+                        domain_tosql(w, registrar, struct_name, inner, ty_name, *is_params);
                     }
                 }
                 PreparedType::Composite(fields) => {
                     let fields_str = join_comma(fields, |w, f| {
-                        gen!(w, "pub {} : {}", f.name, f.own_struct(type_registrar))
+                        gen!(w, "pub {} : {}", f.name, f.own_struct(registrar))
                     });
                     gen!(
                         w,
@@ -615,50 +602,37 @@ fn gen_custom_type(
                         pub struct {struct_name} {{ {fields_str} }}"
                     );
                     if !is_copy {
-                        let borrowed_fields_str = join_comma(fields, |w, f| {
-                            gen!(
-                                w,
-                                "pub {} : {}",
-                                f.name,
-                                f.brw_struct(type_registrar, false)
-                            )
+                        let brw_fields = join_comma(fields, |w, f| {
+                            gen!(w, "pub {} : {}", f.name, f.brw_struct(registrar, false))
                         });
                         let field_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
-                        let field_values = join_comma(fields, |w, f| {
-                            gen!(w, "{}", f.owning_assign(type_registrar))
-                        });
+                        let fields_owning =
+                            join_comma(fields, |w, f| gen!(w, "{}", f.owning_assign(registrar)));
                         gen!(
                             w,
                             "#[derive(Debug)]
-                            pub struct {struct_name}Borrowed<'a> {{ {borrowed_fields_str} }}
+                            pub struct {struct_name}Borrowed<'a> {{ {brw_fields} }}
                             impl<'a> From<{struct_name}Borrowed<'a>> for {struct_name} {{
                                 fn from(
                                     {struct_name}Borrowed {{
                                     {field_names}
                                     }}: {struct_name}Borrowed<'a>,
-                                ) -> Self {{ Self {{ {field_values} }} }}
+                                ) -> Self {{ Self {{ {fields_owning} }} }}
                             }}",
                         );
                         composite_fromsql(w, struct_name, fields, ty_name, ty_schema);
                         if !is_params {
-                            let params_fields_str = join_comma(fields, |w, f| {
-                                gen!(w, "pub {} : {}", f.name, f.brw_struct(type_registrar, true))
+                            let fields = join_comma(fields, |w, f| {
+                                gen!(w, "pub {} : {}", f.name, f.brw_struct(registrar, true))
                             });
                             let derive = if *is_copy { ",Copy,Clone" } else { "" };
                             gen!(
                                 w,
                                 "#[derive(Debug{derive})]
-                                pub struct {struct_name}Params<'a> {{ {params_fields_str} }}",
+                                pub struct {struct_name}Params<'a> {{ {fields} }}",
                             );
                         }
-                        composite_tosql(
-                            w,
-                            type_registrar,
-                            struct_name,
-                            fields,
-                            ty_name,
-                            *is_params,
-                        );
+                        composite_tosql(w, registrar, struct_name, fields, ty_name, *is_params);
                     }
                 }
             }
@@ -669,12 +643,12 @@ fn gen_custom_type(
 
 fn gen_type_modules(
     w: &mut impl Write,
-    type_registrar: &TypeRegistrar,
+    registrar: &TypeRegistrar,
     prepared: &IndexMap<(String, String), PreparedType>,
 ) -> Result<(), Error> {
     // Group the custom types by schema name
     let mut modules = IndexMap::<String, Vec<CornucopiaType>>::new();
-    for ((schema, _), ty) in &type_registrar.types {
+    for ((schema, _), ty) in &registrar.types {
         if let CornucopiaType::Custom { .. } = ty {
             match modules.entry(schema.to_owned()) {
                 Entry::Occupied(mut entry) => {
@@ -688,9 +662,7 @@ fn gen_type_modules(
     }
     // Generate each module
     let modules_str = join_ln(modules, |w, (mod_name, tys)| {
-        let tys_str = join_ln(tys, |w, ty| {
-            gen_custom_type(w, type_registrar, prepared, &ty)
-        });
+        let tys_str = join_ln(tys, |w, ty| gen_custom_type(w, registrar, prepared, &ty));
         gen!(w, "pub mod {mod_name} {{ {tys_str} }}")
     });
 
@@ -699,7 +671,7 @@ fn gen_type_modules(
 }
 
 pub(crate) fn generate(
-    type_registrar: &TypeRegistrar,
+    registrar: &TypeRegistrar,
     (modules, types): (
         Vec<PreparedModule>,
         IndexMap<(String, String), PreparedType>,
@@ -719,17 +691,17 @@ pub(crate) fn generate(
     "
     .to_string();
     // Generate database type
-    gen_type_modules(&mut buff, type_registrar, &types)?;
+    gen_type_modules(&mut buff, registrar, &types)?;
     // Generate queries
     let query_modules = join_ln(modules, |w, module| {
         let queries_string = join_ln(module.queries.values(), |w, query| {
-            gen_query_fn(w, type_registrar, &module, query, is_async)
+            gen_query_fn(w, registrar, &module, query, is_async)
         });
         let params_string = join_ln(module.params.values(), |w, it| {
-            gen_params_struct(w, type_registrar, &module, it, is_async)
+            gen_params_struct(w, registrar, &module, it, is_async)
         });
         let rows_string = join_ln(module.rows.values(), |w, query| {
-            gen_row_structs(w, type_registrar, query, is_async)
+            gen_row_structs(w, registrar, query, is_async)
         });
         gen!(
             w,
