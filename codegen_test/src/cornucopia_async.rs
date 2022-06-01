@@ -15,6 +15,14 @@ pub mod types {
             pub first: i32,
             pub second: &'a str,
         }
+        impl<'a> From<CloneCompositeBorrowed<'a>> for CloneComposite {
+            fn from(CloneCompositeBorrowed { first, second }: CloneCompositeBorrowed<'a>) -> Self {
+                Self {
+                    first,
+                    second: second.into(),
+                }
+            }
+        }
         impl<'a> postgres_types::FromSql<'a> for CloneCompositeBorrowed<'a> {
             fn from_sql(
                 _type: &postgres_types::Type,
@@ -37,14 +45,6 @@ pub mod types {
             }
             fn accepts(type_: &postgres_types::Type) -> bool {
                 type_.name() == "clone_composite" && type_.schema() == "public"
-            }
-        }
-        impl<'a> From<CloneCompositeBorrowed<'a>> for CloneComposite {
-            fn from(CloneCompositeBorrowed { first, second }: CloneCompositeBorrowed<'a>) -> Self {
-                Self {
-                    first,
-                    second: second.into(),
-                }
             }
         }
         impl<'a> postgres_types::ToSql for CloneCompositeBorrowed<'a> {
@@ -502,123 +502,12 @@ pub mod queries {
         pub struct InsertCloneParams<'a> {
             pub composite: super::super::types::public::CloneCompositeBorrowed<'a>,
         }
-        impl<'a> From<CloneCompositeBorrowed<'a>> for CloneComposite {
-            fn from(CloneCompositeBorrowed { first, second }: CloneCompositeBorrowed<'a>) -> Self {
-                Self {
-                    first,
-                    second: second.into(),
-                }
-            }
-        }
-        impl<'a> postgres_types::FromSql<'a> for CloneCompositeBorrowed<'a> {
-            fn from_sql(
-                _type: &postgres_types::Type,
-                buf: &'a [u8],
-            ) -> Result<
-                CloneCompositeBorrowed<'a>,
-                std::boxed::Box<dyn std::error::Error + Sync + Send>,
-            > {
-                let fields = match *_type.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                let mut buf = buf;
-                let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let first = postgres_types::private::read_value(fields[0].type_(), &mut buf)?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let second = postgres_types::private::read_value(fields[1].type_(), &mut buf)?;
-                Result::Ok(CloneCompositeBorrowed { first, second })
-            }
-            fn accepts(type_: &postgres_types::Type) -> bool {
-                type_.name() == "clone_composite" && type_.schema() == "public"
-            }
-        }
-        impl<'a> postgres_types::ToSql for CloneCompositeBorrowed<'a> {
-            fn to_sql(
-                &self,
-                _type: &postgres_types::Type,
-                buf: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<
-                postgres_types::IsNull,
-                std::boxed::Box<dyn std::error::Error + Sync + Send>,
-            > {
-                let fields = match *_type.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                buf.extend_from_slice(&(fields.len() as i32).to_be_bytes());
-                for field in fields {
-                    buf.extend_from_slice(&field.type_().oid().to_be_bytes());
-                    let base = buf.len();
-                    buf.extend_from_slice(&[0; 4]);
-                    let r = match field.name() {
-                        "first" => postgres_types::ToSql::to_sql(&self.first, field.type_(), buf),
-                        "second" => postgres_types::ToSql::to_sql(&self.second, field.type_(), buf),
-                        _ => unreachable!(),
-                    };
-                    let count = match r? {
-                        postgres_types::IsNull::Yes => -1,
-                        postgres_types::IsNull::No => {
-                            let len = buf.len() - base - 4;
-                            if len > i32::max_value() as usize {
-                                return std::result::Result::Err(std::convert::Into::into(
-                                    "value too large to transmit",
-                                ));
-                            }
-                            len as i32
-                        }
-                    };
-                    buf[base..base + 4].copy_from_slice(&count.to_be_bytes());
-                }
-            }
-            pub fn extractor(row: &tokio_postgres::row::Row) -> SelectCloneBorrowed {
-                SelectCloneBorrowed {
-                    composite: row.get(0),
-                }
-            }
-            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
-                self.client.prepare("SELECT * FROM clone;").await
-            }
-            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                let stmt = self.stmt().await?;
-                let row = self.client.query_one(&stmt, &self.params).await?;
-                Ok((self.mapper)(Self::extractor(&row)))
-            }
-            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
-                self.stream().await?.try_collect().await
-            }
-            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                let stmt = self.stmt().await?;
-                Ok(self
-                    .client
-                    .query_opt(&stmt, &self.params)
-                    .await?
-                    .map(|row| (self.mapper)(Self::extractor(&row))))
-            }
-            pub async fn stream(
-                self,
-            ) -> Result<
-                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
-                tokio_postgres::Error,
-            > {
-                let stmt = self.stmt().await?;
-                let stream = self
-                    .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
-                    .await?
-                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))))
-                    .into_stream();
-                Ok(stream)
-            }
-        }
-        pub fn select_clone<'a, C: GenericClient>(
-            client: &'a C,
-        ) -> SelectCloneQuery<'a, C, SelectClone> {
-            SelectCloneQuery {
-                client,
-                params: [],
-                mapper: |it| SelectClone::from(it),
+        impl<'a> InsertCloneParams<'a> {
+            pub async fn insert_clone<C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> Result<u64, tokio_postgres::Error> {
+                insert_clone(client, &self.composite).await
             }
         }
         #[derive(Debug, Clone, Copy)]
@@ -626,54 +515,57 @@ pub mod queries {
             pub composite: super::super::types::public::CopyComposite,
         }
         impl InsertCopyParams {
-            pub async fn query<'a, C: GenericClient>(
+            pub async fn insert_copy<'a, C: GenericClient>(
                 &'a self,
                 client: &'a C,
             ) -> Result<u64, tokio_postgres::Error> {
                 insert_copy(client, &self.composite).await
             }
         }
-        pub async fn insert_copy<'a, C: GenericClient>(
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct SelectClone {
+            pub composite: super::super::types::public::CloneComposite,
+        }
+        pub struct SelectCloneBorrowed<'a> {
+            pub composite: super::super::types::public::CloneCompositeBorrowed<'a>,
+        }
+        impl<'a> From<SelectCloneBorrowed<'a>> for SelectClone {
+            fn from(SelectCloneBorrowed { composite }: SelectCloneBorrowed<'a>) -> Self {
+                Self {
+                    composite: composite.into(),
+                }
+            }
+        }
+        pub struct SelectCloneQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
-            composite: &'a super::super::types::public::CopyComposite,
-        ) -> Result<u64, tokio_postgres::Error> {
-            let stmt = client
-                .prepare("INSERT INTO copy (composite) VALUES ($1);")
-                .await?;
-            client.execute(&stmt, &[composite]).await
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> SelectCloneBorrowed,
+            mapper: fn(SelectCloneBorrowed) -> T,
         }
-        #[derive(Debug, Clone, PartialEq, Copy)]
-        pub struct SelectCopy {
-            pub composite: super::super::types::public::CopyComposite,
-        }
-        pub struct SelectCopyQuery<'a, C: GenericClient, T> {
-            client: &'a C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
-            mapper: fn(SelectCopy) -> T,
-        }
-        impl<'a, C, T: 'a> SelectCopyQuery<'a, C, T>
+        impl<'a, C, T: 'a, const N: usize> SelectCloneQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
-            pub fn map<R>(self, mapper: fn(SelectCopy) -> R) -> SelectCopyQuery<'a, C, R> {
-                SelectCopyQuery {
+            pub fn map<R>(
+                self,
+                mapper: fn(SelectCloneBorrowed) -> R,
+            ) -> SelectCloneQuery<'a, C, R, N> {
+                SelectCloneQuery {
                     client: self.client,
                     params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
                     mapper,
                 }
             }
-            pub fn extractor(row: &tokio_postgres::row::Row) -> SelectCopy {
-                SelectCopy {
-                    composite: row.get(0),
-                }
-            }
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
-                self.client.prepare("SELECT * FROM copy;").await
+                self.client.prepare(self.query).await
             }
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
-                Ok((self.mapper)(Self::extractor(&row)))
+                Ok((self.mapper)((self.extractor)(&row)))
             }
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
@@ -684,7 +576,7 @@ pub mod queries {
                     .client
                     .query_opt(&stmt, &self.params)
                     .await?
-                    .map(|row| (self.mapper)(Self::extractor(&row))))
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
             }
             pub async fn stream(
                 self,
@@ -697,19 +589,261 @@ pub mod queries {
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
                     .await?
-                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))))
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
                 Ok(stream)
             }
         }
+        #[derive(Debug, Clone, PartialEq, Copy)]
+        pub struct SelectCopy {
+            pub composite: super::super::types::public::CopyComposite,
+        }
+        pub struct SelectCopyQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> SelectCopy,
+            mapper: fn(SelectCopy) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> SelectCopyQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(self, mapper: fn(SelectCopy) -> R) -> SelectCopyQuery<'a, C, R, N> {
+                SelectCopyQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+                self.client.prepare(self.query).await
+            }
+            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                let row = self.client.query_one(&stmt, &self.params).await?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.stream().await?.try_collect().await
+            }
+            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub async fn stream(
+                self,
+            ) -> Result<
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
+                let stmt = self.stmt().await?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .await?
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                    .into_stream();
+                Ok(stream)
+            }
+        }
+        pub async fn insert_clone<'a, C: GenericClient>(
+            client: &'a C,
+            composite: &'a super::super::types::public::CloneCompositeBorrowed<'a>,
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO clone (composite) VALUES ($1);
+",
+                )
+                .await?;
+            client.execute(&stmt, &[composite]).await
+        }
+        pub fn select_clone<'a, C: GenericClient>(
+            client: &'a C,
+        ) -> SelectCloneQuery<'a, C, SelectClone, 0> {
+            SelectCloneQuery {
+                client,
+                params: [],
+                query: "SELECT * FROM clone;
+",
+                extractor: |row| SelectCloneBorrowed {
+                    composite: row.get(0),
+                },
+                mapper: |it| SelectClone::from(it),
+            }
+        }
+        pub async fn insert_copy<'a, C: GenericClient>(
+            client: &'a C,
+            composite: &'a super::super::types::public::CopyComposite,
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO copy (composite) VALUES ($1);
+",
+                )
+                .await?;
+            client.execute(&stmt, &[composite]).await
+        }
         pub fn select_copy<'a, C: GenericClient>(
             client: &'a C,
-        ) -> SelectCopyQuery<'a, C, SelectCopy> {
+        ) -> SelectCopyQuery<'a, C, SelectCopy, 0> {
             SelectCopyQuery {
                 client,
                 params: [],
+                query: "SELECT * FROM copy;",
+                extractor: |row| SelectCopy {
+                    composite: row.get(0),
+                },
                 mapper: |it| SelectCopy::from(it),
             }
+        }
+    }
+    pub mod params {
+        use cornucopia_client::GenericClient;
+        use futures::{StreamExt, TryStreamExt};
+        #[derive(Debug)]
+        pub struct InsertBookParams<'a> {
+            pub author: &'a str,
+            pub name: &'a str,
+        }
+        impl<'a> InsertBookParams<'a> {
+            pub async fn insert_book<C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> Result<u64, tokio_postgres::Error> {
+                insert_book(client, &self.author, &self.name).await
+            }
+        }
+        #[derive(Debug)]
+        pub struct ParamsUseTwiceParams<'a> {
+            pub name: &'a str,
+        }
+        impl<'a> ParamsUseTwiceParams<'a> {
+            pub async fn params_use_twice<C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> Result<u64, tokio_postgres::Error> {
+                params_use_twice(client, &self.name).await
+            }
+        }
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct SelectBook {
+            pub author: String,
+            pub name: String,
+        }
+        pub struct SelectBookBorrowed<'a> {
+            pub author: &'a str,
+            pub name: &'a str,
+        }
+        impl<'a> From<SelectBookBorrowed<'a>> for SelectBook {
+            fn from(SelectBookBorrowed { author, name }: SelectBookBorrowed<'a>) -> Self {
+                Self {
+                    author: author.into(),
+                    name: name.into(),
+                }
+            }
+        }
+        pub struct SelectBookQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> SelectBookBorrowed,
+            mapper: fn(SelectBookBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> SelectBookQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(
+                self,
+                mapper: fn(SelectBookBorrowed) -> R,
+            ) -> SelectBookQuery<'a, C, R, N> {
+                SelectBookQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+                self.client.prepare(self.query).await
+            }
+            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                let row = self.client.query_one(&stmt, &self.params).await?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.stream().await?.try_collect().await
+            }
+            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub async fn stream(
+                self,
+            ) -> Result<
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
+                let stmt = self.stmt().await?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .await?
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                    .into_stream();
+                Ok(stream)
+            }
+        }
+        pub async fn insert_book<'a, C: GenericClient>(
+            client: &'a C,
+            author: &'a &'a str,
+            name: &'a &'a str,
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO book (author, name) VALUES ($1, $2);
+",
+                )
+                .await?;
+            client.execute(&stmt, &[author, name]).await
+        }
+        pub fn select_book<'a, C: GenericClient>(
+            client: &'a C,
+        ) -> SelectBookQuery<'a, C, SelectBook, 0> {
+            SelectBookQuery {
+                client,
+                params: [],
+                query: "SELECT * FROM book;
+",
+                extractor: |row| SelectBookBorrowed {
+                    author: row.get(1),
+                    name: row.get(0),
+                },
+                mapper: |it| SelectBook::from(it),
+            }
+        }
+        pub async fn params_use_twice<'a, C: GenericClient>(
+            client: &'a C,
+            name: &'a &'a str,
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare("UPDATE book SET name = $1 WHERE length(name) > 42 AND length($1) < 42;")
+                .await?;
+            client.execute(&stmt, &[name]).await
         }
     }
     pub mod stress {
@@ -1611,357 +1745,6 @@ pub mod queries {
                 .prepare("INSERT INTO nightmare (composite) VALUES ($1);")
                 .await?;
             client.execute(&stmt, &[composite]).await
-        }
-    }
-    pub mod copy {
-        use cornucopia_client::GenericClient;
-        use futures::{StreamExt, TryStreamExt};
-        #[derive(Debug)]
-        pub struct InsertCloneParams<'a> {
-            pub composite: super::super::types::public::CloneCompositeBorrowed<'a>,
-        }
-        impl<'a> InsertCloneParams<'a> {
-            pub async fn insert_clone<C: GenericClient>(
-                &'a self,
-                client: &'a C,
-            ) -> Result<u64, tokio_postgres::Error> {
-                insert_clone(client, &self.composite).await
-            }
-        }
-        #[derive(Debug, Clone, Copy)]
-        pub struct InsertCopyParams {
-            pub composite: super::super::types::public::CopyComposite,
-        }
-        impl InsertCopyParams {
-            pub async fn insert_copy<'a, C: GenericClient>(
-                &'a self,
-                client: &'a C,
-            ) -> Result<u64, tokio_postgres::Error> {
-                insert_copy(client, &self.composite).await
-            }
-        }
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct SelectClone {
-            pub composite: super::super::types::public::CloneComposite,
-        }
-        pub struct SelectCloneBorrowed<'a> {
-            pub composite: super::super::types::public::CloneCompositeBorrowed<'a>,
-        }
-        impl<'a> From<SelectCloneBorrowed<'a>> for SelectClone {
-            fn from(SelectCloneBorrowed { composite }: SelectCloneBorrowed<'a>) -> Self {
-                Self {
-                    composite: composite.into(),
-                }
-            }
-        }
-        pub struct SelectCloneQuery<'a, C: GenericClient, T, const N: usize> {
-            client: &'a C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            query: &'static str,
-            extractor: fn(&tokio_postgres::Row) -> SelectCloneBorrowed,
-            mapper: fn(SelectCloneBorrowed) -> T,
-        }
-        impl<'a, C, T: 'a, const N: usize> SelectCloneQuery<'a, C, T, N>
-        where
-            C: GenericClient,
-        {
-            pub fn map<R>(
-                self,
-                mapper: fn(SelectCloneBorrowed) -> R,
-            ) -> SelectCloneQuery<'a, C, R, N> {
-                SelectCloneQuery {
-                    client: self.client,
-                    params: self.params,
-                    query: self.query,
-                    extractor: self.extractor,
-                    mapper,
-                }
-            }
-            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
-                self.client.prepare(self.query).await
-            }
-            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                let stmt = self.stmt().await?;
-                let row = self.client.query_one(&stmt, &self.params).await?;
-                Ok((self.mapper)((self.extractor)(&row)))
-            }
-            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
-                self.stream().await?.try_collect().await
-            }
-            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                let stmt = self.stmt().await?;
-                Ok(self
-                    .client
-                    .query_opt(&stmt, &self.params)
-                    .await?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
-            }
-            pub async fn stream(
-                self,
-            ) -> Result<
-                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
-                tokio_postgres::Error,
-            > {
-                let stmt = self.stmt().await?;
-                let stream = self
-                    .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
-                    .await?
-                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
-                    .into_stream();
-                Ok(stream)
-            }
-        }
-        #[derive(Debug, Clone, PartialEq, Copy)]
-        pub struct SelectCopy {
-            pub composite: super::super::types::public::CopyComposite,
-        }
-        pub struct SelectCopyQuery<'a, C: GenericClient, T, const N: usize> {
-            client: &'a C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            query: &'static str,
-            extractor: fn(&tokio_postgres::Row) -> SelectCopy,
-            mapper: fn(SelectCopy) -> T,
-        }
-        impl<'a, C, T: 'a, const N: usize> SelectCopyQuery<'a, C, T, N>
-        where
-            C: GenericClient,
-        {
-            pub fn map<R>(self, mapper: fn(SelectCopy) -> R) -> SelectCopyQuery<'a, C, R, N> {
-                SelectCopyQuery {
-                    client: self.client,
-                    params: self.params,
-                    query: self.query,
-                    extractor: self.extractor,
-                    mapper,
-                }
-            }
-            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
-                self.client.prepare(self.query).await
-            }
-            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                let stmt = self.stmt().await?;
-                let row = self.client.query_one(&stmt, &self.params).await?;
-                Ok((self.mapper)((self.extractor)(&row)))
-            }
-            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
-                self.stream().await?.try_collect().await
-            }
-            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                let stmt = self.stmt().await?;
-                Ok(self
-                    .client
-                    .query_opt(&stmt, &self.params)
-                    .await?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
-            }
-            pub async fn stream(
-                self,
-            ) -> Result<
-                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
-                tokio_postgres::Error,
-            > {
-                let stmt = self.stmt().await?;
-                let stream = self
-                    .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
-                    .await?
-                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
-                    .into_stream();
-                Ok(stream)
-            }
-        }
-        pub async fn insert_clone<'a, C: GenericClient>(
-            client: &'a C,
-            composite: &'a super::super::types::public::CloneCompositeBorrowed<'a>,
-        ) -> Result<u64, tokio_postgres::Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO clone (composite) VALUES ($1);
-",
-                )
-                .await?;
-            client.execute(&stmt, &[composite]).await
-        }
-        pub fn select_clone<'a, C: GenericClient>(
-            client: &'a C,
-        ) -> SelectCloneQuery<'a, C, SelectClone, 0> {
-            SelectCloneQuery {
-                client,
-                params: [],
-                query: "SELECT * FROM clone;
-",
-                extractor: |row| SelectCloneBorrowed {
-                    composite: row.get(0),
-                },
-                mapper: |it| SelectClone::from(it),
-            }
-        }
-        pub async fn insert_copy<'a, C: GenericClient>(
-            client: &'a C,
-            composite: &'a super::super::types::public::CopyComposite,
-        ) -> Result<u64, tokio_postgres::Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO copy (composite) VALUES ($1);
-",
-                )
-                .await?;
-            client.execute(&stmt, &[composite]).await
-        }
-        pub fn select_copy<'a, C: GenericClient>(
-            client: &'a C,
-        ) -> SelectCopyQuery<'a, C, SelectCopy, 0> {
-            SelectCopyQuery {
-                client,
-                params: [],
-                query: "SELECT * FROM copy;",
-                extractor: |row| SelectCopy {
-                    composite: row.get(0),
-                },
-                mapper: |it| SelectCopy::from(it),
-            }
-        }
-    }
-    pub mod params {
-        use cornucopia_client::GenericClient;
-        use futures::{StreamExt, TryStreamExt};
-        #[derive(Debug)]
-        pub struct InsertBookParams<'a> {
-            pub author: &'a str,
-            pub name: &'a str,
-        }
-        impl<'a> InsertBookParams<'a> {
-            pub async fn insert_book<C: GenericClient>(
-                &'a self,
-                client: &'a C,
-            ) -> Result<u64, tokio_postgres::Error> {
-                insert_book(client, &self.author, &self.name).await
-            }
-        }
-        #[derive(Debug)]
-        pub struct ParamsUseTwiceParams<'a> {
-            pub name: &'a str,
-        }
-        impl<'a> ParamsUseTwiceParams<'a> {
-            pub async fn params_use_twice<C: GenericClient>(
-                &'a self,
-                client: &'a C,
-            ) -> Result<u64, tokio_postgres::Error> {
-                params_use_twice(client, &self.name).await
-            }
-        }
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct SelectBook {
-            pub author: String,
-            pub name: String,
-        }
-        pub struct SelectBookBorrowed<'a> {
-            pub author: &'a str,
-            pub name: &'a str,
-        }
-        impl<'a> From<SelectBookBorrowed<'a>> for SelectBook {
-            fn from(SelectBookBorrowed { author, name }: SelectBookBorrowed<'a>) -> Self {
-                Self {
-                    author: author.into(),
-                    name: name.into(),
-                }
-            }
-        }
-        pub struct SelectBookQuery<'a, C: GenericClient, T, const N: usize> {
-            client: &'a C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            query: &'static str,
-            extractor: fn(&tokio_postgres::Row) -> SelectBookBorrowed,
-            mapper: fn(SelectBookBorrowed) -> T,
-        }
-        impl<'a, C, T: 'a, const N: usize> SelectBookQuery<'a, C, T, N>
-        where
-            C: GenericClient,
-        {
-            pub fn map<R>(
-                self,
-                mapper: fn(SelectBookBorrowed) -> R,
-            ) -> SelectBookQuery<'a, C, R, N> {
-                SelectBookQuery {
-                    client: self.client,
-                    params: self.params,
-                    query: self.query,
-                    extractor: self.extractor,
-                    mapper,
-                }
-            }
-            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
-                self.client.prepare(self.query).await
-            }
-            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                let stmt = self.stmt().await?;
-                let row = self.client.query_one(&stmt, &self.params).await?;
-                Ok((self.mapper)((self.extractor)(&row)))
-            }
-            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
-                self.stream().await?.try_collect().await
-            }
-            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                let stmt = self.stmt().await?;
-                Ok(self
-                    .client
-                    .query_opt(&stmt, &self.params)
-                    .await?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
-            }
-            pub async fn stream(
-                self,
-            ) -> Result<
-                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
-                tokio_postgres::Error,
-            > {
-                let stmt = self.stmt().await?;
-                let stream = self
-                    .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
-                    .await?
-                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
-                    .into_stream();
-                Ok(stream)
-            }
-        }
-        pub async fn insert_book<'a, C: GenericClient>(
-            client: &'a C,
-            author: &'a &'a str,
-            name: &'a &'a str,
-        ) -> Result<u64, tokio_postgres::Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO book (author, name) VALUES ($1, $2);
-",
-                )
-                .await?;
-            client.execute(&stmt, &[author, name]).await
-        }
-        pub fn select_book<'a, C: GenericClient>(
-            client: &'a C,
-        ) -> SelectBookQuery<'a, C, SelectBook, 0> {
-            SelectBookQuery {
-                client,
-                params: [],
-                query: "SELECT * FROM book;
-",
-                extractor: |row| SelectBookBorrowed {
-                    author: row.get(1),
-                    name: row.get(0),
-                },
-                mapper: |it| SelectBook::from(it),
-            }
-        }
-        pub async fn params_use_twice<'a, C: GenericClient>(
-            client: &'a C,
-            name: &'a &'a str,
-        ) -> Result<u64, tokio_postgres::Error> {
-            let stmt = client
-                .prepare("UPDATE book SET name = $1 WHERE length(name) > 42 AND length($1) < 42;")
-                .await?;
-            client.execute(&stmt, &[name]).await
         }
     }
 }
