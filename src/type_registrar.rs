@@ -17,8 +17,8 @@ pub(crate) enum CornucopiaType {
     Custom {
         pg_ty: Type,
         // TODO Maybe a hashmap if different module declare it, should we allow it ?
-        // TODO an alternative would be to use a different type registrar per module 
-        // which will naturally isolate modules nullability declarations 
+        // TODO an alternative would be to use a different type registrar per module
+        // which will naturally isolate modules nullability declarations
         content: Box<CustomContent>,
         struct_name: String,
         struct_path: String,
