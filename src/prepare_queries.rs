@@ -1,7 +1,7 @@
 use crate::{
     parser::{
         error::{ErrorPosition, ValidationError},
-        NullableColumn, Parsed, ParsedQuery,
+        ParsedQuery,
     },
     read_queries::Module,
     type_registrar::CornucopiaType,
@@ -128,73 +128,26 @@ fn prepare_query(
     // Nullable columns
     let mut nullable_cols = Vec::new();
     for nullable_col in query.nullable_columns {
-        match &nullable_col.value {
-            crate::parser::NullableColumn::Index(index) => {
-                // Get name from column index
-                let name = if let Some(col) = stmt_cols.get(*index as usize - 1) {
-                    col.name()
-                } else {
-                    return Err(Error {
-                        err: ErrorVariant::Validation(
-                            ValidationError::InvalidNullableColumnIndex {
-                                index: *index as usize,
-                                max_col_index: stmt_cols.len(),
-                                pos: ErrorPosition {
-                                    line: nullable_col.line,
-                                    col: nullable_col.col,
-                                    line_str: nullable_col.line_str,
-                                },
-                            },
-                        ),
-                        query_name: query.name,
-                        query_start_line: Some(query.line),
-                        path: module_path.to_owned(),
-                    });
-                };
+        let name = &nullable_col.value;
 
-                // Check if `nullable_cols` already contains this column. If not, add it.
-                if let Some((p, n)) = nullable_cols
-                    .iter()
-                    .find(|(_, n): &&(Parsed<NullableColumn>, String)| n == name)
-                {
-                    return Err(Error {
-                        err: ErrorVariant::Validation(ValidationError::ColumnAlreadyNullable {
-                            name: n.to_owned(),
-                            pos: ErrorPosition {
-                                line: p.line,
-                                col: p.col,
-                                line_str: p.line_str.to_owned(),
-                            },
-                        }),
-                        query_name: query.name,
-                        query_start_line: Some(query.line),
-                        path: module_path.to_owned(),
-                    });
-                } else {
-                    nullable_cols.push((nullable_col, name.to_owned()))
-                }
-            }
-            crate::parser::NullableColumn::Named(name) => {
-                // Check that the nullable column's name corresponds to one of the returned columns'.
-                if stmt_cols.iter().any(|y| y.name() == name) {
-                    nullable_cols.push((nullable_col.clone(), name.to_owned()))
-                } else {
-                    return Err(Error {
-                        err: ErrorVariant::Validation(ValidationError::InvalidNullableColumnName {
-                            name: name.to_owned(),
-                            pos: ErrorPosition {
-                                line: nullable_col.line,
-                                col: nullable_col.col,
-                                line_str: nullable_col.line_str,
-                            },
-                        }),
-                        query_name: query.name.to_owned(),
-                        query_start_line: Some(query.line),
-                        path: module_path.to_owned(),
-                    });
-                };
-            }
-        }
+        // Check that the nullable column's name corresponds to one of the returned columns'.
+        if stmt_cols.iter().any(|y| y.name() == name) {
+            nullable_cols.push((nullable_col.clone(), name.to_owned()))
+        } else {
+            return Err(Error {
+                err: ErrorVariant::Validation(ValidationError::InvalidNullableColumnName {
+                    name: name.to_owned(),
+                    pos: ErrorPosition {
+                        line: nullable_col.line,
+                        col: nullable_col.col,
+                        line_str: nullable_col.line_str,
+                    },
+                }),
+                query_name: query.name.to_owned(),
+                query_start_line: Some(query.line),
+                path: module_path.to_owned(),
+            });
+        };
     }
 
     // Now that we know all the nullable columns by name, check if there are duplicates.
