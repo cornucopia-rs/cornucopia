@@ -174,7 +174,7 @@ pub(crate) struct TypeRegistrar {
 }
 
 impl TypeRegistrar {
-    pub(crate) fn register<'a>(&'a mut self, ty: &Type) -> Result<usize, Error> {
+    pub(crate) fn register(&mut self, ty: &Type) -> Result<usize, Error> {
         if let Some(idx) = self.types.get_index_of(&SchemaKey::from(ty)) {
             return Ok(idx);
         }

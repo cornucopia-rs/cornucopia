@@ -396,7 +396,7 @@ fn prepare_query(
         })?;
     if params_not_empty {
         module
-            .add_params(&registrar, param_struct_name, query_idx)
+            .add_params(registrar, param_struct_name, query_idx)
             .map_err(|e| Error {
                 err: e,
                 query_name: query.name.value.clone(),

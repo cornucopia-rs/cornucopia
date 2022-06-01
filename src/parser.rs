@@ -324,11 +324,11 @@ fn replaced_in_string(mut s: String, replacing_values: &mut [((usize, usize), St
 fn parse_nullable_columns(pair: Pair<Rule>) -> Result<Vec<Parsed<String>>, Error> {
     let mut cols = Vec::new();
     for it in pair.into_inner() {
-      let pos = it.as_span().start_pos();
-      let (line, col) = pos.line_col();
-      let line_str = pos.line_of().to_owned();
-      let value = it.as_str().to_owned();
-      let parsed = Parsed {
+        let pos = it.as_span().start_pos();
+        let (line, col) = pos.line_col();
+        let line_str = pos.line_of().to_owned();
+        let value = it.as_str().to_owned();
+        let parsed = Parsed {
             pos: ParsedPosition {
                 line,
                 col,
