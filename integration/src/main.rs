@@ -4,6 +4,7 @@ use std::{
 };
 
 use clap::Parser;
+use cornucopia::container;
 use owo_colors::OwoColorize;
 
 /// Start cornucopia test runner
@@ -42,15 +43,18 @@ fn main() -> ExitCode {
 
 // Run test, return true if all test are successful
 fn test(apply: bool) -> bool {
-    cornucopia::container::cleanup(false).ok();
-    cornucopia::container::setup(false).unwrap();
+    // Start by removing previous container if it was left open
+    container::cleanup(false).ok();
+    container::setup(false).unwrap();
     let successful = std::panic::catch_unwind(|| {
         let mut client = cornucopia::conn::cornucopia_conn().unwrap();
         run_errors_test(&mut client, apply).unwrap()
             && run_codegen_test(&mut client).unwrap()
             && run_examples_test(&mut client).unwrap()
     });
-    cornucopia::container::cleanup(false).unwrap();
+    // Format all to prevent CLI errors
+    Command::new("cargo").args(["fmt", "--all"]).output().ok();
+    container::cleanup(false).unwrap();
     successful.unwrap()
 }
 

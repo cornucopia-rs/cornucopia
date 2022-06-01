@@ -1,8 +1,8 @@
-use self::utils::{join_comma, join_ln};
 use super::prepare_queries::PreparedModule;
 use crate::{
     prepare_queries::{PreparedField, PreparedParams, PreparedQuery, PreparedRow, PreparedType},
-    type_registrar::{CornucopiaType, SchemaKey, TypeRegistrar},
+    type_registrar::{CornucopiaType, TypeRegistrar},
+    utils::{join_comma, join_ln, SchemaKey},
 };
 use error::Error;
 use indexmap::{map::Entry, IndexMap};
@@ -14,62 +14,6 @@ macro_rules! gen {
     ($($t:tt)*) => {{
         write!($($t)*).unwrap();
     }};
-}
-
-/// Utils functions to make codegen clearer
-mod utils {
-    use std::{
-        cell::RefCell,
-        fmt::{Display, Formatter, Write},
-    };
-
-    pub struct Joiner<T, I: IntoIterator<Item = T>, F: Fn(&mut Formatter, T)> {
-        sep: char,
-        /// Use interior mutability because Display::fmt takes &self
-        inner: RefCell<Option<I>>,
-        mapper: F,
-    }
-
-    impl<T, I: IntoIterator<Item = T>, F: Fn(&mut Formatter, T)> Display for Joiner<T, I, F> {
-        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            let mut first = true;
-            for item in self.inner.borrow_mut().take().unwrap().into_iter() {
-                if first {
-                    first = false;
-                } else {
-                    f.write_char(self.sep)?;
-                }
-                (self.mapper)(f, item);
-            }
-            Ok(())
-        }
-    }
-
-    pub fn join<T, I: IntoIterator<Item = T>, F: Fn(&mut Formatter, T)>(
-        iter: I,
-        map: F,
-        sep: char,
-    ) -> Joiner<T, I, F> {
-        Joiner {
-            sep,
-            inner: RefCell::new(Some(iter)),
-            mapper: map,
-        }
-    }
-
-    pub fn join_comma<T, I: IntoIterator<Item = T>, F: Fn(&mut Formatter, T)>(
-        iter: I,
-        map: F,
-    ) -> Joiner<T, I, F> {
-        join(iter, map, ',')
-    }
-
-    pub fn join_ln<T, I: IntoIterator<Item = T>, F: Fn(&mut Formatter, T)>(
-        iter: I,
-        map: F,
-    ) -> Joiner<T, I, F> {
-        join(iter, map, '\n')
-    }
 }
 
 impl PreparedField {

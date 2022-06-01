@@ -12,6 +12,7 @@ pub(crate) mod read_migrations;
 pub(crate) mod read_queries;
 pub(crate) mod run_migrations;
 pub(crate) mod type_registrar;
+mod utils;
 
 use codegen::generate as generate_internal;
 use error::{NewMigrationError, WriteCodeGenFileError};

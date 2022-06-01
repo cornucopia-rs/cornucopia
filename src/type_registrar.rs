@@ -1,7 +1,9 @@
 use error::{Error, UnsupportedPostgresTypeError};
 use heck::ToUpperCamelCase;
-use indexmap::{Equivalent, IndexMap};
+use indexmap::IndexMap;
 use postgres_types::{Kind, Type};
+
+use crate::utils::SchemaKey;
 
 /// A struct containing a postgres type and its Rust-equivalent.
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -166,28 +168,6 @@ impl CornucopiaType {
                 }
             }
         }
-    }
-}
-
-/// Allows us to query a hashmap without having to own the key strings
-#[derive(PartialEq, Eq, Hash)]
-pub struct SchemaKey<'a> {
-    schema: &'a str,
-    name: &'a str,
-}
-
-impl<'a> From<&'a Type> for SchemaKey<'a> {
-    fn from(ty: &'a Type) -> Self {
-        SchemaKey {
-            schema: ty.schema(),
-            name: ty.name(),
-        }
-    }
-}
-
-impl<'a> Equivalent<(String, String)> for SchemaKey<'a> {
-    fn equivalent(&self, key: &(String, String)) -> bool {
-        key.0.as_str().equivalent(&self.schema) && key.1.as_str().equivalent(&self.name)
     }
 }
 
