@@ -27,8 +27,8 @@ param_list = {
 // Nullable column list
 nullable_column_list = {
 	"?{" ~ ws* 
-    ~ ((ident | number) ~ ws* 
-        ~ ("," ~ ws* ~ (ident | number) ~ ws*)*)? 
+    ~ (ident ~ ws* 
+        ~ ("," ~ ws* ~ ident ~ ws*)*)? 
     ~ ","? ~ ws* 
     ~ "}"
 }

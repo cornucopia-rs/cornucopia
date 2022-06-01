@@ -6,12 +6,6 @@ use pest_derive::Parser as Pest;
 #[grammar = "../grammar.pest"]
 struct CornucopiaParser;
 
-#[derive(Debug, Clone)]
-pub enum NullableColumn {
-    Index(i16),
-    Named(String),
-}
-
 /// Th    if is data structure holds a value and the context in which it was parsed.
 /// This context is used for error reporting.
 #[derive(Debug, Clone)]
@@ -38,7 +32,7 @@ pub(crate) struct ParsedQuery {
     pub(crate) named_param_struct: Option<Parsed<String>>,
     pub(crate) params: Vec<Parsed<String>>,
     pub(crate) named_return_struct: Option<Parsed<String>>,
-    pub(crate) nullable_columns: Vec<Parsed<NullableColumn>>,
+    pub(crate) nullable_columns: Vec<Parsed<String>>,
     pub(crate) sql_str: String,
 }
 
@@ -327,31 +321,20 @@ fn replaced_in_string(mut s: String, replacing_values: &mut [((usize, usize), St
 }
 
 /// Parse nullable column list. Applicable to both extended and postgres-compatible syntax.
-fn parse_nullable_columns(pair: Pair<Rule>) -> Result<Vec<Parsed<NullableColumn>>, Error> {
+fn parse_nullable_columns(pair: Pair<Rule>) -> Result<Vec<Parsed<String>>, Error> {
     let mut cols = Vec::new();
     for it in pair.into_inner() {
-        let pos = it.as_span().start_pos();
-        let (line, col) = pos.line_col();
-        let line_str = pos.line_of().to_owned();
-        let it_str = it.as_str();
-        let nullable_column = match it.as_rule() {
-            // Named nullable column
-            Rule::ident => NullableColumn::Named(it_str.to_owned()),
-            // Indexed nullable column
-            Rule::number => {
-                // Check that the index can be parsed as a i16 (required by postgres wire protocol)
-                let index = validate::i16_index(it_str, line, col, &line_str)?;
-                NullableColumn::Index(index)
-            }
-            _ => unreachable!(),
-        };
-        let parsed = Parsed {
+      let pos = it.as_span().start_pos();
+      let (line, col) = pos.line_col();
+      let line_str = pos.line_of().to_owned();
+      let value = it.as_str().to_owned();
+      let parsed = Parsed {
             pos: ParsedPosition {
                 line,
                 col,
                 line_str,
             },
-            value: nullable_column,
+            value,
         };
         cols.push(parsed);
     }
@@ -499,11 +482,6 @@ pub(crate) mod error {
             name: String,
             pos: ParsedPosition,
         },
-        InvalidNullableColumnIndex {
-            index: usize,
-            max_col_index: usize,
-            pos: ParsedPosition,
-        },
         InvalidNullableColumnName {
             name: String,
             pos: ParsedPosition,
@@ -563,18 +541,6 @@ pub(crate) mod error {
                 }
                 ValidationError::ColumnAlreadyNullable { name, pos } => {
                     let msg = format!("Column `{name}` is already marked as nullable.");
-                    write!(f, "{}", format_err(pos, &[&msg]))
-                }
-                ValidationError::InvalidNullableColumnIndex {
-                    index,
-                    max_col_index,
-                    pos,
-                } => {
-                    let msg = if *max_col_index > 1 {
-                        format!("Bind parameter `${index}` is invalid (must be $1).")
-                    } else {
-                        format!("Bind parameter `${index}` is invalid (must be between $1 and ${max_col_index}).")
-                    };
                     write!(f, "{}", format_err(pos, &[&msg]))
                 }
                 ValidationError::InvalidNullableColumnName { name, pos } => {

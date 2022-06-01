@@ -4,6 +4,121 @@
 #![allow(dead_code)]
 pub mod types {
     pub mod public {
+        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, PartialEq)]
+        #[postgres(name = "clone_composite")]
+        pub struct CloneComposite {
+            pub first: i32,
+            pub second: String,
+        }
+        #[derive(Debug)]
+        pub struct CloneCompositeBorrowed<'a> {
+            pub first: i32,
+            pub second: &'a str,
+        }
+        impl<'a> postgres_types::FromSql<'a> for CloneCompositeBorrowed<'a> {
+            fn from_sql(
+                _type: &postgres_types::Type,
+                buf: &'a [u8],
+            ) -> Result<
+                CloneCompositeBorrowed<'a>,
+                std::boxed::Box<dyn std::error::Error + Sync + Send>,
+            > {
+                let fields = match *_type.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                let mut buf = buf;
+                let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
+                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                let first = postgres_types::private::read_value(fields[0].type_(), &mut buf)?;
+                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                let second = postgres_types::private::read_value(fields[1].type_(), &mut buf)?;
+                Result::Ok(CloneCompositeBorrowed { first, second })
+            }
+            fn accepts(type_: &postgres_types::Type) -> bool {
+                type_.name() == "clone_composite" && type_.schema() == "public"
+            }
+        }
+        impl<'a> From<CloneCompositeBorrowed<'a>> for CloneComposite {
+            fn from(CloneCompositeBorrowed { first, second }: CloneCompositeBorrowed<'a>) -> Self {
+                Self {
+                    first,
+                    second: second.into(),
+                }
+            }
+        }
+        impl<'a> postgres_types::ToSql for CloneCompositeBorrowed<'a> {
+            fn to_sql(
+                &self,
+                _type: &postgres_types::Type,
+                buf: &mut postgres_types::private::BytesMut,
+            ) -> std::result::Result<
+                postgres_types::IsNull,
+                std::boxed::Box<dyn std::error::Error + Sync + Send>,
+            > {
+                let fields = match *_type.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                buf.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {
+                    buf.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = buf.len();
+                    buf.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {
+                        "first" => postgres_types::ToSql::to_sql(&self.first, field.type_(), buf),
+                        "second" => postgres_types::ToSql::to_sql(&self.second, field.type_(), buf),
+                        _ => unreachable!(),
+                    };
+                    let count = match r? {
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {
+                            let len = buf.len() - base - 4;
+                            if len > i32::max_value() as usize {
+                                return std::result::Result::Err(std::convert::Into::into(
+                                    "value too large to transmit",
+                                ));
+                            }
+                            len as i32
+                        }
+                    };
+                    buf[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                }
+                std::result::Result::Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(type_: &postgres_types::Type) -> bool {
+                if type_.name() != "clone_composite" {
+                    return false;
+                }
+                match *type_.kind() {
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != 2usize {
+                            return false;
+                        }
+                        fields.iter().all(|f| match f.name() {
+                            "first" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+                            "second" => <&'a str as postgres_types::ToSql>::accepts(f.type_()),
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> std::result::Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Copy, Clone, PartialEq)]
+        #[postgres(name = "copy_composite")]
+        pub struct CopyComposite {
+            pub first: i32,
+            pub second: f64,
+        }
         #[derive(
             Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, Copy, PartialEq, Eq,
         )]
@@ -377,16 +492,15 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, PartialEq)]
-        #[postgres(name = "clone_composite")]
-        pub struct CloneComposite {
-            pub first: i32,
-            pub second: String,
-        }
+    }
+}
+pub mod queries {
+    pub mod copy {
+        use cornucopia_client::GenericClient;
+        use futures::{StreamExt, TryStreamExt};
         #[derive(Debug)]
-        pub struct CloneCompositeBorrowed<'a> {
-            pub first: i32,
-            pub second: &'a str,
+        pub struct InsertCloneParams<'a> {
+            pub composite: super::super::types::public::CloneCompositeBorrowed<'a>,
         }
         impl<'a> From<CloneCompositeBorrowed<'a>> for CloneComposite {
             fn from(CloneCompositeBorrowed { first, second }: CloneCompositeBorrowed<'a>) -> Self {
@@ -457,44 +571,147 @@ pub mod types {
                     };
                     buf[base..base + 4].copy_from_slice(&count.to_be_bytes());
                 }
-                std::result::Result::Ok(postgres_types::IsNull::No)
             }
-            fn accepts(type_: &postgres_types::Type) -> bool {
-                if type_.name() != "clone_composite" {
-                    return false;
-                }
-                match *type_.kind() {
-                    postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 2usize {
-                            return false;
-                        }
-                        fields.iter().all(|f| match f.name() {
-                            "first" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
-                            "second" => <&'a str as postgres_types::ToSql>::accepts(f.type_()),
-                            _ => false,
-                        })
-                    }
-                    _ => false,
+            pub fn extractor(row: &tokio_postgres::row::Row) -> SelectCloneBorrowed {
+                SelectCloneBorrowed {
+                    composite: row.get(0),
                 }
             }
-            fn to_sql_checked(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                postgres_types::__to_sql_checked(self, ty, out)
+            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+                self.client.prepare("SELECT * FROM clone;").await
+            }
+            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                let row = self.client.query_one(&stmt, &self.params).await?;
+                Ok((self.mapper)(Self::extractor(&row)))
+            }
+            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.stream().await?.try_collect().await
+            }
+            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)(Self::extractor(&row))))
+            }
+            pub async fn stream(
+                self,
+            ) -> Result<
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
+                let stmt = self.stmt().await?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .await?
+                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))))
+                    .into_stream();
+                Ok(stream)
             }
         }
-        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Copy, Clone, PartialEq)]
-        #[postgres(name = "copy_composite")]
-        pub struct CopyComposite {
-            pub first: i32,
-            pub second: f64,
+        pub fn select_clone<'a, C: GenericClient>(
+            client: &'a C,
+        ) -> SelectCloneQuery<'a, C, SelectClone> {
+            SelectCloneQuery {
+                client,
+                params: [],
+                mapper: |it| SelectClone::from(it),
+            }
+        }
+        #[derive(Debug, Clone, Copy)]
+        pub struct InsertCopyParams {
+            pub composite: super::super::types::public::CopyComposite,
+        }
+        impl InsertCopyParams {
+            pub async fn query<'a, C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> Result<u64, tokio_postgres::Error> {
+                insert_copy(client, &self.composite).await
+            }
+        }
+        pub async fn insert_copy<'a, C: GenericClient>(
+            client: &'a C,
+            composite: &'a super::super::types::public::CopyComposite,
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare("INSERT INTO copy (composite) VALUES ($1);")
+                .await?;
+            client.execute(&stmt, &[composite]).await
+        }
+        #[derive(Debug, Clone, PartialEq, Copy)]
+        pub struct SelectCopy {
+            pub composite: super::super::types::public::CopyComposite,
+        }
+        pub struct SelectCopyQuery<'a, C: GenericClient, T> {
+            client: &'a C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
+            mapper: fn(SelectCopy) -> T,
+        }
+        impl<'a, C, T: 'a> SelectCopyQuery<'a, C, T>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(self, mapper: fn(SelectCopy) -> R) -> SelectCopyQuery<'a, C, R> {
+                SelectCopyQuery {
+                    client: self.client,
+                    params: self.params,
+                    mapper,
+                }
+            }
+            pub fn extractor(row: &tokio_postgres::row::Row) -> SelectCopy {
+                SelectCopy {
+                    composite: row.get(0),
+                }
+            }
+            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+                self.client.prepare("SELECT * FROM copy;").await
+            }
+            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                let row = self.client.query_one(&stmt, &self.params).await?;
+                Ok((self.mapper)(Self::extractor(&row)))
+            }
+            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.stream().await?.try_collect().await
+            }
+            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)(Self::extractor(&row))))
+            }
+            pub async fn stream(
+                self,
+            ) -> Result<
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
+                let stmt = self.stmt().await?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .await?
+                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))))
+                    .into_stream();
+                Ok(stream)
+            }
+        }
+        pub fn select_copy<'a, C: GenericClient>(
+            client: &'a C,
+        ) -> SelectCopyQuery<'a, C, SelectCopy> {
+            SelectCopyQuery {
+                client,
+                params: [],
+                mapper: |it| SelectCopy::from(it),
+            }
         }
     }
-}
-pub mod queries {
     pub mod stress {
         use cornucopia_client::GenericClient;
         use futures::{StreamExt, TryStreamExt};
