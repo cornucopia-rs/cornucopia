@@ -3,8 +3,6 @@ use heck::ToUpperCamelCase;
 use indexmap::{Equivalent, IndexMap};
 use postgres_types::{Kind, Type};
 
-use crate::prepare_queries::PreparedField;
-
 /// A struct containing a postgres type and its Rust-equivalent.
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub(crate) enum CornucopiaType {
@@ -16,21 +14,11 @@ pub(crate) enum CornucopiaType {
     Array(Type),
     Custom {
         pg_ty: Type,
-        // TODO Maybe a hashmap if different module declare it, should we allow it ?
-        // TODO an alternative would be to use a different type registrar per module
-        // which will naturally isolate modules nullability declarations
-        content: Box<CustomContent>,
         struct_name: String,
         struct_path: String,
         is_copy: bool,
         is_params: bool,
     },
-}
-#[derive(PartialEq, Eq, Debug, Clone)]
-pub(crate) enum CustomContent {
-    Enum(Vec<String>),
-    Domain(PreparedField),
-    Composite(Vec<PreparedField>),
 }
 
 impl CornucopiaType {
@@ -190,21 +178,21 @@ impl CornucopiaType {
 
 /// Allows us to query a hashmap without having to own the key strings
 #[derive(PartialEq, Eq, Hash)]
-struct TypeRegistrarKey<'a> {
+pub struct TypeSchemeKey<'a> {
     schema: &'a str,
     name: &'a str,
 }
 
-impl<'a> From<&'a Type> for TypeRegistrarKey<'a> {
+impl<'a> From<&'a Type> for TypeSchemeKey<'a> {
     fn from(ty: &'a Type) -> Self {
-        TypeRegistrarKey {
+        TypeSchemeKey {
             schema: ty.schema(),
             name: ty.name(),
         }
     }
 }
 
-impl<'a> Equivalent<(String, String)> for TypeRegistrarKey<'a> {
+impl<'a> Equivalent<(String, String)> for TypeSchemeKey<'a> {
     fn equivalent(&self, key: &(String, String)) -> bool {
         key.0.as_str().equivalent(&self.schema) && key.1.as_str().equivalent(&self.name)
     }
@@ -218,12 +206,23 @@ pub(crate) struct TypeRegistrar {
 
 impl TypeRegistrar {
     pub(crate) fn register<'a>(&'a mut self, ty: &Type) -> Result<&'a CornucopiaType, Error> {
-        if let Some(idx) = self.types.get_index_of(&TypeRegistrarKey::from(ty)) {
+        if let Some(idx) = self.types.get_index_of(&TypeSchemeKey::from(ty)) {
             return Ok(&self.types[idx]);
         }
 
+        fn custom(ty: &Type, is_copy: bool, is_params: bool) -> CornucopiaType {
+            let rust_ty_name = ty.name().to_upper_camel_case();
+            CornucopiaType::Custom {
+                pg_ty: ty.clone(),
+                struct_path: format!("super::super::types::{}::{}", ty.schema(), rust_ty_name),
+                struct_name: rust_ty_name,
+                is_copy,
+                is_params,
+            }
+        }
+
         Ok(match ty.kind() {
-            Kind::Enum(_) => self.insert_custom(ty, true, true),
+            Kind::Enum(_) => self.insert(ty, || custom(ty, true, true)),
             Kind::Array(inner_ty) => {
                 self.register(inner_ty)?;
                 self.insert(ty, || CornucopiaType::Array(inner_ty.clone()))
@@ -231,7 +230,7 @@ impl TypeRegistrar {
             Kind::Domain(inner_ty) => {
                 let inner = self.register(inner_ty)?;
                 let (is_copy, is_params) = (inner.is_copy(), inner.is_params());
-                self.insert_custom(ty, is_copy, is_params)
+                self.insert(ty, || custom(ty, is_copy, is_params))
             }
             Kind::Composite(composite_fields) => {
                 let mut is_copy = true;
@@ -241,7 +240,7 @@ impl TypeRegistrar {
                     is_copy &= field_ty.is_copy();
                     is_params &= field_ty.is_params();
                 }
-                self.insert_custom(ty, is_copy, is_params)
+                self.insert(ty, || custom(ty, is_copy, is_params))
             }
             Kind::Simple => {
                 let (rust_name, is_copy) = match *ty {
@@ -287,7 +286,7 @@ impl TypeRegistrar {
     }
 
     pub(crate) fn get(&self, ty: &Type) -> Option<&CornucopiaType> {
-        self.types.get(&TypeRegistrarKey::from(ty))
+        self.types.get(&TypeSchemeKey::from(ty))
     }
 
     fn insert(&mut self, ty: &Type, call: impl Fn() -> CornucopiaType) -> &CornucopiaType {
@@ -299,56 +298,6 @@ impl TypeRegistrar {
             indexmap::map::Entry::Vacant(v) => {
                 let index = v.index();
                 v.insert(call());
-                index
-            }
-        };
-
-        &self.types[index]
-    }
-
-    fn insert_custom(&mut self, ty: &Type, is_copy: bool, is_params: bool) -> &CornucopiaType {
-        let content = match ty.kind() {
-            Kind::Enum(variants) => CustomContent::Enum(variants.to_vec()),
-            Kind::Domain(inner) => {
-                CustomContent::Domain(PreparedField {
-                    name: "inner".to_string(),
-                    ty: self.get(inner).unwrap().clone(),
-                    is_nullable: false,
-                    is_inner_nullable: false, // TODO used when support null everywhere
-                })
-            }
-            Kind::Composite(fields) => CustomContent::Composite(
-                fields
-                    .iter()
-                    .map(|field| {
-                        PreparedField {
-                            name: field.name().to_string(),
-                            ty: self.get(field.type_()).unwrap().clone(),
-                            is_nullable: false, // TODO used when support null everywhere
-                            is_inner_nullable: false, // TODO used when support null everywhere
-                        }
-                    })
-                    .collect(),
-            ),
-            _ => unreachable!(),
-        };
-        let index = match self
-            .types
-            .entry((ty.schema().to_owned(), ty.name().to_owned()))
-        {
-            indexmap::map::Entry::Occupied(o) => o.index(),
-            indexmap::map::Entry::Vacant(v) => {
-                let index = v.index();
-                let rust_ty_name = ty.name().to_upper_camel_case();
-
-                v.insert(CornucopiaType::Custom {
-                    pg_ty: ty.clone(),
-                    content: Box::new(content),
-                    struct_path: format!("super::super::types::{}::{}", ty.schema(), rust_ty_name),
-                    struct_name: rust_ty_name,
-                    is_copy,
-                    is_params,
-                });
                 index
             }
         };

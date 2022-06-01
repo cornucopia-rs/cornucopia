@@ -1,8 +1,8 @@
 use self::utils::{join_comma, join_ln};
 use super::prepare_queries::PreparedModule;
 use crate::{
-    prepare_queries::{PreparedField, PreparedParams, PreparedQuery, PreparedRow},
-    type_registrar::{CornucopiaType, CustomContent, TypeRegistrar},
+    prepare_queries::{PreparedField, PreparedParams, PreparedQuery, PreparedRow, PreparedType},
+    type_registrar::{CornucopiaType, TypeRegistrar, TypeSchemeKey},
 };
 use error::Error;
 use indexmap::{map::Entry, IndexMap};
@@ -594,21 +594,25 @@ fn gen_query_fn(
 
 /// Generates type definitions for custom user types. This includes domains, composites and enums.
 /// If the type is not `Copy`, then a Borrowed version will be generated.
-fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &CornucopiaType) {
+fn gen_custom_type(
+    w: &mut impl Write,
+    type_registrar: &TypeRegistrar,
+    prepared: &IndexMap<(String, String), PreparedType>,
+    ty: &CornucopiaType,
+) {
     match ty {
         CornucopiaType::Custom {
             pg_ty,
             struct_name,
             is_copy,
             is_params,
-            content,
             ..
         } => {
             let ty_name = pg_ty.name();
             let ty_schema = pg_ty.schema();
             let copy = if *is_copy { "Copy," } else { "" };
-            match &**content {
-                CustomContent::Enum(variants) => {
+            match prepared.get(&TypeSchemeKey::from(pg_ty)).unwrap() {
+                PreparedType::Enum(variants) => {
                     let variants_str = variants.join(",");
                     gen!(w,
                         "#[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, Copy, PartialEq, Eq)]
@@ -616,7 +620,7 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
                         pub enum {struct_name} {{ {variants_str} }}",
                     )
                 }
-                CustomContent::Domain(inner) => {
+                PreparedType::Domain(inner) => {
                     let owned_inner = &inner.own_struct(type_registrar);
                     gen!(
                         w,
@@ -650,7 +654,7 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
                         domain_tosql(w, type_registrar, struct_name, inner, ty_name, *is_params);
                     }
                 }
-                CustomContent::Composite(fields) => {
+                PreparedType::Composite(fields) => {
                     let fields_str = join_comma(fields, |w, f| {
                         gen!(w, "pub {} : {}", f.name, f.own_struct(type_registrar))
                     });
@@ -712,7 +716,11 @@ fn gen_custom_type(w: &mut impl Write, type_registrar: &TypeRegistrar, ty: &Corn
     }
 }
 
-fn gen_type_modules(w: &mut impl Write, type_registrar: &TypeRegistrar) -> Result<(), Error> {
+fn gen_type_modules(
+    w: &mut impl Write,
+    type_registrar: &TypeRegistrar,
+    prepared: &IndexMap<(String, String), PreparedType>,
+) -> Result<(), Error> {
     // Group the custom types by schema name
     let mut modules = IndexMap::<String, Vec<CornucopiaType>>::new();
     for ((schema, _), ty) in &type_registrar.types {
@@ -729,7 +737,9 @@ fn gen_type_modules(w: &mut impl Write, type_registrar: &TypeRegistrar) -> Resul
     }
     // Generate each module
     let modules_str = join_ln(modules, |w, (mod_name, tys)| {
-        let tys_str = join_ln(tys, |w, ty| gen_custom_type(w, type_registrar, &ty));
+        let tys_str = join_ln(tys, |w, ty| {
+            gen_custom_type(w, type_registrar, prepared, &ty)
+        });
         gen!(w, "pub mod {mod_name} {{ {tys_str} }}")
     });
 
@@ -739,7 +749,10 @@ fn gen_type_modules(w: &mut impl Write, type_registrar: &TypeRegistrar) -> Resul
 
 pub(crate) fn generate(
     type_registrar: &TypeRegistrar,
-    modules: Vec<PreparedModule>,
+    (modules, types): (
+        Vec<PreparedModule>,
+        IndexMap<(String, String), PreparedType>,
+    ),
     is_async: bool,
 ) -> Result<String, Error> {
     let import = if is_async {
@@ -755,7 +768,7 @@ pub(crate) fn generate(
     "
     .to_string();
     // Generate database type
-    gen_type_modules(&mut buff, type_registrar)?;
+    gen_type_modules(&mut buff, type_registrar, &types)?;
     // Generate queries
     let query_modules = join_ln(modules, |w, module| {
         let queries_string = join_ln(module.queries.values(), |w, query| {

@@ -9,6 +9,7 @@ use error::ErrorVariant;
 use heck::ToUpperCamelCase;
 use indexmap::{map::Entry, IndexMap};
 use postgres::Client;
+use postgres_types::Kind;
 
 /// This data structure is used by Cornucopia to generate all constructs related to this particular query.
 #[derive(Debug, Clone)]
@@ -42,6 +43,13 @@ pub(crate) struct PreparedRow {
     pub(crate) name: String,
     pub(crate) fields: Vec<PreparedField>,
     pub(crate) is_copy: bool,
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub(crate) enum PreparedType {
+    Enum(Vec<String>),
+    Domain(PreparedField),
+    Composite(Vec<PreparedField>),
 }
 
 /// A struct containing the module name and the list of all
@@ -189,12 +197,56 @@ pub(crate) fn prepare(
     client: &mut Client,
     type_registrar: &mut TypeRegistrar,
     modules: Vec<Module>,
-) -> Result<Vec<PreparedModule>, Error> {
+) -> Result<
+    (
+        Vec<PreparedModule>,
+        IndexMap<(String, String), PreparedType>,
+    ),
+    Error,
+> {
     let mut prepared_modules = Vec::new();
     for module in modules {
         prepared_modules.push(prepare_module(client, module, type_registrar)?);
     }
-    Ok(prepared_modules)
+    let prepared_types = type_registrar
+        .types
+        .iter()
+        .filter_map(|(key, ty)| {
+            if let CornucopiaType::Custom { pg_ty, .. } = ty {
+                Some((
+                    key.clone(),
+                    match pg_ty.kind() {
+                        Kind::Enum(variants) => PreparedType::Enum(variants.to_vec()),
+                        Kind::Domain(inner) => {
+                            PreparedType::Domain(PreparedField {
+                                name: "inner".to_string(),
+                                ty: type_registrar.get(inner).unwrap().clone(),
+                                is_nullable: false,
+                                is_inner_nullable: false, // TODO used when support null everywhere
+                            })
+                        }
+                        Kind::Composite(fields) => PreparedType::Composite(
+                            fields
+                                .iter()
+                                .map(|field| {
+                                    PreparedField {
+                                        name: field.name().to_string(),
+                                        ty: type_registrar.get(field.type_()).unwrap().clone(),
+                                        is_nullable: false, // TODO used when support null everywhere
+                                        is_inner_nullable: false, // TODO used when support null everywhere
+                                    }
+                                })
+                                .collect(),
+                        ),
+                        _ => unreachable!(),
+                    },
+                ))
+            } else {
+                None
+            }
+        })
+        .collect();
+    Ok((prepared_modules, prepared_types))
 }
 
 /// Prepares all queries in this module
