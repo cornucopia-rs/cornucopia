@@ -79,3 +79,12 @@ pub fn join_ln<T, I: IntoIterator<Item = T>, F: Fn(&mut Formatter, T)>(
 ) -> Joiner<T, I, F> {
     join(iter, map, '\n')
 }
+
+pub fn has_dup<T: PartialEq>(slice: &[T]) -> Option<&T> {
+    for i in 1..slice.len() {
+        if let Some(dup) = slice[i..].iter().find(|&f| f == &slice[i - 1]) {
+            return Some(dup);
+        }
+    }
+    None
+}
