@@ -114,25 +114,18 @@ impl PreparedModule {
         params: Vec<PreparedField>,
         row_idx: Option<(usize, Vec<usize>)>,
         sql: String,
-    ) -> Result<usize, ErrorVariant> {
-        match self.queries.entry(name.value.clone()) {
-            Entry::Occupied(_o) => Err(ErrorVariant::Validation(
-                ValidationError::QueryNameAlreadyUsed {
-                    name: name.value,
-                    pos: name.pos,
-                },
-            )),
-            Entry::Vacant(v) => {
-                let index = v.index();
-                v.insert(PreparedQuery {
+    ) -> usize {
+        self.queries
+            .insert_full(
+                name.value.clone(),
+                PreparedQuery {
                     name: name.value,
                     params,
                     row: row_idx,
                     sql,
-                });
-                Ok(index)
-            }
-        }
+                },
+            )
+            .0
     }
 
     fn add_params(
@@ -303,7 +296,7 @@ fn prepare_query(
     // Check for duplicate names
     if let Some(duplicate_col) = has_duplicate(stmt_cols.iter(), |col| col.name()) {
         return Err(Error::new(
-            ErrorVariant::ColumnNameAlreadyTaken {
+            ErrorVariant::DuplicateSqlColName {
                 name: duplicate_col.name().to_owned(),
             },
             &query,
@@ -332,18 +325,6 @@ fn prepare_query(
         };
     }
 
-    // Check if there are duplicate nullable columns
-    if let Some((p, u)) = has_duplicate(nullable_cols.iter(), |(_, n)| n) {
-        return Err(Error {
-            query_name: query.name.value,
-            query_start_line: Some(query.line),
-            err: ErrorVariant::Validation(ValidationError::ColumnAlreadyNullable {
-                name: u.to_owned(),
-                pos: p.pos.clone(),
-            }),
-            path: module_path.to_owned(),
-        });
-    };
 
     // Get return columns
     let mut row_fields = Vec::new();
@@ -386,14 +367,7 @@ fn prepare_query(
 
     let params_not_empty = !params.is_empty();
 
-    let query_idx = module
-        .add_query(query.name.clone(), params, row_idx, query.sql_str)
-        .map_err(|e| Error {
-            err: e,
-            query_name: query.name.value.clone(),
-            query_start_line: Some(query.line),
-            path: module_path.to_owned(),
-        })?;
+    let query_idx = module.add_query(query.name.clone(), params, row_idx, query.sql_str);
     if params_not_empty {
         module
             .add_params(registrar, param_struct_name, query_idx)
@@ -422,7 +396,7 @@ pub(crate) mod error {
         PostgresType(#[from] PostgresTypeError),
         Validation(#[from] ValidationError),
         #[error("Two or more columns have the same name: `{name}`. Consider disambiguing the column names with `AS` clauses.")]
-        ColumnNameAlreadyTaken {
+        DuplicateSqlColName {
             name: String,
         },
     }
