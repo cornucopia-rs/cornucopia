@@ -21,8 +21,6 @@ pub(crate) enum CornucopiaType {
     Domain {
         pg_ty: Type,
         inner: Rc<CornucopiaType>,
-        struct_name: String,
-        struct_path: String,
     },
     Custom {
         pg_ty: Type,
@@ -50,6 +48,28 @@ impl CornucopiaType {
             CornucopiaType::Array { .. } => false,
             CornucopiaType::Domain { inner, .. } => inner.is_params(),
             CornucopiaType::Custom { is_params, .. } => *is_params,
+        }
+    }
+
+    pub(crate) fn to_sql(&self, name: &str) -> String {
+        match self {
+            CornucopiaType::Domain { inner, .. } => {
+                format!(
+                    "&cornucopia_client::DomainWrapper::<{}>(&self.{name})",
+                    inner.brw_struct(true, false)
+                )
+            }
+            _ => format!("&self.{name}"),
+        }
+    }
+
+    pub(crate) fn accept_to_sql(&self) -> String {
+        match self {
+            CornucopiaType::Domain { inner, .. } => format!(
+                "cornucopia_client::DomainWrapper::<{}>",
+                inner.brw_struct(true, false)
+            ),
+            _ => self.brw_struct(true, false),
         }
     }
 
@@ -128,21 +148,7 @@ impl CornucopiaType {
                     format!("cornucopia_client::ArrayIterator<{lifetime}, {inner}>")
                 }
             }
-            CornucopiaType::Domain {
-                struct_path, inner, ..
-            } => {
-                if for_params {
-                    if inner.is_copy() {
-                        struct_path.to_string()
-                    } else if for_params && !inner.is_params() {
-                        format!("{}Params<{lifetime}>", struct_path)
-                    } else {
-                        format!("{}Borrowed<{lifetime}>", struct_path)
-                    }
-                } else {
-                    inner.brw_struct(true, false)
-                }
-            }
+            CornucopiaType::Domain { inner, .. } => inner.brw_struct(for_params, false),
             CornucopiaType::Custom {
                 struct_path,
                 is_params,
@@ -189,8 +195,6 @@ impl TypeRegistrar {
             CornucopiaType::Domain {
                 pg_ty: ty.clone(),
                 inner,
-                struct_path: format!("super::super::types::{}::{}", ty.schema(), rust_ty_name),
-                struct_name: rust_ty_name,
             }
         }
 

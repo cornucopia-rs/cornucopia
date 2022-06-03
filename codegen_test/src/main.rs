@@ -24,8 +24,7 @@ use crate::cornucopia_sync::{
         },
     },
     types::public::{
-        CustomComposite, CustomCompositeBorrowed, DomainArrayParams, DomainJsonBorrowed, DomainNb,
-        DomainTxtBorrowed, MyDomainBorrowed, NightmareComposite, NightmareCompositeParams,
+        CustomComposite, CustomCompositeBorrowed, NightmareComposite, NightmareCompositeParams,
         SpongebobCharacter,
     },
 };
@@ -80,12 +79,11 @@ pub fn domain(client: &mut Client) {
     let raw_json = serde_json::value::to_raw_value(&json).unwrap();
 
     // Erased domain not null
-    let tmp = [DomainJsonBorrowed(Json(&raw_json))];
     let params = InsertNightmareDomainParams {
-        arr: DomainArrayParams(&tmp),
-        json: DomainJsonBorrowed(Json(&raw_json)),
-        nb: DomainNb(42),
-        txt: DomainTxtBorrowed("Hello world"),
+        arr: &[Json(&raw_json)],
+        json: Json(&raw_json),
+        nb: 42,
+        txt: "Hello world",
     };
     let expected = SelectNightmareDomain {
         arr: vec![Json(json.clone())],
@@ -290,7 +288,7 @@ pub fn test_stress(client: &mut Client) {
                 nice: SpongebobCharacter::Squidward,
             }],
             spongebob: &[SpongebobCharacter::Bob, SpongebobCharacter::Patrick],
-            domain: MyDomainBorrowed("Hello"),
+            domain: "Hello",
         },
     };
 

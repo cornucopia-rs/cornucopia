@@ -219,6 +219,7 @@ dependencies = [
  "deadpool-postgres",
  "postgres",
  "postgres-protocol",
+ "postgres-types",
  "tokio",
  "tokio-postgres",
 ]

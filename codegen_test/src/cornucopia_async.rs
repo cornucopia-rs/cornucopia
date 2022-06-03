@@ -13,7 +13,7 @@ pub mod types {
             Patrick,
             Squidward,
         }
-        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, PartialEq)]
+        #[derive(Debug, postgres_types::FromSql, Clone, PartialEq)]
         #[postgres(name = "custom_composite")]
         pub struct CustomComposite {
             pub wow: String,
@@ -145,50 +145,7 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(Debug, Clone, PartialEq, postgres_types::ToSql, postgres_types::FromSql)]
-        #[postgres(name = "my_domain")]
-        pub struct MyDomain(pub String);
-        #[derive(Debug)]
-        pub struct MyDomainBorrowed<'a>(pub &'a str);
-        impl<'a> From<MyDomainBorrowed<'a>> for MyDomain {
-            fn from(MyDomainBorrowed(inner): MyDomainBorrowed<'a>) -> Self {
-                Self(inner.into())
-            }
-        }
-        impl<'a> postgres_types::ToSql for MyDomainBorrowed<'a> {
-            fn to_sql(
-                &self,
-                _type: &postgres_types::Type,
-                buf: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let type_ = match *_type.kind() {
-                    postgres_types::Kind::Domain(ref type_) => type_,
-                    _ => unreachable!(),
-                };
-                postgres_types::ToSql::to_sql(&self.0, type_, buf)
-            }
-            fn accepts(type_: &postgres_types::Type) -> bool {
-                if type_.name() != "my_domain" {
-                    return false;
-                }
-                match *type_.kind() {
-                    postgres_types::Kind::Domain(ref type_) => {
-                        <&'a str as postgres_types::ToSql>::accepts(type_)
-                    }
-                    _ => false,
-                }
-            }
-            fn to_sql_checked(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                postgres_types::__to_sql_checked(self, ty, out)
-            }
-        }
-        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, PartialEq)]
+        #[derive(Debug, postgres_types::FromSql, Clone, PartialEq)]
         #[postgres(name = "nightmare_composite")]
         pub struct NightmareComposite {
             pub custom: Vec<super::super::types::public::CustomComposite>,
@@ -254,7 +211,7 @@ pub mod types {
         pub struct NightmareCompositeParams<'a> {
             pub custom: &'a [super::super::types::public::CustomCompositeBorrowed<'a>],
             pub spongebob: &'a [super::super::types::public::SpongebobCharacter],
-            pub domain: super::super::types::public::MyDomainBorrowed<'a>,
+            pub domain: &'a str,
         }
         impl<'a> postgres_types::ToSql for NightmareCompositeParams<'a> {
             fn to_sql(
@@ -277,7 +234,11 @@ pub mod types {
                         "spongebob" => {
                             postgres_types::ToSql::to_sql(&self.spongebob, field.type_(), buf)
                         }
-                        "domain" => postgres_types::ToSql::to_sql(&self.domain, field.type_(), buf),
+                        "domain" => postgres_types::ToSql::to_sql(
+                            &cornucopia_client::DomainWrapper::<&'a str>(&self.domain),
+                            field.type_(),
+                            buf,
+                        ),
                         _ => unreachable!(),
                     };
                     let count = match r? {
@@ -317,8 +278,8 @@ pub mod types {
                                     )
                                 }
                                 "domain" => {
-                                    <super::super::types::public::MyDomainBorrowed<
-                                        'a,
+                                    <cornucopia_client::DomainWrapper::<
+                                        &'a str,
                                     > as postgres_types::ToSql>::accepts(f.type_())
                                 }
                                 _ => false,
@@ -336,7 +297,7 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, PartialEq)]
+        #[derive(Debug, postgres_types::FromSql, Clone, PartialEq)]
         #[postgres(name = "clone_composite")]
         pub struct CloneComposite {
             pub first: i32,
@@ -439,152 +400,61 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Copy, Clone, PartialEq)]
+        #[derive(Debug, postgres_types::FromSql, Copy, Clone, PartialEq)]
         #[postgres(name = "copy_composite")]
         pub struct CopyComposite {
             pub first: i32,
             pub second: f64,
         }
-        #[derive(Debug, Clone, PartialEq, postgres_types::ToSql, postgres_types::FromSql)]
-        #[postgres(name = "domain_json")]
-        pub struct DomainJson(pub postgres_types::Json<serde_json::Value>);
-        #[derive(Debug)]
-        pub struct DomainJsonBorrowed<'a>(
-            pub postgres_types::Json<&'a serde_json::value::RawValue>,
-        );
-        impl<'a> From<DomainJsonBorrowed<'a>> for DomainJson {
-            fn from(DomainJsonBorrowed(inner): DomainJsonBorrowed<'a>) -> Self {
-                Self(postgres_types::Json(
-                    serde_json::from_str(inner.0.get()).unwrap(),
-                ))
-            }
-        }
-        impl<'a> postgres_types::ToSql for DomainJsonBorrowed<'a> {
+        impl<'a> postgres_types::ToSql for CopyComposite {
             fn to_sql(
                 &self,
                 _type: &postgres_types::Type,
                 buf: &mut postgres_types::private::BytesMut,
             ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
             {
-                let type_ = match *_type.kind() {
-                    postgres_types::Kind::Domain(ref type_) => type_,
+                let fields = match *_type.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
                 };
-                postgres_types::ToSql::to_sql(&self.0, type_, buf)
+                buf.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {
+                    buf.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = buf.len();
+                    buf.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {
+                        "first" => postgres_types::ToSql::to_sql(&self.first, field.type_(), buf),
+                        "second" => postgres_types::ToSql::to_sql(&self.second, field.type_(), buf),
+                        _ => unreachable!(),
+                    };
+                    let count = match r? {
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {
+                            let len = buf.len() - base - 4;
+                            if len > i32::max_value() as usize {
+                                return Err(Into::into("value too large to transmit"));
+                            }
+                            len as i32
+                        }
+                    };
+                    buf[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                }
+                Ok(postgres_types::IsNull::No)
             }
             fn accepts(type_: &postgres_types::Type) -> bool {
-                if type_.name() != "domain_json" {
+                if type_.name() != "copy_composite" {
                     return false;
                 }
                 match *type_.kind() {
-                    postgres_types::Kind::Domain(ref type_) => <postgres_types::Json<
-                        &'a serde_json::value::RawValue,
-                    > as postgres_types::ToSql>::accepts(
-                        type_
-                    ),
-                    _ => false,
-                }
-            }
-            fn to_sql_checked(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                postgres_types::__to_sql_checked(self, ty, out)
-            }
-        }
-        #[derive(Debug, Clone, PartialEq, postgres_types::ToSql, postgres_types::FromSql)]
-        #[postgres(name = "domain_txt")]
-        pub struct DomainTxt(pub String);
-        #[derive(Debug)]
-        pub struct DomainTxtBorrowed<'a>(pub &'a str);
-        impl<'a> From<DomainTxtBorrowed<'a>> for DomainTxt {
-            fn from(DomainTxtBorrowed(inner): DomainTxtBorrowed<'a>) -> Self {
-                Self(inner.into())
-            }
-        }
-        impl<'a> postgres_types::ToSql for DomainTxtBorrowed<'a> {
-            fn to_sql(
-                &self,
-                _type: &postgres_types::Type,
-                buf: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let type_ = match *_type.kind() {
-                    postgres_types::Kind::Domain(ref type_) => type_,
-                    _ => unreachable!(),
-                };
-                postgres_types::ToSql::to_sql(&self.0, type_, buf)
-            }
-            fn accepts(type_: &postgres_types::Type) -> bool {
-                if type_.name() != "domain_txt" {
-                    return false;
-                }
-                match *type_.kind() {
-                    postgres_types::Kind::Domain(ref type_) => {
-                        <&'a str as postgres_types::ToSql>::accepts(type_)
-                    }
-                    _ => false,
-                }
-            }
-            fn to_sql_checked(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                postgres_types::__to_sql_checked(self, ty, out)
-            }
-        }
-        #[derive(Debug, Copy, Clone, PartialEq, postgres_types::ToSql, postgres_types::FromSql)]
-        #[postgres(name = "domain_nb")]
-        pub struct DomainNb(pub i32);
-        #[derive(Debug, Clone, PartialEq, postgres_types::ToSql, postgres_types::FromSql)]
-        #[postgres(name = "domain_array")]
-        pub struct DomainArray(pub Vec<postgres_types::Json<serde_json::Value>>);
-        #[derive(Debug)]
-        pub struct DomainArrayBorrowed<'a>(
-            pub  cornucopia_client::ArrayIterator<
-                'a,
-                postgres_types::Json<&'a serde_json::value::RawValue>,
-            >,
-        );
-        impl<'a> From<DomainArrayBorrowed<'a>> for DomainArray {
-            fn from(DomainArrayBorrowed(inner): DomainArrayBorrowed<'a>) -> Self {
-                Self(
-                    inner
-                        .map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap()))
-                        .collect(),
-                )
-            }
-        }
-        #[derive(Debug)]
-        pub struct DomainArrayParams<'a>(
-            pub &'a [super::super::types::public::DomainJsonBorrowed<'a>],
-        );
-        impl<'a> postgres_types::ToSql for DomainArrayParams<'a> {
-            fn to_sql(
-                &self,
-                _type: &postgres_types::Type,
-                buf: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let type_ = match *_type.kind() {
-                    postgres_types::Kind::Domain(ref type_) => type_,
-                    _ => unreachable!(),
-                };
-                postgres_types::ToSql::to_sql(&self.0, type_, buf)
-            }
-            fn accepts(type_: &postgres_types::Type) -> bool {
-                if type_.name() != "domain_array" {
-                    return false;
-                }
-                match *type_.kind() {
-                    postgres_types::Kind::Domain(ref type_) => {
-                        <&'a [super::super::types::public::DomainJsonBorrowed<
-                            'a,
-                        >] as postgres_types::ToSql>::accepts(type_)
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != 2usize {
+                            return false;
+                        }
+                        fields.iter().all(|f| match f.name() {
+                            "first" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+                            "second" => <f64 as postgres_types::ToSql>::accepts(f.type_()),
+                            _ => false,
+                        })
                     }
                     _ => false,
                 }
@@ -816,10 +686,10 @@ pub mod queries {
         use futures::{StreamExt, TryStreamExt};
         #[derive(Debug)]
         pub struct InsertNightmareDomainParams<'a> {
-            pub arr: super::super::types::public::DomainArrayParams<'a>,
-            pub json: super::super::types::public::DomainJsonBorrowed<'a>,
-            pub nb: super::super::types::public::DomainNb,
-            pub txt: super::super::types::public::DomainTxtBorrowed<'a>,
+            pub arr: &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
+            pub json: postgres_types::Json<&'a serde_json::value::RawValue>,
+            pub nb: i32,
+            pub txt: &'a str,
         }
         impl<'a> InsertNightmareDomainParams<'a> {
             pub async fn insert_nightmare_domain<C: GenericClient>(
@@ -1035,10 +905,10 @@ pub mod queries {
         }
         pub async fn insert_nightmare_domain<'a, C: GenericClient>(
             client: &'a C,
-            txt: &'a super::super::types::public::DomainTxtBorrowed<'a>,
-            json: &'a super::super::types::public::DomainJsonBorrowed<'a>,
-            nb: &'a super::super::types::public::DomainNb,
-            arr: &'a super::super::types::public::DomainArrayParams<'a>,
+            txt: &'a &'a str,
+            json: &'a postgres_types::Json<&'a serde_json::value::RawValue>,
+            nb: &'a i32,
+            arr: &'a &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = client
                 .prepare(

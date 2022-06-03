@@ -223,7 +223,7 @@ pub(crate) fn prepare(
         .iter()
         .filter_map(|(key, ty)| {
             match ty.as_ref() {
-                CornucopiaType::Custom { pg_ty, .. } | CornucopiaType::Domain { pg_ty, .. } => {
+                CornucopiaType::Custom { pg_ty, .. } => {
                     Some((
                         key.clone(),
                         match pg_ty.kind() {

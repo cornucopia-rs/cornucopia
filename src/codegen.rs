@@ -67,65 +67,30 @@ fn is_reserved_keyword(s: &str) -> bool {
     .contains(&s)
 }
 
-fn domain_tosql(
-    w: &mut impl Write,
-    struct_name: &str,
-    inner: &PreparedField,
-    ty_name: &str,
-    is_params: bool,
-) {
-    let accept_ty = inner.brw_struct(true);
-    let post = if is_params { "Borrowed" } else { "Params" };
-    gen!(
-        w,
-        r#"impl <'a> postgres_types::ToSql for {struct_name}{post}<'a> {{
-            fn to_sql(
-                &self,
-                _type: &postgres_types::Type,
-                buf: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {{
-                let type_ = match *_type.kind() {{
-                    postgres_types::Kind::Domain(ref type_) => type_,
-                    _ => unreachable!(),
-                }};
-                postgres_types::ToSql::to_sql(&self.0, type_, buf)
-            }}
-            fn accepts(type_: &postgres_types::Type) -> bool {{
-                if type_.name() != "{ty_name}" {{
-                    return false;
-                }}
-                match *type_.kind() {{
-                    postgres_types::Kind::Domain(ref type_) => <{accept_ty} as postgres_types::ToSql>::accepts(
-                        type_
-                    ),
-                    _ => false,
-                }}
-            }}
-            fn to_sql_checked(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {{
-                postgres_types::__to_sql_checked(self, ty, out)
-            }}
-        }}"#
-    )
-}
-
-fn composite_tosql(
+fn struct_tosql(
     w: &mut impl Write,
     struct_name: &str,
     fields: &[PreparedField],
     ty_name: &str,
+    is_borrow: bool,
     is_params: bool,
 ) {
-    let post = if is_params { "Borrowed" } else { "Params" };
+    let post = if is_borrow {
+        if is_params {
+            "Borrowed<'a>"
+        } else {
+            "Params<'a>"
+        }
+    } else {
+        ""
+    };
     let nb_fields = fields.len();
     let write_fields = join_ln(fields.iter(), |w, f| {
         let name = &f.name;
         gen!(
             w,
-            "\"{name}\" => postgres_types::ToSql::to_sql(&self.{name},field.type_(), buf),",
+            "\"{name}\" => postgres_types::ToSql::to_sql({},field.type_(), buf),",
+            f.ty.to_sql(name)
         )
     });
     let accept_fields = join_ln(fields.iter(), |w, f| {
@@ -133,13 +98,13 @@ fn composite_tosql(
             w,
             "\"{}\" => <{} as postgres_types::ToSql>::accepts(f.type_()),",
             f.name,
-            f.brw_struct(true)
+            f.ty.accept_to_sql()
         )
     });
 
     gen!(
         w,
-        r#"impl<'a> postgres_types::ToSql for {struct_name}{post}<'a> {{
+        r#"impl<'a> postgres_types::ToSql for {struct_name}{post} {{
             fn to_sql(
                 &self,
                 _type: &postgres_types::Type,
@@ -488,51 +453,6 @@ fn gen_custom_type(
     ty: &CornucopiaType,
 ) {
     match ty {
-        CornucopiaType::Domain {
-            pg_ty,
-            inner,
-            struct_name,
-            ..
-        } => {
-            let ty_name = pg_ty.name();
-            let copy = if inner.is_copy() { "Copy," } else { "" };
-            match prepared.get(&SchemaKey::from(pg_ty)).unwrap() {
-                PreparedType::Domain(field) => {
-                    let owned_inner = &field.own_struct();
-                    gen!(
-                        w,
-                        "#[derive(Debug, {copy}Clone, PartialEq, postgres_types::ToSql,postgres_types::FromSql)]
-                        #[postgres(name = \"{ty_name}\")]
-                        pub struct {struct_name} (pub {owned_inner});"
-                    );
-                    if !inner.is_copy() {
-                        let brw_inner = field.brw_struct(false);
-                        let inner_value = field.owning_call();
-                        gen!(
-                            w,
-                            "#[derive(Debug)]
-                            pub struct {struct_name}Borrowed<'a> (pub {brw_inner});
-                            impl<'a> From<{struct_name}Borrowed<'a>> for {struct_name} {{
-                                fn from(
-                                    {struct_name}Borrowed (inner): {struct_name}Borrowed<'a>,
-                                ) -> Self {{ Self({inner_value}) }}
-                            }}"
-                        );
-                        if !inner.is_params() {
-                            let field = field.brw_struct(true);
-                            let derive = if inner.is_copy() { ",Copy,Clone" } else { "" };
-                            gen!(
-                                w,
-                                "#[derive(Debug{derive})]
-                                pub struct {struct_name}Params<'a>(pub {field});",
-                            );
-                        }
-                        domain_tosql(w, struct_name, field, ty_name, inner.is_params());
-                    }
-                }
-                _ => unreachable!(),
-            }
-        }
         CornucopiaType::Custom {
             pg_ty,
             struct_name,
@@ -558,11 +478,13 @@ fn gen_custom_type(
                     });
                     gen!(
                         w,
-                        "#[derive(Debug,postgres_types::ToSql,postgres_types::FromSql,{copy} Clone, PartialEq)]
+                        "#[derive(Debug,postgres_types::FromSql,{copy} Clone, PartialEq)]
                         #[postgres(name = \"{ty_name}\")]
                         pub struct {struct_name} {{ {fields_str} }}"
                     );
-                    if !is_copy {
+                    if *is_copy {
+                        struct_tosql(w, struct_name, fields, ty_name, false, *is_params);
+                    } else {
                         let brw_fields = join_comma(fields, |w, f| {
                             gen!(w, "pub {} : {}", f.name, f.brw_struct(false))
                         });
@@ -593,7 +515,7 @@ fn gen_custom_type(
                                 pub struct {struct_name}Params<'a> {{ {fields} }}",
                             );
                         }
-                        composite_tosql(w, struct_name, fields, ty_name, *is_params);
+                        struct_tosql(w, struct_name, fields, ty_name, true, *is_params);
                     }
                 }
                 _ => unreachable!(),
@@ -611,10 +533,7 @@ fn gen_type_modules(
     // Group the custom types by schema name
     let mut modules = IndexMap::<String, Vec<Rc<CornucopiaType>>>::new();
     for ((schema, _), ty) in &registrar.types {
-        if matches!(
-            ty.as_ref(),
-            CornucopiaType::Custom { .. } | CornucopiaType::Domain { .. }
-        ) {
+        if matches!(ty.as_ref(), CornucopiaType::Custom { .. }) {
             match modules.entry(schema.to_owned()) {
                 Entry::Occupied(mut entry) => {
                     entry.get_mut().push(ty.clone());

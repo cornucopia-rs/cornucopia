@@ -355,3 +355,46 @@ impl<'a, T: FromSql<'a>> FromSql<'a> for ArrayIterator<'a, T> {
         }
     }
 }
+
+pub struct DomainWrapper<T: ToSql>(pub T);
+
+impl<T: ToSql + Debug> Debug for DomainWrapper<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("DomainWrapper").field(&self.0).finish()
+    }
+}
+
+impl<T: ToSql> ToSql for DomainWrapper<T> {
+    fn to_sql(
+        &self,
+        ty: &Type,
+        out: &mut tokio_postgres::types::private::BytesMut,
+    ) -> Result<tokio_postgres::types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+    where
+        Self: Sized,
+    {
+        let ty = match *ty.kind() {
+            postgres_types::Kind::Domain(ref ty) => ty,
+            _ => unreachable!(),
+        };
+        postgres_types::ToSql::to_sql(&self.0, ty, out)
+    }
+
+    fn accepts(ty: &Type) -> bool
+    where
+        Self: Sized,
+    {
+        match *ty.kind() {
+            postgres_types::Kind::Domain(ref type_) => <T as postgres_types::ToSql>::accepts(type_),
+            _ => false,
+        }
+    }
+
+    fn to_sql_checked(
+        &self,
+        ty: &Type,
+        out: &mut tokio_postgres::types::private::BytesMut,
+    ) -> Result<tokio_postgres::types::IsNull, Box<dyn std::error::Error + Sync + Send>> {
+        postgres_types::__to_sql_checked(self, ty, out)
+    }
+}
