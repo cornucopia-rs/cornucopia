@@ -12,14 +12,21 @@ use time::{OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;
 
 use crate::cornucopia_sync::{
-    queries::stress::{
-        select_everything, select_everything_array, select_nightmare, InsertEverythingArrayParams,
-        InsertEverythingParams, InsertNightmareParams, SelectEverything, SelectEverythingArray,
-        SelectNightmare,
+    queries::{
+        domain::{
+            select_nightmare_domain, select_nightmare_domain_null, InsertNightmareDomainParams,
+            SelectNightmareDomain, SelectNightmareDomainNull,
+        },
+        stress::{
+            select_everything, select_everything_array, select_nightmare,
+            InsertEverythingArrayParams, InsertEverythingParams, InsertNightmareParams,
+            SelectEverything, SelectEverythingArray, SelectNightmare,
+        },
     },
     types::public::{
-        CustomComposite, CustomCompositeBorrowed, MyDomain, MyDomainBorrowed, NightmareComposite,
-        NightmareCompositeParams, SpongebobCharacter,
+        CustomComposite, CustomCompositeBorrowed, DomainArrayParams, DomainJsonBorrowed, DomainNb,
+        DomainTxtBorrowed, MyDomainBorrowed, NightmareComposite, NightmareCompositeParams,
+        SpongebobCharacter,
     },
 };
 
@@ -65,6 +72,38 @@ pub fn test_copy(client: &mut Client) {
     };
     clone_params.insert_clone(client).unwrap();
     select_copy(client).one().unwrap();
+}
+
+// Test domain erasing
+pub fn domain(client: &mut Client) {
+    let json: Value = serde_json::from_str("{}").unwrap();
+    let raw_json = serde_json::value::to_raw_value(&json).unwrap();
+
+    // Erased domain not null
+    let tmp = [DomainJsonBorrowed(Json(&raw_json))];
+    let params = InsertNightmareDomainParams {
+        arr: DomainArrayParams(&tmp),
+        json: DomainJsonBorrowed(Json(&raw_json)),
+        nb: DomainNb(42),
+        txt: DomainTxtBorrowed("Hello world"),
+    };
+    let expected = SelectNightmareDomain {
+        arr: vec![Json(json.clone())],
+        json: Json(json.clone()),
+        nb: 42,
+        txt: "Hello world".to_string(),
+    };
+    assert_eq!(1, params.insert_nightmare_domain(client).unwrap());
+    let actual = select_nightmare_domain(client).one().unwrap();
+    assert_eq!(expected, actual);
+    let expected = SelectNightmareDomainNull {
+        arr: Some(vec![Json(json.clone())]),
+        json: Some(Json(json)),
+        nb: Some(42),
+        txt: Some("Hello world".to_string()),
+    };
+    let actual = select_nightmare_domain_null(client).one().unwrap();
+    assert_eq!(expected, actual);
 }
 
 // Test hard cases

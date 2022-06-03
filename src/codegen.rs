@@ -67,39 +67,6 @@ fn is_reserved_keyword(s: &str) -> bool {
     .contains(&s)
 }
 
-fn domain_brw_fromsql(
-    w: &mut impl Write,
-    struct_name: &str,
-    inner_ty: &str,
-    ty_name: &str,
-    ty_schema: &str,
-) {
-    gen!(
-        w,
-        r#"impl<'a> postgres_types::FromSql<'a> for {struct_name}Borrowed<'a> {{
-            fn from_sql(_type: &postgres_types::Type, buf: &'a [u8]) -> Result<
-                {struct_name}Borrowed<'a>, Box<dyn std::error::Error + Sync + Send>,
-            > {{
-                <{inner_ty} as postgres_types::FromSql>::from_sql(_type, buf).map({struct_name}Borrowed)
-            }}
-            fn accepts(type_: &postgres_types::Type) -> bool {{
-                if <{inner_ty} as postgres_types::FromSql>::accepts(type_) {{
-                    return true;
-                }}
-                if type_.name() != "{ty_name}" || type_.schema() != "{ty_schema}" {{
-                    return false;
-                }}
-                match *type_.kind() {{
-                    postgres_types::Kind::Domain(ref type_) => {{
-                        <{inner_ty} as postgres_types::ToSql>::accepts(type_)
-                    }}
-                    _ => false,
-                }}
-            }}
-        }}"#
-    )
-}
-
 fn domain_tosql(
     w: &mut impl Write,
     struct_name: &str,
@@ -528,7 +495,6 @@ fn gen_custom_type(
             ..
         } => {
             let ty_name = pg_ty.name();
-            let ty_schema = pg_ty.schema();
             let copy = if inner.is_copy() { "Copy," } else { "" };
             match prepared.get(&SchemaKey::from(pg_ty)).unwrap() {
                 PreparedType::Domain(field) => {
@@ -552,7 +518,6 @@ fn gen_custom_type(
                                 ) -> Self {{ Self({inner_value}) }}
                             }}"
                         );
-                        domain_brw_fromsql(w, struct_name, &brw_inner, ty_name, ty_schema);
                         if !inner.is_params() {
                             let field = field.brw_struct(true);
                             let derive = if inner.is_copy() { ",Copy,Clone" } else { "" };

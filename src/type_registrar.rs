@@ -69,21 +69,15 @@ impl CornucopiaType {
         }
 
         match self {
-            CornucopiaType::Simple { pg_ty, .. } => {
-                if matches!(*pg_ty, Type::JSON | Type::JSONB) {
-                    format!("postgres_types::Json(serde_json::from_str({name}.0.get()).unwrap())")
-                } else {
-                    format!("{name}.into()")
-                }
+            CornucopiaType::Simple { pg_ty, .. } if matches!(*pg_ty, Type::JSON | Type::JSONB) => {
+                format!("postgres_types::Json(serde_json::from_str({name}.0.get()).unwrap())")
             }
             CornucopiaType::Array { inner, .. } => {
                 let inner = inner.owning_call("v", is_inner_nullable, false);
                 format!("{name}.map(|v| {inner}).collect()")
             }
-            CornucopiaType::Domain { .. } => {
-                format!("{name}.0.into()")
-            }
-            CornucopiaType::Custom { .. } => {
+            CornucopiaType::Domain { inner, .. } => inner.owning_call(name, is_nullable, false),
+            _ => {
                 format!("{name}.into()")
             }
         }
@@ -137,12 +131,16 @@ impl CornucopiaType {
             CornucopiaType::Domain {
                 struct_path, inner, ..
             } => {
-                if inner.is_copy() {
-                    struct_path.to_string()
-                } else if for_params && !inner.is_params() {
-                    format!("{}Params<{lifetime}>", struct_path)
+                if for_params {
+                    if inner.is_copy() {
+                        struct_path.to_string()
+                    } else if for_params && !inner.is_params() {
+                        format!("{}Params<{lifetime}>", struct_path)
+                    } else {
+                        format!("{}Borrowed<{lifetime}>", struct_path)
+                    }
                 } else {
-                    format!("{}Borrowed<{lifetime}>", struct_path)
+                    inner.brw_struct(true, false)
                 }
             }
             CornucopiaType::Custom {

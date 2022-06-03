@@ -155,29 +155,6 @@ pub mod types {
                 Self(inner.into())
             }
         }
-        impl<'a> postgres_types::FromSql<'a> for MyDomainBorrowed<'a> {
-            fn from_sql(
-                _type: &postgres_types::Type,
-                buf: &'a [u8],
-            ) -> Result<MyDomainBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
-            {
-                <&'a str as postgres_types::FromSql>::from_sql(_type, buf).map(MyDomainBorrowed)
-            }
-            fn accepts(type_: &postgres_types::Type) -> bool {
-                if <&'a str as postgres_types::FromSql>::accepts(type_) {
-                    return true;
-                }
-                if type_.name() != "my_domain" || type_.schema() != "public" {
-                    return false;
-                }
-                match *type_.kind() {
-                    postgres_types::Kind::Domain(ref type_) => {
-                        <&'a str as postgres_types::ToSql>::accepts(type_)
-                    }
-                    _ => false,
-                }
-            }
-        }
         impl<'a> postgres_types::ToSql for MyDomainBorrowed<'a> {
             fn to_sql(
                 &self,
@@ -228,7 +205,7 @@ pub mod types {
                 'a,
                 super::super::types::public::SpongebobCharacter,
             >,
-            pub domain: super::super::types::public::MyDomainBorrowed<'a>,
+            pub domain: &'a str,
         }
         impl<'a> From<NightmareCompositeBorrowed<'a>> for NightmareComposite {
             fn from(
@@ -241,7 +218,7 @@ pub mod types {
                 Self {
                     custom: custom.map(|v| v.into()).collect(),
                     spongebob: spongebob.map(|v| v).collect(),
-                    domain: domain.0.into(),
+                    domain: domain.into(),
                 }
             }
         }
@@ -468,6 +445,159 @@ pub mod types {
             pub first: i32,
             pub second: f64,
         }
+        #[derive(Debug, Clone, PartialEq, postgres_types::ToSql, postgres_types::FromSql)]
+        #[postgres(name = "domain_json")]
+        pub struct DomainJson(pub postgres_types::Json<serde_json::Value>);
+        #[derive(Debug)]
+        pub struct DomainJsonBorrowed<'a>(
+            pub postgres_types::Json<&'a serde_json::value::RawValue>,
+        );
+        impl<'a> From<DomainJsonBorrowed<'a>> for DomainJson {
+            fn from(DomainJsonBorrowed(inner): DomainJsonBorrowed<'a>) -> Self {
+                Self(postgres_types::Json(
+                    serde_json::from_str(inner.0.get()).unwrap(),
+                ))
+            }
+        }
+        impl<'a> postgres_types::ToSql for DomainJsonBorrowed<'a> {
+            fn to_sql(
+                &self,
+                _type: &postgres_types::Type,
+                buf: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let type_ = match *_type.kind() {
+                    postgres_types::Kind::Domain(ref type_) => type_,
+                    _ => unreachable!(),
+                };
+                postgres_types::ToSql::to_sql(&self.0, type_, buf)
+            }
+            fn accepts(type_: &postgres_types::Type) -> bool {
+                if type_.name() != "domain_json" {
+                    return false;
+                }
+                match *type_.kind() {
+                    postgres_types::Kind::Domain(ref type_) => <postgres_types::Json<
+                        &'a serde_json::value::RawValue,
+                    > as postgres_types::ToSql>::accepts(
+                        type_
+                    ),
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        #[derive(Debug, Clone, PartialEq, postgres_types::ToSql, postgres_types::FromSql)]
+        #[postgres(name = "domain_txt")]
+        pub struct DomainTxt(pub String);
+        #[derive(Debug)]
+        pub struct DomainTxtBorrowed<'a>(pub &'a str);
+        impl<'a> From<DomainTxtBorrowed<'a>> for DomainTxt {
+            fn from(DomainTxtBorrowed(inner): DomainTxtBorrowed<'a>) -> Self {
+                Self(inner.into())
+            }
+        }
+        impl<'a> postgres_types::ToSql for DomainTxtBorrowed<'a> {
+            fn to_sql(
+                &self,
+                _type: &postgres_types::Type,
+                buf: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let type_ = match *_type.kind() {
+                    postgres_types::Kind::Domain(ref type_) => type_,
+                    _ => unreachable!(),
+                };
+                postgres_types::ToSql::to_sql(&self.0, type_, buf)
+            }
+            fn accepts(type_: &postgres_types::Type) -> bool {
+                if type_.name() != "domain_txt" {
+                    return false;
+                }
+                match *type_.kind() {
+                    postgres_types::Kind::Domain(ref type_) => {
+                        <&'a str as postgres_types::ToSql>::accepts(type_)
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        #[derive(Debug, Copy, Clone, PartialEq, postgres_types::ToSql, postgres_types::FromSql)]
+        #[postgres(name = "domain_nb")]
+        pub struct DomainNb(pub i32);
+        #[derive(Debug, Clone, PartialEq, postgres_types::ToSql, postgres_types::FromSql)]
+        #[postgres(name = "domain_array")]
+        pub struct DomainArray(pub Vec<postgres_types::Json<serde_json::Value>>);
+        #[derive(Debug)]
+        pub struct DomainArrayBorrowed<'a>(
+            pub  cornucopia_client::ArrayIterator<
+                'a,
+                postgres_types::Json<&'a serde_json::value::RawValue>,
+            >,
+        );
+        impl<'a> From<DomainArrayBorrowed<'a>> for DomainArray {
+            fn from(DomainArrayBorrowed(inner): DomainArrayBorrowed<'a>) -> Self {
+                Self(
+                    inner
+                        .map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap()))
+                        .collect(),
+                )
+            }
+        }
+        #[derive(Debug)]
+        pub struct DomainArrayParams<'a>(
+            pub &'a [super::super::types::public::DomainJsonBorrowed<'a>],
+        );
+        impl<'a> postgres_types::ToSql for DomainArrayParams<'a> {
+            fn to_sql(
+                &self,
+                _type: &postgres_types::Type,
+                buf: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let type_ = match *_type.kind() {
+                    postgres_types::Kind::Domain(ref type_) => type_,
+                    _ => unreachable!(),
+                };
+                postgres_types::ToSql::to_sql(&self.0, type_, buf)
+            }
+            fn accepts(type_: &postgres_types::Type) -> bool {
+                if type_.name() != "domain_array" {
+                    return false;
+                }
+                match *type_.kind() {
+                    postgres_types::Kind::Domain(ref type_) => {
+                        <&'a [super::super::types::public::DomainJsonBorrowed<
+                            'a,
+                        >] as postgres_types::ToSql>::accepts(type_)
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
     }
 }
 pub mod queries {
@@ -665,6 +795,249 @@ pub mod queries {
                     composite: row.get(0),
                 },
                 mapper: |it| SelectCopy::from(it),
+            }
+        }
+    }
+    pub mod domain {
+        use postgres::{fallible_iterator::FallibleIterator, GenericClient};
+        #[derive(Debug)]
+        pub struct InsertNightmareDomainParams<'a> {
+            pub arr: super::super::types::public::DomainArrayParams<'a>,
+            pub json: super::super::types::public::DomainJsonBorrowed<'a>,
+            pub nb: super::super::types::public::DomainNb,
+            pub txt: super::super::types::public::DomainTxtBorrowed<'a>,
+        }
+        impl<'a> InsertNightmareDomainParams<'a> {
+            pub fn insert_nightmare_domain<C: GenericClient>(
+                &'a self,
+                client: &'a mut C,
+            ) -> Result<u64, postgres::Error> {
+                insert_nightmare_domain(client, &self.txt, &self.json, &self.nb, &self.arr)
+            }
+        }
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct SelectNightmareDomain {
+            pub arr: Vec<postgres_types::Json<serde_json::Value>>,
+            pub json: postgres_types::Json<serde_json::Value>,
+            pub nb: i32,
+            pub txt: String,
+        }
+        pub struct SelectNightmareDomainBorrowed<'a> {
+            pub arr: cornucopia_client::ArrayIterator<
+                'a,
+                postgres_types::Json<&'a serde_json::value::RawValue>,
+            >,
+            pub json: postgres_types::Json<&'a serde_json::value::RawValue>,
+            pub nb: i32,
+            pub txt: &'a str,
+        }
+        impl<'a> From<SelectNightmareDomainBorrowed<'a>> for SelectNightmareDomain {
+            fn from(
+                SelectNightmareDomainBorrowed { arr, json, nb, txt }: SelectNightmareDomainBorrowed<
+                    'a,
+                >,
+            ) -> Self {
+                Self {
+                    arr: arr
+                        .map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap()))
+                        .collect(),
+                    json: postgres_types::Json(serde_json::from_str(json.0.get()).unwrap()),
+                    nb,
+                    txt: txt.into(),
+                }
+            }
+        }
+        pub struct SelectNightmareDomainQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a mut C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&postgres::Row) -> SelectNightmareDomainBorrowed,
+            mapper: fn(SelectNightmareDomainBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> SelectNightmareDomainQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(
+                self,
+                mapper: fn(SelectNightmareDomainBorrowed) -> R,
+            ) -> SelectNightmareDomainQuery<'a, C, R, N> {
+                SelectNightmareDomainQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
+                self.client.prepare(self.query)
+            }
+            pub fn one(mut self) -> Result<T, postgres::Error> {
+                let stmt = self.stmt()?;
+                let row = self.client.query_one(&stmt, &self.params)?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
+                self.stream()?.collect()
+            }
+            pub fn opt(mut self) -> Result<Option<T>, postgres::Error> {
+                let stmt = self.stmt()?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub fn stream(
+                mut self,
+            ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
+            {
+                let stmt = self.stmt()?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .iterator()
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
+                Ok(stream)
+            }
+        }
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct SelectNightmareDomainNull {
+            pub arr: Option<Vec<postgres_types::Json<serde_json::Value>>>,
+            pub json: Option<postgres_types::Json<serde_json::Value>>,
+            pub nb: Option<i32>,
+            pub txt: Option<String>,
+        }
+        pub struct SelectNightmareDomainNullBorrowed<'a> {
+            pub arr: Option<
+                cornucopia_client::ArrayIterator<
+                    'a,
+                    postgres_types::Json<&'a serde_json::value::RawValue>,
+                >,
+            >,
+            pub json: Option<postgres_types::Json<&'a serde_json::value::RawValue>>,
+            pub nb: Option<i32>,
+            pub txt: Option<&'a str>,
+        }
+        impl<'a> From<SelectNightmareDomainNullBorrowed<'a>> for SelectNightmareDomainNull {
+            fn from(
+                SelectNightmareDomainNullBorrowed {
+                    arr,
+                    json,
+                    nb,
+                    txt,
+                }: SelectNightmareDomainNullBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    arr: arr.map(|v| {
+                        v.map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap()))
+                            .collect()
+                    }),
+                    json: json
+                        .map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap())),
+                    nb,
+                    txt: txt.map(|v| v.into()),
+                }
+            }
+        }
+        pub struct SelectNightmareDomainNullQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a mut C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&postgres::Row) -> SelectNightmareDomainNullBorrowed,
+            mapper: fn(SelectNightmareDomainNullBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> SelectNightmareDomainNullQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(
+                self,
+                mapper: fn(SelectNightmareDomainNullBorrowed) -> R,
+            ) -> SelectNightmareDomainNullQuery<'a, C, R, N> {
+                SelectNightmareDomainNullQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
+                self.client.prepare(self.query)
+            }
+            pub fn one(mut self) -> Result<T, postgres::Error> {
+                let stmt = self.stmt()?;
+                let row = self.client.query_one(&stmt, &self.params)?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
+                self.stream()?.collect()
+            }
+            pub fn opt(mut self) -> Result<Option<T>, postgres::Error> {
+                let stmt = self.stmt()?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub fn stream(
+                mut self,
+            ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
+            {
+                let stmt = self.stmt()?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .iterator()
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
+                Ok(stream)
+            }
+        }
+        pub fn select_nightmare_domain<'a, C: GenericClient>(
+            client: &'a mut C,
+        ) -> SelectNightmareDomainQuery<'a, C, SelectNightmareDomain, 0> {
+            SelectNightmareDomainQuery {
+                client,
+                params: [],
+                query: "SELECT txt, json, nb, arr FROM nightmare_domain;
+",
+                extractor: |row| SelectNightmareDomainBorrowed {
+                    arr: row.get(3),
+                    json: row.get(1),
+                    nb: row.get(2),
+                    txt: row.get(0),
+                },
+                mapper: |it| SelectNightmareDomain::from(it),
+            }
+        }
+        pub fn insert_nightmare_domain<'a, C: GenericClient>(
+            client: &'a mut C,
+            txt: &'a super::super::types::public::DomainTxtBorrowed<'a>,
+            json: &'a super::super::types::public::DomainJsonBorrowed<'a>,
+            nb: &'a super::super::types::public::DomainNb,
+            arr: &'a super::super::types::public::DomainArrayParams<'a>,
+        ) -> Result<u64, postgres::Error> {
+            let stmt = client.prepare(
+                "INSERT INTO nightmare_domain (txt, json, nb, arr) VALUES ($1, $2, $3, $4);
+",
+            )?;
+            client.execute(&stmt, &[txt, json, nb, arr])
+        }
+        pub fn select_nightmare_domain_null<'a, C: GenericClient>(
+            client: &'a mut C,
+        ) -> SelectNightmareDomainNullQuery<'a, C, SelectNightmareDomainNull, 0> {
+            SelectNightmareDomainNullQuery {
+                client,
+                params: [],
+                query: "SELECT txt, json, nb, arr FROM nightmare_domain;",
+                extractor: |row| SelectNightmareDomainNullBorrowed {
+                    arr: row.get(3),
+                    json: row.get(1),
+                    nb: row.get(2),
+                    txt: row.get(0),
+                },
+                mapper: |it| SelectNightmareDomainNull::from(it),
             }
         }
     }
