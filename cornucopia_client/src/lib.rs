@@ -356,15 +356,15 @@ impl<'a, T: FromSql<'a>> FromSql<'a> for ArrayIterator<'a, T> {
     }
 }
 
-pub struct DomainWrapper<T: ToSql>(pub T);
+pub struct Domain<T: ToSql>(pub T);
 
-impl<T: ToSql + Debug> Debug for DomainWrapper<T> {
+impl<T: ToSql + Debug> Debug for Domain<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("DomainWrapper").field(&self.0).finish()
     }
 }
 
-impl<T: ToSql> ToSql for DomainWrapper<T> {
+impl<T: ToSql> ToSql for Domain<T> {
     fn to_sql(
         &self,
         ty: &Type,

@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use error::{Error, UnsupportedPostgresTypeError};
 use heck::ToUpperCamelCase;
-use indexmap::IndexMap;
+use indexmap::{map::Entry, IndexMap};
 use postgres_types::{Kind, Type};
 
 use crate::utils::SchemaKey;
@@ -55,7 +55,7 @@ impl CornucopiaType {
         match self {
             CornucopiaType::Domain { inner, .. } => {
                 format!(
-                    "&cornucopia_client::DomainWrapper::<{}>(&self.{name})",
+                    "&cornucopia_client::Domain::<{}>(&self.{name})",
                     inner.brw_struct(true, false)
                 )
             }
@@ -66,7 +66,7 @@ impl CornucopiaType {
     pub(crate) fn accept_to_sql(&self) -> String {
         match self {
             CornucopiaType::Domain { inner, .. } => format!(
-                "cornucopia_client::DomainWrapper::<{}>",
+                "cornucopia_client::Domain::<{}>",
                 inner.brw_struct(true, false)
             ),
             _ => self.brw_struct(true, false),
@@ -191,7 +191,6 @@ impl TypeRegistrar {
         }
 
         fn domain(ty: &Type, inner: Rc<CornucopiaType>) -> CornucopiaType {
-            let rust_ty_name = ty.name().to_upper_camel_case();
             CornucopiaType::Domain {
                 pg_ty: ty.clone(),
                 inner,
@@ -275,8 +274,8 @@ impl TypeRegistrar {
             .types
             .entry((ty.schema().to_owned(), ty.name().to_owned()))
         {
-            indexmap::map::Entry::Occupied(o) => o.index(),
-            indexmap::map::Entry::Vacant(v) => {
+            Entry::Occupied(o) => o.index(),
+            Entry::Vacant(v) => {
                 let index = v.index();
                 v.insert(Rc::new(call()));
                 index

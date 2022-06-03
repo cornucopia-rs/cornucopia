@@ -235,7 +235,7 @@ pub mod types {
                             postgres_types::ToSql::to_sql(&self.spongebob, field.type_(), buf)
                         }
                         "domain" => postgres_types::ToSql::to_sql(
-                            &cornucopia_client::DomainWrapper::<&'a str>(&self.domain),
+                            &cornucopia_client::Domain::<&'a str>(&self.domain),
                             field.type_(),
                             buf,
                         ),
@@ -278,7 +278,7 @@ pub mod types {
                                     )
                                 }
                                 "domain" => {
-                                    <cornucopia_client::DomainWrapper::<
+                                    <cornucopia_client::Domain::<
                                         &'a str,
                                     > as postgres_types::ToSql>::accepts(f.type_())
                                 }
