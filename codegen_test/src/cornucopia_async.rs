@@ -4,121 +4,6 @@
 #![allow(dead_code)]
 pub mod types {
     pub mod public {
-        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, PartialEq)]
-        #[postgres(name = "clone_composite")]
-        pub struct CloneComposite {
-            pub first: i32,
-            pub second: String,
-        }
-        #[derive(Debug)]
-        pub struct CloneCompositeBorrowed<'a> {
-            pub first: i32,
-            pub second: &'a str,
-        }
-        impl<'a> From<CloneCompositeBorrowed<'a>> for CloneComposite {
-            fn from(CloneCompositeBorrowed { first, second }: CloneCompositeBorrowed<'a>) -> Self {
-                Self {
-                    first,
-                    second: second.into(),
-                }
-            }
-        }
-        impl<'a> postgres_types::FromSql<'a> for CloneCompositeBorrowed<'a> {
-            fn from_sql(
-                _type: &postgres_types::Type,
-                buf: &'a [u8],
-            ) -> Result<
-                CloneCompositeBorrowed<'a>,
-                std::boxed::Box<dyn std::error::Error + Sync + Send>,
-            > {
-                let fields = match *_type.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                let mut buf = buf;
-                let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let first = postgres_types::private::read_value(fields[0].type_(), &mut buf)?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
-                let second = postgres_types::private::read_value(fields[1].type_(), &mut buf)?;
-                Result::Ok(CloneCompositeBorrowed { first, second })
-            }
-            fn accepts(type_: &postgres_types::Type) -> bool {
-                type_.name() == "clone_composite" && type_.schema() == "public"
-            }
-        }
-        impl<'a> postgres_types::ToSql for CloneCompositeBorrowed<'a> {
-            fn to_sql(
-                &self,
-                _type: &postgres_types::Type,
-                buf: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<
-                postgres_types::IsNull,
-                std::boxed::Box<dyn std::error::Error + Sync + Send>,
-            > {
-                let fields = match *_type.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                buf.extend_from_slice(&(fields.len() as i32).to_be_bytes());
-                for field in fields {
-                    buf.extend_from_slice(&field.type_().oid().to_be_bytes());
-                    let base = buf.len();
-                    buf.extend_from_slice(&[0; 4]);
-                    let r = match field.name() {
-                        "first" => postgres_types::ToSql::to_sql(&self.first, field.type_(), buf),
-                        "second" => postgres_types::ToSql::to_sql(&self.second, field.type_(), buf),
-                        _ => unreachable!(),
-                    };
-                    let count = match r? {
-                        postgres_types::IsNull::Yes => -1,
-                        postgres_types::IsNull::No => {
-                            let len = buf.len() - base - 4;
-                            if len > i32::max_value() as usize {
-                                return std::result::Result::Err(std::convert::Into::into(
-                                    "value too large to transmit",
-                                ));
-                            }
-                            len as i32
-                        }
-                    };
-                    buf[base..base + 4].copy_from_slice(&count.to_be_bytes());
-                }
-                std::result::Result::Ok(postgres_types::IsNull::No)
-            }
-            fn accepts(type_: &postgres_types::Type) -> bool {
-                if type_.name() != "clone_composite" {
-                    return false;
-                }
-                match *type_.kind() {
-                    postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 2usize {
-                            return false;
-                        }
-                        fields.iter().all(|f| match f.name() {
-                            "first" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
-                            "second" => <&'a str as postgres_types::ToSql>::accepts(f.type_()),
-                            _ => false,
-                        })
-                    }
-                    _ => false,
-                }
-            }
-            fn to_sql_checked(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                postgres_types::__to_sql_checked(self, ty, out)
-            }
-        }
-        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Copy, Clone, PartialEq)]
-        #[postgres(name = "copy_composite")]
-        pub struct CopyComposite {
-            pub first: i32,
-            pub second: f64,
-        }
         #[derive(
             Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, Copy, PartialEq, Eq,
         )]
@@ -160,10 +45,8 @@ pub mod types {
             fn from_sql(
                 _type: &postgres_types::Type,
                 buf: &'a [u8],
-            ) -> Result<
-                CustomCompositeBorrowed<'a>,
-                std::boxed::Box<dyn std::error::Error + Sync + Send>,
-            > {
+            ) -> Result<CustomCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
+            {
                 let fields = match *_type.kind() {
                     postgres_types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
@@ -176,7 +59,7 @@ pub mod types {
                 let such_cool = postgres_types::private::read_value(fields[1].type_(), &mut buf)?;
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
                 let nice = postgres_types::private::read_value(fields[2].type_(), &mut buf)?;
-                Result::Ok(CustomCompositeBorrowed {
+                Ok(CustomCompositeBorrowed {
                     wow,
                     such_cool,
                     nice,
@@ -191,10 +74,8 @@ pub mod types {
                 &self,
                 _type: &postgres_types::Type,
                 buf: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<
-                postgres_types::IsNull,
-                std::boxed::Box<dyn std::error::Error + Sync + Send>,
-            > {
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
                 let fields = match *_type.kind() {
                     postgres_types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
@@ -217,16 +98,14 @@ pub mod types {
                         postgres_types::IsNull::No => {
                             let len = buf.len() - base - 4;
                             if len > i32::max_value() as usize {
-                                return std::result::Result::Err(std::convert::Into::into(
-                                    "value too large to transmit",
-                                ));
+                                return Err(Into::into("value too large to transmit"));
                             }
                             len as i32
                         }
                     };
                     buf[base..base + 4].copy_from_slice(&count.to_be_bytes());
                 }
-                std::result::Result::Ok(postgres_types::IsNull::No)
+                Ok(postgres_types::IsNull::No)
             }
             fn accepts(type_: &postgres_types::Type) -> bool {
                 if type_.name() != "custom_composite" {
@@ -261,7 +140,7 @@ pub mod types {
                 &self,
                 ty: &postgres_types::Type,
                 out: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
             {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
@@ -280,10 +159,8 @@ pub mod types {
             fn from_sql(
                 _type: &postgres_types::Type,
                 buf: &'a [u8],
-            ) -> std::result::Result<
-                MyDomainBorrowed<'a>,
-                std::boxed::Box<dyn std::error::Error + Sync + Send>,
-            > {
+            ) -> Result<MyDomainBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
+            {
                 <&'a str as postgres_types::FromSql>::from_sql(_type, buf).map(MyDomainBorrowed)
             }
             fn accepts(type_: &postgres_types::Type) -> bool {
@@ -306,10 +183,8 @@ pub mod types {
                 &self,
                 _type: &postgres_types::Type,
                 buf: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<
-                postgres_types::IsNull,
-                std::boxed::Box<dyn std::error::Error + Sync + Send>,
-            > {
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
                 let type_ = match *_type.kind() {
                     postgres_types::Kind::Domain(ref type_) => type_,
                     _ => unreachable!(),
@@ -331,10 +206,8 @@ pub mod types {
                 &self,
                 ty: &postgres_types::Type,
                 out: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<
-                postgres_types::IsNull,
-                Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>,
-            > {
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
@@ -367,7 +240,7 @@ pub mod types {
             ) -> Self {
                 Self {
                     custom: custom.map(|v| v.into()).collect(),
-                    spongebob: spongebob.map(|v| v.into()).collect(),
+                    spongebob: spongebob.map(|v| v).collect(),
                     domain: domain.into(),
                 }
             }
@@ -376,10 +249,8 @@ pub mod types {
             fn from_sql(
                 _type: &postgres_types::Type,
                 buf: &'a [u8],
-            ) -> Result<
-                NightmareCompositeBorrowed<'a>,
-                std::boxed::Box<dyn std::error::Error + Sync + Send>,
-            > {
+            ) -> Result<NightmareCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
+            {
                 let fields = match *_type.kind() {
                     postgres_types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
@@ -392,7 +263,7 @@ pub mod types {
                 let spongebob = postgres_types::private::read_value(fields[1].type_(), &mut buf)?;
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
                 let domain = postgres_types::private::read_value(fields[2].type_(), &mut buf)?;
-                Result::Ok(NightmareCompositeBorrowed {
+                Ok(NightmareCompositeBorrowed {
                     custom,
                     spongebob,
                     domain,
@@ -413,10 +284,8 @@ pub mod types {
                 &self,
                 _type: &postgres_types::Type,
                 buf: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<
-                postgres_types::IsNull,
-                std::boxed::Box<dyn std::error::Error + Sync + Send>,
-            > {
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
                 let fields = match *_type.kind() {
                     postgres_types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
@@ -439,16 +308,14 @@ pub mod types {
                         postgres_types::IsNull::No => {
                             let len = buf.len() - base - 4;
                             if len > i32::max_value() as usize {
-                                return std::result::Result::Err(std::convert::Into::into(
-                                    "value too large to transmit",
-                                ));
+                                return Err(Into::into("value too large to transmit"));
                             }
                             len as i32
                         }
                     };
                     buf[base..base + 4].copy_from_slice(&count.to_be_bytes());
                 }
-                std::result::Result::Ok(postgres_types::IsNull::No)
+                Ok(postgres_types::IsNull::No)
             }
             fn accepts(type_: &postgres_types::Type) -> bool {
                 if type_.name() != "nightmare_composite" {
@@ -487,10 +354,119 @@ pub mod types {
                 &self,
                 ty: &postgres_types::Type,
                 out: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
             {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
+        }
+        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, PartialEq)]
+        #[postgres(name = "clone_composite")]
+        pub struct CloneComposite {
+            pub first: i32,
+            pub second: String,
+        }
+        #[derive(Debug)]
+        pub struct CloneCompositeBorrowed<'a> {
+            pub first: i32,
+            pub second: &'a str,
+        }
+        impl<'a> From<CloneCompositeBorrowed<'a>> for CloneComposite {
+            fn from(CloneCompositeBorrowed { first, second }: CloneCompositeBorrowed<'a>) -> Self {
+                Self {
+                    first,
+                    second: second.into(),
+                }
+            }
+        }
+        impl<'a> postgres_types::FromSql<'a> for CloneCompositeBorrowed<'a> {
+            fn from_sql(
+                _type: &postgres_types::Type,
+                buf: &'a [u8],
+            ) -> Result<CloneCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *_type.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                let mut buf = buf;
+                let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
+                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                let first = postgres_types::private::read_value(fields[0].type_(), &mut buf)?;
+                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                let second = postgres_types::private::read_value(fields[1].type_(), &mut buf)?;
+                Ok(CloneCompositeBorrowed { first, second })
+            }
+            fn accepts(type_: &postgres_types::Type) -> bool {
+                type_.name() == "clone_composite" && type_.schema() == "public"
+            }
+        }
+        impl<'a> postgres_types::ToSql for CloneCompositeBorrowed<'a> {
+            fn to_sql(
+                &self,
+                _type: &postgres_types::Type,
+                buf: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *_type.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                buf.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {
+                    buf.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = buf.len();
+                    buf.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {
+                        "first" => postgres_types::ToSql::to_sql(&self.first, field.type_(), buf),
+                        "second" => postgres_types::ToSql::to_sql(&self.second, field.type_(), buf),
+                        _ => unreachable!(),
+                    };
+                    let count = match r? {
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {
+                            let len = buf.len() - base - 4;
+                            if len > i32::max_value() as usize {
+                                return Err(Into::into("value too large to transmit"));
+                            }
+                            len as i32
+                        }
+                    };
+                    buf[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                }
+                Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(type_: &postgres_types::Type) -> bool {
+                if type_.name() != "clone_composite" {
+                    return false;
+                }
+                match *type_.kind() {
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != 2usize {
+                            return false;
+                        }
+                        fields.iter().all(|f| match f.name() {
+                            "first" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+                            "second" => <&'a str as postgres_types::ToSql>::accepts(f.type_()),
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Copy, Clone, PartialEq)]
+        #[postgres(name = "copy_composite")]
+        pub struct CopyComposite {
+            pub first: i32,
+            pub second: f64,
         }
     }
 }
@@ -1313,40 +1289,36 @@ pub mod queries {
                 }: SelectEverythingArrayBorrowed<'a>,
             ) -> Self {
                 Self {
-                    bingint_: bingint_.map(|v| v.into()).collect(),
-                    bool_: bool_.map(|v| v.into()).collect(),
-                    boolean_: boolean_.map(|v| v.into()).collect(),
+                    bingint_: bingint_.map(|v| v).collect(),
+                    bool_: bool_.map(|v| v).collect(),
+                    boolean_: boolean_.map(|v| v).collect(),
                     bytea_: bytea_.map(|v| v.into()).collect(),
-                    char_: char_.map(|v| v.into()).collect(),
-                    date_: date_.map(|v| v.into()).collect(),
-                    double_precision_: double_precision_.map(|v| v.into()).collect(),
-                    float4_: float4_.map(|v| v.into()).collect(),
-                    float8_: float8_.map(|v| v.into()).collect(),
-                    inet_: inet_.map(|v| v.into()).collect(),
-                    int2_: int2_.map(|v| v.into()).collect(),
-                    int4_: int4_.map(|v| v.into()).collect(),
-                    int8_: int8_.map(|v| v.into()).collect(),
-                    int_: int_.map(|v| v.into()).collect(),
+                    char_: char_.map(|v| v).collect(),
+                    date_: date_.map(|v| v).collect(),
+                    double_precision_: double_precision_.map(|v| v).collect(),
+                    float4_: float4_.map(|v| v).collect(),
+                    float8_: float8_.map(|v| v).collect(),
+                    inet_: inet_.map(|v| v).collect(),
+                    int2_: int2_.map(|v| v).collect(),
+                    int4_: int4_.map(|v| v).collect(),
+                    int8_: int8_.map(|v| v).collect(),
+                    int_: int_.map(|v| v).collect(),
                     json_: json_
                         .map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap()))
                         .collect(),
                     jsonb_: jsonb_
                         .map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap()))
                         .collect(),
-                    macaddr_: macaddr_.map(|v| v.into()).collect(),
-                    real_: real_.map(|v| v.into()).collect(),
-                    smallint_: smallint_.map(|v| v.into()).collect(),
+                    macaddr_: macaddr_.map(|v| v).collect(),
+                    real_: real_.map(|v| v).collect(),
+                    smallint_: smallint_.map(|v| v).collect(),
                     text_: text_.map(|v| v.into()).collect(),
-                    time_: time_.map(|v| v.into()).collect(),
-                    timestamp_: timestamp_.map(|v| v.into()).collect(),
-                    timestamp_with_time_zone_: timestamp_with_time_zone_
-                        .map(|v| v.into())
-                        .collect(),
-                    timestamp_without_time_zone_: timestamp_without_time_zone_
-                        .map(|v| v.into())
-                        .collect(),
-                    timestamptz_: timestamptz_.map(|v| v.into()).collect(),
-                    uuid_: uuid_.map(|v| v.into()).collect(),
+                    time_: time_.map(|v| v).collect(),
+                    timestamp_: timestamp_.map(|v| v).collect(),
+                    timestamp_with_time_zone_: timestamp_with_time_zone_.map(|v| v).collect(),
+                    timestamp_without_time_zone_: timestamp_without_time_zone_.map(|v| v).collect(),
+                    timestamptz_: timestamptz_.map(|v| v).collect(),
+                    uuid_: uuid_.map(|v| v).collect(),
                     varchar_: varchar_.map(|v| v.into()).collect(),
                 }
             }

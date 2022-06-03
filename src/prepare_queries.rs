@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::{
     parser::{error::ValidationError, Parsed, ParsedQuery},
     read_queries::Module,
@@ -24,7 +26,7 @@ pub(crate) struct PreparedQuery {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct PreparedField {
     pub(crate) name: String,
-    pub(crate) ty_idx: usize,
+    pub(crate) ty: Rc<CornucopiaType>,
     pub(crate) is_nullable: bool,
     pub(crate) is_inner_nullable: bool, // Vec only
 }
@@ -63,6 +65,12 @@ pub(crate) struct PreparedModule {
     pub(crate) rows: IndexMap<String, PreparedRow>,
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct Preparation {
+    pub(crate) modules: Vec<PreparedModule>,
+    pub(crate) types: IndexMap<(String, String), PreparedType>,
+}
+
 impl PreparedModule {
     fn add_row(
         &mut self,
@@ -95,7 +103,7 @@ impl PreparedModule {
                 Ok((o.index(), indexes.unwrap()))
             }
             Entry::Vacant(v) => {
-                let is_copy = fields.iter().all(|f| registrar[f.ty_idx].is_copy());
+                let is_copy = fields.iter().all(|f| f.ty.is_copy());
                 let mut tmp = fields.to_vec();
                 tmp.sort_unstable_by(|a, b| a.name.cmp(&b.name));
                 v.insert(PreparedRow {
@@ -130,7 +138,6 @@ impl PreparedModule {
 
     fn add_params(
         &mut self,
-        registrar: &TypeRegistrar,
         name: Parsed<String>,
         query_idx: usize,
     ) -> Result<usize, ErrorVariant> {
@@ -163,7 +170,7 @@ impl PreparedModule {
                 let index = v.index();
                 v.insert(PreparedParams {
                     name: name.value,
-                    is_copy: fields.iter().all(|a| registrar[a.ty_idx].is_copy()),
+                    is_copy: fields.iter().all(|a| a.ty.is_copy()),
                     fields,
                     queries: vec![query_idx],
                 });
@@ -194,22 +201,21 @@ pub(crate) fn prepare(
     client: &mut Client,
     registrar: &mut TypeRegistrar,
     modules: Vec<Module>,
-) -> Result<
-    (
-        Vec<PreparedModule>,
-        IndexMap<(String, String), PreparedType>,
-    ),
-    Error,
-> {
-    let mut prepared_modules = Vec::new();
+) -> Result<Preparation, Error> {
+    let mut tmp = Preparation {
+        modules: Vec::new(),
+        types: IndexMap::new(),
+    };
     for module in modules {
-        prepared_modules.push(prepare_module(client, module, registrar)?);
+        tmp.modules.push(prepare_module(client, module, registrar)?);
     }
-    let prepared_types = registrar
+    // Sort module for consistent codegen
+    tmp.modules.sort_unstable_by(|a, b| a.name.cmp(&b.name));
+    tmp.types = registrar
         .types
         .iter()
         .filter_map(|(key, ty)| {
-            if let CornucopiaType::Custom { pg_ty, .. } = ty {
+            if let CornucopiaType::Custom { pg_ty, .. } = ty.as_ref() {
                 Some((
                     key.clone(),
                     match pg_ty.kind() {
@@ -217,7 +223,7 @@ pub(crate) fn prepare(
                         Kind::Domain(inner) => {
                             PreparedType::Domain(PreparedField {
                                 name: "inner".to_string(),
-                                ty_idx: registrar.index_of(inner),
+                                ty: registrar.ref_of(inner),
                                 is_nullable: false,
                                 is_inner_nullable: false, // TODO used when support null everywhere
                             })
@@ -228,7 +234,7 @@ pub(crate) fn prepare(
                                 .map(|field| {
                                     PreparedField {
                                         name: field.name().to_string(),
-                                        ty_idx: registrar.index_of(field.type_()),
+                                        ty: registrar.ref_of(field.type_()),
                                         is_nullable: false, // TODO used when support null everywhere
                                         is_inner_nullable: false, // TODO used when support null everywhere
                                     }
@@ -243,7 +249,7 @@ pub(crate) fn prepare(
             }
         })
         .collect();
-    Ok((prepared_modules, prepared_types))
+    Ok(tmp)
 }
 
 /// Prepares all queries in this module
@@ -283,9 +289,10 @@ fn prepare_query(
         // Register type
         params.push(PreparedField {
             name: name.value.to_owned(),
-            ty_idx: registrar
+            ty: registrar
                 .register(ty)
-                .map_err(|e| Error::new(e, &query, module_path))?,
+                .map_err(|e| Error::new(e, &query, module_path))?
+                .clone(),
             is_nullable: false,       // TODO used when support null everywhere
             is_inner_nullable: false, // TODO used when support null everywhere
         });
@@ -334,12 +341,15 @@ fn prepare_query(
             is_nullable: nullable_cols.iter().any(|(_, n)| *n == name),
             is_inner_nullable: false, // TODO used when support null everywhere
             name,
-            ty_idx: registrar.register(column.type_()).map_err(|e| Error {
-                query_start_line: Some(query.line),
-                err: e.into(),
-                path: String::from(module_path),
-                query_name: query.name.value.clone(),
-            })?,
+            ty: registrar
+                .register(column.type_())
+                .map_err(|e| Error {
+                    query_start_line: Some(query.line),
+                    err: e.into(),
+                    path: String::from(module_path),
+                    query_name: query.name.value.clone(),
+                })?
+                .clone(),
         });
     }
 
@@ -370,7 +380,7 @@ fn prepare_query(
     let query_idx = module.add_query(query.name.clone(), params, row_idx, query.sql_str);
     if params_not_empty {
         module
-            .add_params(registrar, param_struct_name, query_idx)
+            .add_params(param_struct_name, query_idx)
             .map_err(|e| Error {
                 err: e,
                 query_name: query.name.value.clone(),
