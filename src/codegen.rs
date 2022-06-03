@@ -521,6 +521,53 @@ fn gen_custom_type(
     ty: &CornucopiaType,
 ) {
     match ty {
+        CornucopiaType::Domain {
+            pg_ty,
+            inner,
+            struct_name,
+            ..
+        } => {
+            let ty_name = pg_ty.name();
+            let ty_schema = pg_ty.schema();
+            let copy = if inner.is_copy() { "Copy," } else { "" };
+            match prepared.get(&SchemaKey::from(pg_ty)).unwrap() {
+                PreparedType::Domain(field) => {
+                    let owned_inner = &field.own_struct();
+                    gen!(
+                        w,
+                        "#[derive(Debug, {copy}Clone, PartialEq, postgres_types::ToSql,postgres_types::FromSql)]
+                        #[postgres(name = \"{ty_name}\")]
+                        pub struct {struct_name} (pub {owned_inner});"
+                    );
+                    if !inner.is_copy() {
+                        let brw_inner = field.brw_struct(false);
+                        let inner_value = field.owning_call();
+                        gen!(
+                            w,
+                            "#[derive(Debug)]
+                            pub struct {struct_name}Borrowed<'a> (pub {brw_inner});
+                            impl<'a> From<{struct_name}Borrowed<'a>> for {struct_name} {{
+                                fn from(
+                                    {struct_name}Borrowed (inner): {struct_name}Borrowed<'a>,
+                                ) -> Self {{ Self({inner_value}) }}
+                            }}"
+                        );
+                        domain_brw_fromsql(w, struct_name, &brw_inner, ty_name, ty_schema);
+                        if !inner.is_params() {
+                            let field = field.brw_struct(true);
+                            let derive = if inner.is_copy() { ",Copy,Clone" } else { "" };
+                            gen!(
+                                w,
+                                "#[derive(Debug{derive})]
+                                pub struct {struct_name}Params<'a>(pub {field});",
+                            );
+                        }
+                        domain_tosql(w, struct_name, field, ty_name, inner.is_params());
+                    }
+                }
+                _ => unreachable!(),
+            }
+        }
         CornucopiaType::Custom {
             pg_ty,
             struct_name,
@@ -539,40 +586,6 @@ fn gen_custom_type(
                         #[postgres(name = \"{ty_name}\")]
                         pub enum {struct_name} {{ {variants_str} }}",
                     )
-                }
-                PreparedType::Domain(inner) => {
-                    let owned_inner = &inner.own_struct();
-                    gen!(
-                        w,
-                        "#[derive(Debug, {copy}Clone, PartialEq, postgres_types::ToSql,postgres_types::FromSql)]
-                        #[postgres(name = \"{ty_name}\")]
-                        pub struct {struct_name} (pub {owned_inner});"
-                    );
-                    if !is_copy {
-                        let brw_inner = inner.brw_struct(false);
-                        let inner_value = inner.owning_call();
-                        gen!(
-                            w,
-                            "#[derive(Debug)]
-                            pub struct {struct_name}Borrowed<'a> (pub {brw_inner});
-                            impl<'a> From<{struct_name}Borrowed<'a>> for {struct_name} {{
-                                fn from(
-                                    {struct_name}Borrowed (inner): {struct_name}Borrowed<'a>,
-                                ) -> Self {{ Self({inner_value}) }}
-                            }}"
-                        );
-                        domain_brw_fromsql(w, struct_name, &brw_inner, ty_name, ty_schema);
-                        if !is_params {
-                            let field = inner.brw_struct(true);
-                            let derive = if *is_copy { ",Copy,Clone" } else { "" };
-                            gen!(
-                                w,
-                                "#[derive(Debug{derive})]
-                                pub struct {struct_name}Params<'a>(pub {field});",
-                            );
-                        }
-                        domain_tosql(w, struct_name, inner, ty_name, *is_params);
-                    }
                 }
                 PreparedType::Composite(fields) => {
                     let fields_str = join_comma(fields, |w, f| {
@@ -618,9 +631,10 @@ fn gen_custom_type(
                         composite_tosql(w, struct_name, fields, ty_name, *is_params);
                     }
                 }
+                _ => unreachable!(),
             }
         }
-        CornucopiaType::Simple { .. } | CornucopiaType::Array { .. } => unreachable!(),
+        _ => unreachable!(),
     }
 }
 
@@ -632,7 +646,10 @@ fn gen_type_modules(
     // Group the custom types by schema name
     let mut modules = IndexMap::<String, Vec<Rc<CornucopiaType>>>::new();
     for ((schema, _), ty) in &registrar.types {
-        if let CornucopiaType::Custom { .. } = ty.as_ref() {
+        if matches!(
+            ty.as_ref(),
+            CornucopiaType::Custom { .. } | CornucopiaType::Domain { .. }
+        ) {
             match modules.entry(schema.to_owned()) {
                 Entry::Occupied(mut entry) => {
                     entry.get_mut().push(ty.clone());

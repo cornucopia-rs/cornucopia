@@ -18,6 +18,12 @@ pub(crate) enum CornucopiaType {
     Array {
         inner: Rc<CornucopiaType>,
     },
+    Domain {
+        pg_ty: Type,
+        inner: Rc<CornucopiaType>,
+        struct_name: String,
+        struct_path: String,
+    },
     Custom {
         pg_ty: Type,
         struct_name: String,
@@ -33,6 +39,7 @@ impl CornucopiaType {
             CornucopiaType::Simple { is_copy, .. } | CornucopiaType::Custom { is_copy, .. } => {
                 *is_copy
             }
+            CornucopiaType::Domain { inner, .. } => inner.is_copy(),
             CornucopiaType::Array { .. } => false,
         }
     }
@@ -41,6 +48,7 @@ impl CornucopiaType {
         match self {
             CornucopiaType::Simple { .. } => true,
             CornucopiaType::Array { .. } => false,
+            CornucopiaType::Domain { inner, .. } => inner.is_params(),
             CornucopiaType::Custom { is_params, .. } => *is_params,
         }
     }
@@ -72,6 +80,9 @@ impl CornucopiaType {
                 let inner = inner.owning_call("v", is_inner_nullable, false);
                 format!("{name}.map(|v| {inner}).collect()")
             }
+            CornucopiaType::Domain { .. } => {
+                format!("{name}.0.into()")
+            }
             CornucopiaType::Custom { .. } => {
                 format!("{name}.into()")
             }
@@ -89,6 +100,7 @@ impl CornucopiaType {
                     format!("Vec<{own_inner}>")
                 }
             }
+            CornucopiaType::Domain { inner, .. } => inner.own_struct(false),
             CornucopiaType::Custom { struct_path, .. } => struct_path.to_string(),
         }
     }
@@ -120,6 +132,17 @@ impl CornucopiaType {
                     format!("&{lifetime} [{inner}]")
                 } else {
                     format!("cornucopia_client::ArrayIterator<{lifetime}, {inner}>")
+                }
+            }
+            CornucopiaType::Domain {
+                struct_path, inner, ..
+            } => {
+                if inner.is_copy() {
+                    struct_path.to_string()
+                } else if for_params && !inner.is_params() {
+                    format!("{}Params<{lifetime}>", struct_path)
+                } else {
+                    format!("{}Borrowed<{lifetime}>", struct_path)
                 }
             }
             CornucopiaType::Custom {
@@ -163,6 +186,16 @@ impl TypeRegistrar {
             }
         }
 
+        fn domain(ty: &Type, inner: Rc<CornucopiaType>) -> CornucopiaType {
+            let rust_ty_name = ty.name().to_upper_camel_case();
+            CornucopiaType::Domain {
+                pg_ty: ty.clone(),
+                inner,
+                struct_path: format!("super::super::types::{}::{}", ty.schema(), rust_ty_name),
+                struct_name: rust_ty_name,
+            }
+        }
+
         Ok(match ty.kind() {
             Kind::Enum(_) => self.insert(ty, || custom(ty, true, true)),
             Kind::Array(inner_ty) => {
@@ -172,9 +205,8 @@ impl TypeRegistrar {
                 })
             }
             Kind::Domain(inner_ty) => {
-                let inner = self.register(inner_ty)?;
-                let (is_copy, is_params) = (inner.is_copy(), inner.is_params());
-                self.insert(ty, || custom(ty, is_copy, is_params))
+                let inner = self.register(inner_ty)?.clone();
+                self.insert(ty, || domain(ty, inner.clone()))
             }
             Kind::Composite(composite_fields) => {
                 let mut is_copy = true;

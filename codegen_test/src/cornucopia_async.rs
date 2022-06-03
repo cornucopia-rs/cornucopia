@@ -216,7 +216,7 @@ pub mod types {
         pub struct NightmareComposite {
             pub custom: Vec<super::super::types::public::CustomComposite>,
             pub spongebob: Vec<super::super::types::public::SpongebobCharacter>,
-            pub domain: super::super::types::public::MyDomain,
+            pub domain: String,
         }
         #[derive(Debug)]
         pub struct NightmareCompositeBorrowed<'a> {
@@ -241,7 +241,7 @@ pub mod types {
                 Self {
                     custom: custom.map(|v| v.into()).collect(),
                     spongebob: spongebob.map(|v| v).collect(),
-                    domain: domain.into(),
+                    domain: domain.0.into(),
                 }
             }
         }

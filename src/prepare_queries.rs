@@ -222,37 +222,38 @@ pub(crate) fn prepare(
         .types
         .iter()
         .filter_map(|(key, ty)| {
-            if let CornucopiaType::Custom { pg_ty, .. } = ty.as_ref() {
-                Some((
-                    key.clone(),
-                    match pg_ty.kind() {
-                        Kind::Enum(variants) => PreparedType::Enum(variants.to_vec()),
-                        Kind::Domain(inner) => {
-                            PreparedType::Domain(PreparedField {
-                                name: "inner".to_string(),
-                                ty: registrar.ref_of(inner),
-                                is_nullable: false,
-                                is_inner_nullable: false, // TODO used when support null everywhere
-                            })
-                        }
-                        Kind::Composite(fields) => PreparedType::Composite(
-                            fields
-                                .iter()
-                                .map(|field| {
-                                    PreparedField {
-                                        name: field.name().to_string(),
-                                        ty: registrar.ref_of(field.type_()),
-                                        is_nullable: false, // TODO used when support null everywhere
-                                        is_inner_nullable: false, // TODO used when support null everywhere
-                                    }
+            match ty.as_ref() {
+                CornucopiaType::Custom { pg_ty, .. } | CornucopiaType::Domain { pg_ty, .. } => {
+                    Some((
+                        key.clone(),
+                        match pg_ty.kind() {
+                            Kind::Enum(variants) => PreparedType::Enum(variants.to_vec()),
+                            Kind::Domain(inner) => {
+                                PreparedType::Domain(PreparedField {
+                                    name: "inner".to_string(),
+                                    ty: registrar.ref_of(inner),
+                                    is_nullable: false,
+                                    is_inner_nullable: false, // TODO used when support null everywhere
                                 })
-                                .collect(),
-                        ),
-                        _ => unreachable!(),
-                    },
-                ))
-            } else {
-                None
+                            }
+                            Kind::Composite(fields) => PreparedType::Composite(
+                                fields
+                                    .iter()
+                                    .map(|field| {
+                                        PreparedField {
+                                            name: field.name().to_string(),
+                                            ty: registrar.ref_of(field.type_()),
+                                            is_nullable: false, // TODO used when support null everywhere
+                                            is_inner_nullable: false, // TODO used when support null everywhere
+                                        }
+                                    })
+                                    .collect(),
+                            ),
+                            _ => unreachable!(),
+                        },
+                    ))
+                }
+                _ => None,
             }
         })
         .collect();

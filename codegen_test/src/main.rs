@@ -240,7 +240,7 @@ pub fn test_stress(client: &mut Client) {
                 nice: SpongebobCharacter::Squidward,
             }],
             spongebob: vec![SpongebobCharacter::Bob, SpongebobCharacter::Patrick],
-            domain: MyDomain("Hello".to_string()),
+            domain: "Hello".to_string(),
         },
     };
     let params = InsertNightmareParams {
