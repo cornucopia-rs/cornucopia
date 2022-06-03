@@ -45,10 +45,8 @@ pub mod types {
             fn from_sql(
                 _type: &postgres_types::Type,
                 buf: &'a [u8],
-            ) -> Result<
-                CustomCompositeBorrowed<'a>,
-                std::boxed::Box<dyn std::error::Error + Sync + Send>,
-            > {
+            ) -> Result<CustomCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
+            {
                 let fields = match *_type.kind() {
                     postgres_types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
@@ -61,7 +59,7 @@ pub mod types {
                 let such_cool = postgres_types::private::read_value(fields[1].type_(), &mut buf)?;
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
                 let nice = postgres_types::private::read_value(fields[2].type_(), &mut buf)?;
-                Result::Ok(CustomCompositeBorrowed {
+                Ok(CustomCompositeBorrowed {
                     wow,
                     such_cool,
                     nice,
@@ -76,10 +74,8 @@ pub mod types {
                 &self,
                 _type: &postgres_types::Type,
                 buf: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<
-                postgres_types::IsNull,
-                std::boxed::Box<dyn std::error::Error + Sync + Send>,
-            > {
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
                 let fields = match *_type.kind() {
                     postgres_types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
@@ -102,16 +98,14 @@ pub mod types {
                         postgres_types::IsNull::No => {
                             let len = buf.len() - base - 4;
                             if len > i32::max_value() as usize {
-                                return std::result::Result::Err(std::convert::Into::into(
-                                    "value too large to transmit",
-                                ));
+                                return Err(Into::into("value too large to transmit"));
                             }
                             len as i32
                         }
                     };
                     buf[base..base + 4].copy_from_slice(&count.to_be_bytes());
                 }
-                std::result::Result::Ok(postgres_types::IsNull::No)
+                Ok(postgres_types::IsNull::No)
             }
             fn accepts(type_: &postgres_types::Type) -> bool {
                 if type_.name() != "custom_composite" {
@@ -146,7 +140,7 @@ pub mod types {
                 &self,
                 ty: &postgres_types::Type,
                 out: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
             {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
@@ -165,10 +159,8 @@ pub mod types {
             fn from_sql(
                 _type: &postgres_types::Type,
                 buf: &'a [u8],
-            ) -> std::result::Result<
-                MyDomainBorrowed<'a>,
-                std::boxed::Box<dyn std::error::Error + Sync + Send>,
-            > {
+            ) -> Result<MyDomainBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
+            {
                 <&'a str as postgres_types::FromSql>::from_sql(_type, buf).map(MyDomainBorrowed)
             }
             fn accepts(type_: &postgres_types::Type) -> bool {
@@ -191,10 +183,8 @@ pub mod types {
                 &self,
                 _type: &postgres_types::Type,
                 buf: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<
-                postgres_types::IsNull,
-                std::boxed::Box<dyn std::error::Error + Sync + Send>,
-            > {
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
                 let type_ = match *_type.kind() {
                     postgres_types::Kind::Domain(ref type_) => type_,
                     _ => unreachable!(),
@@ -216,10 +206,8 @@ pub mod types {
                 &self,
                 ty: &postgres_types::Type,
                 out: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<
-                postgres_types::IsNull,
-                Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>,
-            > {
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
@@ -261,10 +249,8 @@ pub mod types {
             fn from_sql(
                 _type: &postgres_types::Type,
                 buf: &'a [u8],
-            ) -> Result<
-                NightmareCompositeBorrowed<'a>,
-                std::boxed::Box<dyn std::error::Error + Sync + Send>,
-            > {
+            ) -> Result<NightmareCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
+            {
                 let fields = match *_type.kind() {
                     postgres_types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
@@ -277,7 +263,7 @@ pub mod types {
                 let spongebob = postgres_types::private::read_value(fields[1].type_(), &mut buf)?;
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
                 let domain = postgres_types::private::read_value(fields[2].type_(), &mut buf)?;
-                Result::Ok(NightmareCompositeBorrowed {
+                Ok(NightmareCompositeBorrowed {
                     custom,
                     spongebob,
                     domain,
@@ -298,10 +284,8 @@ pub mod types {
                 &self,
                 _type: &postgres_types::Type,
                 buf: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<
-                postgres_types::IsNull,
-                std::boxed::Box<dyn std::error::Error + Sync + Send>,
-            > {
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
                 let fields = match *_type.kind() {
                     postgres_types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
@@ -324,16 +308,14 @@ pub mod types {
                         postgres_types::IsNull::No => {
                             let len = buf.len() - base - 4;
                             if len > i32::max_value() as usize {
-                                return std::result::Result::Err(std::convert::Into::into(
-                                    "value too large to transmit",
-                                ));
+                                return Err(Into::into("value too large to transmit"));
                             }
                             len as i32
                         }
                     };
                     buf[base..base + 4].copy_from_slice(&count.to_be_bytes());
                 }
-                std::result::Result::Ok(postgres_types::IsNull::No)
+                Ok(postgres_types::IsNull::No)
             }
             fn accepts(type_: &postgres_types::Type) -> bool {
                 if type_.name() != "nightmare_composite" {
@@ -372,7 +354,7 @@ pub mod types {
                 &self,
                 ty: &postgres_types::Type,
                 out: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
             {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
@@ -400,10 +382,8 @@ pub mod types {
             fn from_sql(
                 _type: &postgres_types::Type,
                 buf: &'a [u8],
-            ) -> Result<
-                CloneCompositeBorrowed<'a>,
-                std::boxed::Box<dyn std::error::Error + Sync + Send>,
-            > {
+            ) -> Result<CloneCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
+            {
                 let fields = match *_type.kind() {
                     postgres_types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
@@ -414,7 +394,7 @@ pub mod types {
                 let first = postgres_types::private::read_value(fields[0].type_(), &mut buf)?;
                 let _oid = postgres_types::private::read_be_i32(&mut buf)?;
                 let second = postgres_types::private::read_value(fields[1].type_(), &mut buf)?;
-                Result::Ok(CloneCompositeBorrowed { first, second })
+                Ok(CloneCompositeBorrowed { first, second })
             }
             fn accepts(type_: &postgres_types::Type) -> bool {
                 type_.name() == "clone_composite" && type_.schema() == "public"
@@ -425,10 +405,8 @@ pub mod types {
                 &self,
                 _type: &postgres_types::Type,
                 buf: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<
-                postgres_types::IsNull,
-                std::boxed::Box<dyn std::error::Error + Sync + Send>,
-            > {
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
                 let fields = match *_type.kind() {
                     postgres_types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
@@ -448,16 +426,14 @@ pub mod types {
                         postgres_types::IsNull::No => {
                             let len = buf.len() - base - 4;
                             if len > i32::max_value() as usize {
-                                return std::result::Result::Err(std::convert::Into::into(
-                                    "value too large to transmit",
-                                ));
+                                return Err(Into::into("value too large to transmit"));
                             }
                             len as i32
                         }
                     };
                     buf[base..base + 4].copy_from_slice(&count.to_be_bytes());
                 }
-                std::result::Result::Ok(postgres_types::IsNull::No)
+                Ok(postgres_types::IsNull::No)
             }
             fn accepts(type_: &postgres_types::Type) -> bool {
                 if type_.name() != "clone_composite" {
@@ -481,7 +457,7 @@ pub mod types {
                 &self,
                 ty: &postgres_types::Type,
                 out: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
             {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
@@ -496,8 +472,7 @@ pub mod types {
 }
 pub mod queries {
     pub mod copy {
-        use postgres::fallible_iterator::FallibleIterator;
-        use postgres::GenericClient;
+        use postgres::{fallible_iterator::FallibleIterator, GenericClient};
         #[derive(Debug)]
         pub struct InsertCloneParams<'a> {
             pub composite: super::super::types::public::CloneCompositeBorrowed<'a>,
@@ -694,8 +669,7 @@ pub mod queries {
         }
     }
     pub mod params {
-        use postgres::fallible_iterator::FallibleIterator;
-        use postgres::GenericClient;
+        use postgres::{fallible_iterator::FallibleIterator, GenericClient};
         #[derive(Debug)]
         pub struct InsertBookParams<'a> {
             pub author: &'a str,
@@ -829,8 +803,7 @@ pub mod queries {
         }
     }
     pub mod stress {
-        use postgres::fallible_iterator::FallibleIterator;
-        use postgres::GenericClient;
+        use postgres::{fallible_iterator::FallibleIterator, GenericClient};
         #[derive(Debug)]
         pub struct InsertEverythingParams<'a> {
             pub bigserial_: i64,

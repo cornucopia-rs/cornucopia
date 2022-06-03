@@ -59,7 +59,7 @@ pub mod types {
                 buf: &'a [u8],
             ) -> Result<
                 CustomCompositeBorrowed<'a>,
-                std::boxed::Box<dyn std::error::Error + Sync + Send>,
+                Box<dyn std::error::Error + Sync + Send>,
             > {
                 let fields = match *_type.kind() {
                     postgres_types::Kind::Composite(ref fields) => fields,
@@ -82,7 +82,7 @@ pub mod types {
                     fields[2].type_(),
                     &mut buf,
                 )?;
-                Result::Ok(CustomCompositeBorrowed {
+                Ok(CustomCompositeBorrowed {
                     name,
                     age,
                     persona,
@@ -97,9 +97,9 @@ pub mod types {
                 &self,
                 _type: &postgres_types::Type,
                 buf: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<
+            ) -> Result<
                 postgres_types::IsNull,
-                std::boxed::Box<dyn std::error::Error + Sync + Send>,
+                Box<dyn std::error::Error + Sync + Send>,
             > {
                 let fields = match *_type.kind() {
                     postgres_types::Kind::Composite(ref fields) => fields,
@@ -131,16 +131,14 @@ pub mod types {
                         postgres_types::IsNull::No => {
                             let len = buf.len() - base - 4;
                             if len > i32::max_value() as usize {
-                                return std::result::Result::Err(
-                                    std::convert::Into::into("value too large to transmit"),
-                                );
+                                return Err(Into::into("value too large to transmit"));
                             }
                             len as i32
                         }
                     };
                     buf[base..base + 4].copy_from_slice(&count.to_be_bytes());
                 }
-                std::result::Result::Ok(postgres_types::IsNull::No)
+                Ok(postgres_types::IsNull::No)
             }
             fn accepts(type_: &postgres_types::Type) -> bool {
                 if type_.name() != "custom_composite" {
@@ -173,7 +171,7 @@ pub mod types {
                 &self,
                 ty: &postgres_types::Type,
                 out: &mut postgres_types::private::BytesMut,
-            ) -> std::result::Result<
+            ) -> Result<
                 postgres_types::IsNull,
                 Box<dyn std::error::Error + Sync + Send>,
             > {

@@ -77,26 +77,26 @@ fn domain_brw_fromsql(
     gen!(
         w,
         r#"impl<'a> postgres_types::FromSql<'a> for {struct_name}Borrowed<'a> {{
-        fn from_sql(_type: &postgres_types::Type, buf: &'a [u8]) -> std::result::Result<
-            {struct_name}Borrowed<'a>, std::boxed::Box<dyn std::error::Error + Sync + Send>,
-        > {{
-            <{inner_ty} as postgres_types::FromSql>::from_sql(_type, buf).map({struct_name}Borrowed)
-        }}
-        fn accepts(type_: &postgres_types::Type) -> bool {{
-            if <{inner_ty} as postgres_types::FromSql>::accepts(type_) {{
-                return true;
+            fn from_sql(_type: &postgres_types::Type, buf: &'a [u8]) -> Result<
+                {struct_name}Borrowed<'a>, Box<dyn std::error::Error + Sync + Send>,
+            > {{
+                <{inner_ty} as postgres_types::FromSql>::from_sql(_type, buf).map({struct_name}Borrowed)
             }}
-            if type_.name() != "{ty_name}" || type_.schema() != "{ty_schema}" {{
-                return false;
-            }}
-            match *type_.kind() {{
-                postgres_types::Kind::Domain(ref type_) => {{
-                    <{inner_ty} as postgres_types::ToSql>::accepts(type_)
+            fn accepts(type_: &postgres_types::Type) -> bool {{
+                if <{inner_ty} as postgres_types::FromSql>::accepts(type_) {{
+                    return true;
                 }}
-                _ => false,
+                if type_.name() != "{ty_name}" || type_.schema() != "{ty_schema}" {{
+                    return false;
+                }}
+                match *type_.kind() {{
+                    postgres_types::Kind::Domain(ref type_) => {{
+                        <{inner_ty} as postgres_types::ToSql>::accepts(type_)
+                    }}
+                    _ => false,
+                }}
             }}
-        }}
-    }}"#
+        }}"#
     )
 }
 
@@ -112,42 +112,36 @@ fn domain_tosql(
     gen!(
         w,
         r#"impl <'a> postgres_types::ToSql for {struct_name}{post}<'a> {{
-        fn to_sql(
-            &self,
-            _type: &postgres_types::Type,
-            buf: &mut postgres_types::private::BytesMut,
-        ) -> std::result::Result<
-            postgres_types::IsNull,
-            std::boxed::Box<dyn std::error::Error + Sync + Send>,
-        > {{
-            let type_ = match *_type.kind() {{
-                postgres_types::Kind::Domain(ref type_) => type_,
-                _ => unreachable!(),
-            }};
-            postgres_types::ToSql::to_sql(&self.0, type_, buf)
-        }}
-        fn accepts(type_: &postgres_types::Type) -> bool {{
-            if type_.name() != "{ty_name}" {{
-                return false;
+            fn to_sql(
+                &self,
+                _type: &postgres_types::Type,
+                buf: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {{
+                let type_ = match *_type.kind() {{
+                    postgres_types::Kind::Domain(ref type_) => type_,
+                    _ => unreachable!(),
+                }};
+                postgres_types::ToSql::to_sql(&self.0, type_, buf)
             }}
-            match *type_.kind() {{
-                postgres_types::Kind::Domain(ref type_) => <{accept_ty} as postgres_types::ToSql>::accepts(
-                    type_
-                ),
-                _ => false,
+            fn accepts(type_: &postgres_types::Type) -> bool {{
+                if type_.name() != "{ty_name}" {{
+                    return false;
+                }}
+                match *type_.kind() {{
+                    postgres_types::Kind::Domain(ref type_) => <{accept_ty} as postgres_types::ToSql>::accepts(
+                        type_
+                    ),
+                    _ => false,
+                }}
             }}
-        }}
-        fn to_sql_checked(
-            &self,
-            ty: &postgres_types::Type,
-            out: &mut postgres_types::private::BytesMut,
-        ) -> std::result::Result<
-            postgres_types::IsNull,
-            Box<dyn std::error::Error + std::marker::Sync + std::marker::Send>,
-        > {{
-            postgres_types::__to_sql_checked(self, ty, out)
-        }}
-    }}"#
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {{
+                postgres_types::__to_sql_checked(self, ty, out)
+            }}
+        }}"#
     )
 }
 
@@ -179,65 +173,63 @@ fn composite_tosql(
     gen!(
         w,
         r#"impl<'a> postgres_types::ToSql for {struct_name}{post}<'a> {{
-        fn to_sql(
-            &self,
-            _type: &postgres_types::Type,
-            buf: &mut postgres_types::private::BytesMut,
-        ) -> std::result::Result<postgres_types::IsNull, std::boxed::Box<dyn std::error::Error + Sync + Send>,> {{
-            let fields = match *_type.kind() {{
-                postgres_types::Kind::Composite(ref fields) => fields,
-                _ => unreachable!(),
-            }};
-            buf.extend_from_slice(&(fields.len() as i32).to_be_bytes());
-            for field in fields {{
-                buf.extend_from_slice(&field.type_().oid().to_be_bytes());
-                let base = buf.len();
-                buf.extend_from_slice(&[0; 4]);
-                let r = match field.name() {{
-                    {write_fields}
-                    _ => unreachable!()
+            fn to_sql(
+                &self,
+                _type: &postgres_types::Type,
+                buf: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>,> {{
+                let fields = match *_type.kind() {{
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
                 }};
-                let count = match r? {{
-                    postgres_types::IsNull::Yes => -1,
-                    postgres_types::IsNull::No => {{
-                        let len = buf.len() - base - 4;
-                        if len > i32::max_value() as usize {{
-                            return std::result::Result::Err(std::convert::Into::into(
-                                "value too large to transmit",
-                            ));
+                buf.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {{
+                    buf.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = buf.len();
+                    buf.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {{
+                        {write_fields}
+                        _ => unreachable!()
+                    }};
+                    let count = match r? {{
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {{
+                            let len = buf.len() - base - 4;
+                            if len > i32::max_value() as usize {{
+                                return Err(Into::into("value too large to transmit"));
+                            }}
+                            len as i32
                         }}
-                        len as i32
-                    }}
-                }};
-                buf[base..base + 4].copy_from_slice(&count.to_be_bytes());
-            }}
-            std::result::Result::Ok(postgres_types::IsNull::No)
-        }}
-        fn accepts(type_: &postgres_types::Type) -> bool {{
-            if type_.name() != "{ty_name}" {{
-                return false;
-            }}
-            match *type_.kind() {{
-                postgres_types::Kind::Composite(ref fields) => {{
-                    if fields.len() != {nb_fields}usize {{
-                        return false;
-                    }}
-                    fields.iter().all(|f| match f.name() {{
-                        {accept_fields}
-                        _ => false,
-                    }})
+                    }};
+                    buf[base..base + 4].copy_from_slice(&count.to_be_bytes());
                 }}
-                _ => false,
+                Ok(postgres_types::IsNull::No)
             }}
-        }}
-        fn to_sql_checked(
-            &self,
-            ty: &postgres_types::Type,
-            out: &mut postgres_types::private::BytesMut,
-        ) -> std::result::Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {{
-            postgres_types::__to_sql_checked(self, ty, out)
-        }}
-    }}"#
+            fn accepts(type_: &postgres_types::Type) -> bool {{
+                if type_.name() != "{ty_name}" {{
+                    return false;
+                }}
+                match *type_.kind() {{
+                    postgres_types::Kind::Composite(ref fields) => {{
+                        if fields.len() != {nb_fields}usize {{
+                            return false;
+                        }}
+                        fields.iter().all(|f| match f.name() {{
+                            {accept_fields}
+                            _ => false,
+                        }})
+                    }}
+                    _ => false,
+                }}
+            }}
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {{
+                postgres_types::__to_sql_checked(self, ty, out)
+            }}
+        }}"#
     );
 }
 
@@ -261,24 +253,23 @@ fn composite_fromsql(
     gen!(
         w,
         r#"impl<'a> postgres_types::FromSql<'a> for {struct_name}Borrowed<'a> {{
-        fn from_sql(
-            _type: &postgres_types::Type,
-            buf: &'a [u8],
-        ) -> Result<{struct_name}Borrowed<'a>, std::boxed::Box<dyn std::error::Error + Sync + Send>> {{
-            let fields = match *_type.kind() {{
-                postgres_types::Kind::Composite(ref fields) => fields,
-                _ => unreachable!(),
-            }};
-            let mut buf = buf;
-            let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
-            {read_fields}
-            Result::Ok({struct_name}Borrowed {{ {field_names} }})
-        }}
+            fn from_sql(_type: &postgres_types::Type, buf: &'a [u8]) -> 
+                Result<{struct_name}Borrowed<'a>, Box<dyn std::error::Error + Sync + Send>> 
+            {{
+                let fields = match *_type.kind() {{
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                }};
+                let mut buf = buf;
+                let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
+                {read_fields}
+                Ok({struct_name}Borrowed {{ {field_names} }})
+            }}
 
-        fn accepts(type_: &postgres_types::Type) -> bool {{
-            type_.name() == "{ty_name}" && type_.schema() == "{ty_schema}"
-        }}
-    }}"#
+            fn accepts(type_: &postgres_types::Type) -> bool {{
+                type_.name() == "{ty_name}" && type_.schema() == "{ty_schema}"
+            }}
+        }}"#
     )
 }
 
@@ -365,11 +356,11 @@ fn gen_row_structs(w: &mut impl Write, row: &PreparedRow, is_async: bool) {
             gen!(
                 w,
                 "pub struct {name}Borrowed<'a> {{ {struct_fields} }}
-            impl<'a> From<{name}Borrowed<'a>> for {name} {{
-                fn from({name}Borrowed {{ {fields_names} }}: {name}Borrowed<'a>) -> Self {{
-                    Self {{ {fields_owning} }}
-                }}
-            }}"
+                impl<'a> From<{name}Borrowed<'a>> for {name} {{
+                    fn from({name}Borrowed {{ {fields_names} }}: {name}Borrowed<'a>) -> Self {{
+                        Self {{ {fields_owning} }}
+                    }}
+                }}"
             );
         };
     }
@@ -402,61 +393,61 @@ fn gen_row_structs(w: &mut impl Write, row: &PreparedRow, is_async: bool) {
             };
 
         gen!(w,"
-        pub struct {name}Query<'a, C: GenericClient, T, const N: usize> {{
-            client: &'a {client_mut} C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            query: &'static str,
-            extractor: fn(&{backend}::Row) -> {name}{borrowed_str},
-            mapper: fn({name}{borrowed_str}) -> T,
-        }}
-        impl<'a, C, T:'a, const N: usize> {name}Query<'a, C, T, N> where C: GenericClient {{
-            pub fn map<R>(self, mapper: fn({name}{borrowed_str}) -> R) -> {name}Query<'a,C,R,N> {{
-                {name}Query {{
-                    client: self.client,
-                    params: self.params,
-                    query: self.query,
-                    extractor: self.extractor,
-                    mapper,
+            pub struct {name}Query<'a, C: GenericClient, T, const N: usize> {{
+                client: &'a {client_mut} C,
+                params: [&'a (dyn postgres_types::ToSql + Sync); N],
+                query: &'static str,
+                extractor: fn(&{backend}::Row) -> {name}{borrowed_str},
+                mapper: fn({name}{borrowed_str}) -> T,
+            }}
+            impl<'a, C, T:'a, const N: usize> {name}Query<'a, C, T, N> where C: GenericClient {{
+                pub fn map<R>(self, mapper: fn({name}{borrowed_str}) -> R) -> {name}Query<'a,C,R,N> {{
+                    {name}Query {{
+                        client: self.client,
+                        params: self.params,
+                        query: self.query,
+                        extractor: self.extractor,
+                        mapper,
+                    }}
                 }}
-            }}
-        
-            pub {fn_async} fn stmt(&{client_mut} self) -> Result<{backend}::Statement, {backend}::Error> {{
-                self.client.prepare(self.query){fn_await}
-            }}
-        
-            pub {fn_async} fn one({client_mut} self) -> Result<T, {backend}::Error> {{
-                let stmt = self.stmt(){fn_await}?;
-                let row = self.client.query_one(&stmt, &self.params){fn_await}?;
-                Ok((self.mapper)((self.extractor)(&row)))
-            }}
-        
-            pub {fn_async} fn vec(self) -> Result<Vec<T>, {backend}::Error> {{
-                self.stream(){fn_await}?.{collect}
-            }}
-        
-            pub {fn_async} fn opt({client_mut} self) -> Result<Option<T>, {backend}::Error> {{
-                let stmt = self.stmt(){fn_await}?;
-                Ok(self
-                    .client
-                    .query_opt(&stmt, &self.params)
-                    {fn_await}?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
-            }}
-        
-            pub {fn_async} fn stream(
-                {client_mut} self,
-            ) -> Result<impl {raw_type}<Item = Result<T, {backend}::Error>> + 'a, {backend}::Error> {{
-                let stmt = self.stmt(){fn_await}?;
-                let stream = self
-                    .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
-                    {fn_await}?
-                    {raw_pre}
-                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
-                    {raw_post};
-                Ok(stream)
-            }}
-        }}")
+            
+                pub {fn_async} fn stmt(&{client_mut} self) -> Result<{backend}::Statement, {backend}::Error> {{
+                    self.client.prepare(self.query){fn_await}
+                }}
+            
+                pub {fn_async} fn one({client_mut} self) -> Result<T, {backend}::Error> {{
+                    let stmt = self.stmt(){fn_await}?;
+                    let row = self.client.query_one(&stmt, &self.params){fn_await}?;
+                    Ok((self.mapper)((self.extractor)(&row)))
+                }}
+            
+                pub {fn_async} fn vec(self) -> Result<Vec<T>, {backend}::Error> {{
+                    self.stream(){fn_await}?.{collect}
+                }}
+            
+                pub {fn_async} fn opt({client_mut} self) -> Result<Option<T>, {backend}::Error> {{
+                    let stmt = self.stmt(){fn_await}?;
+                    Ok(self
+                        .client
+                        .query_opt(&stmt, &self.params)
+                        {fn_await}?
+                        .map(|row| (self.mapper)((self.extractor)(&row))))
+                }}
+            
+                pub {fn_async} fn stream(
+                    {client_mut} self,
+                ) -> Result<impl {raw_type}<Item = Result<T, {backend}::Error>> + 'a, {backend}::Error> {{
+                    let stmt = self.stmt(){fn_await}?;
+                    let stream = self
+                        .client
+                        .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                        {fn_await}?
+                        {raw_pre}
+                        .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                        {raw_post};
+                    Ok(stream)
+                }}
+            }}")
     }
 }
 
@@ -498,14 +489,14 @@ fn gen_query_fn(
         let client_mut = if is_async { "" } else { "mut" };
         gen!(w,
             "pub fn {name}<'a, C: GenericClient>(client: &'a {client_mut} C, {param_list}) -> {row_name}Query<'a,C, {row_name}, {nb_params}> {{
-            {row_name}Query {{
-                client,
-                params: [{param_names}],
-                query: \"{sql}\",
-                extractor: |row| {{ {row_name}{borrowed_str} {{{get_fields}}} }},
-                mapper: |it| {row_name}::from(it),
-            }}
-        }}",
+                {row_name}Query {{
+                    client,
+                    params: [{param_names}],
+                    query: \"{sql}\",
+                    extractor: |row| {{ {row_name}{borrowed_str} {{{get_fields}}} }},
+                    mapper: |it| {row_name}::from(it),
+                }}
+            }}",
         );
     } else {
         // Execute fn
@@ -670,7 +661,7 @@ pub(crate) fn generate(
     let import = if is_async {
         "use futures::{{StreamExt, TryStreamExt}};use cornucopia_client::GenericClient;"
     } else {
-        "use postgres::fallible_iterator::FallibleIterator;use postgres::GenericClient;"
+        "use postgres::{{fallible_iterator::FallibleIterator,GenericClient}};"
     };
     let mut buff = "// This file was generated with `cornucopia`. Do not modify.
     #![allow(clippy::all)]
