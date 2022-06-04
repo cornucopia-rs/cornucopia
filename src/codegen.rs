@@ -7,7 +7,7 @@ use crate::{
     utils::{join_comma, join_ln},
 };
 use error::Error;
-use indexmap::{map::Entry, IndexMap};
+use indexmap::IndexMap;
 use std::fmt::Write;
 
 // write! without errors
@@ -515,12 +515,13 @@ fn gen_query_fn(
 
 /// Generates type definitions for custom user types. This includes domains, composites and enums.
 /// If the type is not `Copy`, then a Borrowed version will be generated.
-fn gen_custom_type(w: &mut impl Write, schema: &str, name: &str, prepared: &PreparedType) {
+fn gen_custom_type(w: &mut impl Write, schema: &str, prepared: &PreparedType) {
     let PreparedType {
         struct_name,
         content,
         is_copy,
         is_params,
+        name,
     } = prepared;
     let copy = if *is_copy { "Copy," } else { "" };
     match content {
@@ -614,23 +615,11 @@ fn gen_custom_type(w: &mut impl Write, schema: &str, name: &str, prepared: &Prep
 
 fn gen_type_modules(
     w: &mut impl Write,
-    prepared: &IndexMap<(String, String), PreparedType>,
+    prepared: &IndexMap<String, Vec<PreparedType>>,
 ) -> Result<(), Error> {
-    // Group the custom types by schema name
-    let mut modules = IndexMap::<&str, Vec<(&str, &PreparedType)>>::new();
-    for ((schema, name), ty) in prepared {
-        match modules.entry(schema) {
-            Entry::Occupied(mut entry) => {
-                entry.get_mut().push((name, ty));
-            }
-            Entry::Vacant(entry) => {
-                entry.insert(vec![(name, ty)]);
-            }
-        }
-    }
     // Generate each module
-    let modules_str = join_ln(modules, |w, (schema, types)| {
-        let tys_str = join_ln(types, |w, (name, ty)| gen_custom_type(w, schema, name, ty));
+    let modules_str = join_ln(prepared, |w, (schema, types)| {
+        let tys_str = join_ln(types, |w, ty| gen_custom_type(w, schema, ty));
         gen!(w, "pub mod {schema} {{ {tys_str} }}")
     });
 

@@ -50,6 +50,7 @@ pub(crate) struct PreparedRow {
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub(crate) struct PreparedType {
+    pub(crate) name: String,
     pub(crate) struct_name: String,
     pub(crate) content: PreparedContent,
     pub(crate) is_copy: bool,
@@ -76,7 +77,7 @@ pub(crate) struct PreparedModule {
 #[derive(Debug, Clone)]
 pub(crate) struct Preparation {
     pub(crate) modules: Vec<PreparedModule>,
-    pub(crate) types: IndexMap<(String, String), PreparedType>,
+    pub(crate) types: IndexMap<String, Vec<PreparedType>>,
 }
 
 impl PreparedModule {
@@ -224,16 +225,28 @@ pub(crate) fn prepare(client: &mut Client, modules: Vec<Module>) -> Result<Prepa
     }
     // Sort module for consistent codegen
     tmp.modules.sort_unstable_by(|a, b| a.name.cmp(&b.name));
-    tmp.types = registrar
-        .types
-        .iter()
-        .filter_map(|(key, ty)| prepare_type(&registrar, ty).map(|it| (key.clone(), it)))
-        .collect();
+    // Prepare types grouped by schema
+    for ((schema, name), ty) in &registrar.types {
+        if let Some(ty) = prepare_type(&registrar, name, ty) {
+            match tmp.types.entry(schema.clone()) {
+                Entry::Occupied(mut entry) => {
+                    entry.get_mut().push(ty);
+                }
+                Entry::Vacant(entry) => {
+                    entry.insert(vec![ty]);
+                }
+            }
+        }
+    }
     Ok(tmp)
 }
 
 /// Prepares database custom types
-fn prepare_type(registrar: &TypeRegistrar, ty: &CornucopiaType) -> Option<PreparedType> {
+fn prepare_type(
+    registrar: &TypeRegistrar,
+    name: &str,
+    ty: &CornucopiaType,
+) -> Option<PreparedType> {
     if let CornucopiaType::Custom {
         pg_ty,
         struct_name,
@@ -268,6 +281,7 @@ fn prepare_type(registrar: &TypeRegistrar, ty: &CornucopiaType) -> Option<Prepar
             _ => unreachable!(),
         };
         Some(PreparedType {
+            name: name.to_string(),
             struct_name: struct_name.clone(),
             content,
             is_copy: *is_copy,
