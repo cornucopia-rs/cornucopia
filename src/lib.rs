@@ -23,7 +23,6 @@ use read_queries::read_query_modules;
 use run_migrations::run_migrations as run_migrations_internal;
 use std::path::Path;
 use time::OffsetDateTime;
-use type_registrar::TypeRegistrar;
 
 /// Runs the migrations at `migrations_path`.
 pub fn run_migrations(client: &mut Client, migrations_path: &str) -> Result<(), Error> {
@@ -60,11 +59,9 @@ pub fn generate_live(
     destination: Option<&str>,
     is_async: bool,
 ) -> Result<String, Error> {
-    let mut type_registrar = TypeRegistrar::default();
-
     let modules = read_query_modules(queries_path)?;
-    let prepared_modules = prepare(client, &mut type_registrar, modules)?;
-    let generated_code = generate_internal(&type_registrar, prepared_modules, is_async)?;
+    let prepared_modules = prepare(client, modules)?;
+    let generated_code = generate_internal(prepared_modules, is_async)?;
 
     if let Some(d) = destination {
         write_generated_code(d, &generated_code)?
@@ -84,14 +81,12 @@ pub fn generate_managed(
     podman: bool,
     is_async: bool,
 ) -> Result<String, Error> {
-    let mut type_registrar = TypeRegistrar::default();
-
     let modules = read_query_modules(queries_path)?;
     container::setup(podman)?;
     let mut client = conn::cornucopia_conn()?;
     run_migrations_internal(&mut client, migrations_path)?;
-    let prepared_modules = prepare(&mut client, &mut type_registrar, modules)?;
-    let generated_code = generate_internal(&type_registrar, prepared_modules, is_async)?;
+    let prepared_modules = prepare(&mut client, modules)?;
+    let generated_code = generate_internal(prepared_modules, is_async)?;
     container::cleanup(podman)?;
 
     if let Some(destination) = destination {

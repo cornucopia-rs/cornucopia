@@ -50,7 +50,16 @@ pub(crate) struct PreparedRow {
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
-pub(crate) enum PreparedType {
+pub(crate) struct PreparedType {
+    pub(crate) name: String,
+    pub(crate) struct_name: String,
+    pub(crate) content: PreparedContent,
+    pub(crate) is_copy: bool,
+    pub(crate) is_params: bool,
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub(crate) enum PreparedContent {
     Enum(Vec<String>),
     Domain(PreparedField),
     Composite(Vec<PreparedField>),
@@ -69,7 +78,7 @@ pub(crate) struct PreparedModule {
 #[derive(Debug, Clone)]
 pub(crate) struct Preparation {
     pub(crate) modules: Vec<PreparedModule>,
-    pub(crate) types: IndexMap<(String, String), PreparedType>,
+    pub(crate) types: IndexMap<String, Vec<PreparedType>>,
 }
 
 impl PreparedModule {
@@ -182,59 +191,83 @@ impl PreparedModule {
 }
 
 /// Prepares all modules
-pub(crate) fn prepare(
-    client: &mut Client,
-    registrar: &mut TypeRegistrar,
-    modules: Vec<Module>,
-) -> Result<Preparation, Error> {
+pub(crate) fn prepare(client: &mut Client, modules: Vec<Module>) -> Result<Preparation, Error> {
+    let mut registrar = TypeRegistrar::default();
     let mut tmp = Preparation {
         modules: Vec::new(),
         types: IndexMap::new(),
     };
     for module in modules {
-        tmp.modules.push(prepare_module(client, module, registrar)?);
+        tmp.modules
+            .push(prepare_module(client, module, &mut registrar)?);
     }
     // Sort module for consistent codegen
     tmp.modules.sort_unstable_by(|a, b| a.name.cmp(&b.name));
-    tmp.types = registrar
-        .types
-        .iter()
-        .filter_map(|(key, ty)| {
-            if let CornucopiaType::Custom { pg_ty, .. } = ty.as_ref() {
-                Some((
-                    key.clone(),
-                    match pg_ty.kind() {
-                        Kind::Enum(variants) => PreparedType::Enum(variants.to_vec()),
-                        Kind::Domain(inner) => {
-                            PreparedType::Domain(PreparedField {
-                                name: "inner".to_string(),
-                                ty: registrar.ref_of(inner),
-                                is_nullable: false,
-                                is_inner_nullable: false, // TODO used when support null everywhere
-                            })
-                        }
-                        Kind::Composite(fields) => PreparedType::Composite(
-                            fields
-                                .iter()
-                                .map(|field| {
-                                    PreparedField {
-                                        name: field.name().to_string(),
-                                        ty: registrar.ref_of(field.type_()),
-                                        is_nullable: false, // TODO used when support null everywhere
-                                        is_inner_nullable: false, // TODO used when support null everywhere
-                                    }
-                                })
-                                .collect(),
-                        ),
-                        _ => unreachable!(),
-                    },
-                ))
-            } else {
-                None
+    // Prepare types grouped by schema
+    for ((schema, name), ty) in &registrar.types {
+        if let Some(ty) = prepare_type(&registrar, name, ty) {
+            match tmp.types.entry(schema.clone()) {
+                Entry::Occupied(mut entry) => {
+                    entry.get_mut().push(ty);
+                }
+                Entry::Vacant(entry) => {
+                    entry.insert(vec![ty]);
+                }
             }
-        })
-        .collect();
+        }
+    }
     Ok(tmp)
+}
+
+/// Prepares database custom types
+fn prepare_type(
+    registrar: &TypeRegistrar,
+    name: &str,
+    ty: &CornucopiaType,
+) -> Option<PreparedType> {
+    if let CornucopiaType::Custom {
+        pg_ty,
+        struct_name,
+        is_copy,
+        is_params,
+        ..
+    } = ty
+    {
+        let content = match pg_ty.kind() {
+            Kind::Enum(variants) => PreparedContent::Enum(variants.to_vec()),
+            Kind::Domain(inner) => {
+                PreparedContent::Domain(PreparedField {
+                    name: "inner".to_string(),
+                    ty: registrar.ref_of(inner),
+                    is_nullable: false,
+                    is_inner_nullable: false, // TODO used when support null everywhere
+                })
+            }
+            Kind::Composite(fields) => PreparedContent::Composite(
+                fields
+                    .iter()
+                    .map(|field| {
+                        PreparedField {
+                            name: field.name().to_string(),
+                            ty: registrar.ref_of(field.type_()),
+                            is_nullable: false, // TODO used when support null everywhere
+                            is_inner_nullable: false, // TODO used when support null everywhere
+                        }
+                    })
+                    .collect(),
+            ),
+            _ => unreachable!(),
+        };
+        Some(PreparedType {
+            name: name.to_string(),
+            struct_name: struct_name.clone(),
+            content,
+            is_copy: *is_copy,
+            is_params: *is_params,
+        })
+    } else {
+        None
+    }
 }
 
 /// Prepares all queries in this module
