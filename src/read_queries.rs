@@ -1,11 +1,11 @@
-use crate::parser::{parse_queries, ParsedQuery};
+use crate::parser::{parse_query_module, ParsedQuery, ValidatedModule};
 use error::Error;
 
 #[derive(Debug)]
 pub(crate) struct Module {
     pub(crate) path: String,
     pub(crate) name: String,
-    pub(crate) queries: Vec<ParsedQuery>,
+    pub(crate) inner: ValidatedModule,
 }
 
 /// Reads queries in the directory. Only .sql files are considered.
@@ -46,7 +46,7 @@ pub(crate) fn read_query_modules(dir_path: &str) -> Result<Vec<Module>, Error> {
             let module = Module {
                 path: String::from(path_buf.to_string_lossy()),
                 name: module_name,
-                queries: parse_queries(&file_contents).map_err(|err| Error {
+                inner: parse_query_module(&file_contents).map_err(|err| Error {
                     err: err.into(),
                     path: String::from(path_buf.to_string_lossy()),
                 })?,
