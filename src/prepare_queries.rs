@@ -1,10 +1,11 @@
 use std::rc::Rc;
 
 use crate::{
-    parser::{error::ValidationError, Parsed, ParsedQuery},
+    parser::{error::ValidationError, Parsed, ParsedQuery, ValidatedQuery},
     read_queries::Module,
     type_registrar::CornucopiaType,
     type_registrar::TypeRegistrar,
+    utils::has_duplicate,
 };
 use error::Error;
 use error::ErrorVariant;
@@ -87,7 +88,7 @@ impl PreparedModule {
                 // registered row with the same name...
                 if prev.len() != fields.len() || !prev.iter().all(|f| fields.contains(f)) {
                     return Err(ErrorVariant::Validation(
-                        ValidationError::NamedRowInvalidFields {
+                        ValidationError::NamedStructInvalidFields {
                             expected: prev.clone(),
                             actual: fields,
                             name: name.value,
@@ -153,7 +154,7 @@ impl PreparedModule {
                     || !prev.fields.iter().all(|f| params.contains(f))
                 {
                     return Err(ErrorVariant::Validation(
-                        ValidationError::NamedParamStructInvalidFields {
+                        ValidationError::NamedStructInvalidFields {
                             name: name.value,
                             pos: name.pos,
                             expected: prev.fields.clone(),
@@ -178,22 +179,6 @@ impl PreparedModule {
             }
         }
     }
-}
-
-fn has_duplicate<T, U>(
-    iter: T,
-    mapper: fn(<T as IntoIterator>::Item) -> U,
-) -> Option<<T as IntoIterator>::Item>
-where
-    T: IntoIterator + Clone,
-    U: Eq + std::hash::Hash + Clone,
-{
-    let mut uniq = std::collections::HashSet::new();
-    iter.clone()
-        .into_iter()
-        .zip(iter.into_iter().map(mapper))
-        .find(|(_, u)| !uniq.insert(u.clone()))
-        .map(|(t, _)| t)
 }
 
 /// Prepares all modules
@@ -264,7 +249,7 @@ fn prepare_module(
         params: IndexMap::new(),
         rows: IndexMap::new(),
     };
-    for query in module.queries {
+    for query in module.inner.queries {
         prepare_query(client, &mut tmp, registrar, query, &module.path)?;
     }
     Ok(tmp)
@@ -275,15 +260,30 @@ fn prepare_query(
     client: &mut Client,
     module: &mut PreparedModule,
     registrar: &mut TypeRegistrar,
-    query: ParsedQuery,
+    query: ValidatedQuery,
     module_path: &str,
 ) -> Result<(), Error> {
     // Prepare the statement
     let stmt = client
-        .prepare(&query.sql_str)
+        .prepare(&query.sql_str())
         .map_err(|e| Error::new(e, &query, module_path))?;
 
-    // Get parameter parameters
+    match query {
+        ValidatedQuery::PgCompatible {
+            name,
+            params,
+            row,
+            sql_str,
+        } => todo!(),
+        ValidatedQuery::Extended {
+            name,
+            params,
+            row,
+            sql_str,
+        } => todo!(),
+    }
+
+    // Get parameters
     let mut params = Vec::new();
     for (name, ty) in query.params.iter().zip(stmt.params().iter()) {
         // Register type
@@ -331,7 +331,6 @@ fn prepare_query(
             });
         };
     }
-
 
     // Get return columns
     let mut row_fields = Vec::new();
@@ -395,6 +394,7 @@ fn prepare_query(
 pub(crate) mod error {
     use std::fmt::Display;
 
+    use crate::parser::ValidatedQuery;
     use crate::parser::{error::ValidationError, ParsedQuery};
     use crate::type_registrar::error::Error as PostgresTypeError;
     use thiserror::Error as ThisError;
@@ -420,12 +420,16 @@ pub(crate) mod error {
     }
 
     impl Error {
-        pub(crate) fn new<E: Into<ErrorVariant>>(err: E, query: &ParsedQuery, path: &str) -> Self {
+        pub(crate) fn new<E: Into<ErrorVariant>>(
+            err: E,
+            query: &ValidatedQuery,
+            path: &str,
+        ) -> Self {
             Self {
                 query_start_line: Some(query.line),
                 err: err.into(),
                 path: String::from(path),
-                query_name: query.name.value.clone(),
+                query_name: query.name().value.clone(),
             }
         }
     }
