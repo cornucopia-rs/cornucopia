@@ -80,11 +80,18 @@ pub fn join_ln<T, I: IntoIterator<Item = T>, F: Fn(&mut Formatter, T)>(
     join(iter, map, '\n')
 }
 
-pub fn has_dup<T: PartialEq>(slice: &[T]) -> Option<&T> {
-    for i in 1..slice.len() {
-        if let Some(dup) = slice[i..].iter().find(|&f| f == &slice[i - 1]) {
-            return Some(dup);
-        }
-    }
-    None
+pub fn has_duplicate<T, U>(
+    iter: T,
+    mapper: fn(<T as IntoIterator>::Item) -> U,
+) -> Option<<T as IntoIterator>::Item>
+where
+    T: IntoIterator + Clone,
+    U: Eq + std::hash::Hash + Clone,
+{
+    let mut uniq = std::collections::HashSet::new();
+    iter.clone()
+        .into_iter()
+        .zip(iter.into_iter().map(mapper))
+        .find(|(_, u)| !uniq.insert(u.clone()))
+        .map(|(t, _)| t)
 }
