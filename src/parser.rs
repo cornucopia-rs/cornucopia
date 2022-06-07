@@ -1,6 +1,8 @@
-use error::{Error, ErrorPosition, ValidationError};
+use error::{Error, ValidationError};
 use pest::{iterators::Pair, Parser};
 use pest_derive::Parser as Pest;
+
+use self::error::Kind;
 
 #[derive(Pest)]
 #[grammar = "../grammar.pest"]
@@ -76,16 +78,12 @@ pub(crate) fn parse_queries(input: &str) -> Result<Vec<ParsedQuery>, Error> {
 
                         // Check if the bind parameter's index is greater than the number of parameters
                         if let Some(p) = bind_params.iter().find(|p| p.value > nb_params as i16) {
-                            return Err(Error::Validation(
-                                ValidationError::MoreBindParamsThanParams {
-                                    nb_params,
-                                    pos: ErrorPosition {
-                                        line: p.line,
-                                        col: p.col,
-                                        line_str: p.line_str.to_owned(),
-                                    },
-                                },
-                            ));
+                            return Err(Error::Validation(ValidationError {
+                                line: p.line,
+                                col: p.col,
+                                line_str: p.line_str.to_owned(),
+                                kind: Kind::MoreBindParamsThanParams { nb_params },
+                            }));
                         };
 
                         // Check that every param is used in the query
@@ -94,13 +92,11 @@ pub(crate) fn parse_queries(input: &str) -> Result<Vec<ParsedQuery>, Error> {
                                 .iter()
                                 .any(|bind_index| bind_index.value == *index as i16 + 1)
                         }) {
-                            return Err(Error::Validation(ValidationError::UnusedParam {
-                                index: index + 1,
-                                pos: ErrorPosition {
-                                    line: p.line,
-                                    col: p.col,
-                                    line_str: p.line_str.to_owned(),
-                                },
+                            return Err(Error::Validation(ValidationError {
+                                line: p.line,
+                                col: p.col,
+                                line_str: p.line_str.to_owned(),
+                                kind: Kind::UnusedParam { index: index + 1 },
                             }));
                         }
 
@@ -161,12 +157,11 @@ fn parse_params(pair: Pair<Rule>) -> Result<Vec<Parsed<String>>, Error> {
             let line_str = pos.line_of().to_owned();
             // Check that this parameter is not already in the list, then add it to the list.
             if params.iter().any(|p: &Parsed<String>| p.value == it_str) {
-                return Err(Error::Validation(ValidationError::DuplicateParam {
-                    pos: ErrorPosition {
-                        line,
-                        col,
-                        line_str,
-                    },
+                return Err(Error::Validation(ValidationError {
+                    line,
+                    col,
+                    line_str,
+                    kind: Kind::DuplicateParam,
                 }));
             } else {
                 params.push(Parsed {
@@ -196,23 +191,21 @@ fn parse_pg_bind_params(pair: Pair<Rule>) -> Result<Vec<Parsed<i16>>, Error> {
 
             // Check that the index can be parsed as a i16 (required by postgres wire protocol)
             let index = it_str.parse::<i16>().map_err(|_| {
-                Error::Validation(ValidationError::InvalidI16Index {
-                    pos: ErrorPosition {
-                        line,
-                        col,
-                        line_str: line_str.to_owned(),
-                    },
+                Error::Validation(ValidationError {
+                    line,
+                    col,
+                    line_str: line_str.to_owned(),
+                    kind: Kind::InvalidI16Index,
                 })
             })?;
 
             // Check that the index is also non-zero (postgres bind params are 1-indexed)
             if index == 0 {
-                return Err(Error::Validation(ValidationError::InvalidI16Index {
-                    pos: ErrorPosition {
-                        line,
-                        col,
-                        line_str,
-                    },
+                return Err(Error::Validation(ValidationError {
+                    line,
+                    col,
+                    line_str,
+                    kind: Kind::InvalidI16Index,
                 }));
             };
 
@@ -226,12 +219,11 @@ fn parse_pg_bind_params(pair: Pair<Rule>) -> Result<Vec<Parsed<i16>>, Error> {
                 });
             }
         } else {
-            return Err(Error::Validation(ValidationError::ExtendedParamInPgQuery {
-                pos: ErrorPosition {
-                    line,
-                    col,
-                    line_str,
-                },
+            return Err(Error::Validation(ValidationError {
+                line,
+                col,
+                line_str,
+                kind: Kind::ExtendedParamInPgQuery,
             }));
         }
     }
@@ -288,12 +280,11 @@ fn parse_extended_bind_params(
                 bind_params.push(parsed);
             }
         } else {
-            return Err(Error::Validation(ValidationError::PgParamInExtendedQuery {
-                pos: ErrorPosition {
-                    line,
-                    col,
-                    line_str,
-                },
+            return Err(Error::Validation(ValidationError {
+                line,
+                col,
+                line_str,
+                kind: Kind::PgParamInExtendedQuery,
             }));
         }
     }
@@ -340,114 +331,68 @@ pub(crate) mod error {
     }
 
     #[derive(Debug)]
-    pub(crate) struct ErrorPosition {
+    pub(crate) struct ValidationError {
         pub(crate) line: usize,
         pub(crate) col: usize,
         pub(crate) line_str: String,
+        pub(crate) kind: Kind,
     }
 
     #[derive(Debug)]
-    pub(crate) enum ValidationError {
-        PgParamInExtendedQuery {
-            pos: ErrorPosition,
-        },
-        ExtendedParamInPgQuery {
-            pos: ErrorPosition,
-        },
-        InvalidI16Index {
-            pos: ErrorPosition,
-        },
-        DuplicateParam {
-            pos: ErrorPosition,
-        },
-        MoreBindParamsThanParams {
-            nb_params: usize,
-            pos: ErrorPosition,
-        },
-        UnusedParam {
-            index: usize,
-            pos: ErrorPosition,
-        },
-        ColumnAlreadyNullable {
-            name: String,
-            pos: ErrorPosition,
-        },
-        InvalidNullableColumnName {
-            name: String,
-            pos: ErrorPosition,
-        },
+    pub(crate) enum Kind {
+        PgParamInExtendedQuery,
+        ExtendedParamInPgQuery,
+        InvalidI16Index,
+        DuplicateParam,
+        MoreBindParamsThanParams { nb_params: usize },
+        UnusedParam { index: usize },
+        ColumnAlreadyNullable { name: String },
+        InvalidNullableColumnName { name: String },
     }
 
     impl Display for ValidationError {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            match self {
-                ValidationError::PgParamInExtendedQuery { pos } => {
-                    let msg = [
-                            "Indexed bind parameters (`$index`) are not allowed when using the extended syntax.", 
-                            "Consider using a named bind parameter like `:identifier`, or use the PostgreSQL-compatible syntax."
-                        ];
-                    write!(f, "{}", format_err(pos.line, pos.col, &pos.line_str, &msg))
+            let Self {
+                line,
+                col,
+                line_str,
+                kind,
+            } = self;
+            // Format error position
+            let line_str = line_str.trim_end();
+            write!(
+                f,
+                " --> {line}:{col}\n  | \n  | {line_str}\n  |{:>col$}^---\n  | ",
+                " "
+            )?;
+            // Format error msgs
+            let mut err_msgs = |msgs: &[&str]| -> std::fmt::Result {
+                for msg in msgs {
+                    write!(f, "\n  = {}", msg)?;
                 }
-                ValidationError::ExtendedParamInPgQuery { pos } => {
-                    let msg = [
-                            "Named bind parameters like `:identifier` are not allowed when using the PostgreSQL-compatible syntax.", 
-                            "Consider using an indexed bind parameter like `$index`, or use the extended syntax."
-                        ];
-                    write!(f, "{}", format_err(pos.line, pos.col, &pos.line_str, &msg))
-                }
-                ValidationError::InvalidI16Index { pos } => {
-                    let msg = ["Index must be between 1 and 32767."];
-                    write!(f, "{}", format_err(pos.line, pos.col, &pos.line_str, &msg))
-                }
-                ValidationError::DuplicateParam { pos } => {
-                    let msg = ["Parameter is already used in parameter list."];
-                    write!(f, "{}", format_err(pos.line, pos.col, &pos.line_str, &msg))
-                }
-                ValidationError::MoreBindParamsThanParams { pos, nb_params } => {
-                    let msg = format!(
+                Ok(())
+            };
+            match kind {
+                Kind::PgParamInExtendedQuery => err_msgs(&[
+                        "Indexed bind parameters (`$index`) are not allowed when using the extended syntax.", 
+                        "Consider using a named bind parameter like `:identifier`, or use the PostgreSQL-compatible syntax."
+                    ]),
+                Kind::ExtendedParamInPgQuery => err_msgs( &[
+                        "Named bind parameters like `:identifier` are not allowed when using the PostgreSQL-compatible syntax.", 
+                        "Consider using an indexed bind parameter like `$index`, or use the extended syntax."
+                    ]),
+                Kind::InvalidI16Index => err_msgs( &["Index must be between 1 and 32767."]),
+                Kind::DuplicateParam => err_msgs( &["Parameter is already used in parameter list."]),
+                Kind::MoreBindParamsThanParams {  nb_params } =>     err_msgs(&[&format!(
                         "Index is higher than the number of parameters supplied ({nb_params})."
-                    );
-                    write!(
-                        f,
-                        "{}",
-                        format_err(pos.line, pos.col, &pos.line_str, &[&msg])
-                    )
-                }
-                ValidationError::UnusedParam { pos, index } => {
-                    let msg = format!("Parameter `${index}` is never used in the query.");
-                    write!(
-                        f,
-                        "{}",
-                        format_err(pos.line, pos.col, &pos.line_str, &[&msg])
-                    )
-                }
-                ValidationError::ColumnAlreadyNullable { name, pos } => {
-                    let msg = format!("Column `{name}` is already marked as nullable.");
-                    write!(
-                        f,
-                        "{}",
-                        format_err(pos.line, pos.col, &pos.line_str, &[&msg])
-                    )
-                }
-                ValidationError::InvalidNullableColumnName { name, pos } => {
-                    let msg = format!("No column named `{name}` found for this query.");
-                    write!(
-                        f,
-                        "{}",
-                        format_err(pos.line, pos.col, &pos.line_str, &[&msg])
-                    )
-                }
+                    )]),
+                Kind::UnusedParam { index } => err_msgs(&[&format!("Parameter `${index}` is never used in the query.")]),
+                Kind::ColumnAlreadyNullable { name } => err_msgs(&[&format!("Column `{name}` is already marked as nullable.")]),
+                Kind::InvalidNullableColumnName { name } => err_msgs(&[&format!("No column named `{name}` found for this query.")]),
             }
         }
     }
     impl std::error::Error for ValidationError {}
-
-    fn format_err(line: usize, col: usize, line_str: &str, messages: &[&str]) -> String {
-        let msg = messages.join("\n  = ");
-        let line_str = line_str.trim_end();
-        let cursor = format!("{}^---", " ".repeat(col - 1));
-        format!(" --> {line}:{col}\n  | \n  | {line_str}\n  | {cursor}\n  | \n  = {msg}")
-    }
 
     impl Display for Error {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

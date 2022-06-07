@@ -1,6 +1,6 @@
 use crate::{
     parser::{
-        error::{ErrorPosition, ValidationError},
+        error::{Kind, ValidationError},
         ParsedQuery,
     },
     read_queries::Module,
@@ -135,12 +135,12 @@ fn prepare_query(
             nullable_cols.push((nullable_col.clone(), name.to_owned()))
         } else {
             return Err(Error {
-                err: ErrorVariant::Validation(ValidationError::InvalidNullableColumnName {
-                    name: name.to_owned(),
-                    pos: ErrorPosition {
-                        line: nullable_col.line,
-                        col: nullable_col.col,
-                        line_str: nullable_col.line_str,
+                err: ErrorVariant::Validation(ValidationError {
+                    line: nullable_col.line,
+                    col: nullable_col.col,
+                    line_str: nullable_col.line_str,
+                    kind: Kind::InvalidNullableColumnName {
+                        name: name.to_owned(),
                     },
                 }),
                 query_name: query.name.to_owned(),
@@ -155,13 +155,11 @@ fn prepare_query(
         return Err(Error {
             query_name: query.name,
             query_start_line: Some(query.line),
-            err: ErrorVariant::Validation(ValidationError::ColumnAlreadyNullable {
-                name: u.to_owned(),
-                pos: ErrorPosition {
-                    line: p.line,
-                    col: p.col,
-                    line_str: p.line_str.to_owned(),
-                },
+            err: ErrorVariant::Validation(ValidationError {
+                line: p.line,
+                col: p.col,
+                line_str: p.line_str.to_owned(),
+                kind: Kind::ColumnAlreadyNullable { name: u.to_owned() },
             }),
             path: module_path.to_owned(),
         });
