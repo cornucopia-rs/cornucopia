@@ -66,11 +66,15 @@ pub fn generate_live(
     let modules_info = read_query_modules(queries_path)?;
 
     let mut validated_modules = Vec::new();
-    for info in modules_info {
+    for module_info in modules_info {
         // Parse
-        let parsed_module = parse_query_module(&info.0, &info.2)?;
+        let parsed_module = parse_query_module(&module_info.path, &module_info.contents)?;
         // Validate
-        validated_modules.push(validate_module(info.0, info.1, parsed_module)?);
+        validated_modules.push(validate_module(
+            module_info.path,
+            module_info.name,
+            parsed_module,
+        )?);
     }
 
     // Generate
@@ -99,9 +103,9 @@ pub fn generate_managed(
     let mut validated_modules = Vec::new();
     for info in modules_info {
         // Parse
-        let parsed_module = parse_query_module(&info.0, &info.2)?;
+        let parsed_module = parse_query_module(&info.path, &info.contents)?;
         // Validate
-        validated_modules.push(validate_module(info.0, info.1, parsed_module)?);
+        validated_modules.push(validate_module(info.path, info.name, parsed_module)?);
     }
     container::setup(podman)?;
     let mut client = conn::cornucopia_conn()?;

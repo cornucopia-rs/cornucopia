@@ -1,10 +1,16 @@
 use error::Error;
 
+pub(crate) struct ModuleInfo {
+    pub(crate) path: String,
+    pub(crate) name: String,
+    pub(crate) contents: String,
+}
+
 /// Reads queries in the directory. Only .sql files are considered.
 ///
 /// # Error
 /// Returns an error if `dir_path` does not point to a valid directory or if a query file cannot be parsed.
-pub(crate) fn read_query_modules(dir_path: &str) -> Result<Vec<(String, String, String)>, Error> {
+pub(crate) fn read_query_modules(dir_path: &str) -> Result<Vec<ModuleInfo>, Error> {
     let mut modules_info = Vec::new();
     for entry_result in std::fs::read_dir(dir_path).map_err(|err| Error {
         err,
@@ -35,11 +41,11 @@ pub(crate) fn read_query_modules(dir_path: &str) -> Result<Vec<(String, String, 
                 path: dir_path.to_owned(),
             })?;
 
-            modules_info.push((
-                String::from(path_buf.to_string_lossy()),
-                module_name,
-                file_contents,
-            ));
+            modules_info.push(ModuleInfo {
+                path: String::from(path_buf.to_string_lossy()),
+                name: module_name,
+                contents: file_contents,
+            });
         } else {
             continue;
         }

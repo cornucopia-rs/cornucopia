@@ -91,10 +91,11 @@ pub(crate) fn duplicate_nullable_ident(
     Ok(())
 }
 
+type ParsedNullableIdents = Vec<Parsed<NullableIdent>>;
 pub(crate) fn named_struct_in_pg_query(
     module_path: &str,
     annotation: QueryAnnotation,
-) -> Result<(Vec<Parsed<NullableIdent>>, Vec<Parsed<NullableIdent>>), Error> {
+) -> Result<(ParsedNullableIdents, ParsedNullableIdents), Error> {
     if let QueryDataStructure::Named(name) = annotation.param {
         return Err(Error {
             err: ErrorVariant::NamedStructInPgQuery { pos: name.pos },
