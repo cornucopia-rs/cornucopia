@@ -374,9 +374,10 @@ fn prepare_query(
                     (name.map(|x| x.to_upper_camel_case() + "Params"), idents)
                 }
                 crate::parser::QueryDataStructure::Named(named_params) => {
-                    let idents = validation::unknown_named_struct(&module.path, &name, param_types)
-                        .map_err(ErrorVariant::from)
-                        .map_err(|e| Error::new(e, &name, &module.path))?;
+                    let idents =
+                        validation::unknown_named_struct(&module.path, &named_params, param_types)
+                            .map_err(ErrorVariant::from)
+                            .map_err(|e| Error::new(e, &name, &module.path))?;
                     (named_params, idents)
                 }
             };
@@ -385,9 +386,10 @@ fn prepare_query(
                     (name.map(|x| x.to_upper_camel_case()), idents)
                 }
                 crate::parser::QueryDataStructure::Named(named_row) => {
-                    let idents = validation::unknown_named_struct(&module.path, &name, row_types)
-                        .map_err(ErrorVariant::from)
-                        .map_err(|e| Error::new(e, &name, &module.path))?;
+                    let idents =
+                        validation::unknown_named_struct(&module.path, &named_row, row_types)
+                            .map_err(ErrorVariant::from)
+                            .map_err(|e| Error::new(e, &name, &module.path))?;
 
                     (named_row, idents)
                 }

@@ -3,6 +3,7 @@ use std::net::{IpAddr, Ipv4Addr};
 use cornucopia_sync::{
     queries::{
         copy::{select_copy, InsertCloneParams, InsertCopyParams},
+        named::{items, new_item_hidden, new_item_visible, Item},
         params::insert_book,
     },
     types::public::{CloneCompositeBorrowed, CopyComposite},
@@ -16,6 +17,7 @@ use uuid::Uuid;
 
 use crate::cornucopia_sync::{
     queries::{
+        named::item_by_id,
         params::{select_book, SelectBook},
         stress::{
             select_everything, select_everything_array, select_nightmare,
@@ -43,6 +45,7 @@ pub fn main() {
         .unwrap();
     test_copy(client);
     test_params(client);
+    test_named(client);
     test_stress(client);
 }
 
@@ -67,6 +70,46 @@ pub fn test_params(client: &mut Client) {
             }
         ]
     )
+}
+
+pub fn test_named(client: &mut Client) {
+    let hidden_id = new_item_hidden(client, &"secret", &42.0).one().unwrap().id;
+    let visible_id = new_item_visible(client, &"stuff", &84.0).one().unwrap().id;
+    assert_eq!(
+        items(client).vec().unwrap(),
+        &[
+            Item {
+                id: hidden_id,
+                name: "secret".into(),
+                price: 42.0,
+                show: false
+            },
+            Item {
+                id: visible_id,
+                name: "stuff".into(),
+                price: 84.0,
+                show: true
+            }
+        ]
+    );
+    assert_eq!(
+        item_by_id(client, &hidden_id).one().unwrap(),
+        Item {
+            id: hidden_id,
+            name: "secret".into(),
+            price: 42.0,
+            show: false
+        }
+    );
+    assert_eq!(
+        item_by_id(client, &visible_id).one().unwrap(),
+        Item {
+            id: visible_id,
+            name: "stuff".into(),
+            price: 84.0,
+            show: true
+        }
+    );
 }
 
 // Test we correctly implement borrowed version and copy derive
