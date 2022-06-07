@@ -400,16 +400,16 @@ fn prepare_query(
                     .zip(stmt_params)
                     .map(|(a, b)| (a.to_owned(), b.to_owned()))
                     .collect::<Vec<(Parsed<String>, Type)>>();
-                for nullable_col in nullable_params_fields {
+                for nullable_col in &nullable_params_fields {
                     // If none of the row's columns match the nullable column
-                    validation::nullable_param_name(&module.path, &nullable_col, &params)
+                    validation::nullable_param_name(&module.path, nullable_col, &params)
                         .map_err(ErrorVariant::from)
                         .map_err(|e| Error::new(e, &name, &module.path))?;
                 }
 
                 let mut param_fields = Vec::new();
                 for (col_name, col_ty) in params {
-                    let is_nullable = nullable_row_fields
+                    let is_nullable = nullable_params_fields
                         .iter()
                         .any(|x| x.value.name() == col_name.value);
                     // Register type

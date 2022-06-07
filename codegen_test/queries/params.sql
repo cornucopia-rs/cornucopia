@@ -1,7 +1,7 @@
---! insert_book
+--! insert_book (author?)
 INSERT INTO book (author, name) VALUES (:author, :name);
 
---! select_book
+--! select_book: (author?)
 SELECT * FROM book;
 
 --! params_use_twice

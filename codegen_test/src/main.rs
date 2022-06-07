@@ -1,7 +1,10 @@
 use std::net::{IpAddr, Ipv4Addr};
 
 use cornucopia_sync::{
-    queries::copy::{select_copy, InsertCloneParams, InsertCopyParams},
+    queries::{
+        copy::{select_copy, InsertCloneParams, InsertCopyParams},
+        params::insert_book,
+    },
     types::public::{CloneCompositeBorrowed, CopyComposite},
 };
 use eui48::MacAddress;
@@ -12,10 +15,13 @@ use time::{OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;
 
 use crate::cornucopia_sync::{
-    queries::stress::{
-        select_everything, select_everything_array, select_nightmare, InsertEverythingArrayParams,
-        InsertEverythingParams, InsertNightmareParams, SelectEverything, SelectEverythingArray,
-        SelectNightmare,
+    queries::{
+        params::{select_book, SelectBook},
+        stress::{
+            select_everything, select_everything_array, select_nightmare,
+            InsertEverythingArrayParams, InsertEverythingParams, InsertNightmareParams,
+            SelectEverything, SelectEverythingArray, SelectNightmare,
+        },
     },
     types::public::{
         CustomComposite, CustomCompositeBorrowed, MyDomain, MyDomainBorrowed, NightmareComposite,
@@ -36,10 +42,32 @@ pub fn main() {
         .connect(NoTls)
         .unwrap();
     test_copy(client);
+    test_params(client);
     test_stress(client);
 }
 
 pub fn moving<T>(_item: T) {}
+
+pub fn test_params(client: &mut Client) {
+    assert_eq!(1, insert_book(client, &None, &"Necronomicon").unwrap());
+    assert_eq!(
+        1,
+        insert_book(client, &Some("Marcel Proust"), &"In Search of Lost Time").unwrap()
+    );
+    assert_eq!(
+        select_book(client).vec().unwrap(),
+        &[
+            SelectBook {
+                author: None,
+                name: "Necronomicon".into()
+            },
+            SelectBook {
+                author: Some("Marcel Proust".into()),
+                name: "In Search of Lost Time".into()
+            }
+        ]
+    )
+}
 
 // Test we correctly implement borrowed version and copy derive
 pub fn test_copy(client: &mut Client) {

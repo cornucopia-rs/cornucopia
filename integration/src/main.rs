@@ -1,5 +1,6 @@
 use std::{
     borrow::Cow,
+    fmt::Display,
     process::{Command, ExitCode},
 };
 
@@ -41,6 +42,13 @@ fn main() -> ExitCode {
     }
 }
 
+fn display<T, E: Display>(result: Result<T, E>) -> Result<T, E> {
+    if let Err(err) = &result {
+        eprintln!("{}", err);
+    }
+    result
+}
+
 // Run test, return true if all test are successful
 fn test(apply: bool) -> bool {
     // Start by removing previous container if it was left open
@@ -48,9 +56,9 @@ fn test(apply: bool) -> bool {
     container::setup(false).unwrap();
     let successful = std::panic::catch_unwind(|| {
         let mut client = cornucopia::conn::cornucopia_conn().unwrap();
-        run_errors_test(&mut client, apply).unwrap()
-            && run_codegen_test(&mut client).unwrap()
-            && run_examples_test(&mut client).unwrap()
+        display(run_errors_test(&mut client, apply)).unwrap()
+            && display(run_codegen_test(&mut client)).unwrap()
+            && display(run_examples_test(&mut client)).unwrap()
     });
     // Format all to prevent CLI errors
     Command::new("cargo").args(["fmt", "--all"]).output().ok();

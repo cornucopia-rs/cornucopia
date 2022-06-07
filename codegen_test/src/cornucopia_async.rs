@@ -4,115 +4,6 @@
 #![allow(dead_code)]
 pub mod types {
     pub mod public {
-        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, PartialEq)]
-        #[postgres(name = "clone_composite")]
-        pub struct CloneComposite {
-            pub first: i32,
-            pub second: String,
-        }
-        #[derive(Debug)]
-        pub struct CloneCompositeBorrowed<'a> {
-            pub first: i32,
-            pub second: &'a str,
-        }
-        impl<'a> From<CloneCompositeBorrowed<'a>> for CloneComposite {
-            fn from(CloneCompositeBorrowed { first, second }: CloneCompositeBorrowed<'a>) -> Self {
-                Self {
-                    first,
-                    second: second.into(),
-                }
-            }
-        }
-        impl<'a> postgres_types::FromSql<'a> for CloneCompositeBorrowed<'a> {
-            fn from_sql(
-                ty: &postgres_types::Type,
-                out: &'a [u8],
-            ) -> Result<CloneCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let fields = match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                let mut out = out;
-                let num_fields = postgres_types::private::read_be_i32(&mut out)?;
-                let _oid = postgres_types::private::read_be_i32(&mut out)?;
-                let first = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
-                let _oid = postgres_types::private::read_be_i32(&mut out)?;
-                let second = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
-                Ok(CloneCompositeBorrowed { first, second })
-            }
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                ty.name() == "clone_composite" && ty.schema() == "public"
-            }
-        }
-        impl<'a> postgres_types::ToSql for CloneCompositeBorrowed<'a> {
-            fn to_sql(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let fields = match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
-                for field in fields {
-                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
-                    let base = out.len();
-                    out.extend_from_slice(&[0; 4]);
-                    let r = match field.name() {
-                        "first" => postgres_types::ToSql::to_sql(&self.first, field.type_(), out),
-                        "second" => postgres_types::ToSql::to_sql(&self.second, field.type_(), out),
-                        _ => unreachable!(),
-                    };
-                    let count = match r? {
-                        postgres_types::IsNull::Yes => -1,
-                        postgres_types::IsNull::No => {
-                            let len = out.len() - base - 4;
-                            if len > i32::max_value() as usize {
-                                return Err(Into::into("value too large to transmit"));
-                            }
-                            len as i32
-                        }
-                    };
-                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
-                }
-                Ok(postgres_types::IsNull::No)
-            }
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                if ty.name() != "clone_composite" {
-                    return false;
-                }
-                match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 2usize {
-                            return false;
-                        }
-                        fields.iter().all(|f| match f.name() {
-                            "first" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
-                            "second" => <&'a str as postgres_types::ToSql>::accepts(f.type_()),
-                            _ => false,
-                        })
-                    }
-                    _ => false,
-                }
-            }
-            fn to_sql_checked(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                postgres_types::__to_sql_checked(self, ty, out)
-            }
-        }
-        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Copy, Clone, PartialEq)]
-        #[postgres(name = "copy_composite")]
-        pub struct CopyComposite {
-            pub first: i32,
-            pub second: f64,
-        }
         #[derive(
             Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, Copy, PartialEq, Eq,
         )]
@@ -468,6 +359,115 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
+        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, PartialEq)]
+        #[postgres(name = "clone_composite")]
+        pub struct CloneComposite {
+            pub first: i32,
+            pub second: String,
+        }
+        #[derive(Debug)]
+        pub struct CloneCompositeBorrowed<'a> {
+            pub first: i32,
+            pub second: &'a str,
+        }
+        impl<'a> From<CloneCompositeBorrowed<'a>> for CloneComposite {
+            fn from(CloneCompositeBorrowed { first, second }: CloneCompositeBorrowed<'a>) -> Self {
+                Self {
+                    first,
+                    second: second.into(),
+                }
+            }
+        }
+        impl<'a> postgres_types::FromSql<'a> for CloneCompositeBorrowed<'a> {
+            fn from_sql(
+                ty: &postgres_types::Type,
+                out: &'a [u8],
+            ) -> Result<CloneCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                let mut out = out;
+                let num_fields = postgres_types::private::read_be_i32(&mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let first = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let second = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
+                Ok(CloneCompositeBorrowed { first, second })
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                ty.name() == "clone_composite" && ty.schema() == "public"
+            }
+        }
+        impl<'a> postgres_types::ToSql for CloneCompositeBorrowed<'a> {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {
+                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = out.len();
+                    out.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {
+                        "first" => postgres_types::ToSql::to_sql(&self.first, field.type_(), out),
+                        "second" => postgres_types::ToSql::to_sql(&self.second, field.type_(), out),
+                        _ => unreachable!(),
+                    };
+                    let count = match r? {
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {
+                            let len = out.len() - base - 4;
+                            if len > i32::max_value() as usize {
+                                return Err(Into::into("value too large to transmit"));
+                            }
+                            len as i32
+                        }
+                    };
+                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                }
+                Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "clone_composite" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != 2usize {
+                            return false;
+                        }
+                        fields.iter().all(|f| match f.name() {
+                            "first" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+                            "second" => <&'a str as postgres_types::ToSql>::accepts(f.type_()),
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Copy, Clone, PartialEq)]
+        #[postgres(name = "copy_composite")]
+        pub struct CopyComposite {
+            pub first: i32,
+            pub second: f64,
+        }
     }
 }
 pub mod queries {
@@ -686,7 +686,7 @@ pub mod queries {
         use futures::{StreamExt, TryStreamExt};
         #[derive(Debug)]
         pub struct InsertBookParams<'a> {
-            pub author: &'a str,
+            pub author: Option<&'a str>,
             pub name: &'a str,
         }
         impl<'a> InsertBookParams<'a> {
@@ -711,17 +711,17 @@ pub mod queries {
         }
         #[derive(Debug, Clone, PartialEq)]
         pub struct SelectBook {
-            pub author: String,
+            pub author: Option<String>,
             pub name: String,
         }
         pub struct SelectBookBorrowed<'a> {
-            pub author: &'a str,
+            pub author: Option<&'a str>,
             pub name: &'a str,
         }
         impl<'a> From<SelectBookBorrowed<'a>> for SelectBook {
             fn from(SelectBookBorrowed { author, name }: SelectBookBorrowed<'a>) -> Self {
                 Self {
-                    author: author.into(),
+                    author: author.map(|v| v.into()),
                     name: name.into(),
                 }
             }
@@ -786,7 +786,7 @@ pub mod queries {
         }
         pub async fn insert_book<'a, C: GenericClient>(
             client: &'a C,
-            author: &'a &'a str,
+            author: &'a Option<&'a str>,
             name: &'a &'a str,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = client
@@ -1190,6 +1190,212 @@ pub mod queries {
             }
         }
         #[derive(Debug, Clone, PartialEq)]
+        pub struct SelectEverythingNull {
+            pub bigserial_: Option<i64>,
+            pub bingint_: Option<i64>,
+            pub bool_: Option<bool>,
+            pub boolean_: Option<bool>,
+            pub bytea_: Option<Vec<u8>>,
+            pub char_: Option<i8>,
+            pub date_: Option<time::Date>,
+            pub double_precision_: Option<f64>,
+            pub float4_: Option<f32>,
+            pub float8_: Option<f64>,
+            pub inet_: Option<std::net::IpAddr>,
+            pub int2_: Option<i16>,
+            pub int4_: Option<i32>,
+            pub int8_: Option<i64>,
+            pub int_: Option<i32>,
+            pub json_: Option<postgres_types::Json<serde_json::Value>>,
+            pub jsonb_: Option<postgres_types::Json<serde_json::Value>>,
+            pub macaddr_: Option<eui48::MacAddress>,
+            pub real_: Option<f32>,
+            pub serial2_: Option<i16>,
+            pub serial4_: Option<i32>,
+            pub serial8_: Option<i64>,
+            pub serial_: Option<i32>,
+            pub smallint_: Option<i16>,
+            pub smallserial_: Option<i16>,
+            pub text_: Option<String>,
+            pub time_: Option<time::Time>,
+            pub timestamp_: Option<time::PrimitiveDateTime>,
+            pub timestamp_with_time_zone_: Option<time::OffsetDateTime>,
+            pub timestamp_without_time_zone_: Option<time::PrimitiveDateTime>,
+            pub timestamptz_: Option<time::OffsetDateTime>,
+            pub uuid_: Option<uuid::Uuid>,
+            pub varchar_: Option<String>,
+        }
+        pub struct SelectEverythingNullBorrowed<'a> {
+            pub bigserial_: Option<i64>,
+            pub bingint_: Option<i64>,
+            pub bool_: Option<bool>,
+            pub boolean_: Option<bool>,
+            pub bytea_: Option<&'a [u8]>,
+            pub char_: Option<i8>,
+            pub date_: Option<time::Date>,
+            pub double_precision_: Option<f64>,
+            pub float4_: Option<f32>,
+            pub float8_: Option<f64>,
+            pub inet_: Option<std::net::IpAddr>,
+            pub int2_: Option<i16>,
+            pub int4_: Option<i32>,
+            pub int8_: Option<i64>,
+            pub int_: Option<i32>,
+            pub json_: Option<postgres_types::Json<&'a serde_json::value::RawValue>>,
+            pub jsonb_: Option<postgres_types::Json<&'a serde_json::value::RawValue>>,
+            pub macaddr_: Option<eui48::MacAddress>,
+            pub real_: Option<f32>,
+            pub serial2_: Option<i16>,
+            pub serial4_: Option<i32>,
+            pub serial8_: Option<i64>,
+            pub serial_: Option<i32>,
+            pub smallint_: Option<i16>,
+            pub smallserial_: Option<i16>,
+            pub text_: Option<&'a str>,
+            pub time_: Option<time::Time>,
+            pub timestamp_: Option<time::PrimitiveDateTime>,
+            pub timestamp_with_time_zone_: Option<time::OffsetDateTime>,
+            pub timestamp_without_time_zone_: Option<time::PrimitiveDateTime>,
+            pub timestamptz_: Option<time::OffsetDateTime>,
+            pub uuid_: Option<uuid::Uuid>,
+            pub varchar_: Option<&'a str>,
+        }
+        impl<'a> From<SelectEverythingNullBorrowed<'a>> for SelectEverythingNull {
+            fn from(
+                SelectEverythingNullBorrowed {
+                    bigserial_,
+                    bingint_,
+                    bool_,
+                    boolean_,
+                    bytea_,
+                    char_,
+                    date_,
+                    double_precision_,
+                    float4_,
+                    float8_,
+                    inet_,
+                    int2_,
+                    int4_,
+                    int8_,
+                    int_,
+                    json_,
+                    jsonb_,
+                    macaddr_,
+                    real_,
+                    serial2_,
+                    serial4_,
+                    serial8_,
+                    serial_,
+                    smallint_,
+                    smallserial_,
+                    text_,
+                    time_,
+                    timestamp_,
+                    timestamp_with_time_zone_,
+                    timestamp_without_time_zone_,
+                    timestamptz_,
+                    uuid_,
+                    varchar_,
+                }: SelectEverythingNullBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    bigserial_,
+                    bingint_,
+                    bool_,
+                    boolean_,
+                    bytea_: bytea_.map(|v| v.into()),
+                    char_,
+                    date_,
+                    double_precision_,
+                    float4_,
+                    float8_,
+                    inet_,
+                    int2_,
+                    int4_,
+                    int8_,
+                    int_,
+                    json_: json_
+                        .map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap())),
+                    jsonb_: jsonb_
+                        .map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap())),
+                    macaddr_,
+                    real_,
+                    serial2_,
+                    serial4_,
+                    serial8_,
+                    serial_,
+                    smallint_,
+                    smallserial_,
+                    text_: text_.map(|v| v.into()),
+                    time_,
+                    timestamp_,
+                    timestamp_with_time_zone_,
+                    timestamp_without_time_zone_,
+                    timestamptz_,
+                    uuid_,
+                    varchar_: varchar_.map(|v| v.into()),
+                }
+            }
+        }
+        pub struct SelectEverythingNullQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> SelectEverythingNullBorrowed,
+            mapper: fn(SelectEverythingNullBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> SelectEverythingNullQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(
+                self,
+                mapper: fn(SelectEverythingNullBorrowed) -> R,
+            ) -> SelectEverythingNullQuery<'a, C, R, N> {
+                SelectEverythingNullQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+                self.client.prepare(self.query).await
+            }
+            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                let row = self.client.query_one(&stmt, &self.params).await?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.stream().await?.try_collect().await
+            }
+            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub async fn stream(
+                self,
+            ) -> Result<
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
+                let stmt = self.stmt().await?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .await?
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                    .into_stream();
+                Ok(stream)
+            }
+        }
+        #[derive(Debug, Clone, PartialEq)]
         pub struct SelectEverythingArray {
             pub bingint_: Vec<i64>,
             pub bool_: Vec<bool>,
@@ -1382,6 +1588,206 @@ pub mod queries {
             }
         }
         #[derive(Debug, Clone, PartialEq)]
+        pub struct SelectEverythingArrayNull {
+            pub bingint_: Option<Vec<i64>>,
+            pub bool_: Option<Vec<bool>>,
+            pub boolean_: Option<Vec<bool>>,
+            pub bytea_: Option<Vec<Vec<u8>>>,
+            pub char_: Option<Vec<i8>>,
+            pub date_: Option<Vec<time::Date>>,
+            pub double_precision_: Option<Vec<f64>>,
+            pub float4_: Option<Vec<f32>>,
+            pub float8_: Option<Vec<f64>>,
+            pub inet_: Option<Vec<std::net::IpAddr>>,
+            pub int2_: Option<Vec<i16>>,
+            pub int4_: Option<Vec<i32>>,
+            pub int8_: Option<Vec<i64>>,
+            pub int_: Option<Vec<i32>>,
+            pub json_: Option<Vec<postgres_types::Json<serde_json::Value>>>,
+            pub jsonb_: Option<Vec<postgres_types::Json<serde_json::Value>>>,
+            pub macaddr_: Option<Vec<eui48::MacAddress>>,
+            pub real_: Option<Vec<f32>>,
+            pub smallint_: Option<Vec<i16>>,
+            pub text_: Option<Vec<String>>,
+            pub time_: Option<Vec<time::Time>>,
+            pub timestamp_: Option<Vec<time::PrimitiveDateTime>>,
+            pub timestamp_with_time_zone_: Option<Vec<time::OffsetDateTime>>,
+            pub timestamp_without_time_zone_: Option<Vec<time::PrimitiveDateTime>>,
+            pub timestamptz_: Option<Vec<time::OffsetDateTime>>,
+            pub uuid_: Option<Vec<uuid::Uuid>>,
+            pub varchar_: Option<Vec<String>>,
+        }
+        pub struct SelectEverythingArrayNullBorrowed<'a> {
+            pub bingint_: Option<cornucopia_client::ArrayIterator<'a, i64>>,
+            pub bool_: Option<cornucopia_client::ArrayIterator<'a, bool>>,
+            pub boolean_: Option<cornucopia_client::ArrayIterator<'a, bool>>,
+            pub bytea_: Option<cornucopia_client::ArrayIterator<'a, &'a [u8]>>,
+            pub char_: Option<cornucopia_client::ArrayIterator<'a, i8>>,
+            pub date_: Option<cornucopia_client::ArrayIterator<'a, time::Date>>,
+            pub double_precision_: Option<cornucopia_client::ArrayIterator<'a, f64>>,
+            pub float4_: Option<cornucopia_client::ArrayIterator<'a, f32>>,
+            pub float8_: Option<cornucopia_client::ArrayIterator<'a, f64>>,
+            pub inet_: Option<cornucopia_client::ArrayIterator<'a, std::net::IpAddr>>,
+            pub int2_: Option<cornucopia_client::ArrayIterator<'a, i16>>,
+            pub int4_: Option<cornucopia_client::ArrayIterator<'a, i32>>,
+            pub int8_: Option<cornucopia_client::ArrayIterator<'a, i64>>,
+            pub int_: Option<cornucopia_client::ArrayIterator<'a, i32>>,
+            pub json_: Option<
+                cornucopia_client::ArrayIterator<
+                    'a,
+                    postgres_types::Json<&'a serde_json::value::RawValue>,
+                >,
+            >,
+            pub jsonb_: Option<
+                cornucopia_client::ArrayIterator<
+                    'a,
+                    postgres_types::Json<&'a serde_json::value::RawValue>,
+                >,
+            >,
+            pub macaddr_: Option<cornucopia_client::ArrayIterator<'a, eui48::MacAddress>>,
+            pub real_: Option<cornucopia_client::ArrayIterator<'a, f32>>,
+            pub smallint_: Option<cornucopia_client::ArrayIterator<'a, i16>>,
+            pub text_: Option<cornucopia_client::ArrayIterator<'a, &'a str>>,
+            pub time_: Option<cornucopia_client::ArrayIterator<'a, time::Time>>,
+            pub timestamp_: Option<cornucopia_client::ArrayIterator<'a, time::PrimitiveDateTime>>,
+            pub timestamp_with_time_zone_:
+                Option<cornucopia_client::ArrayIterator<'a, time::OffsetDateTime>>,
+            pub timestamp_without_time_zone_:
+                Option<cornucopia_client::ArrayIterator<'a, time::PrimitiveDateTime>>,
+            pub timestamptz_: Option<cornucopia_client::ArrayIterator<'a, time::OffsetDateTime>>,
+            pub uuid_: Option<cornucopia_client::ArrayIterator<'a, uuid::Uuid>>,
+            pub varchar_: Option<cornucopia_client::ArrayIterator<'a, &'a str>>,
+        }
+        impl<'a> From<SelectEverythingArrayNullBorrowed<'a>> for SelectEverythingArrayNull {
+            fn from(
+                SelectEverythingArrayNullBorrowed {
+                    bingint_,
+                    bool_,
+                    boolean_,
+                    bytea_,
+                    char_,
+                    date_,
+                    double_precision_,
+                    float4_,
+                    float8_,
+                    inet_,
+                    int2_,
+                    int4_,
+                    int8_,
+                    int_,
+                    json_,
+                    jsonb_,
+                    macaddr_,
+                    real_,
+                    smallint_,
+                    text_,
+                    time_,
+                    timestamp_,
+                    timestamp_with_time_zone_,
+                    timestamp_without_time_zone_,
+                    timestamptz_,
+                    uuid_,
+                    varchar_,
+                }: SelectEverythingArrayNullBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    bingint_: bingint_.map(|v| v.map(|v| v).collect()),
+                    bool_: bool_.map(|v| v.map(|v| v).collect()),
+                    boolean_: boolean_.map(|v| v.map(|v| v).collect()),
+                    bytea_: bytea_.map(|v| v.map(|v| v.into()).collect()),
+                    char_: char_.map(|v| v.map(|v| v).collect()),
+                    date_: date_.map(|v| v.map(|v| v).collect()),
+                    double_precision_: double_precision_.map(|v| v.map(|v| v).collect()),
+                    float4_: float4_.map(|v| v.map(|v| v).collect()),
+                    float8_: float8_.map(|v| v.map(|v| v).collect()),
+                    inet_: inet_.map(|v| v.map(|v| v).collect()),
+                    int2_: int2_.map(|v| v.map(|v| v).collect()),
+                    int4_: int4_.map(|v| v.map(|v| v).collect()),
+                    int8_: int8_.map(|v| v.map(|v| v).collect()),
+                    int_: int_.map(|v| v.map(|v| v).collect()),
+                    json_: json_.map(|v| {
+                        v.map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap()))
+                            .collect()
+                    }),
+                    jsonb_: jsonb_.map(|v| {
+                        v.map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap()))
+                            .collect()
+                    }),
+                    macaddr_: macaddr_.map(|v| v.map(|v| v).collect()),
+                    real_: real_.map(|v| v.map(|v| v).collect()),
+                    smallint_: smallint_.map(|v| v.map(|v| v).collect()),
+                    text_: text_.map(|v| v.map(|v| v.into()).collect()),
+                    time_: time_.map(|v| v.map(|v| v).collect()),
+                    timestamp_: timestamp_.map(|v| v.map(|v| v).collect()),
+                    timestamp_with_time_zone_: timestamp_with_time_zone_
+                        .map(|v| v.map(|v| v).collect()),
+                    timestamp_without_time_zone_: timestamp_without_time_zone_
+                        .map(|v| v.map(|v| v).collect()),
+                    timestamptz_: timestamptz_.map(|v| v.map(|v| v).collect()),
+                    uuid_: uuid_.map(|v| v.map(|v| v).collect()),
+                    varchar_: varchar_.map(|v| v.map(|v| v.into()).collect()),
+                }
+            }
+        }
+        pub struct SelectEverythingArrayNullQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> SelectEverythingArrayNullBorrowed,
+            mapper: fn(SelectEverythingArrayNullBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> SelectEverythingArrayNullQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(
+                self,
+                mapper: fn(SelectEverythingArrayNullBorrowed) -> R,
+            ) -> SelectEverythingArrayNullQuery<'a, C, R, N> {
+                SelectEverythingArrayNullQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+                self.client.prepare(self.query).await
+            }
+            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                let row = self.client.query_one(&stmt, &self.params).await?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.stream().await?.try_collect().await
+            }
+            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub async fn stream(
+                self,
+            ) -> Result<
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
+                let stmt = self.stmt().await?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .await?
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                    .into_stream();
+                Ok(stream)
+            }
+        }
+        #[derive(Debug, Clone, PartialEq)]
         pub struct SelectNightmare {
             pub composite: super::super::types::public::NightmareComposite,
         }
@@ -1497,6 +1903,52 @@ pub mod queries {
                     varchar_: row.get(20),
                 },
                 mapper: |it| SelectEverything::from(it),
+            }
+        }
+        pub fn select_everything_null<'a, C: GenericClient>(
+            client: &'a C,
+        ) -> SelectEverythingNullQuery<'a, C, SelectEverythingNull, 0> {
+            SelectEverythingNullQuery {
+                client,
+                params: [],
+                query: "SELECT * FROM Everything
+",
+                extractor: |row| SelectEverythingNullBorrowed {
+                    bigserial_: row.get(13),
+                    bingint_: row.get(11),
+                    bool_: row.get(0),
+                    boolean_: row.get(1),
+                    bytea_: row.get(21),
+                    char_: row.get(2),
+                    date_: row.get(26),
+                    double_precision_: row.get(18),
+                    float4_: row.get(15),
+                    float8_: row.get(17),
+                    inet_: row.get(31),
+                    int2_: row.get(4),
+                    int4_: row.get(8),
+                    int8_: row.get(12),
+                    int_: row.get(7),
+                    json_: row.get(28),
+                    jsonb_: row.get(29),
+                    macaddr_: row.get(32),
+                    real_: row.get(16),
+                    serial2_: row.get(6),
+                    serial4_: row.get(10),
+                    serial8_: row.get(14),
+                    serial_: row.get(9),
+                    smallint_: row.get(3),
+                    smallserial_: row.get(5),
+                    text_: row.get(19),
+                    time_: row.get(27),
+                    timestamp_: row.get(22),
+                    timestamp_with_time_zone_: row.get(25),
+                    timestamp_without_time_zone_: row.get(23),
+                    timestamptz_: row.get(24),
+                    uuid_: row.get(30),
+                    varchar_: row.get(20),
+                },
+                mapper: |it| SelectEverythingNull::from(it),
             }
         }
         pub async fn insert_everything<'a, C: GenericClient>(
@@ -1621,6 +2073,46 @@ pub mod queries {
                     varchar_: row.get(14),
                 },
                 mapper: |it| SelectEverythingArray::from(it),
+            }
+        }
+        pub fn select_everything_array_null<'a, C: GenericClient>(
+            client: &'a C,
+        ) -> SelectEverythingArrayNullQuery<'a, C, SelectEverythingArrayNull, 0> {
+            SelectEverythingArrayNullQuery {
+                client,
+                params: [],
+                query: "SELECT * FROM EverythingArray
+",
+                extractor: |row| SelectEverythingArrayNullBorrowed {
+                    bingint_: row.get(7),
+                    bool_: row.get(0),
+                    boolean_: row.get(1),
+                    bytea_: row.get(15),
+                    char_: row.get(2),
+                    date_: row.get(20),
+                    double_precision_: row.get(12),
+                    float4_: row.get(9),
+                    float8_: row.get(11),
+                    inet_: row.get(25),
+                    int2_: row.get(4),
+                    int4_: row.get(6),
+                    int8_: row.get(8),
+                    int_: row.get(5),
+                    json_: row.get(22),
+                    jsonb_: row.get(23),
+                    macaddr_: row.get(26),
+                    real_: row.get(10),
+                    smallint_: row.get(3),
+                    text_: row.get(13),
+                    time_: row.get(21),
+                    timestamp_: row.get(16),
+                    timestamp_with_time_zone_: row.get(19),
+                    timestamp_without_time_zone_: row.get(17),
+                    timestamptz_: row.get(18),
+                    uuid_: row.get(24),
+                    varchar_: row.get(14),
+                },
+                mapper: |it| SelectEverythingArrayNull::from(it),
             }
         }
         pub async fn insert_everything_array<'a, C: GenericClient>(
