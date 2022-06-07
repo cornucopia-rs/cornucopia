@@ -27,5 +27,3 @@ CREATE TABLE author (
 );
 '''
 error = 'Error while preparing query "insert_author" [file: "queries/module_1.sql", line: 1] (inconsistent types deduced for parameter $1)'
-
-
