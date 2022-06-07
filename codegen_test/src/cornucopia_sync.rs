@@ -4,6 +4,115 @@
 #![allow(dead_code)]
 pub mod types {
     pub mod public {
+        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, PartialEq)]
+        #[postgres(name = "clone_composite")]
+        pub struct CloneComposite {
+            pub first: i32,
+            pub second: String,
+        }
+        #[derive(Debug)]
+        pub struct CloneCompositeBorrowed<'a> {
+            pub first: i32,
+            pub second: &'a str,
+        }
+        impl<'a> From<CloneCompositeBorrowed<'a>> for CloneComposite {
+            fn from(CloneCompositeBorrowed { first, second }: CloneCompositeBorrowed<'a>) -> Self {
+                Self {
+                    first,
+                    second: second.into(),
+                }
+            }
+        }
+        impl<'a> postgres_types::FromSql<'a> for CloneCompositeBorrowed<'a> {
+            fn from_sql(
+                ty: &postgres_types::Type,
+                out: &'a [u8],
+            ) -> Result<CloneCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                let mut out = out;
+                let num_fields = postgres_types::private::read_be_i32(&mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let first = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let second = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
+                Ok(CloneCompositeBorrowed { first, second })
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                ty.name() == "clone_composite" && ty.schema() == "public"
+            }
+        }
+        impl<'a> postgres_types::ToSql for CloneCompositeBorrowed<'a> {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {
+                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = out.len();
+                    out.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {
+                        "first" => postgres_types::ToSql::to_sql(&self.first, field.type_(), out),
+                        "second" => postgres_types::ToSql::to_sql(&self.second, field.type_(), out),
+                        _ => unreachable!(),
+                    };
+                    let count = match r? {
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {
+                            let len = out.len() - base - 4;
+                            if len > i32::max_value() as usize {
+                                return Err(Into::into("value too large to transmit"));
+                            }
+                            len as i32
+                        }
+                    };
+                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                }
+                Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "clone_composite" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != 2usize {
+                            return false;
+                        }
+                        fields.iter().all(|f| match f.name() {
+                            "first" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+                            "second" => <&'a str as postgres_types::ToSql>::accepts(f.type_()),
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Copy, Clone, PartialEq)]
+        #[postgres(name = "copy_composite")]
+        pub struct CopyComposite {
+            pub first: i32,
+            pub second: f64,
+        }
         #[derive(
             Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, Copy, PartialEq, Eq,
         )]
@@ -358,115 +467,6 @@ pub mod types {
             {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
-        }
-        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, PartialEq)]
-        #[postgres(name = "clone_composite")]
-        pub struct CloneComposite {
-            pub first: i32,
-            pub second: String,
-        }
-        #[derive(Debug)]
-        pub struct CloneCompositeBorrowed<'a> {
-            pub first: i32,
-            pub second: &'a str,
-        }
-        impl<'a> From<CloneCompositeBorrowed<'a>> for CloneComposite {
-            fn from(CloneCompositeBorrowed { first, second }: CloneCompositeBorrowed<'a>) -> Self {
-                Self {
-                    first,
-                    second: second.into(),
-                }
-            }
-        }
-        impl<'a> postgres_types::FromSql<'a> for CloneCompositeBorrowed<'a> {
-            fn from_sql(
-                ty: &postgres_types::Type,
-                out: &'a [u8],
-            ) -> Result<CloneCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let fields = match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                let mut out = out;
-                let num_fields = postgres_types::private::read_be_i32(&mut out)?;
-                let _oid = postgres_types::private::read_be_i32(&mut out)?;
-                let first = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
-                let _oid = postgres_types::private::read_be_i32(&mut out)?;
-                let second = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
-                Ok(CloneCompositeBorrowed { first, second })
-            }
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                ty.name() == "clone_composite" && ty.schema() == "public"
-            }
-        }
-        impl<'a> postgres_types::ToSql for CloneCompositeBorrowed<'a> {
-            fn to_sql(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let fields = match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
-                for field in fields {
-                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
-                    let base = out.len();
-                    out.extend_from_slice(&[0; 4]);
-                    let r = match field.name() {
-                        "first" => postgres_types::ToSql::to_sql(&self.first, field.type_(), out),
-                        "second" => postgres_types::ToSql::to_sql(&self.second, field.type_(), out),
-                        _ => unreachable!(),
-                    };
-                    let count = match r? {
-                        postgres_types::IsNull::Yes => -1,
-                        postgres_types::IsNull::No => {
-                            let len = out.len() - base - 4;
-                            if len > i32::max_value() as usize {
-                                return Err(Into::into("value too large to transmit"));
-                            }
-                            len as i32
-                        }
-                    };
-                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
-                }
-                Ok(postgres_types::IsNull::No)
-            }
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                if ty.name() != "clone_composite" {
-                    return false;
-                }
-                match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 2usize {
-                            return false;
-                        }
-                        fields.iter().all(|f| match f.name() {
-                            "first" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
-                            "second" => <&'a str as postgres_types::ToSql>::accepts(f.type_()),
-                            _ => false,
-                        })
-                    }
-                    _ => false,
-                }
-            }
-            fn to_sql_checked(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                postgres_types::__to_sql_checked(self, ty, out)
-            }
-        }
-        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Copy, Clone, PartialEq)]
-        #[postgres(name = "copy_composite")]
-        pub struct CopyComposite {
-            pub first: i32,
-            pub second: f64,
         }
     }
 }
@@ -847,39 +847,39 @@ pub mod queries {
             ) -> Result<u64, postgres::Error> {
                 insert_everything(
                     client,
+                    &self.bigserial_,
+                    &self.bingint_,
                     &self.bool_,
                     &self.boolean_,
-                    &self.char_,
-                    &self.smallint_,
-                    &self.int2_,
-                    &self.smallserial_,
-                    &self.serial2_,
-                    &self.int_,
-                    &self.int4_,
-                    &self.serial_,
-                    &self.serial4_,
-                    &self.bingint_,
-                    &self.int8_,
-                    &self.bigserial_,
-                    &self.serial8_,
-                    &self.float4_,
-                    &self.real_,
-                    &self.float8_,
-                    &self.double_precision_,
-                    &self.text_,
-                    &self.varchar_,
                     &self.bytea_,
-                    &self.timestamp_,
-                    &self.timestamp_without_time_zone_,
-                    &self.timestamptz_,
-                    &self.timestamp_with_time_zone_,
+                    &self.char_,
                     &self.date_,
-                    &self.time_,
+                    &self.double_precision_,
+                    &self.float4_,
+                    &self.float8_,
+                    &self.inet_,
+                    &self.int2_,
+                    &self.int4_,
+                    &self.int8_,
+                    &self.int_,
                     &self.json_,
                     &self.jsonb_,
-                    &self.uuid_,
-                    &self.inet_,
                     &self.macaddr_,
+                    &self.real_,
+                    &self.serial2_,
+                    &self.serial4_,
+                    &self.serial8_,
+                    &self.serial_,
+                    &self.smallint_,
+                    &self.smallserial_,
+                    &self.text_,
+                    &self.time_,
+                    &self.timestamp_,
+                    &self.timestamp_with_time_zone_,
+                    &self.timestamp_without_time_zone_,
+                    &self.timestamptz_,
+                    &self.uuid_,
+                    &self.varchar_,
                 )
             }
         }
@@ -920,33 +920,33 @@ pub mod queries {
             ) -> Result<u64, postgres::Error> {
                 insert_everything_array(
                     client,
+                    &self.bingint_,
                     &self.bool_,
                     &self.boolean_,
-                    &self.char_,
-                    &self.smallint_,
-                    &self.int2_,
-                    &self.int_,
-                    &self.int4_,
-                    &self.bingint_,
-                    &self.int8_,
-                    &self.float4_,
-                    &self.real_,
-                    &self.float8_,
-                    &self.double_precision_,
-                    &self.text_,
-                    &self.varchar_,
                     &self.bytea_,
-                    &self.timestamp_,
-                    &self.timestamp_without_time_zone_,
-                    &self.timestamptz_,
-                    &self.timestamp_with_time_zone_,
+                    &self.char_,
                     &self.date_,
-                    &self.time_,
+                    &self.double_precision_,
+                    &self.float4_,
+                    &self.float8_,
+                    &self.inet_,
+                    &self.int2_,
+                    &self.int4_,
+                    &self.int8_,
+                    &self.int_,
                     &self.json_,
                     &self.jsonb_,
-                    &self.uuid_,
-                    &self.inet_,
                     &self.macaddr_,
+                    &self.real_,
+                    &self.smallint_,
+                    &self.text_,
+                    &self.time_,
+                    &self.timestamp_,
+                    &self.timestamp_with_time_zone_,
+                    &self.timestamp_without_time_zone_,
+                    &self.timestamptz_,
+                    &self.uuid_,
+                    &self.varchar_,
                 )
             }
         }
@@ -1466,82 +1466,82 @@ pub mod queries {
         }
         pub fn insert_everything<'a, C: GenericClient>(
             client: &'a mut C,
+            bigserial_: &'a i64,
+            bingint_: &'a i64,
             bool_: &'a bool,
             boolean_: &'a bool,
-            char_: &'a i8,
-            smallint_: &'a i16,
-            int2_: &'a i16,
-            smallserial_: &'a i16,
-            serial2_: &'a i16,
-            int_: &'a i32,
-            int4_: &'a i32,
-            serial_: &'a i32,
-            serial4_: &'a i32,
-            bingint_: &'a i64,
-            int8_: &'a i64,
-            bigserial_: &'a i64,
-            serial8_: &'a i64,
-            float4_: &'a f32,
-            real_: &'a f32,
-            float8_: &'a f64,
-            double_precision_: &'a f64,
-            text_: &'a &'a str,
-            varchar_: &'a &'a str,
             bytea_: &'a &'a [u8],
-            timestamp_: &'a time::PrimitiveDateTime,
-            timestamp_without_time_zone_: &'a time::PrimitiveDateTime,
-            timestamptz_: &'a time::OffsetDateTime,
-            timestamp_with_time_zone_: &'a time::OffsetDateTime,
+            char_: &'a i8,
             date_: &'a time::Date,
-            time_: &'a time::Time,
+            double_precision_: &'a f64,
+            float4_: &'a f32,
+            float8_: &'a f64,
+            inet_: &'a std::net::IpAddr,
+            int2_: &'a i16,
+            int4_: &'a i32,
+            int8_: &'a i64,
+            int_: &'a i32,
             json_: &'a postgres_types::Json<&'a serde_json::value::RawValue>,
             jsonb_: &'a postgres_types::Json<&'a serde_json::value::RawValue>,
-            uuid_: &'a uuid::Uuid,
-            inet_: &'a std::net::IpAddr,
             macaddr_: &'a eui48::MacAddress,
+            real_: &'a f32,
+            serial2_: &'a i16,
+            serial4_: &'a i32,
+            serial8_: &'a i64,
+            serial_: &'a i32,
+            smallint_: &'a i16,
+            smallserial_: &'a i16,
+            text_: &'a &'a str,
+            time_: &'a time::Time,
+            timestamp_: &'a time::PrimitiveDateTime,
+            timestamp_with_time_zone_: &'a time::OffsetDateTime,
+            timestamp_without_time_zone_: &'a time::PrimitiveDateTime,
+            timestamptz_: &'a time::OffsetDateTime,
+            uuid_: &'a uuid::Uuid,
+            varchar_: &'a &'a str,
         ) -> Result<u64, postgres::Error> {
             let stmt = client
                 .prepare(
                     "INSERT INTO Everything (bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33);
+    VALUES ($3, $4, $6, $24, $12, $25, $20, $15, $13, $23, $21, $2, $14, $1, $22, $9, $19, $10, $8, $26, $33, $5, $28, $30, $31, $29, $7, $27, $16, $17, $32, $11, $18);
 ",
                 )?;
             client.execute(
                 &stmt,
                 &[
+                    bigserial_,
+                    bingint_,
                     bool_,
                     boolean_,
-                    char_,
-                    smallint_,
-                    int2_,
-                    smallserial_,
-                    serial2_,
-                    int_,
-                    int4_,
-                    serial_,
-                    serial4_,
-                    bingint_,
-                    int8_,
-                    bigserial_,
-                    serial8_,
-                    float4_,
-                    real_,
-                    float8_,
-                    double_precision_,
-                    text_,
-                    varchar_,
                     bytea_,
-                    timestamp_,
-                    timestamp_without_time_zone_,
-                    timestamptz_,
-                    timestamp_with_time_zone_,
+                    char_,
                     date_,
-                    time_,
+                    double_precision_,
+                    float4_,
+                    float8_,
+                    inet_,
+                    int2_,
+                    int4_,
+                    int8_,
+                    int_,
                     json_,
                     jsonb_,
-                    uuid_,
-                    inet_,
                     macaddr_,
+                    real_,
+                    serial2_,
+                    serial4_,
+                    serial8_,
+                    serial_,
+                    smallint_,
+                    smallserial_,
+                    text_,
+                    time_,
+                    timestamp_,
+                    timestamp_with_time_zone_,
+                    timestamp_without_time_zone_,
+                    timestamptz_,
+                    uuid_,
+                    varchar_,
                 ],
             )
         }
@@ -1587,70 +1587,70 @@ pub mod queries {
         }
         pub fn insert_everything_array<'a, C: GenericClient>(
             client: &'a mut C,
+            bingint_: &'a &'a [i64],
             bool_: &'a &'a [bool],
             boolean_: &'a &'a [bool],
-            char_: &'a &'a [i8],
-            smallint_: &'a &'a [i16],
-            int2_: &'a &'a [i16],
-            int_: &'a &'a [i32],
-            int4_: &'a &'a [i32],
-            bingint_: &'a &'a [i64],
-            int8_: &'a &'a [i64],
-            float4_: &'a &'a [f32],
-            real_: &'a &'a [f32],
-            float8_: &'a &'a [f64],
-            double_precision_: &'a &'a [f64],
-            text_: &'a &'a [&'a str],
-            varchar_: &'a &'a [&'a str],
             bytea_: &'a &'a [&'a [u8]],
-            timestamp_: &'a &'a [time::PrimitiveDateTime],
-            timestamp_without_time_zone_: &'a &'a [time::PrimitiveDateTime],
-            timestamptz_: &'a &'a [time::OffsetDateTime],
-            timestamp_with_time_zone_: &'a &'a [time::OffsetDateTime],
+            char_: &'a &'a [i8],
             date_: &'a &'a [time::Date],
-            time_: &'a &'a [time::Time],
+            double_precision_: &'a &'a [f64],
+            float4_: &'a &'a [f32],
+            float8_: &'a &'a [f64],
+            inet_: &'a &'a [std::net::IpAddr],
+            int2_: &'a &'a [i16],
+            int4_: &'a &'a [i32],
+            int8_: &'a &'a [i64],
+            int_: &'a &'a [i32],
             json_: &'a &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
             jsonb_: &'a &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
-            uuid_: &'a &'a [uuid::Uuid],
-            inet_: &'a &'a [std::net::IpAddr],
             macaddr_: &'a &'a [eui48::MacAddress],
+            real_: &'a &'a [f32],
+            smallint_: &'a &'a [i16],
+            text_: &'a &'a [&'a str],
+            time_: &'a &'a [time::Time],
+            timestamp_: &'a &'a [time::PrimitiveDateTime],
+            timestamp_with_time_zone_: &'a &'a [time::OffsetDateTime],
+            timestamp_without_time_zone_: &'a &'a [time::PrimitiveDateTime],
+            timestamptz_: &'a &'a [time::OffsetDateTime],
+            uuid_: &'a &'a [uuid::Uuid],
+            varchar_: &'a &'a [&'a str],
         ) -> Result<u64, postgres::Error> {
             let stmt = client
                 .prepare(
                     "INSERT INTO EverythingArray (bool_, boolean_, char_, smallint_, int2_, int_, int4_, bingint_, int8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27);
+    VALUES ($2, $3, $5, $19, $11, $14, $12, $1, $13, $8, $18, $9, $7, $20, $27, $4, $22, $24, $25, $23, $6, $21, $15, $16, $26, $10, $17);
 ",
                 )?;
             client.execute(
                 &stmt,
                 &[
+                    bingint_,
                     bool_,
                     boolean_,
-                    char_,
-                    smallint_,
-                    int2_,
-                    int_,
-                    int4_,
-                    bingint_,
-                    int8_,
-                    float4_,
-                    real_,
-                    float8_,
-                    double_precision_,
-                    text_,
-                    varchar_,
                     bytea_,
-                    timestamp_,
-                    timestamp_without_time_zone_,
-                    timestamptz_,
-                    timestamp_with_time_zone_,
+                    char_,
                     date_,
-                    time_,
+                    double_precision_,
+                    float4_,
+                    float8_,
+                    inet_,
+                    int2_,
+                    int4_,
+                    int8_,
+                    int_,
                     json_,
                     jsonb_,
-                    uuid_,
-                    inet_,
                     macaddr_,
+                    real_,
+                    smallint_,
+                    text_,
+                    time_,
+                    timestamp_,
+                    timestamp_with_time_zone_,
+                    timestamp_without_time_zone_,
+                    timestamptz_,
+                    uuid_,
+                    varchar_,
                 ],
             )
         }

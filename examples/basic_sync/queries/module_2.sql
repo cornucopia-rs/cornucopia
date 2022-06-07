@@ -10,7 +10,7 @@ SELECT
 FROM
     Book;
 
---! books_opt_ret_param ?{title}
+--! books_opt_ret_param: (title?)
 SELECT
     Title
 FROM
