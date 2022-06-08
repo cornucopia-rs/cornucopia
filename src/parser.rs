@@ -88,41 +88,10 @@ impl<'a> FromPair for TypeAnnotationKind {
     }
 }
 
-#[derive(Debug, Clone)]
-pub enum NullableIdent {
-    Nullable(String),
-    NonNullable(String),
-}
-
-impl NullableIdent {
-    pub(crate) fn name(&self) -> &str {
-        match self {
-            NullableIdent::Nullable(i) => i,
-            NullableIdent::NonNullable(i) => i,
-        }
-    }
-    pub(crate) fn is_nullable(&self) -> bool {
-        match self {
-            NullableIdent::Nullable(_) => true,
-            NullableIdent::NonNullable(_) => false,
-        }
-    }
-}
-
-impl<'a> FromPair for NullableIdent {
-    fn from_pair(pair: Pair<Rule>) -> Self {
-        match pair.as_rule() {
-            Rule::ident => Self::NonNullable(pair.as_str().into()),
-            Rule::nullable => Self::Nullable(pair.into_inner().next().unwrap().as_str().into()),
-            _ => unreachable!(),
-        }
-    }
-}
-
 struct TypeAnnotation {
     kind: TypeAnnotationKind,
     ty_name: Parsed<String>,
-    fields: Vec<Parsed<NullableIdent>>,
+    fields: Vec<Parsed<String>>,
 }
 
 impl FromPair for TypeAnnotation {
@@ -131,12 +100,11 @@ impl FromPair for TypeAnnotation {
         let kind = TypeAnnotationKind::from_pair(tokens.next().unwrap());
         let mut inner_tokens = tokens.next().unwrap().into_inner();
         let ident = Parsed::<String>::from_pair(inner_tokens.next().unwrap());
-        let fields = inner_tokens
-            .next()
-            .unwrap()
-            .into_inner()
-            .map(Parsed::<NullableIdent>::from_pair)
-            .collect();
+        let fields = if let Some(x) = inner_tokens.next() {
+            x.into_inner().map(Parsed::<String>::from_pair).collect()
+        } else {
+            Vec::new()
+        };
         Self {
             kind,
             ty_name: ident,
@@ -146,50 +114,9 @@ impl FromPair for TypeAnnotation {
 }
 
 #[derive(Debug)]
-pub(crate) struct TypeAnnotationListItem {
+pub(crate) struct TypeDataStructure {
     pub(crate) name: Parsed<String>,
-    pub(crate) fields: Vec<Parsed<NullableIdent>>,
-}
-
-impl FromPair for TypeAnnotationListItem {
-    fn from_pair(pair: Pair<Rule>) -> Self {
-        let rule = pair.as_rule();
-        let mut tokens = pair.into_inner();
-        let ident = Parsed::<String>::from_pair(tokens.next().unwrap());
-        let mut fields = Vec::new();
-        if let Rule::type_with_nullable_cols = rule {
-            fields = tokens
-                .next()
-                .unwrap()
-                .into_inner()
-                .map(Parsed::<NullableIdent>::from_pair)
-                .collect();
-        }
-
-        Self {
-            name: ident,
-            fields,
-        }
-    }
-}
-
-struct TypeAnnotationList {
-    kind: TypeAnnotationKind,
-    types: Vec<TypeAnnotationListItem>,
-}
-
-impl FromPair for TypeAnnotationList {
-    fn from_pair(pair: Pair<Rule>) -> Self {
-        let mut tokens = pair.into_inner();
-        let kind = TypeAnnotationKind::from_pair(tokens.next().unwrap());
-        let types = tokens
-            .next()
-            .unwrap()
-            .into_inner()
-            .map(TypeAnnotationListItem::from_pair)
-            .collect();
-        Self { kind, types }
-    }
+    pub(crate) fields: Vec<Parsed<String>>,
 }
 
 #[derive(Debug)]
@@ -258,7 +185,7 @@ impl FromPair for Query {
 
 #[derive(Debug)]
 pub(crate) enum QueryDataStructure {
-    Implicit { idents: Vec<Parsed<NullableIdent>> },
+    Implicit { idents: Vec<Parsed<String>> },
     Named(Parsed<String>),
 }
 
@@ -273,11 +200,8 @@ impl FromPair for QueryDataStructure {
         let pair = pair.into_inner().next().unwrap();
         match pair.as_rule() {
             Rule::ident => QueryDataStructure::Named(Parsed::<String>::from_pair(pair)),
-            Rule::query_field_list => {
-                let idents = pair
-                    .into_inner()
-                    .map(Parsed::<NullableIdent>::from_pair)
-                    .collect();
+            Rule::field_list => {
+                let idents = pair.into_inner().map(Parsed::<String>::from_pair).collect();
                 QueryDataStructure::Implicit { idents }
             }
             _ => {
@@ -314,9 +238,9 @@ impl FromPair for QueryAnnotation {
 
 #[derive(Debug)]
 pub(crate) struct ParsedModule {
-    pub(crate) param_types: Vec<TypeAnnotationListItem>,
-    pub(crate) row_types: Vec<TypeAnnotationListItem>,
-    pub(crate) db_types: Vec<TypeAnnotationListItem>,
+    pub(crate) param_types: Vec<TypeDataStructure>,
+    pub(crate) row_types: Vec<TypeDataStructure>,
+    pub(crate) db_types: Vec<TypeDataStructure>,
     pub(crate) queries: Vec<Query>,
 }
 
@@ -334,7 +258,7 @@ impl FromPair for ParsedModule {
                         ty_name,
                         fields,
                     } = TypeAnnotation::from_pair(it);
-                    let ty_item = TypeAnnotationListItem {
+                    let ty_item = TypeDataStructure {
                         name: ty_name,
                         fields,
                     };
@@ -342,14 +266,6 @@ impl FromPair for ParsedModule {
                         TypeAnnotationKind::Param => param_types.push(ty_item),
                         TypeAnnotationKind::Row => row_types.push(ty_item),
                         TypeAnnotationKind::Db => db_types.push(ty_item),
-                    }
-                }
-                Rule::type_annotation_list => {
-                    let TypeAnnotationList { kind, mut types } = TypeAnnotationList::from_pair(it);
-                    match kind {
-                        TypeAnnotationKind::Param => param_types.append(&mut types),
-                        TypeAnnotationKind::Row => row_types.append(&mut types),
-                        TypeAnnotationKind::Db => db_types.append(&mut types),
                     }
                 }
                 Rule::query => {
@@ -413,19 +329,16 @@ mod test {
     #[test]
     fn test() {
         let input = r#"
---: ROW Hello(a,b?)
+--: ROW Hello(a?,b?)
+--: row hello
 
---: PARAM (
---:     hello, world()
---: )
-
---! query (first?, second?, third)
+--! query (first?, second?, third?)
 asd
 
 --! query : (first?, second?)
-asd $1
+asd :asd
 
---! query (first?, second?, third) : (first?, second?)
+--! query (first?, second?, third?) : (first?, second?)
 asd :first
         "#;
 
