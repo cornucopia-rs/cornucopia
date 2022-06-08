@@ -1,9 +1,10 @@
 use error::Error;
 
+#[derive(Debug, Clone)]
 pub(crate) struct ModuleInfo {
     pub(crate) path: String,
     pub(crate) name: String,
-    pub(crate) contents: String,
+    pub(crate) content: String,
 }
 
 /// Reads queries in the directory. Only .sql files are considered.
@@ -44,7 +45,7 @@ pub(crate) fn read_query_modules(dir_path: &str) -> Result<Vec<ModuleInfo>, Erro
             modules_info.push(ModuleInfo {
                 path: String::from(path_buf.to_string_lossy()),
                 name: module_name,
-                contents: file_contents,
+                content: file_contents,
             });
         } else {
             continue;

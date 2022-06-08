@@ -95,3 +95,21 @@ where
         .find(|(_, u)| !uniq.insert(u.clone()))
         .map(|(t, _)| t)
 }
+
+/// Retrieve line index and content
+// TODO not very strong
+pub fn compute_line(content: &str, pos: usize) -> (usize, usize, &str) {
+    let mut col = pos + 1;
+    let mut line = 1;
+    let mut line_str = "";
+    for l in content.split('\n') {
+        if col > l.len() {
+            line += 1;
+            col -= l.len() + 1;
+        } else {
+            line_str = l.trim_end();
+            break;
+        }
+    }
+    (col, line, line_str)
+}

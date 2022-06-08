@@ -681,6 +681,246 @@ pub mod queries {
             }
         }
     }
+    pub mod named {
+        use cornucopia_client::GenericClient;
+        use futures::{StreamExt, TryStreamExt};
+        #[derive(Debug)]
+        pub struct ItemParams<'a> {
+            pub name: &'a str,
+            pub price: f64,
+        }
+        impl<'a> ItemParams<'a> {
+            pub fn new_item_visible<C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> IdQuery<'a, C, Id, 2> {
+                new_item_visible(client, &self.name, &self.price)
+            }
+            pub fn new_item_hidden<C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> IdQuery<'a, C, Id, 2> {
+                new_item_hidden(client, &self.name, &self.price)
+            }
+        }
+        #[derive(Debug, Clone, Copy)]
+        pub struct ItemByIdParams {
+            pub id: i32,
+        }
+        impl ItemByIdParams {
+            pub fn item_by_id<'a, C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> ItemQuery<'a, C, Item, 1> {
+                item_by_id(client, &self.id)
+            }
+        }
+        #[derive(Debug, Clone, PartialEq, Copy)]
+        pub struct Id {
+            pub id: i32,
+        }
+        pub struct IdQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> Id,
+            mapper: fn(Id) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> IdQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(self, mapper: fn(Id) -> R) -> IdQuery<'a, C, R, N> {
+                IdQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+                self.client.prepare(self.query).await
+            }
+            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                let row = self.client.query_one(&stmt, &self.params).await?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.stream().await?.try_collect().await
+            }
+            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub async fn stream(
+                self,
+            ) -> Result<
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
+                let stmt = self.stmt().await?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .await?
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                    .into_stream();
+                Ok(stream)
+            }
+        }
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct Item {
+            pub id: i32,
+            pub name: String,
+            pub price: f64,
+            pub show: bool,
+        }
+        pub struct ItemBorrowed<'a> {
+            pub id: i32,
+            pub name: &'a str,
+            pub price: f64,
+            pub show: bool,
+        }
+        impl<'a> From<ItemBorrowed<'a>> for Item {
+            fn from(
+                ItemBorrowed {
+                    id,
+                    name,
+                    price,
+                    show,
+                }: ItemBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    id,
+                    name: name.into(),
+                    price,
+                    show,
+                }
+            }
+        }
+        pub struct ItemQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> ItemBorrowed,
+            mapper: fn(ItemBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> ItemQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(self, mapper: fn(ItemBorrowed) -> R) -> ItemQuery<'a, C, R, N> {
+                ItemQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+                self.client.prepare(self.query).await
+            }
+            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                let row = self.client.query_one(&stmt, &self.params).await?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.stream().await?.try_collect().await
+            }
+            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub async fn stream(
+                self,
+            ) -> Result<
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
+                let stmt = self.stmt().await?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .await?
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                    .into_stream();
+                Ok(stream)
+            }
+        }
+        pub fn new_item_visible<'a, C: GenericClient>(
+            client: &'a C,
+            name: &'a &'a str,
+            price: &'a f64,
+        ) -> IdQuery<'a, C, Id, 2> {
+            IdQuery {
+                client,
+                params: [name, price],
+                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, true) RETURNING id ; 
+",
+                extractor: |row| Id { id: row.get(0) },
+                mapper: |it| Id::from(it),
+            }
+        }
+        pub fn new_item_hidden<'a, C: GenericClient>(
+            client: &'a C,
+            name: &'a &'a str,
+            price: &'a f64,
+        ) -> IdQuery<'a, C, Id, 2> {
+            IdQuery {
+                client,
+                params: [name, price],
+                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id;
+",
+                extractor: |row| Id { id: row.get(0) },
+                mapper: |it| Id::from(it),
+            }
+        }
+        pub fn items<'a, C: GenericClient>(client: &'a C) -> ItemQuery<'a, C, Item, 0> {
+            ItemQuery {
+                client,
+                params: [],
+                query: "SELECT * FROM item;
+",
+                extractor: |row| ItemBorrowed {
+                    id: row.get(0),
+                    name: row.get(1),
+                    price: row.get(2),
+                    show: row.get(3),
+                },
+                mapper: |it| Item::from(it),
+            }
+        }
+        pub fn item_by_id<'a, C: GenericClient>(
+            client: &'a C,
+            id: &'a i32,
+        ) -> ItemQuery<'a, C, Item, 1> {
+            ItemQuery {
+                client,
+                params: [id],
+                query: "SELECT * FROM item WHERE id = $1;
+",
+                extractor: |row| ItemBorrowed {
+                    id: row.get(0),
+                    name: row.get(1),
+                    price: row.get(2),
+                    show: row.get(3),
+                },
+                mapper: |it| Item::from(it),
+            }
+        }
+    }
     pub mod params {
         use cornucopia_client::GenericClient;
         use futures::{StreamExt, TryStreamExt};

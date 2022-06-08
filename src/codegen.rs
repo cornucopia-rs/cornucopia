@@ -656,7 +656,7 @@ pub(crate) fn generate(preparation: Preparation, is_async: bool) -> Result<Strin
         gen!(
             w,
             "pub mod {} {{ {import} {params_string} {rows_string} {queries_string} }}",
-            module.name
+            module.info.name
         )
     });
     gen!(&mut buff, "pub mod queries {{ {} }}", query_modules);

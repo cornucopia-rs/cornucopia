@@ -23,7 +23,7 @@ use postgres::Client;
 use prepare_queries::prepare;
 use read_queries::read_query_modules;
 use run_migrations::run_migrations as run_migrations_internal;
-use std::path::Path;
+use std::{path::Path, rc::Rc};
 use time::OffsetDateTime;
 use validation::validate_module;
 
@@ -67,14 +67,11 @@ pub fn generate_live(
 
     let mut validated_modules = Vec::new();
     for module_info in modules_info {
+        let info = Rc::new(module_info);
         // Parse
-        let parsed_module = parse_query_module(&module_info.path, &module_info.contents)?;
+        let parsed_module = parse_query_module(&info.path, &info.content)?;
         // Validate
-        validated_modules.push(validate_module(
-            module_info.path,
-            module_info.name,
-            parsed_module,
-        )?);
+        validated_modules.push(validate_module(info, parsed_module)?);
     }
 
     // Generate
@@ -102,10 +99,11 @@ pub fn generate_managed(
     let modules_info = read_query_modules(queries_path)?;
     let mut validated_modules = Vec::new();
     for info in modules_info {
+        let info = Rc::new(info);
         // Parse
-        let parsed_module = parse_query_module(&info.path, &info.contents)?;
+        let parsed_module = parse_query_module(&info.path, &info.content)?;
         // Validate
-        validated_modules.push(validate_module(info.path, info.name, parsed_module)?);
+        validated_modules.push(validate_module(info, parsed_module)?);
     }
     container::setup(podman)?;
     let mut client = conn::cornucopia_conn()?;
