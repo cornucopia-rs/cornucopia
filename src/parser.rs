@@ -16,33 +16,11 @@ impl FromPair for String {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct ParsedPosition {
-    pub(crate) span: (usize, usize),
-    pub(crate) line: usize,
-    pub(crate) col: usize,
-    pub(crate) line_str: String,
-}
-
-impl<'a> From<&Pair<'a, Rule>> for ParsedPosition {
-    fn from(pair: &Pair<'a, Rule>) -> Self {
-        let span = pair.as_span();
-        let pos = span.start_pos();
-        let (line, col) = pos.line_col();
-        let line_str = pos.line_of().to_owned();
-        Self {
-            line,
-            col,
-            line_str,
-            span: (span.start(), span.end()),
-        }
-    }
-}
-
 impl<T: FromPair> FromPair for Parsed<T> {
     fn from_pair(pair: Pair<Rule>) -> Self {
         Self {
-            pos: ParsedPosition::from(&pair),
+            start: pair.as_span().start(),
+            end: pair.as_span().end(),
             value: T::from_pair(pair),
         }
     }
@@ -58,7 +36,8 @@ impl<T: std::hash::Hash> std::hash::Hash for Parsed<T> {
 /// This context is used for error reporting.
 #[derive(Debug, Clone)]
 pub struct Parsed<T> {
-    pub(crate) pos: ParsedPosition,
+    pub(crate) start: usize,
+    pub(crate) end: usize,
     pub(crate) value: T,
 }
 
@@ -85,8 +64,9 @@ impl<T: Ord> Ord for Parsed<T> {
 impl<T> Parsed<T> {
     pub(crate) fn map<U>(&self, f: fn(&T) -> U) -> Parsed<U> {
         Parsed {
-            pos: self.pos.clone(),
             value: f(&self.value),
+            start: self.start,
+            end: self.end,
         }
     }
 }
@@ -250,8 +230,8 @@ impl QuerySql {
                     .iter()
                     .position(|bp| bp == bind_param)
                     .unwrap();
-                let start = bind_param.pos.span.0 - sql_start - 1_usize;
-                let end = bind_param.pos.span.1 - sql_start - 1_usize;
+                let start = bind_param.start - sql_start - 1_usize;
+                let end = bind_param.end - sql_start - 1_usize;
                 ((start, end), format!("${}", index + 1))
             })
             .collect::<Vec<((usize, usize), String)>>();
