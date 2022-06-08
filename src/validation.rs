@@ -4,49 +4,24 @@ use crate::prepare_queries::PreparedField;
 use crate::read_queries::ModuleInfo;
 use crate::utils::has_duplicate;
 
-use crate::parser::{
-    NullableIdent, Parsed, ParsedModule, Query, QueryAnnotation, QueryDataStructure,
-    TypeAnnotationListItem,
-};
+use crate::parser::{Parsed, ParsedModule, Query, QueryDataStructure, TypeDataStructure};
 
 #[derive(Debug)]
 pub(crate) struct ValidatedModule {
     pub(crate) info: Rc<ModuleInfo>,
-    pub(crate) param_types: Vec<TypeAnnotationListItem>,
-    pub(crate) row_types: Vec<TypeAnnotationListItem>,
-    pub(crate) _db_types: Vec<TypeAnnotationListItem>,
+    pub(crate) param_types: Vec<TypeDataStructure>,
+    pub(crate) row_types: Vec<TypeDataStructure>,
+    pub(crate) _db_types: Vec<TypeDataStructure>,
     pub(crate) queries: Vec<ValidatedQuery>,
 }
 
 #[derive(Debug)]
-pub(crate) enum ValidatedQuery {
-    PgCompatible {
-        name: Parsed<String>,
-        params: Vec<Parsed<NullableIdent>>,
-        row: Vec<Parsed<NullableIdent>>,
-        sql_str: String,
-    },
-    Extended {
-        name: Parsed<String>,
-        params: QueryDataStructure,
-        bind_params: Vec<Parsed<String>>,
-        row: QueryDataStructure,
-        sql_str: String,
-    },
-}
-impl ValidatedQuery {
-    pub(crate) fn name(&self) -> &Parsed<String> {
-        match self {
-            ValidatedQuery::PgCompatible { name, .. } => name,
-            ValidatedQuery::Extended { name, .. } => name,
-        }
-    }
-    pub(crate) fn sql_str(&self) -> &String {
-        match self {
-            ValidatedQuery::PgCompatible { sql_str, .. } => sql_str,
-            ValidatedQuery::Extended { sql_str, .. } => sql_str,
-        }
-    }
+pub(crate) struct ValidatedQuery {
+    pub(crate) name: Parsed<String>,
+    pub(crate) params: QueryDataStructure,
+    pub(crate) bind_params: Vec<Parsed<String>>,
+    pub(crate) row: QueryDataStructure,
+    pub(crate) sql_str: String,
 }
 
 use error::{Error, ErrorVariant};
@@ -55,9 +30,9 @@ use postgres_types::Type;
 
 pub(crate) fn duplicate_nullable_ident(
     info: &Rc<ModuleInfo>,
-    idents: &[Parsed<NullableIdent>],
+    idents: &[Parsed<String>],
 ) -> Result<(), Error> {
-    if let Some(dup) = has_duplicate(idents, |p| p.value.name()) {
+    if let Some(dup) = has_duplicate(idents, |p| &p.value) {
         return Err(Error {
             err: ErrorVariant::DuplicateCol { pos: dup.start },
             info: info.clone(),
@@ -93,13 +68,13 @@ pub(crate) fn query_name_already_used(
 
 pub(crate) fn nullable_column_name(
     info: &Rc<ModuleInfo>,
-    nullable_col: &Parsed<NullableIdent>,
+    nullable_col: &Parsed<String>,
     stmt_cols: &[Column],
 ) -> Result<(), Error> {
     // If none of the row's columns match the nullable column
     if stmt_cols
         .iter()
-        .any(|row_col| row_col.name() == nullable_col.value.name())
+        .any(|row_col| row_col.name() == nullable_col.value)
     {
         Ok(())
     } else {
@@ -114,13 +89,13 @@ pub(crate) fn nullable_column_name(
 
 pub(crate) fn nullable_param_name(
     info: &Rc<ModuleInfo>,
-    nullable_col: &Parsed<NullableIdent>,
+    nullable_col: &Parsed<String>,
     params: &[(Parsed<String>, Type)],
 ) -> Result<(), Error> {
     // If none of the row's columns match the nullable column
     if params
         .iter()
-        .any(|(name, _)| name.value == nullable_col.value.name())
+        .any(|(name, _)| name.value == nullable_col.value)
     {
         Ok(())
     } else {
@@ -155,21 +130,6 @@ pub(crate) fn named_struct_field(
     }
 }
 
-pub(crate) fn unknown_named_struct(
-    info: &Rc<ModuleInfo>,
-    name: &Parsed<String>,
-    types: &[TypeAnnotationListItem],
-) -> Result<Vec<Parsed<NullableIdent>>, Error> {
-    if let Some(x) = types.iter().find(|x| &x.name == name) {
-        Ok(x.fields.clone())
-    } else {
-        Err(Error {
-            err: ErrorVariant::UnknownNamedStruct { pos: name.start },
-            info: info.clone(),
-        })
-    }
-}
-
 pub(crate) fn validate_query(info: &Rc<ModuleInfo>, query: Query) -> Result<ValidatedQuery, Error> {
     if let QueryDataStructure::Implicit { idents } = &query.annotation.param {
         duplicate_nullable_ident(info, idents)?;
@@ -182,7 +142,7 @@ pub(crate) fn validate_query(info: &Rc<ModuleInfo>, query: Query) -> Result<Vali
     bind_params.dedup();
 
     let sql_str = query.sql.normalize_sql(query.sql_start);
-    let validated_query = ValidatedQuery::Extended {
+    let validated_query = ValidatedQuery {
         name: query.annotation.name,
         params: query.annotation.param,
         bind_params,
@@ -223,33 +183,17 @@ pub mod error {
     use std::{fmt::Display, rc::Rc};
 
     use crate::{
-        parser::{NullableIdent, Parsed},
-        prepare_queries::PreparedField,
-        read_queries::ModuleInfo,
+        parser::Parsed, prepare_queries::PreparedField, read_queries::ModuleInfo,
         utils::compute_line,
     };
 
     #[derive(Debug)]
     pub enum ErrorVariant {
-        AmbiguousBindParam {
-            pos: usize,
-        },
-        InvalidI16Index {
-            pos: usize,
-        },
         DuplicateCol {
             pos: usize,
         },
-        MoreBindParamsThanParams {
-            nb_params: usize,
-            pos: usize,
-        },
-        UnusedParam {
-            index: usize,
-            pos: usize,
-        },
         InvalidNullableColumnName {
-            nullable_col: Parsed<NullableIdent>,
+            nullable_col: Parsed<String>,
         },
         NamedStructInvalidFields {
             expected: Vec<PreparedField>,
@@ -259,12 +203,6 @@ pub mod error {
         QueryNameAlreadyUsed {
             name1: Parsed<String>,
             name2: Parsed<String>,
-        },
-        NamedStructInPgQuery {
-            pos: usize,
-        },
-        UnknownNamedStruct {
-            pos: usize,
         },
     }
 
@@ -281,27 +219,15 @@ pub mod error {
                 self.info.path
             );
             match &self.err {
-                ErrorVariant::InvalidI16Index { pos } => {
-                    let msg = ["Index must be between 1 and 32767."];
-                    write!(f, "{head}{}", format_err(&self.info, *pos, &msg))
-                }
                 ErrorVariant::DuplicateCol { pos } => {
                     let msg = ["Column name is already used."];
                     write!(f, "{head}{}", format_err(&self.info, *pos, &msg))
                 }
-                ErrorVariant::MoreBindParamsThanParams { pos, nb_params } => {
-                    let msg = format!(
-                        "Index is higher than the number of parameters supplied ({nb_params})."
-                    );
-                    write!(f, "{head}{}", format_err(&self.info, *pos, &[&msg]))
-                }
-                ErrorVariant::UnusedParam { pos, index } => {
-                    let msg = format!("Parameter `${index}` is never used in the query.");
-                    write!(f, "{head}{}", format_err(&self.info, *pos, &[&msg]))
-                }
                 ErrorVariant::InvalidNullableColumnName { nullable_col } => {
-                    let name = nullable_col.value.name();
-                    let msg = format!("No column named `{name}` found for this query.");
+                    let msg = format!(
+                        "No column named `{}` found for this query.",
+                        nullable_col.value
+                    );
                     write!(
                         f,
                         "{head}{}",
@@ -332,22 +258,6 @@ pub mod error {
                         format_err(&self.info, name1.start, &[&msg1]),
                         format_err(&self.info, name2.start, &[&msg2])
                     )
-                }
-                ErrorVariant::AmbiguousBindParam { pos } => {
-                    let msg = [
-                                "Cannot mix bind parameter syntaxes in the same query.", 
-                                "Please use either named (`:named_ident`) or indexed (`$n`) bind parameters, but not both."
-                            ];
-                    write!(f, "{head}{}", format_err(&self.info, *pos, &msg))
-                }
-                ErrorVariant::NamedStructInPgQuery { pos } => {
-                    let msg = ["Named query structs are not allowed when using the PostgreSQL-compatible syntax.",
-                    "Use anonymous structs instead, or use the extended query syntax."];
-                    write!(f, "{head}{}", format_err(&self.info, *pos, &msg))
-                }
-                ErrorVariant::UnknownNamedStruct { pos } => {
-                    let msg = "Unknown named struct. Named structs must be registered using type annotations.";
-                    write!(f, "{head}{}", format_err(&self.info, *pos, &[msg]))
                 }
             }
         }
