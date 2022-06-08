@@ -1,8 +1,5 @@
---: row Item()
-
---: row Id()
-
---: param ItemParams()
+--: row Item(price?)
+--: param ItemParams(price?)
 
 --! new_item_visible ItemParams: Id
 INSERT INTO item (name, price, show) VALUES (:name, :price, true) RETURNING id ; 

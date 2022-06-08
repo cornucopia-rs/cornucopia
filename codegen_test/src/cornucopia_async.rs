@@ -687,7 +687,7 @@ pub mod queries {
         #[derive(Debug)]
         pub struct ItemParams<'a> {
             pub name: &'a str,
-            pub price: f64,
+            pub price: Option<f64>,
         }
         impl<'a> ItemParams<'a> {
             pub fn new_item_visible<C: GenericClient>(
@@ -778,13 +778,13 @@ pub mod queries {
         pub struct Item {
             pub id: i32,
             pub name: String,
-            pub price: f64,
+            pub price: Option<f64>,
             pub show: bool,
         }
         pub struct ItemBorrowed<'a> {
             pub id: i32,
             pub name: &'a str,
-            pub price: f64,
+            pub price: Option<f64>,
             pub show: bool,
         }
         impl<'a> From<ItemBorrowed<'a>> for Item {
@@ -862,7 +862,7 @@ pub mod queries {
         pub fn new_item_visible<'a, C: GenericClient>(
             client: &'a C,
             name: &'a &'a str,
-            price: &'a f64,
+            price: &'a Option<f64>,
         ) -> IdQuery<'a, C, Id, 2> {
             IdQuery {
                 client,
@@ -876,7 +876,7 @@ pub mod queries {
         pub fn new_item_hidden<'a, C: GenericClient>(
             client: &'a C,
             name: &'a &'a str,
-            price: &'a f64,
+            price: &'a Option<f64>,
         ) -> IdQuery<'a, C, Id, 2> {
             IdQuery {
                 client,

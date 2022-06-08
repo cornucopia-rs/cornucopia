@@ -262,6 +262,7 @@ impl FromPair for ParsedModule {
                         name: ty_name,
                         fields,
                     };
+
                     match kind {
                         TypeAnnotationKind::Param => param_types.push(ty_item),
                         TypeAnnotationKind::Row => row_types.push(ty_item),

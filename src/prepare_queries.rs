@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    parser::{Parsed, TypeDataStructure},
+    parser::{Parsed, QueryDataStructure, TypeDataStructure},
     read_queries::ModuleInfo,
     type_registrar::CornucopiaType,
     type_registrar::TypeRegistrar,
@@ -301,32 +301,27 @@ fn prepare_query(
         sql_str,
     } = query;
 
-    let (params_name, nullable_params_fields) = match params {
-        crate::parser::QueryDataStructure::Implicit { idents } => {
-            (name.map(|x| x.to_upper_camel_case() + "Params"), idents)
+    let (nullable_params_fields, params_name) = match params {
+        QueryDataStructure::Implicit { idents } => {
+            (idents, name.map(|x| x.to_upper_camel_case() + "Params"))
         }
-        crate::parser::QueryDataStructure::Named(name) => {
-            let idents = if let Some(x) = param_types.iter().find(|x| x.name == name) {
-                x.fields.clone()
-            } else {
-                Vec::new()
-            };
-            (name, idents)
-        }
+        QueryDataStructure::Named(name) => (
+            param_types
+                .iter()
+                .find_map(|it| (it.name == name).then(|| it.fields.clone()))
+                .unwrap_or_default(),
+            name,
+        ),
     };
-    let (row_name, nullable_row_fields) = match row {
-        crate::parser::QueryDataStructure::Implicit { idents } => {
-            (name.map(|x| x.to_upper_camel_case()), idents)
-        }
-        crate::parser::QueryDataStructure::Named(named_row) => {
-            let idents = if let Some(x) = row_types.iter().find(|x| x.name == name) {
-                x.fields.clone()
-            } else {
-                Vec::new()
-            };
-
-            (named_row, idents)
-        }
+    let (nullable_row_fields, row_name) = match row {
+        QueryDataStructure::Implicit { idents } => (idents, name.map(|x| x.to_upper_camel_case())),
+        QueryDataStructure::Named(name) => (
+            row_types
+                .iter()
+                .find_map(|it| (it.name == name).then(|| it.fields.clone()))
+                .unwrap_or_default(),
+            name,
+        ),
     };
 
     let params_fields = {
@@ -384,6 +379,7 @@ fn prepare_query(
         let mut row_fields = Vec::new();
         for (col_name, col_ty) in stmt_cols.iter().map(|c| (c.name(), c.type_())) {
             let is_nullable = nullable_row_fields.iter().any(|x| x.value == col_name);
+
             // Register type
             row_fields.push(PreparedField {
                 name: col_name.to_owned(),

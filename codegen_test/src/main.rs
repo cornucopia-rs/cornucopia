@@ -3,7 +3,7 @@ use std::net::{IpAddr, Ipv4Addr};
 use cornucopia_sync::{
     queries::{
         copy::{select_copy, InsertCloneParams, InsertCopyParams},
-        named::{items, new_item_hidden, new_item_visible, Item},
+        named::{items, Item},
         params::insert_book,
     },
     types::public::{CloneCompositeBorrowed, CopyComposite},
@@ -17,7 +17,7 @@ use uuid::Uuid;
 
 use crate::cornucopia_sync::{
     queries::{
-        named::item_by_id,
+        named::{item_by_id, new_item_visible, ItemParams},
         params::{select_book, SelectBook},
         stress::{
             select_everything, select_everything_array, select_nightmare,
@@ -73,21 +73,45 @@ pub fn test_params(client: &mut Client) {
 }
 
 pub fn test_named(client: &mut Client) {
-    let hidden_id = new_item_hidden(client, &"secret", &42.0).one().unwrap().id;
-    let visible_id = new_item_visible(client, &"stuff", &84.0).one().unwrap().id;
+    let hidden_id = ItemParams {
+        name: "secret",
+        price: Some(42.0),
+    }
+    .new_item_hidden(client)
+    .one()
+    .unwrap()
+    .id;
+    let visible_id = ItemParams {
+        name: "stuff",
+        price: Some(84.0),
+    }
+    .new_item_visible(client)
+    .one()
+    .unwrap()
+    .id;
+    let last_id = new_item_visible(client, &"can't by me", &None)
+        .one()
+        .unwrap()
+        .id;
     assert_eq!(
         items(client).vec().unwrap(),
         &[
             Item {
                 id: hidden_id,
                 name: "secret".into(),
-                price: 42.0,
+                price: Some(42.0),
                 show: false
             },
             Item {
                 id: visible_id,
                 name: "stuff".into(),
-                price: 84.0,
+                price: Some(84.0),
+                show: true
+            },
+            Item {
+                id: last_id,
+                name: "can't by me".into(),
+                price: None,
                 show: true
             }
         ]
@@ -97,7 +121,7 @@ pub fn test_named(client: &mut Client) {
         Item {
             id: hidden_id,
             name: "secret".into(),
-            price: 42.0,
+            price: Some(42.0),
             show: false
         }
     );
@@ -106,7 +130,7 @@ pub fn test_named(client: &mut Client) {
         Item {
             id: visible_id,
             name: "stuff".into(),
-            price: 84.0,
+            price: Some(84.0),
             show: true
         }
     );
