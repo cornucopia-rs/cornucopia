@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use error::Error;
 use pest::{iterators::Pair, Parser};
 use pest_derive::Parser as Pest;
@@ -39,6 +41,12 @@ pub struct Parsed<T> {
     pub(crate) start: usize,
     pub(crate) end: usize,
     pub(crate) value: T,
+}
+
+impl<T: Display> Display for Parsed<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.value.fmt(f)
+    }
 }
 
 impl<T: PartialEq> PartialEq<Self> for Parsed<T> {

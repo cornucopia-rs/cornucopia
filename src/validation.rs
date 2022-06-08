@@ -52,9 +52,9 @@ pub(crate) fn query_name_already_used(
             .find(|(j, q)| *j != i && q.annotation.name == query.annotation.name)
         {
             return Err(Error {
-                err: ErrorVariant::QueryNameAlreadyUsed {
-                    name1: query.annotation.name.clone(),
-                    name2: q.annotation.name.clone(),
+                err: ErrorVariant::DuplicateQueryName {
+                    name1: q.annotation.name.clone(),
+                    name2: query.annotation.name.clone(),
                 },
                 info: info.clone(),
             });
@@ -111,19 +111,19 @@ pub(crate) fn nullable_param_name(
 pub(crate) fn named_struct_field(
     info: &Rc<ModuleInfo>,
     name: &Parsed<String>,
-    prev_fields: &[PreparedField],
     fields: &[PreparedField],
+    prev_name: &Parsed<String>,
+    prev_fields: &[PreparedField],
 ) -> Result<(), Error> {
-    // If the row doesn't contain the same fields as a previously
-    // registered row with the same name...
-    if prev_fields.len() == fields.len() || prev_fields.iter().all(|f| fields.contains(f)) {
+    if prev_fields.len() == fields.len() && prev_fields.iter().all(|f| fields.contains(f)) {
         Ok(())
     } else {
         Err(Error {
             err: ErrorVariant::NamedStructInvalidFields {
-                expected: prev_fields.to_owned(),
-                actual: fields.to_owned(),
-                name: name.clone(),
+                expected_name: name.to_owned(),
+                expected_fields: fields.to_owned(),
+                actual_name: prev_name.to_owned(),
+                actual_fields: prev_fields.to_owned(),
             },
             info: info.clone(),
         })
@@ -195,11 +195,12 @@ pub mod error {
             nullable_col: Parsed<String>,
         },
         NamedStructInvalidFields {
-            expected: Vec<PreparedField>,
-            actual: Vec<PreparedField>,
-            name: Parsed<String>,
+            expected_name: Parsed<String>,
+            expected_fields: Vec<PreparedField>,
+            actual_name: Parsed<String>,
+            actual_fields: Vec<PreparedField>,
         },
-        QueryNameAlreadyUsed {
+        DuplicateQueryName {
             name1: Parsed<String>,
             name2: Parsed<String>,
         },
@@ -233,29 +234,41 @@ pub mod error {
                         format_err(&self.info, nullable_col.start, &[&msg])
                     )
                 }
-                // Move into another module
                 ErrorVariant::NamedStructInvalidFields {
-                    name,
-                    expected,
-                    actual,
+                    expected_name,
+                    expected_fields,
+                    actual_name,
+                    actual_fields,
                 } => {
-                    let msg1 = format!("This query's named row struct `{}` has already been used, but the fields don't match.", name.value);
-                    let msg2 = format!("Expected fields: {expected:#?}");
-                    let msg3 = format!("Got fields: {actual:#?}");
+                    let expected_fields = expected_fields
+                        .iter()
+                        .map(|f| format!("  {}: {}", f.name, f.ty.pg_ty()))
+                        .collect::<Vec<String>>()
+                        .join("\n");
+                    let got_fields = actual_fields
+                        .iter()
+                        .map(|f| format!("  {}: {}", f.name, f.ty.pg_ty()))
+                        .collect::<Vec<String>>()
+                        .join("\n");
+
+                    let msg = "This named data structure has been defined elsewhere, but the fields don't match.\n";
                     write!(
                         f,
-                        "{head}{}",
-                        format_err(&self.info, name.start, &[&msg1, &msg2, &msg3])
+                        "{head}{}{}\n\n{}\n{}",
+                        format_err(&self.info, actual_name.start, &[msg]),
+                        format_err(&self.info, expected_name.start, &["First defined here"]),
+                        &format!("Expected fields: [\n{expected_fields}\n]"),
+                        &format!("Got fields: [\n{got_fields}\n]")
                     )
                 }
-                ErrorVariant::QueryNameAlreadyUsed { name1, name2 } => {
-                    let msg1 = format!("A query named `{}` already exists.", name1.value);
-                    let msg2 = format!("Query `{}` first defined here.", name2.value);
+                ErrorVariant::DuplicateQueryName { name1, name2 } => {
+                    let msg1 = "This query's name is already used";
+                    let msg2 = "First defined here.";
                     write!(
                         f,
                         "{head}{}\n{}",
-                        format_err(&self.info, name1.start, &[&msg1]),
-                        format_err(&self.info, name2.start, &[&msg2])
+                        format_err(&self.info, name1.start, &[msg1]),
+                        format_err(&self.info, name2.start, &[msg2]),
                     )
                 }
             }
@@ -264,9 +277,13 @@ pub mod error {
     impl std::error::Error for Error {}
 
     fn format_err(info: &ModuleInfo, pos: usize, messages: &[&str]) -> String {
-        let msg = messages.join("\n  = ");
+        let msg = messages
+            .iter()
+            .map(|m| format!("\n  = {}", m))
+            .collect::<Vec<String>>()
+            .join("");
         let (col, line, line_str) = compute_line(&info.content, pos);
         let cursor = format!("{}^---", " ".repeat(col - 1));
-        format!(" --> {line}:{col}\n  | \n  | {line_str}\n  | {cursor}\n  | \n  = {msg}")
+        format!(" --> {line}:{col}\n  | \n  | {line_str}\n  | {cursor}\n  | {msg}")
     }
 }

@@ -36,7 +36,7 @@ pub struct PreparedField {
 /// A params struct
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedParams {
-    pub(crate) name: String,
+    pub(crate) name: Parsed<String>,
     pub(crate) fields: Vec<PreparedField>,
     pub(crate) is_copy: bool,
     pub(crate) queries: Vec<usize>,
@@ -45,7 +45,7 @@ pub(crate) struct PreparedParams {
 /// A returned row
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedRow {
-    pub(crate) name: String,
+    pub(crate) name: Parsed<String>,
     pub(crate) fields: Vec<PreparedField>,
     pub(crate) is_copy: bool,
 }
@@ -92,13 +92,20 @@ impl PreparedModule {
         assert!(!fields.is_empty());
         match self.rows.entry(name.value.clone()) {
             Entry::Occupied(o) => {
-                let prev = &o.get().fields;
+                let prev = &o.get();
 
                 // If the row doesn't contain the same fields as a previously
                 // registered row with the same name...
-                validation::named_struct_field(&self.info, &name, prev, &fields)?;
+                validation::named_struct_field(
+                    &self.info,
+                    &name,
+                    &fields,
+                    &prev.name,
+                    &prev.fields,
+                )?;
 
                 let indexes: Option<Vec<_>> = prev
+                    .fields
                     .iter()
                     .map(|f| fields.iter().position(|it| it == f))
                     .collect();
@@ -109,7 +116,7 @@ impl PreparedModule {
                 let mut tmp = fields.to_vec();
                 tmp.sort_unstable_by(|a, b| a.name.cmp(&b.name));
                 v.insert(PreparedRow {
-                    name: name.value.clone(),
+                    name: name.clone(),
                     fields: tmp,
                     is_copy,
                 });
@@ -126,7 +133,13 @@ impl PreparedModule {
                 let prev = o.get_mut();
                 // If the param doesn't contain the same fields as a previously
                 // registered param with the same name...
-                validation::named_struct_field(&self.info, &name, &prev.fields, fields)?;
+                validation::named_struct_field(
+                    &self.info,
+                    &name,
+                    fields,
+                    &prev.name,
+                    &prev.fields,
+                )?;
 
                 prev.queries.push(query_idx);
 
@@ -137,7 +150,7 @@ impl PreparedModule {
                 let mut tmp = fields.to_vec();
                 tmp.sort_unstable_by(|a, b| a.name.cmp(&b.name));
                 v.insert(PreparedParams {
-                    name: name.value.clone(),
+                    name: name.clone(),
                     fields: tmp,
                     is_copy,
                     queries: vec![],
