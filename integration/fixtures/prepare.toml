@@ -26,4 +26,5 @@ CREATE TABLE author (
   name TEXT
 );
 '''
+# TODO: We could probably improve this error to use the bind_parameter name instead of the index
 error = 'Error while preparing query "insert_author" [file: "queries/module_1.sql", line: 1] (inconsistent types deduced for parameter $1)'
