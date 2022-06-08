@@ -2,7 +2,7 @@ use crate::prepare_queries::PreparedField;
 use crate::utils::has_duplicate;
 
 use crate::parser::{
-    BindParameter, NullableIdent, Parsed, ParsedModule, Query, QueryAnnotation, QueryDataStructure,
+    NullableIdent, Parsed, ParsedModule, Query, QueryAnnotation, QueryDataStructure,
     TypeAnnotationListItem,
 };
 
@@ -51,31 +51,6 @@ use error::{Error, ErrorVariant};
 use postgres::Column;
 use postgres_types::Type;
 
-pub(crate) fn ambiguous_bind_param(
-    module_path: &str,
-    bind_params: &[Parsed<BindParameter>],
-) -> Result<bool, Error> {
-    // We're taking the first bind parameter as the gauge of what syntax is used.
-    // This is pretty ad-hoc, it might worthwhile to add an explicit syntax marker (or smth similar).
-    let syntax_is_extended = bind_params
-        .get(0)
-        .map(|bind_param| matches!(bind_param.value, BindParameter::Extended(_)))
-        .unwrap_or(true);
-    for bind_param in &bind_params[0..] {
-        let bind_param_is_extended = matches!(bind_param.value, BindParameter::Extended(_));
-        if syntax_is_extended ^ bind_param_is_extended {
-            return Err(Error {
-                err: ErrorVariant::AmbiguousBindParam {
-                    pos: bind_param.pos.clone(),
-                },
-                path: module_path.to_owned(),
-            });
-        }
-    }
-
-    Ok(syntax_is_extended)
-}
-
 pub(crate) fn duplicate_nullable_ident(
     module_path: &str,
     idents: &[Parsed<NullableIdent>],
@@ -89,105 +64,6 @@ pub(crate) fn duplicate_nullable_ident(
         });
     }
     Ok(())
-}
-
-type ParsedNullableIdents = Vec<Parsed<NullableIdent>>;
-pub(crate) fn named_struct_in_pg_query(
-    module_path: &str,
-    annotation: QueryAnnotation,
-) -> Result<(ParsedNullableIdents, ParsedNullableIdents), Error> {
-    if let QueryDataStructure::Named(name) = annotation.param {
-        return Err(Error {
-            err: ErrorVariant::NamedStructInPgQuery { pos: name.pos },
-            path: module_path.to_owned(),
-        });
-    };
-    if let QueryDataStructure::Named(name) = annotation.row {
-        return Err(Error {
-            err: ErrorVariant::NamedStructInPgQuery { pos: name.pos },
-            path: module_path.to_owned(),
-        });
-    };
-
-    let param = match annotation.param {
-        QueryDataStructure::Implicit { idents } => idents,
-        QueryDataStructure::Named(_) => unreachable!(),
-    };
-    let row = match annotation.row {
-        QueryDataStructure::Implicit { idents } => idents,
-        QueryDataStructure::Named(_) => unreachable!(),
-    };
-    Ok((param, row))
-}
-
-pub(crate) fn more_bind_params_than_params(
-    module_path: &str,
-    params: &[Parsed<NullableIdent>],
-    deduped_bind_params: &[Parsed<i16>],
-) -> Result<(), Error> {
-    let params_len = params.len();
-    if let Some(bind_param) = deduped_bind_params
-        .iter()
-        .find(|bind_param| bind_param.value as usize > params_len)
-    {
-        return Err(Error {
-            err: ErrorVariant::MoreBindParamsThanParams {
-                nb_params: params.len(),
-                pos: bind_param.pos.clone(),
-            },
-            path: module_path.to_owned(),
-        });
-    }
-    Ok(())
-}
-
-pub(crate) fn unused_param(
-    module_path: &str,
-    params: &[Parsed<NullableIdent>],
-    bind_params: &[Parsed<i16>],
-) -> Result<(), Error> {
-    if let Some((index, p)) = params.iter().enumerate().find(|(index, _)| {
-        !bind_params
-            .iter()
-            .any(|bind_index| bind_index.value as usize == *index + 1)
-    }) {
-        return Err(Error {
-            err: ErrorVariant::UnusedParam {
-                index: index + 1,
-                pos: p.pos.clone(),
-            },
-            path: module_path.to_owned(),
-        });
-    };
-    Ok(())
-}
-
-pub(crate) fn i16_index(
-    module_path: &str,
-    Parsed { pos, value }: Parsed<BindParameter>,
-) -> Result<Parsed<i16>, Error> {
-    let usize_index = match value {
-        BindParameter::PgCompatible(index) => index,
-        BindParameter::Extended(_) => unreachable!(),
-    };
-    // Check that the index can be parsed as a i16 (required by postgres wire protocol)
-    let i16_index = i16::try_from(usize_index).map_err(|_| Error {
-        err: ErrorVariant::InvalidI16Index { pos: pos.clone() },
-        path: module_path.to_owned(),
-    })?;
-
-    // Check that the index is also non-zero (postgres bind params are 1-indexed)
-    if i16_index == 0 {
-        return Err(Error {
-            err: ErrorVariant::InvalidI16Index { pos },
-            path: module_path.to_owned(),
-        });
-    };
-
-    Ok(Parsed {
-        pos,
-        value: i16_index,
-    })
 }
 
 pub(crate) fn query_name_already_used(module_path: &str, queries: &[Query]) -> Result<(), Error> {
@@ -300,55 +176,17 @@ pub(crate) fn validate_query(module_path: &str, query: Query) -> Result<Validate
     if let QueryDataStructure::Implicit { idents } = &query.annotation.row {
         duplicate_nullable_ident(module_path, idents)?;
     };
-    let name = query.annotation.name.clone();
-    let is_extended_syntax = ambiguous_bind_param(module_path, &query.sql.bind_params)?;
-    let validated_query = if is_extended_syntax {
-        let mut bind_params = query
-            .sql
-            .bind_params
-            .iter()
-            .map(|bind_param| {
-                bind_param.map(|bind_param| match bind_param {
-                    BindParameter::Extended(e) => e.clone(),
-                    BindParameter::PgCompatible(_) => {
-                        unreachable!()
-                    }
-                })
-            })
-            .collect::<Vec<Parsed<String>>>();
-        bind_params.sort();
-        bind_params.dedup();
+    let mut bind_params = query.sql.bind_params.clone();
+    bind_params.sort();
+    bind_params.dedup();
 
-        let sql_str = query.sql.normalize_sql(query.sql_start);
-        ValidatedQuery::Extended {
-            name: query.annotation.name,
-            params: query.annotation.param,
-            bind_params,
-            row: query.annotation.row,
-            sql_str,
-        }
-    } else {
-        let bind_params = &query
-            .sql
-            .bind_params
-            .into_iter()
-            .map(|bind_param| i16_index(module_path, bind_param))
-            .collect::<Result<Vec<Parsed<i16>>, Error>>()?;
-        let mut deduped_bind_params = bind_params.clone();
-        deduped_bind_params.sort();
-        deduped_bind_params.dedup();
-
-        let (params, row) = named_struct_in_pg_query(module_path, query.annotation)?;
-
-        more_bind_params_than_params(module_path, &params, &deduped_bind_params)?;
-        unused_param(module_path, &params, bind_params)?;
-
-        ValidatedQuery::PgCompatible {
-            name,
-            params,
-            row,
-            sql_str: query.sql.sql_str,
-        }
+    let sql_str = query.sql.normalize_sql(query.sql_start);
+    let validated_query = ValidatedQuery::Extended {
+        name: query.annotation.name,
+        params: query.annotation.param,
+        bind_params,
+        row: query.annotation.row,
+        sql_str,
     };
 
     Ok(validated_query)

@@ -212,28 +212,10 @@ impl FromPair for TypeAnnotationList {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum BindParameter {
-    PgCompatible(usize),
-    Extended(String),
-}
-
-impl FromPair for BindParameter {
-    fn from_pair(pair: Pair<Rule>) -> Self {
-        match pair.as_rule() {
-            Rule::number => BindParameter::PgCompatible(pair.as_str().parse::<usize>().unwrap()),
-            Rule::ident => BindParameter::Extended(pair.as_str().to_string()),
-            _ => {
-                unreachable!()
-            }
-        }
-    }
-}
-
 #[derive(Debug)]
 pub(crate) struct QuerySql {
     pub(crate) sql_str: String,
-    pub(crate) bind_params: Vec<Parsed<BindParameter>>,
+    pub(crate) bind_params: Vec<Parsed<String>>,
 }
 
 impl QuerySql {
@@ -262,10 +244,8 @@ impl QuerySql {
 impl FromPair for QuerySql {
     fn from_pair(pair: Pair<Rule>) -> Self {
         let sql_str = pair.as_str().into();
-        let bind_params: Vec<Parsed<BindParameter>> = pair
-            .into_inner()
-            .map(Parsed::<BindParameter>::from_pair)
-            .collect();
+        let bind_params: Vec<Parsed<String>> =
+            pair.into_inner().map(Parsed::<String>::from_pair).collect();
 
         Self {
             sql_str,
