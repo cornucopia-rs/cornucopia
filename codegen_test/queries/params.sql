@@ -6,3 +6,6 @@ SELECT * FROM book;
 
 --! params_use_twice
 UPDATE book SET name = :name WHERE length(name) > 42 AND length(:name) < 42;
+
+--! params_order
+UPDATE imaginary SET c=:c, a=:a, z=:a, r=:c;

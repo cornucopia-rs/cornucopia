@@ -949,6 +949,19 @@ pub mod queries {
                 params_use_twice(client, &self.name).await
             }
         }
+        #[derive(Debug, Clone, Copy)]
+        pub struct ParamsOrderParams {
+            pub a: i32,
+            pub c: i32,
+        }
+        impl ParamsOrderParams {
+            pub async fn params_order<'a, C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> Result<u64, tokio_postgres::Error> {
+                params_order(client, &self.a, &self.c).await
+            }
+        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct SelectBook {
             pub author: Option<String>,
@@ -1057,9 +1070,22 @@ pub mod queries {
             name: &'a &'a str,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = client
-                .prepare("UPDATE book SET name = $1 WHERE length(name) > 42 AND length($1) < 42;")
+                .prepare(
+                    "UPDATE book SET name = $1 WHERE length(name) > 42 AND length($1) < 42;
+",
+                )
                 .await?;
             client.execute(&stmt, &[name]).await
+        }
+        pub async fn params_order<'a, C: GenericClient>(
+            client: &'a C,
+            a: &'a i32,
+            c: &'a i32,
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare("UPDATE imaginary SET c=$2, a=$1, z=$1, r=$2;")
+                .await?;
+            client.execute(&stmt, &[a, c]).await
         }
     }
     pub mod stress {

@@ -18,7 +18,7 @@ use uuid::Uuid;
 use crate::cornucopia_sync::{
     queries::{
         named::{item_by_id, new_item_visible, ItemParams},
-        params::{select_book, SelectBook},
+        params::{params_use_twice, select_book, SelectBook},
         stress::{
             select_everything, select_everything_array, select_nightmare,
             InsertEverythingArrayParams, InsertEverythingParams, InsertNightmareParams,
@@ -69,7 +69,8 @@ pub fn test_params(client: &mut Client) {
                 name: "In Search of Lost Time".into()
             }
         ]
-    )
+    );
+    params_use_twice(client, &"name").unwrap();
 }
 
 pub fn test_named(client: &mut Client) {

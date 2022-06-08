@@ -141,13 +141,12 @@ pub(crate) fn validate_query(info: &Rc<ModuleInfo>, query: Query) -> Result<Vali
     bind_params.sort();
     bind_params.dedup();
 
-    let sql_str = query.sql.normalize_sql(query.sql_start);
     let validated_query = ValidatedQuery {
         name: query.annotation.name,
         params: query.annotation.param,
         bind_params,
         row: query.annotation.row,
-        sql_str,
+        sql_str: query.sql.sql_str,
     };
 
     Ok(validated_query)

@@ -125,35 +125,27 @@ pub(crate) struct QuerySql {
     pub(crate) bind_params: Vec<Parsed<String>>,
 }
 
-impl QuerySql {
-    pub(crate) fn normalize_sql(self, sql_start: usize) -> String {
-        let mut deduped_bind_params = self.bind_params.clone();
-        deduped_bind_params.sort();
-        deduped_bind_params.dedup();
-
-        let mut replacing_values = self
-            .bind_params
-            .iter()
-            .map(|bind_param| {
-                let index = deduped_bind_params
-                    .iter()
-                    .position(|bp| bp == bind_param)
-                    .unwrap();
-                let start = bind_param.start - sql_start - 1_usize;
-                let end = bind_param.end - sql_start - 1_usize;
-                ((start, end), format!("${}", index + 1))
-            })
-            .collect::<Vec<((usize, usize), String)>>();
-        replaced_in_string(self.sql_str, &mut replacing_values)
-    }
-}
-
 impl FromPair for QuerySql {
     fn from_pair(pair: Pair<Rule>) -> Self {
-        let sql_str = pair.as_str().into();
+        let sql_start = pair.as_span().start();
+        let mut sql_str = pair.as_str().to_string();
         let bind_params: Vec<Parsed<String>> =
             pair.into_inner().map(Parsed::<String>::from_pair).collect();
 
+        // Normalize
+        let mut deduped_bind_params = bind_params.clone();
+        deduped_bind_params.sort_unstable();
+        deduped_bind_params.dedup();
+
+        for bind_param in bind_params.iter().rev() {
+            let index = deduped_bind_params
+                .iter()
+                .position(|bp| bp == bind_param)
+                .unwrap();
+            let start = bind_param.start - sql_start - 1;
+            let end = bind_param.end - sql_start - 1;
+            sql_str.replace_range(start..=end, &format!("${}", index + 1))
+        }
         Self {
             sql_str,
             bind_params,
@@ -165,7 +157,6 @@ impl FromPair for QuerySql {
 pub(crate) struct Query {
     pub(crate) annotation: QueryAnnotation,
     pub(crate) sql: QuerySql,
-    pub(crate) sql_start: usize,
 }
 
 impl FromPair for Query {
@@ -173,13 +164,8 @@ impl FromPair for Query {
         let mut tokens = pair.into_inner();
         let annotation = QueryAnnotation::from_pair(tokens.next().unwrap());
         let sql_tokens = tokens.next().unwrap();
-        let sql_start = sql_tokens.as_span().start();
         let sql = QuerySql::from_pair(sql_tokens);
-        Self {
-            annotation,
-            sql,
-            sql_start,
-        }
+        Self { annotation, sql }
     }
 }
 
@@ -295,15 +281,6 @@ pub(crate) fn parse_query_module(module_path: &str, input: &str) -> Result<Parse
         .next()
         .unwrap();
     Ok(ParsedModule::from_pair(parsed))
-}
-
-/// Utility that replaces all the replacing values into the target string.
-fn replaced_in_string(mut s: String, replacing_values: &mut [((usize, usize), String)]) -> String {
-    replacing_values.sort_by(|a, b| a.0 .0.cmp(&b.0 .0));
-    for ((start, end), value) in replacing_values.iter().rev() {
-        s.replace_range(start..=end, value)
-    }
-    s
 }
 
 pub(crate) mod error {

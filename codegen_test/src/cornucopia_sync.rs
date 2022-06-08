@@ -926,6 +926,19 @@ pub mod queries {
                 params_use_twice(client, &self.name)
             }
         }
+        #[derive(Debug, Clone, Copy)]
+        pub struct ParamsOrderParams {
+            pub a: i32,
+            pub c: i32,
+        }
+        impl ParamsOrderParams {
+            pub fn params_order<'a, C: GenericClient>(
+                &'a self,
+                client: &'a mut C,
+            ) -> Result<u64, postgres::Error> {
+                params_order(client, &self.a, &self.c)
+            }
+        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct SelectBook {
             pub author: Option<String>,
@@ -1028,9 +1041,18 @@ pub mod queries {
             name: &'a &'a str,
         ) -> Result<u64, postgres::Error> {
             let stmt = client.prepare(
-                "UPDATE book SET name = $1 WHERE length(name) > 42 AND length($1) < 42;",
+                "UPDATE book SET name = $1 WHERE length(name) > 42 AND length($1) < 42;
+",
             )?;
             client.execute(&stmt, &[name])
+        }
+        pub fn params_order<'a, C: GenericClient>(
+            client: &'a mut C,
+            a: &'a i32,
+            c: &'a i32,
+        ) -> Result<u64, postgres::Error> {
+            let stmt = client.prepare("UPDATE imaginary SET c=$2, a=$1, z=$1, r=$2;")?;
+            client.execute(&stmt, &[a, c])
         }
     }
     pub mod stress {
