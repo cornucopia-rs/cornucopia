@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    parser::{Parsed, TypeAnnotationListItem},
+    parser::{Parsed, TypeDataStructure},
     read_queries::ModuleInfo,
     type_registrar::CornucopiaType,
     type_registrar::TypeRegistrar,
@@ -284,196 +284,118 @@ fn prepare_query(
     client: &mut Client,
     module: &mut PreparedModule,
     registrar: &mut TypeRegistrar,
-    param_types: &[TypeAnnotationListItem],
-    row_types: &[TypeAnnotationListItem],
+    param_types: &[TypeDataStructure],
+    row_types: &[TypeDataStructure],
     query: ValidatedQuery,
 ) -> Result<(), Error> {
     // Prepare the statement
     let stmt = client
-        .prepare(query.sql_str())
-        .map_err(|e| Error::new(e, query.name(), module.info.clone()))?;
+        .prepare(&query.sql_str)
+        .map_err(|e| Error::new(e, &query.name, module.info.clone()))?;
 
-    let (query_name, params_name, params_fields, row_name, row_fields, sql_str) = match query {
-        ValidatedQuery::PgCompatible {
-            name,
-            params,
-            row,
-            sql_str,
-        } => {
-            let param_fields = {
-                let mut param_fields = Vec::new();
-                for (col_name, col_ty) in params.iter().zip(stmt.params().iter()) {
-                    // Register type
-                    param_fields.push(PreparedField {
-                        name: col_name.value.name().to_owned(),
-                        ty: registrar
-                            .register(col_ty)
-                            .map_err(|e| Error::new(e, &name, module.info.clone()))?
-                            .clone(),
-                        is_nullable: col_name.value.is_nullable(),
-                        is_inner_nullable: false, // TODO used when support null everywhere
-                    });
-                }
-                param_fields
-            };
-            let row_fields = {
-                let stmt_cols = stmt.columns();
-                // Check for duplicate names
-                if let Some(duplicate_col) = has_duplicate(stmt_cols.iter(), |col| col.name()) {
-                    return Err(Error::new(
-                        ErrorVariant::DuplicateSqlColName {
-                            name: duplicate_col.name().to_owned(),
-                        },
-                        &name,
-                        module.info.clone(),
-                    ));
-                };
-                for nullable_col in &row {
-                    // If none of the row's columns match the nullable column
-                    validation::nullable_column_name(&module.info, nullable_col, stmt_cols)
-                        .map_err(ErrorVariant::from)
-                        .map_err(|e| Error::new(e, &name, module.info.clone()))?;
-                }
+    let ValidatedQuery {
+        name,
+        params,
+        bind_params,
+        row,
+        sql_str,
+    } = query;
 
-                let mut row_fields = Vec::new();
-                for (col_name, col_ty) in stmt_cols.iter().map(|c| (c.name(), c.type_())) {
-                    let is_nullable = row.iter().any(|x| x.value.name() == col_name);
-                    // Register type
-                    row_fields.push(PreparedField {
-                        name: col_name.to_owned(),
-                        ty: registrar
-                            .register(col_ty)
-                            .map_err(|e| Error::new(e, &name, module.info.clone()))?
-                            .clone(),
-                        is_nullable,
-                        is_inner_nullable: false, // TODO used when support null everywhere
-                    });
-                }
-                row_fields
-            };
-            let params_name = name.map(|x| x.to_upper_camel_case() + "Params");
-            let row_name = name.map(|x| x.to_upper_camel_case());
-            (
-                name,
-                params_name,
-                param_fields,
-                row_name,
-                row_fields,
-                sql_str,
-            )
+    let (params_name, nullable_params_fields) = match params {
+        crate::parser::QueryDataStructure::Implicit { idents } => {
+            (name.map(|x| x.to_upper_camel_case() + "Params"), idents)
         }
-        ValidatedQuery::Extended {
-            name,
-            params,
-            bind_params,
-            row,
-            sql_str,
-        } => {
-            let (params_name, nullable_params_fields) = match params {
-                crate::parser::QueryDataStructure::Implicit { idents } => {
-                    (name.map(|x| x.to_upper_camel_case() + "Params"), idents)
-                }
-                crate::parser::QueryDataStructure::Named(named_params) => {
-                    let idents =
-                        validation::unknown_named_struct(&module.info, &named_params, param_types)
-                            .map_err(ErrorVariant::from)
-                            .map_err(|e| Error::new(e, &name, module.info.clone()))?;
-                    (named_params, idents)
-                }
+        crate::parser::QueryDataStructure::Named(name) => {
+            let idents = if let Some(x) = param_types.iter().find(|x| x.name == name) {
+                x.fields.clone()
+            } else {
+                Vec::new()
             };
-            let (row_name, nullable_row_fields) = match row {
-                crate::parser::QueryDataStructure::Implicit { idents } => {
-                    (name.map(|x| x.to_upper_camel_case()), idents)
-                }
-                crate::parser::QueryDataStructure::Named(named_row) => {
-                    let idents =
-                        validation::unknown_named_struct(&module.info, &named_row, row_types)
-                            .map_err(ErrorVariant::from)
-                            .map_err(|e| Error::new(e, &name, module.info.clone()))?;
-
-                    (named_row, idents)
-                }
-            };
-
-            let param_fields = {
-                let stmt_params = stmt.params();
-                let params = bind_params
-                    .iter()
-                    .zip(stmt_params)
-                    .map(|(a, b)| (a.to_owned(), b.to_owned()))
-                    .collect::<Vec<(Parsed<String>, Type)>>();
-                for nullable_col in &nullable_params_fields {
-                    // If none of the row's columns match the nullable column
-                    validation::nullable_param_name(&module.info, nullable_col, &params)
-                        .map_err(ErrorVariant::from)
-                        .map_err(|e| Error::new(e, &name, module.info.clone()))?;
-                }
-
-                let mut param_fields = Vec::new();
-                for (col_name, col_ty) in params {
-                    let is_nullable = nullable_params_fields
-                        .iter()
-                        .any(|x| x.value.name() == col_name.value);
-                    // Register type
-                    param_fields.push(PreparedField {
-                        name: col_name.value.to_owned(),
-                        ty: registrar
-                            .register(&col_ty)
-                            .map_err(|e| Error::new(e, &name, module.info.clone()))?
-                            .clone(),
-                        is_nullable,
-                        is_inner_nullable: false, // TODO used when support null everywhere
-                    });
-                }
-                param_fields
-            };
-
-            let row_fields = {
-                let stmt_cols = stmt.columns();
-                // Check for duplicate names
-                if let Some(duplicate_col) = has_duplicate(stmt_cols.iter(), |col| col.name()) {
-                    return Err(Error::new(
-                        ErrorVariant::DuplicateSqlColName {
-                            name: duplicate_col.name().to_owned(),
-                        },
-                        &name,
-                        module.info.clone(),
-                    ));
-                };
-                for nullable_col in &nullable_row_fields {
-                    // If none of the row's columns match the nullable column
-                    validation::nullable_column_name(&module.info, nullable_col, stmt_cols)
-                        .map_err(ErrorVariant::from)
-                        .map_err(|e| Error::new(e, &name, module.info.clone()))?;
-                }
-
-                let mut row_fields = Vec::new();
-                for (col_name, col_ty) in stmt_cols.iter().map(|c| (c.name(), c.type_())) {
-                    let is_nullable = nullable_row_fields
-                        .iter()
-                        .any(|x| x.value.name() == col_name);
-                    // Register type
-                    row_fields.push(PreparedField {
-                        name: col_name.to_owned(),
-                        ty: registrar
-                            .register(col_ty)
-                            .map_err(|e| Error::new(e, &name, module.info.clone()))?
-                            .clone(),
-                        is_nullable,
-                        is_inner_nullable: false, // TODO used when support null everywhere
-                    });
-                }
-                row_fields
-            };
-            (
-                name,
-                params_name,
-                param_fields,
-                row_name,
-                row_fields,
-                sql_str,
-            )
+            (name, idents)
         }
+    };
+    let (row_name, nullable_row_fields) = match row {
+        crate::parser::QueryDataStructure::Implicit { idents } => {
+            (name.map(|x| x.to_upper_camel_case()), idents)
+        }
+        crate::parser::QueryDataStructure::Named(named_row) => {
+            let idents = if let Some(x) = row_types.iter().find(|x| x.name == name) {
+                x.fields.clone()
+            } else {
+                Vec::new()
+            };
+
+            (named_row, idents)
+        }
+    };
+
+    let params_fields = {
+        let stmt_params = stmt.params();
+        let params = bind_params
+            .iter()
+            .zip(stmt_params)
+            .map(|(a, b)| (a.to_owned(), b.to_owned()))
+            .collect::<Vec<(Parsed<String>, Type)>>();
+        for nullable_col in &nullable_params_fields {
+            // If none of the row's columns match the nullable column
+            validation::nullable_param_name(&module.info, nullable_col, &params)
+                .map_err(ErrorVariant::from)
+                .map_err(|e| Error::new(e, &name, module.info.clone()))?;
+        }
+
+        let mut param_fields = Vec::new();
+        for (col_name, col_ty) in params {
+            let is_nullable = nullable_params_fields
+                .iter()
+                .any(|x| x.value == col_name.value);
+            // Register type
+            param_fields.push(PreparedField {
+                name: col_name.value.to_owned(),
+                ty: registrar
+                    .register(&col_ty)
+                    .map_err(|e| Error::new(e, &name, module.info.clone()))?
+                    .clone(),
+                is_nullable,
+                is_inner_nullable: false, // TODO used when support null everywhere
+            });
+        }
+        param_fields
+    };
+
+    let row_fields = {
+        let stmt_cols = stmt.columns();
+        // Check for duplicate names
+        if let Some(duplicate_col) = has_duplicate(stmt_cols.iter(), |col| col.name()) {
+            return Err(Error::new(
+                ErrorVariant::DuplicateSqlColName {
+                    name: duplicate_col.name().to_owned(),
+                },
+                &name,
+                module.info.clone(),
+            ));
+        };
+        for nullable_col in &nullable_row_fields {
+            // If none of the row's columns match the nullable column
+            validation::nullable_column_name(&module.info, nullable_col, stmt_cols)
+                .map_err(ErrorVariant::from)
+                .map_err(|e| Error::new(e, &name, module.info.clone()))?;
+        }
+
+        let mut row_fields = Vec::new();
+        for (col_name, col_ty) in stmt_cols.iter().map(|c| (c.name(), c.type_())) {
+            let is_nullable = nullable_row_fields.iter().any(|x| x.value == col_name);
+            // Register type
+            row_fields.push(PreparedField {
+                name: col_name.to_owned(),
+                ty: registrar
+                    .register(col_ty)
+                    .map_err(|e| Error::new(e, &name, module.info.clone()))?
+                    .clone(),
+                is_nullable,
+                is_inner_nullable: false, // TODO used when support null everywhere
+            });
+        }
+        row_fields
     };
 
     let params_empty = params_fields.is_empty();
@@ -483,22 +405,22 @@ fn prepare_query(
                 .add_row(registrar, row_name, row_fields)
                 .map_err(|e| Error {
                     err: e,
-                    query_name: query_name.clone(),
-                    info: module.info.clone(),
+                    query_name: name.clone(),
+                    module_info: module.info.clone(),
                 })?,
         )
     } else {
         None
     };
 
-    let query_idx = module.add_query(query_name.value.clone(), params_fields, row_idx, sql_str);
+    let query_idx = module.add_query(name.value.clone(), params_fields, row_idx, sql_str);
     if !params_empty {
         module
             .add_param(params_name, query_idx)
             .map_err(|e| Error {
                 err: e,
-                query_name: query_name.clone(),
-                info: module.info.clone(),
+                query_name: name.clone(),
+                module_info: module.info.clone(),
             })?;
     };
 
@@ -532,7 +454,7 @@ pub(crate) mod error {
     pub struct Error {
         pub(crate) query_name: Parsed<String>,
         pub(crate) err: ErrorVariant,
-        pub(crate) info: Rc<ModuleInfo>,
+        pub(crate) module_info: Rc<ModuleInfo>,
     }
 
     impl Error {
@@ -544,7 +466,7 @@ pub(crate) mod error {
             Self {
                 err: err.into(),
                 query_name: query_name.clone(),
-                info,
+                module_info: info,
             }
         }
     }
@@ -552,13 +474,13 @@ pub(crate) mod error {
     impl Display for Error {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             // Retrieve line index and content
-            let (_, line, _) = compute_line(&self.info.content, self.query_name.start);
+            let (_, line, _) = compute_line(&self.module_info.content, self.query_name.start);
             match &self.err {
                 ErrorVariant::Db(e) => write!(
                     f,
                     "Error while preparing query \"{}\" [file: \"{}\", line: {}] ({})",
                     self.query_name.value,
-                    self.info.path,
+                    self.module_info.path,
                     line,
                     e.as_db_error().unwrap().message()
                 ),
@@ -566,7 +488,7 @@ pub(crate) mod error {
                 _ => write!(
                     f,
                     "Error while preparing query \"{}\" [file: \"{}\", line: {}]:\n{}",
-                    self.query_name.value, self.info.path, line, self.err
+                    self.query_name.value, self.module_info.path, line, self.err
                 ),
             }
         }
