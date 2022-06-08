@@ -38,26 +38,26 @@ ident = {
     !"_"+
     ~ (("_" | LETTER) ~ (LETTER | ASCII_DIGIT | "_")*) 
 }
-nullable = {ident ~ "?"}
+nullable = _{ident ~ "?"}
 extended_bind_parameter = _{":" ~ ident}
-pg_bind_parameter = _{"$" ~ number}
+pg_bind_param = _{"$" ~ number}
+
+// Field list
+field_list = {
+	"(" ~ type_ws* 
+    ~ (nullable  ~ type_ws* 
+        ~ ("," ~ type_ws* ~ nullable ~ type_ws*)*)? 
+    ~ ","? ~ type_ws* 
+    ~ ")"
+}
 
 // Type annotation
 row = {^"row"}
 param = {^"param"}
 db = {^"db"}
 type_annotation_kind = _{row | param | db}
-type_field_list = {
-	"(" ~ type_ws* 
-    ~ ((nullable | ident) ~ type_ws* 
-        ~ ("," ~ type_ws* ~ (nullable | ident) ~ type_ws*)*)? 
-    ~ ","? ~ type_ws* 
-    ~ ")"
-}
-
 type_without_nullable_cols = {ident}
-type_with_nullable_cols = {ident ~ type_ws* ~ type_field_list}
-
+type_with_nullable_cols = {ident ~ type_ws* ~ field_list}
 type_list = {
 	"(" ~ type_ws* 
     ~ ( (type_with_nullable_cols | type_without_nullable_cols) ~ type_ws* 
@@ -65,33 +65,17 @@ type_list = {
     ~ ","? ~ type_ws* 
     ~ ")"
 }
-
 type_annotation = {
 	type_annotation_token 
     ~ type_ws* ~ type_annotation_kind  
     ~ type_ws* ~ (type_with_nullable_cols | type_without_nullable_cols)
-    ~ (type_ws* ~ NEWLINE+)
+    ~ (NEWLINE*)
 }
-type_annotation_list = {
-	type_annotation_token 
-    ~ type_ws* ~ type_annotation_kind  
-    ~ type_ws* ~ type_list
-    ~ (type_ws* ~ NEWLINE+)
-}
-
-type_annotation_enum = _{type_annotation | type_annotation_list}
 
 // Query annotation
-query_param = {(ident | query_field_list)}
-query_row = {(ident | query_field_list)}
+query_param = {(ident | field_list)}
+query_row = {(ident | field_list)}
 
-query_field_list = {
-	"(" ~ query_ws* 
-    ~ ((nullable | ident) ~ query_ws* 
-        ~ ("," ~ query_ws* ~ (nullable | ident) ~ query_ws*)*)? 
-    ~ ","? ~ query_ws* 
-    ~ ")"
-}
 query_annotation = {
     query_annotation_token
     ~ (query_ws* ~ ident)
@@ -111,11 +95,11 @@ sql = {
 	(
 	    sql_string
         | "::" 
-	    | (extended_bind_parameter | pg_bind_parameter)
-	    | (!(query_annotation_token | type_annotation_token) ~ ANY)
+	    | (extended_bind_parameter)
+	    | (!(query_annotation_token | type_annotation_token | pg_bind_param) ~ ANY)
 	)+
 }
 
 // Parser
 eoi = _{ !ANY }
-parser = {SOI ~ (blank* ~ (type_annotation_enum | query))* ~ eoi}
+parser = {SOI ~ (blank* ~ (type_annotation | query))* ~ eoi}
