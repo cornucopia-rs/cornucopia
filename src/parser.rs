@@ -295,38 +295,3 @@ pub(crate) mod error {
         pub err: pest::error::Error<Rule>,
     }
 }
-
-#[cfg(test)]
-mod test {
-    use pest::Parser;
-
-    use crate::parser::{FromPair, ParsedModule};
-
-    use super::{CornucopiaParser, Rule};
-
-    #[test]
-    fn test() {
-        let input = r#"
---: ROW Hello(a?,b?)
---: row hello
-
---! query (first?, second?, third?)
-asd
-
---! query : (first?, second?)
-asd :asd
-
---! query (first?, second?, third?) : (first?, second?)
-asd :first
-        "#;
-
-        let x = CornucopiaParser::parse(Rule::parser, input)
-            .unwrap()
-            .next()
-            .unwrap();
-
-        let y = ParsedModule::from_pair(x);
-
-        println!("{:#?}", &y);
-    }
-}
