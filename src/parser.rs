@@ -71,6 +71,12 @@ fn ln() -> impl Parser<char, (), Error = Simple<char>> {
 fn space() -> impl Parser<char, (), Error = Simple<char>> {
     one_of(" \t").repeated().ignored()
 }
+fn blank() -> impl Parser<char, (), Error = Simple<char>> {
+    whitespace().or(space()
+        .ignore_then(just("--"))
+        .ignore_then(filter(|c: &char| *c != '\n').repeated())
+        .ignore_then(ln()))
+}
 fn parse_nullable_ident() -> impl Parser<char, Vec<Parsed<String>>, Error = Simple<char>> {
     space()
         .ignore_then(ident())
@@ -246,7 +252,7 @@ impl QueryDataStruct {
     fn parser() -> impl Parser<char, Self, Error = Simple<char>> {
         parse_nullable_ident()
             .map(|idents| Self::Implicit { idents })
-            .or(ident().map(|it| Self::Named(it)))
+            .or(ident().map(Self::Named))
     }
 }
 
@@ -264,11 +270,13 @@ impl QueryAnnotation {
             .ignore_then(ident())
             .then_ignore(space())
             .then(QueryDataStruct::parser().or_not())
-            // TODO better handling of :
             .then_ignore(space())
-            .then_ignore(just(':').or_not())
-            .then_ignore(space())
-            .then(QueryDataStruct::parser().or_not())
+            .then(
+                just(':')
+                    .ignore_then(space())
+                    .ignore_then(QueryDataStruct::parser())
+                    .or_not(),
+            )
             .map(|((name, param), row)| Self {
                 name,
                 param: param.unwrap_or_default(),
@@ -325,7 +333,7 @@ pub(crate) fn parse_query_module(path: &str, input: &str) -> Result<ParsedModule
     TypeAnnotation::parser()
         .map(Statement::Type)
         .or(Query::parser().map(Statement::Query))
-        .separated_by(whitespace())
+        .separated_by(blank())
         .collect()
         .parse(input)
         .map_err(|e| Error {
