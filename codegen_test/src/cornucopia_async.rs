@@ -235,7 +235,7 @@ pub mod types {
                             postgres_types::ToSql::to_sql(&self.spongebob, field.type_(), out)
                         }
                         "domain" => postgres_types::ToSql::to_sql(
-                            &cornucopia_client::Domain::<&'a str>(&self.domain),
+                            &cornucopia_client::private::Domain::<&'a str>(&self.domain),
                             field.type_(),
                             out,
                         ),
@@ -278,7 +278,7 @@ pub mod types {
                                     )
                                 }
                                 "domain" => {
-                                    <cornucopia_client::Domain::<
+                                    <cornucopia_client::private::Domain::<
                                         &'a str,
                                     > as postgres_types::ToSql>::accepts(f.type_())
                                 }
@@ -563,7 +563,7 @@ pub mod queries {
                 let stmt = self.stmt().await?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
                     .await?
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
@@ -622,7 +622,7 @@ pub mod queries {
                 let stmt = self.stmt().await?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
                     .await?
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
@@ -775,7 +775,7 @@ pub mod queries {
                 let stmt = self.stmt().await?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
                     .await?
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
@@ -872,7 +872,7 @@ pub mod queries {
                 let stmt = self.stmt().await?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
                     .await?
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
@@ -1012,7 +1012,7 @@ pub mod queries {
                 let stmt = self.stmt().await?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
                     .await?
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
@@ -1097,7 +1097,7 @@ pub mod queries {
                 let stmt = self.stmt().await?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
                     .await?
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
@@ -1271,7 +1271,7 @@ pub mod queries {
                 let stmt = self.stmt().await?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
                     .await?
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
@@ -1682,7 +1682,7 @@ pub mod queries {
                 let stmt = self.stmt().await?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
                     .await?
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
@@ -1888,7 +1888,7 @@ pub mod queries {
                 let stmt = self.stmt().await?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
                     .await?
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
@@ -2080,7 +2080,7 @@ pub mod queries {
                 let stmt = self.stmt().await?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
                     .await?
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
@@ -2280,7 +2280,7 @@ pub mod queries {
                 let stmt = self.stmt().await?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
                     .await?
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
@@ -2352,7 +2352,7 @@ pub mod queries {
                 let stmt = self.stmt().await?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
                     .await?
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
@@ -2925,7 +2925,7 @@ pub mod queries {
                 let stmt = self.stmt().await?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
                     .await?
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
@@ -2997,7 +2997,7 @@ pub mod queries {
                 let stmt = self.stmt().await?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
                     .await?
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
@@ -3059,7 +3059,7 @@ pub mod queries {
                 let stmt = self.stmt().await?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
                     .await?
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
@@ -3121,7 +3121,7 @@ pub mod queries {
                 let stmt = self.stmt().await?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
                     .await?
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
@@ -3180,7 +3180,7 @@ pub mod queries {
                 let stmt = self.stmt().await?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
                     .await?
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
@@ -3252,7 +3252,7 @@ pub mod queries {
                 let stmt = self.stmt().await?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
                     .await?
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();

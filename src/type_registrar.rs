@@ -55,7 +55,7 @@ impl CornucopiaType {
         match self {
             CornucopiaType::Domain { inner, .. } => {
                 format!(
-                    "&cornucopia_client::Domain::<{}>(&self.{name})",
+                    "&cornucopia_client::private::Domain::<{}>(&self.{name})",
                     inner.brw_struct(true, false)
                 )
             }
@@ -66,7 +66,7 @@ impl CornucopiaType {
     pub(crate) fn accept_to_sql(&self) -> String {
         match self {
             CornucopiaType::Domain { inner, .. } => format!(
-                "cornucopia_client::Domain::<{}>",
+                "cornucopia_client::private::Domain::<{}>",
                 inner.brw_struct(true, false)
             ),
             _ => self.brw_struct(true, false),

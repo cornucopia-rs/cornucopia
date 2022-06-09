@@ -372,7 +372,7 @@ fn gen_row_structs(w: &mut impl Write, row: &PreparedRow, is_async: bool) {
                     let stmt = self.stmt(){fn_await}?;
                     let stream = self
                         .client
-                        .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                        .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
                         {fn_await}?
                         {raw_pre}
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
