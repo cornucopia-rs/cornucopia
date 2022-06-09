@@ -19,44 +19,38 @@ pub mod queries {
                 Self { col1: col1.into() }
             }
         }
-        pub struct ExampleQueryQuery<'a, C: GenericClient, T> {
+        pub struct ExampleQueryQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); 0],
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> ExampleQueryBorrowed,
             mapper: fn(ExampleQueryBorrowed) -> T,
         }
-        impl<'a, C, T: 'a> ExampleQueryQuery<'a, C, T>
+        impl<'a, C, T: 'a, const N: usize> ExampleQueryQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
             pub fn map<R>(
                 self,
                 mapper: fn(ExampleQueryBorrowed) -> R,
-            ) -> ExampleQueryQuery<'a, C, R> {
+            ) -> ExampleQueryQuery<'a, C, R, N> {
                 ExampleQueryQuery {
                     client: self.client,
                     params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
                     mapper,
-                }
-            }
-            pub fn extractor(row: &tokio_postgres::row::Row) -> ExampleQueryBorrowed {
-                ExampleQueryBorrowed {
-                    col1: row.get(0),
                 }
             }
             pub async fn stmt(
                 &self,
             ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
-                self.client.prepare("SELECT
-    *
-FROM
-    example_table;
-
-").await
+                self.client.prepare(self.query).await
             }
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
-                Ok((self.mapper)(Self::extractor(&row)))
+                Ok((self.mapper)((self.extractor)(&row)))
             }
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
@@ -68,7 +62,7 @@ FROM
                         .client
                         .query_opt(&stmt, &self.params)
                         .await?
-                        .map(|row| (self.mapper)(Self::extractor(&row))),
+                        .map(|row| (self.mapper)((self.extractor)(&row))),
                 )
             }
             pub async fn stream(
@@ -82,17 +76,28 @@ FROM
                     .client
                     .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
                     .await?
-                    .map(move |res| res.map(|row| (self.mapper)(Self::extractor(&row))))
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
                 Ok(stream)
             }
         }
         pub fn example_query<'a, C: GenericClient>(
             client: &'a C,
-        ) -> ExampleQueryQuery<'a, C, ExampleQuery> {
+        ) -> ExampleQueryQuery<'a, C, ExampleQuery, 0> {
             ExampleQueryQuery {
                 client,
                 params: [],
+                query: "SELECT
+    *
+FROM
+    example_table;
+
+",
+                extractor: |row| {
+                    ExampleQueryBorrowed {
+                        col1: row.get(0),
+                    }
+                },
                 mapper: |it| ExampleQuery::from(it),
             }
         }

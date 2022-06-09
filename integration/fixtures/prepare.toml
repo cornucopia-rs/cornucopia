@@ -13,3 +13,17 @@ CREATE TABLE item (
 error = '''
 Error while preparing query "items" [file: "queries/module_1.sql", line: 1]:
 Two or more columns have the same name: `name`. Consider disambiguing the column names with `AS` clauses.'''
+
+[[test]]
+name = 'InconsistentTypes'
+query = '''
+--! insert_author
+INSERT INTO Author (id, name) VALUES (:name, :name);
+'''
+migration = '''
+CREATE TABLE author (
+  id SERIAL,
+  name TEXT
+);
+'''
+error = 'Error while preparing query "insert_author" [file: "queries/module_1.sql", line: 1] (inconsistent types deduced for parameter $1)'

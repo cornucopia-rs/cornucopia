@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = { version = "1.18.1", features = ["full"] }
+tokio = { version = "1.18.2", features = ["full"] }
 tokio-postgres = "0.7.6"
 cornucopia_client = { path = "../../cornucopia_client" }
 deadpool-postgres = "0.10.2"

@@ -63,7 +63,7 @@ Cornucopia aims to get out of your way, **transpiling your PostgreSQL queries to
 * Async (`tokio_postgres`) and sync drivers (`postgres`).
 * Ergonomic type mapping.
 * One-dimensional array types.
-* Nullable return columns.
+* Granular nullity control.
 * Optional migration management.
 * Build your queries against your own live database, or let Cornucopia manage that for you.
 * Use the connection type that you want (pooled or not, transaction or not). You can mix and match them freely.
@@ -180,9 +180,14 @@ The diagram below shows a very high level representation of the items generated 
 
 
 ### Query annotation syntax
-Cornucopia supports two kinds of annotation syntaxes: PostgreSQL-compatible and extended. no matter which kind of syntax you use, Cornucopia will generate and use valid PostgreSQL statements for your queries (i.e. the extended syntax is stripped away internally).
+```sql
+--! example_query
+select * from authors
+where first_name = :first_name and last_name = :last_name
+```
+Notice that bind parameters are specified by name with the `:colon_identifier` notation, instead of by index. This allows queries to be very concise while also being more expressive.
 
-Note that annotations are whitespace insignificant and can be split accross multiple lines too
+Annotations are whitespace insignificant and can be split accross multiple lines too
 ```sql
 --! authors (
 --!
@@ -190,29 +195,13 @@ Note that annotations are whitespace insignificant and can be split accross mult
 ```
 Comments that do not start with `--!` (e.g. `-- This`) are simply ignored by Cornucopia, so feel free to use them as you usually would.
 
-#### PostgreSQL-compatible
-```sql
---! example_query(first_name, last_name)
-select * from authors 
-where first_name = $1 and last_name = $2
-```
-This syntax keeps your raw queries compatible with any PostgreSQL tool.
-
-#### Extended
-```sql
---! example_query
-select * from authors
-where first_name = :first_name and last_name = :last_name
-```
-The extended syntax does not guarantee compatibility with PostgreSQL tools, but it allows you to use named parameters with the `:colon_identifier` notation. More features might be added to this syntax in the future.
-
 #### Nullable columns
 ```sql
---! authors_named_john ?{name}
+--! authors_named_john(first_name?): (name?)
 select name from authors 
 where first_name = :first_name
 ```
-In addition, both the PostgreSQL-compatible and extended syntaxes can accept a list of nullable columns using the `?{hello, world}` notation.
+Query parameters and columns can specify their nullity by using the `(hello?, world?)` notation. Fields that are not present are assumed to be non-null.
 
 ### Transactions
 Generated queries take a `GenericClient` as parameter, which accepts both `Client`s and `Transaction`s. That means you can use the same generated queries for both single statements and transactions.

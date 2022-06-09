@@ -52,11 +52,10 @@ pub async fn main() {
 
     // The param struct can be more convenient
     // and less error-prone in some cases
-    AuthorNameStartingWithParams { start_str: &"Jo" };
     println!(
         "{:?}",
-        AuthorNameStartingWithParams { start_str: &"Jo" }
-            .query(&client)
+        AuthorNameStartingWithParams { start_str: "Jo" }
+            .author_name_starting_with(&client)
             .vec()
             .await
             .unwrap()

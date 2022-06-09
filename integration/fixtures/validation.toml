@@ -1,52 +1,8 @@
 [[test]]
-name = 'PgParamInExtendedQuery'
+name = 'DuplicateCol'
 query = '''
---! new_author
-INSERT INTO Author (id, name) VALUES (:id, $1);
-'''
-error = '''
-Error while reading queries [path: "queries/module_1.sql"]:  --> 2:45
-  | 
-  | INSERT INTO Author (id, name) VALUES (:id, $1);
-  |                                             ^---
-  | 
-  = Indexed bind parameters (`$index`) are not allowed when using the extended syntax.
-  = Consider using a named bind parameter like `:identifier`, or use the PostgreSQL-compatible syntax..'''
-
-[[test]]
-name = 'ExtendedParamInPgQuery'
-query = '''
---! new_author(id, name)
-INSERT INTO Author (id, name) VALUES ($1, :name);
-'''
-error = '''
-Error while reading queries [path: "queries/module_1.sql"]:  --> 2:44
-  | 
-  | INSERT INTO Author (id, name) VALUES ($1, :name);
-  |                                            ^---
-  | 
-  = Named bind parameters like `:identifier` are not allowed when using the PostgreSQL-compatible syntax.
-  = Consider using an indexed bind parameter like `$index`, or use the extended syntax..'''
-
-[[test]]
-name = 'InvalidI16Index'
-query = '''
---! new_author(id, name)
-INSERT INTO Author (id, name) VALUES ($1, $10000);
-'''
-error = '''
-Error while reading queries [path: "queries/module_1.sql"]:  --> 2:44
-  | 
-  | INSERT INTO Author (id, name) VALUES ($1, $10000);
-  |                                            ^---
-  | 
-  = Index is higher than the number of parameters supplied (2)..'''
-
-[[test]]
-name = 'DuplicateParam'
-query = '''
---! new_author(id, id)
-INSERT INTO Author (id, name) VALUES ($1, $2);
+--! new_author(id?, id?)
+INSERT INTO Author (id, name) VALUES (:id, :id);
 '''
 migration = '''
 CREATE TABLE author (
@@ -55,45 +11,18 @@ CREATE TABLE author (
 );
 '''
 error = '''
-Error while reading queries [path: "queries/module_1.sql"]:  --> 1:20
+Error while validating queries [path: "queries/module_1.sql"]:
+ --> 1:21
   | 
-  | --! new_author(id, id)
-  |                    ^---
+  | --! new_author(id?, id?)
+  |                     ^---
   | 
-  = Parameter is already used in parameter list..'''
-
-[[test]]
-name = 'MoreBindParamsThanParams'
-query = '''
---! new_author(id, name)
-INSERT INTO Author (id, name) VALUES ($1, $3);
-'''
-error = '''
-Error while reading queries [path: "queries/module_1.sql"]:  --> 2:44
-  | 
-  | INSERT INTO Author (id, name) VALUES ($1, $3);
-  |                                            ^---
-  | 
-  = Index is higher than the number of parameters supplied (2)..'''
-
-[[test]]
-name = 'UnusedParam'
-query = '''
---! new_author(id, name, other)
-INSERT INTO Author (id, name) VALUES ($1, $2);
-'''
-error = '''
-Error while reading queries [path: "queries/module_1.sql"]:  --> 1:26
-  | 
-  | --! new_author(id, name, other)
-  |                          ^---
-  | 
-  = Parameter `$3` is never used in the query..'''
+  = Column name is already used.'''
 
 [[test]]
 name = 'ColumnAlreadyNullable'
 query = '''
---! new_author ?{id, name, id}
+--! new_author: (id?, name?, id?)
 SELECT id, name FROM Author;
 '''
 migration = '''
@@ -103,18 +32,18 @@ CREATE TABLE author (
 );
 '''
 error = '''
-Error while preparing query "new_author" [file: "queries/module_1.sql", line: 1]:
- --> 1:28
+Error while validating queries [path: "queries/module_1.sql"]:
+ --> 1:30
   | 
-  | --! new_author ?{id, name, id}
-  |                            ^---
+  | --! new_author: (id?, name?, id?)
+  |                              ^---
   | 
-  = Column `id` is already marked as nullable.'''
+  = Column name is already used.'''
 
 [[test]]
 name = 'InvalidNullableColumnName'
 query = '''
---! new_author ?{name}
+--! new_author: (name?)
 SELECT id FROM Author;
 '''
 migration = '''
@@ -124,10 +53,77 @@ CREATE TABLE author (
 );
 '''
 error = '''
-Error while preparing query "new_author" [file: "queries/module_1.sql", line: 1]:
+Error while validating queries [path: "queries/module_1.sql"]:
  --> 1:18
   | 
-  | --! new_author ?{name}
+  | --! new_author: (name?)
   |                  ^---
   | 
   = No column named `name` found for this query.'''
+
+[[test]]
+name = 'QueryAlreadyExists'
+query = '''
+--! new_author
+SELECT id FROM Author;
+
+--! new_author
+SELECT id FROM Author;
+'''
+migration = '''
+CREATE TABLE author (
+  id SERIAL,
+  name TEXT
+);
+'''
+error = '''
+Error while validating queries [path: "queries/module_1.sql"]:
+ --> 4:5
+  | 
+  | --! new_author
+  |     ^---
+  | 
+  = This query's name is already used
+ --> 1:5
+  | 
+  | --! new_author
+  |     ^---
+  | 
+  = First defined here.'''
+
+[[test]]
+name = 'NamedStructInvalidFields'
+query = '''
+--! author_names: Row
+SELECT name FROM Author;
+
+--! author_ids: Row
+SELECT id FROM Author;
+'''
+migration = '''
+CREATE TABLE author (
+  id SERIAL,
+  name TEXT
+);
+'''
+error = '''
+Error while validating queries [path: "queries/module_1.sql"]:
+ --> 1:19
+  | 
+  | --! author_names: Row
+  |                   ^---
+  | 
+  = This named data structure has been defined elsewhere, but the fields don't match.
+ --> 4:17
+  | 
+  | --! author_ids: Row
+  |                 ^---
+  | 
+  = First defined here
+
+Expected fields: [
+  id: int4
+]
+Got fields: [
+  name: text
+]'''

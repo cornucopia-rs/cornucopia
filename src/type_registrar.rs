@@ -1,225 +1,231 @@
+use std::rc::Rc;
+
 use error::{Error, UnsupportedPostgresTypeError};
 use heck::ToUpperCamelCase;
-use indexmap::{Equivalent, IndexMap};
-use postgres::Client;
+use indexmap::IndexMap;
 use postgres_types::{Kind, Type};
+
+use crate::utils::SchemaKey;
 
 /// A struct containing a postgres type and its Rust-equivalent.
 #[derive(PartialEq, Eq, Debug, Clone)]
-pub(crate) struct CornucopiaType {
-    pub(crate) pg_ty: Type,
-    pub(crate) rust_ty_name: String,
-    pub(crate) rust_path_from_queries: String,
-    pub(crate) rust_path_from_types: String,
-    pub(crate) is_copy: bool,
-    pub(crate) is_params: bool,
+pub(crate) enum CornucopiaType {
+    Simple {
+        pg_ty: Type,
+        rust_name: &'static str,
+        is_copy: bool,
+    },
+    Array {
+        inner: Rc<CornucopiaType>,
+    },
+    Custom {
+        pg_ty: Type,
+        struct_name: String,
+        struct_path: String,
+        is_copy: bool,
+        is_params: bool,
+    },
 }
 
 impl CornucopiaType {
-    fn new_base(pg_ty: Type, rust_ty_name: String, is_copy: bool, is_params: bool) -> Self {
-        Self {
-            rust_path_from_queries: rust_ty_name.clone(),
-            rust_path_from_types: rust_ty_name.clone(),
-            pg_ty,
-            rust_ty_name,
-            is_copy,
-            is_params,
+    pub fn is_copy(&self) -> bool {
+        match self {
+            CornucopiaType::Simple { is_copy, .. } | CornucopiaType::Custom { is_copy, .. } => {
+                *is_copy
+            }
+            CornucopiaType::Array { .. } => false,
         }
     }
-    fn new_custom(pg_ty: Type, rust_ty_name: String, is_copy: bool, is_params: bool) -> Self {
-        Self {
-            rust_path_from_queries: format!(
-                "super::super::types::{}::{}",
-                pg_ty.schema(),
-                rust_ty_name
-            ),
-            rust_path_from_types: format!("super::{}::{}", pg_ty.schema(), rust_ty_name),
-            pg_ty,
-            rust_ty_name,
-            is_copy,
-            is_params,
+
+    pub fn is_params(&self) -> bool {
+        match self {
+            CornucopiaType::Simple { .. } => true,
+            CornucopiaType::Array { .. } => false,
+            CornucopiaType::Custom { is_params, .. } => *is_params,
         }
     }
-}
 
-impl CornucopiaType {
-    pub(crate) fn owning_call(&self, var_name: &str, is_nullable: bool) -> String {
-        if self.is_copy {
-            return "".into();
+    pub(crate) fn pg_ty(&self) -> &Type {
+        match self {
+            CornucopiaType::Simple { pg_ty, .. } => pg_ty,
+            CornucopiaType::Array { inner } => inner.pg_ty(),
+            CornucopiaType::Custom { pg_ty, .. } => pg_ty,
+        }
+    }
+
+    pub(crate) fn owning_call(
+        &self,
+        name: &str,
+        is_nullable: bool,
+        is_inner_nullable: bool,
+    ) -> String {
+        if self.is_copy() {
+            return name.into();
         }
 
-        if self.rust_path_from_queries == "postgres_types::Json<serde_json::Value>" {
-            return format!(
-                "postgres_types::Json(serde_json::from_str({var_name}.0.get()).unwrap())"
-            );
+        if is_nullable {
+            let into = self.owning_call("v", false, is_inner_nullable);
+            return format!("{name}.map(|v| {into})");
         }
 
-        match self.pg_ty.kind() {
-            Kind::Array(_) => {
-                if is_nullable {
-                    format!("{var_name}.map(|v| v.map(|v| v.into()).collect())")
+        match self {
+            CornucopiaType::Simple { pg_ty, .. } => {
+                if matches!(*pg_ty, Type::JSON | Type::JSONB) {
+                    format!("postgres_types::Json(serde_json::from_str({name}.0.get()).unwrap())")
                 } else {
-                    format!("{var_name}.map(|v| v.into()).collect()")
+                    format!("{name}.into()")
                 }
             }
-            Kind::Domain(_) | Kind::Composite(_) => format!("{var_name}.into()"),
-            _ => {
-                if is_nullable {
-                    format!("{var_name}.map(|v| v.into())")
-                } else {
-                    format!("{var_name}.into()")
-                }
+            CornucopiaType::Array { inner, .. } => {
+                let inner = inner.owning_call("v", is_inner_nullable, false);
+                format!("{name}.map(|v| {inner}).collect()")
+            }
+            CornucopiaType::Custom { .. } => {
+                format!("{name}.into()")
             }
         }
     }
+
+    pub(crate) fn own_struct(&self, is_inner_nullable: bool) -> String {
+        match self {
+            CornucopiaType::Simple { rust_name, .. } => rust_name.to_string(),
+            CornucopiaType::Array { inner, .. } => {
+                let own_inner = inner.own_struct(false);
+                if is_inner_nullable {
+                    format!("Option<Vec<{own_inner}>>")
+                } else {
+                    format!("Vec<{own_inner}>")
+                }
+            }
+            CornucopiaType::Custom { struct_path, .. } => struct_path.to_string(),
+        }
+    }
+
     /// String representing a borrowed rust equivalent of this type. Notably, if
     /// a Rust equivalent is a String or a Vec<T>, it will return a &str and a &[T] respectively.
-    pub(crate) fn borrowed_rust_ty(
-        &self,
-        type_registrar: &TypeRegistrar,
-        lifetime: Option<&'static str>,
-        is_param: bool,
-    ) -> String {
-        // Special case for copy types
-        if self.is_copy {
-            return self.rust_path_from_queries.to_owned();
-        }
-        // Special case for byte arrays
-        if self.rust_path_from_queries == "Vec<u8>" {
-            return format!("&{} [u8]", lifetime.unwrap_or(""));
-        }
-        // Special case for domains and composites
-        if matches!(self.pg_ty.kind(), Kind::Domain(_) | Kind::Composite(_)) {
-            return if is_param && !self.is_params {
-                format!(
-                    "{}Params<{}>",
-                    self.rust_path_from_queries,
-                    lifetime.unwrap_or("'a")
-                )
-            } else {
-                format!(
-                    "{}Borrowed<{}>",
-                    self.rust_path_from_queries,
-                    lifetime.unwrap_or("'a")
-                )
-            };
-        }
-
-        // Special case for PostgreSQL arrays
-        if let Kind::Array(inner_ty) = self.pg_ty.kind() {
-            let inner_ty = type_registrar.get(inner_ty).unwrap();
-
-            // Its more practical for users to use a slice
-            if is_param {
-                return format!(
-                    "&{} [{}]",
-                    lifetime.unwrap_or("'a"),
-                    inner_ty.borrowed_rust_ty(type_registrar, lifetime, is_param)
-                );
-            } else {
-                return format!(
-                    "cornucopia_client::ArrayIterator<{}, {}>",
-                    lifetime.unwrap_or("'a"),
-                    inner_ty.borrowed_rust_ty(type_registrar, lifetime, is_param)
-                );
+    pub(crate) fn brw_struct(&self, for_params: bool, is_inner_nullable: bool) -> String {
+        let lifetime = "'a";
+        match self {
+            CornucopiaType::Simple {
+                pg_ty, rust_name, ..
+            } => match *pg_ty {
+                Type::BYTEA => format!("&{lifetime} [u8]"),
+                Type::TEXT | Type::VARCHAR => format!("&{lifetime} str"),
+                Type::JSON | Type::JSONB => {
+                    format!("postgres_types::Json<&{lifetime} serde_json::value::RawValue>")
+                }
+                _ => rust_name.to_string(),
+            },
+            CornucopiaType::Array { inner, .. } => {
+                let inner = inner.brw_struct(for_params, false);
+                let inner = if is_inner_nullable {
+                    format!("Option<{inner}>")
+                } else {
+                    inner
+                };
+                // Its more practical for users to use a slice
+                if for_params {
+                    format!("&{lifetime} [{inner}]")
+                } else {
+                    format!("cornucopia_client::ArrayIterator<{lifetime}, {inner}>")
+                }
+            }
+            CornucopiaType::Custom {
+                struct_path,
+                is_params,
+                is_copy,
+                ..
+            } => {
+                if *is_copy {
+                    struct_path.to_string()
+                } else if for_params && !is_params {
+                    format!("{}Params<{lifetime}>", struct_path)
+                } else {
+                    format!("{}Borrowed<{lifetime}>", struct_path)
+                }
             }
         }
-
-        // Simple checks
-        match self.rust_path_from_queries.as_str() {
-            "String" => {
-                format!("&{} str", lifetime.unwrap_or(""))
-            }
-            "postgres_types::Json<serde_json::Value>" => {
-                format!(
-                    "postgres_types::Json<&{} serde_json::value::RawValue>",
-                    lifetime.unwrap_or("")
-                )
-            }
-            _ => unreachable!(),
-        }
-    }
-}
-
-/// Allows us to query a hashmap without having to own the key strings
-#[derive(PartialEq, Eq, Hash)]
-struct TypeRegistrarKey<'a> {
-    schema: &'a str,
-    name: &'a str,
-}
-
-impl<'a> From<&'a Type> for TypeRegistrarKey<'a> {
-    fn from(ty: &'a Type) -> Self {
-        TypeRegistrarKey {
-            schema: ty.schema(),
-            name: ty.name(),
-        }
-    }
-}
-
-impl<'a> Equivalent<(String, String)> for TypeRegistrarKey<'a> {
-    fn equivalent(&self, key: &(String, String)) -> bool {
-        key.0.as_str().equivalent(&self.schema) && key.1.as_str().equivalent(&self.name)
     }
 }
 
 /// Data structure holding all types known to this particular run of Cornucopia.
+#[derive(Debug, Clone, Default)]
 pub(crate) struct TypeRegistrar {
-    base_types: IndexMap<(String, String), CornucopiaType>,
-    pub(crate) custom_types: IndexMap<(String, String), CornucopiaType>,
-}
-
-enum TypeVariant {
-    Base(usize),
-    Custom(usize),
+    pub types: IndexMap<(String, String), Rc<CornucopiaType>>,
 }
 
 impl TypeRegistrar {
-    pub(crate) fn register(
-        &mut self,
-        client: &mut Client,
-        ty: &Type,
-    ) -> Result<&CornucopiaType, Error> {
-        if let Some(cty) = self.get_by_index(ty) {
-            return match cty {
-                TypeVariant::Base(index) => Ok(&self.base_types[index]),
-                TypeVariant::Custom(index) => Ok(&self.custom_types[index]),
-            };
-        };
+    pub(crate) fn register(&mut self, ty: &Type) -> Result<&Rc<CornucopiaType>, Error> {
+        if let Some(idx) = self.types.get_index_of(&SchemaKey::from(ty)) {
+            return Ok(&self.types[idx]);
+        }
+
+        fn custom(ty: &Type, is_copy: bool, is_params: bool) -> CornucopiaType {
+            let rust_ty_name = ty.name().to_upper_camel_case();
+            CornucopiaType::Custom {
+                pg_ty: ty.clone(),
+                struct_path: format!("super::super::types::{}::{}", ty.schema(), rust_ty_name),
+                struct_name: rust_ty_name,
+                is_copy,
+                is_params,
+            }
+        }
 
         Ok(match ty.kind() {
-            Kind::Enum(_) => {
-                self.insert_custom(ty.clone(), ty.name().to_upper_camel_case(), true, true)
-            }
+            Kind::Enum(_) => self.insert(ty, || custom(ty, true, true)),
             Kind::Array(inner_ty) => {
-                let a_rust_ty_name = &self.register(client, inner_ty)?.rust_path_from_queries;
-                let rust_ty_name = format!("Vec<{}>", a_rust_ty_name);
-                self.insert_base(ty.clone(), rust_ty_name, false, false)
+                let inner = self.register(inner_ty)?.clone();
+                self.insert(ty, || CornucopiaType::Array {
+                    inner: inner.clone(),
+                })
             }
             Kind::Domain(inner_ty) => {
-                let inner = self.register(client, inner_ty)?;
-                let (is_copy, is_params) = (inner.is_copy, inner.is_params);
-                self.insert_custom(
-                    ty.clone(),
-                    ty.name().to_upper_camel_case(),
-                    is_copy,
-                    is_params,
-                )
+                let inner = self.register(inner_ty)?;
+                let (is_copy, is_params) = (inner.is_copy(), inner.is_params());
+                self.insert(ty, || custom(ty, is_copy, is_params))
             }
             Kind::Composite(composite_fields) => {
                 let mut is_copy = true;
                 let mut is_params = true;
                 for field in composite_fields {
-                    let field_ty = self.register(client, field.type_())?;
-                    is_copy &= field_ty.is_copy;
-                    is_params &= field_ty.is_params;
+                    let field_ty = self.register(field.type_())?;
+                    is_copy &= field_ty.is_copy();
+                    is_params &= field_ty.is_params();
                 }
-                self.insert_custom(
-                    ty.clone(),
-                    ty.name().to_upper_camel_case(),
+                self.insert(ty, || custom(ty, is_copy, is_params))
+            }
+            Kind::Simple => {
+                let (rust_name, is_copy) = match *ty {
+                    Type::BOOL => ("bool", true),
+                    Type::CHAR => ("i8", true),
+                    Type::INT2 => ("i16", true),
+                    Type::INT4 => ("i32", true),
+                    Type::INT8 => ("i64", true),
+                    Type::FLOAT4 => ("f32", true),
+                    Type::FLOAT8 => ("f64", true),
+                    Type::TEXT | Type::VARCHAR => ("String", false),
+                    Type::BYTEA => ("Vec<u8>", false),
+                    Type::TIMESTAMP => ("time::PrimitiveDateTime", true),
+                    Type::TIMESTAMPTZ => ("time::OffsetDateTime", true),
+                    Type::DATE => ("time::Date", true),
+                    Type::TIME => ("time::Time", true),
+                    Type::JSON | Type::JSONB => ("postgres_types::Json<serde_json::Value>", false),
+                    Type::UUID => ("uuid::Uuid", true),
+                    Type::INET => ("std::net::IpAddr", true),
+                    Type::MACADDR => ("eui48::MacAddress", true),
+                    _ => {
+                        return Err(Error::UnsupportedPostgresType(
+                            UnsupportedPostgresTypeError {
+                                name: ty.name().to_owned(),
+                            },
+                        ))
+                    }
+                };
+                self.insert(ty, || CornucopiaType::Simple {
+                    pg_ty: ty.clone(),
+                    rust_name,
                     is_copy,
-                    is_params,
-                )
+                })
             }
             _ => {
                 return Err(Error::UnsupportedPostgresType(
@@ -231,167 +237,34 @@ impl TypeRegistrar {
         })
     }
 
-    pub(crate) fn get(&self, ty: &Type) -> Option<&CornucopiaType> {
-        self.base_types
-            .get(&TypeRegistrarKey::from(ty))
-            .or_else(|| self.custom_types.get(&TypeRegistrarKey::from(ty)))
+    pub(crate) fn ref_of(&self, ty: &Type) -> Rc<CornucopiaType> {
+        self.types
+            .get(&SchemaKey::from(ty))
+            .expect("type must already be registered")
+            .clone()
     }
 
-    fn get_by_index(&self, ty: &Type) -> Option<TypeVariant> {
-        self.base_types
-            .get_index_of(&TypeRegistrarKey::from(ty))
-            .map(TypeVariant::Base)
-            .or_else(|| {
-                self.custom_types
-                    .get_index_of(&TypeRegistrarKey::from(ty))
-                    .map(TypeVariant::Custom)
-            })
-    }
-
-    fn new() -> Self {
-        Self {
-            base_types: IndexMap::new(),
-            custom_types: IndexMap::new(),
-        }
-    }
-
-    fn insert_base(
-        &mut self,
-        ty: Type,
-        rust_ty_name: String,
-        is_copy: bool,
-        is_params: bool,
-    ) -> &CornucopiaType {
+    fn insert(&mut self, ty: &Type, call: impl Fn() -> CornucopiaType) -> &Rc<CornucopiaType> {
         let index = match self
-            .base_types
+            .types
             .entry((ty.schema().to_owned(), ty.name().to_owned()))
         {
             indexmap::map::Entry::Occupied(o) => o.index(),
             indexmap::map::Entry::Vacant(v) => {
                 let index = v.index();
-                v.insert(CornucopiaType::new_base(
-                    ty,
-                    rust_ty_name,
-                    is_copy,
-                    is_params,
-                ));
+                v.insert(Rc::new(call()));
                 index
             }
         };
-
-        &self.base_types[index]
-    }
-
-    fn insert_custom(
-        &mut self,
-        ty: Type,
-        rust_ty_name: String,
-        is_copy: bool,
-        is_params: bool,
-    ) -> &CornucopiaType {
-        let index = match self
-            .custom_types
-            .entry((ty.schema().to_owned(), ty.name().to_owned()))
-        {
-            indexmap::map::Entry::Occupied(o) => o.index(),
-            indexmap::map::Entry::Vacant(v) => {
-                let index = v.index();
-                v.insert(CornucopiaType::new_custom(
-                    ty,
-                    rust_ty_name,
-                    is_copy,
-                    is_params,
-                ));
-                index
-            }
-        };
-
-        &self.custom_types[index]
+        &self.types[index]
     }
 }
 
-impl<const N: usize> From<[(Type, &'static str, bool, bool); N]> for TypeRegistrar {
-    fn from(base_types: [(Type, &'static str, bool, bool); N]) -> Self {
-        let mut registrar = Self::new();
-        for (ty, rust_ty_name, is_copy, is_params) in base_types {
-            registrar.insert_base(ty, rust_ty_name.to_owned(), is_copy, is_params);
-        }
-        registrar
-    }
-}
+impl std::ops::Index<&Type> for TypeRegistrar {
+    type Output = Rc<CornucopiaType>;
 
-impl Default for TypeRegistrar {
-    fn default() -> Self {
-        TypeRegistrar::from([
-            (Type::BOOL, "bool", true, true),
-            (Type::CHAR, "i8", true, true),
-            (Type::INT2, "i16", true, true),
-            (Type::INT4, "i32", true, true),
-            (Type::INT8, "i64", true, true),
-            (Type::FLOAT4, "f32", true, true),
-            (Type::FLOAT8, "f64", true, true),
-            (Type::TEXT, "String", false, true),
-            (Type::VARCHAR, "String", false, true),
-            (Type::BYTEA, "Vec<u8>", false, true),
-            (Type::TIMESTAMP, "time::PrimitiveDateTime", true, true),
-            (Type::TIMESTAMPTZ, "time::OffsetDateTime", true, true),
-            (Type::DATE, "time::Date", true, true),
-            (Type::TIME, "time::Time", true, true),
-            (
-                Type::JSON,
-                "postgres_types::Json<serde_json::Value>",
-                false,
-                true,
-            ),
-            (
-                Type::JSONB,
-                "postgres_types::Json<serde_json::Value>",
-                false,
-                true,
-            ),
-            (Type::UUID, "uuid::Uuid", true, true),
-            (Type::INET, "std::net::IpAddr", true, true),
-            (Type::MACADDR, "eui48::MacAddress", true, true),
-            (Type::BOOL_ARRAY, "Vec<bool>", false, false),
-            (Type::CHAR_ARRAY, "Vec<i8>", false, false),
-            (Type::INT2_ARRAY, "Vec<i16>", false, false),
-            (Type::INT4_ARRAY, "Vec<i32>", false, false),
-            (Type::INT8_ARRAY, "Vec<i64>", false, false),
-            (Type::FLOAT4_ARRAY, "Vec<f32>", false, false),
-            (Type::FLOAT8_ARRAY, "Vec<f64>", false, false),
-            (Type::TEXT_ARRAY, "Vec<String>", false, false),
-            (Type::VARCHAR_ARRAY, "Vec<String>", false, false),
-            (Type::BYTEA_ARRAY, "Vec<Vec<u8>>", false, false),
-            (
-                Type::TIMESTAMP_ARRAY,
-                "Vec<time::PrimitiveDateTime>",
-                false,
-                true,
-            ),
-            (
-                Type::TIMESTAMPTZ_ARRAY,
-                "Vec<time::OffsetDateTime>",
-                false,
-                true,
-            ),
-            (Type::DATE_ARRAY, "Vec<time::Date>", false, false),
-            (Type::TIME_ARRAY, "Vec<time::Time>", false, false),
-            (
-                Type::JSON_ARRAY,
-                "Vec<postgres_types::Json<serde_json::Value>>",
-                false,
-                false,
-            ),
-            (
-                Type::JSON_ARRAY,
-                "Vec<postgres_types::Json<serde_json::Value>>",
-                false,
-                false,
-            ),
-            (Type::UUID_ARRAY, "Vec<uuid::Uuid>", false, false),
-            (Type::INET_ARRAY, "Vec<std::net::IpAddr>", false, false),
-            (Type::MACADDR_ARRAY, "Vec<eui48::MacAddress>", false, false),
-        ])
+    fn index(&self, index: &Type) -> &Self::Output {
+        &self.types[&SchemaKey::from(index)]
     }
 }
 
