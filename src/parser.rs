@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use error::Error;
+use heck::ToUpperCamelCase;
 use pest::{iterators::Pair, Parser};
 use pest_derive::Parser as Pest;
 
@@ -70,7 +71,7 @@ impl<T: Ord> Ord for Parsed<T> {
 }
 
 impl<T> Parsed<T> {
-    pub(crate) fn map<U>(&self, f: fn(&T) -> U) -> Parsed<U> {
+    pub(crate) fn map<U>(&self, f: impl Fn(&T) -> U) -> Parsed<U> {
         Parsed {
             value: f(&self.value),
             start: self.start,
@@ -178,25 +179,54 @@ impl FromPair for Query {
 }
 
 #[derive(Debug)]
-pub(crate) enum QueryDataStructure {
+pub(crate) enum QueryDataStruct {
     Implicit { idents: Vec<Parsed<String>> },
     Named(Parsed<String>),
 }
 
-impl Default for QueryDataStructure {
+impl QueryDataStruct {
+    pub(crate) fn name_and_fields(
+        self,
+        registered_structs: &[TypeDataStructure],
+        query_name: &Parsed<String>,
+        name_suffix: Option<&str>,
+    ) -> (Vec<Parsed<String>>, Parsed<String>) {
+        match self {
+            QueryDataStruct::Implicit { idents } => (
+                idents,
+                query_name.map(|x| {
+                    format!(
+                        "{}{}",
+                        x.to_upper_camel_case(),
+                        name_suffix.unwrap_or_default()
+                    )
+                }),
+            ),
+            QueryDataStruct::Named(name) => (
+                registered_structs
+                    .iter()
+                    .find_map(|it| (it.name == name).then(|| it.fields.clone()))
+                    .unwrap_or_default(),
+                name,
+            ),
+        }
+    }
+}
+
+impl Default for QueryDataStruct {
     fn default() -> Self {
         Self::Implicit { idents: Vec::new() }
     }
 }
 
-impl FromPair for QueryDataStructure {
+impl FromPair for QueryDataStruct {
     fn from_pair(pair: Pair<Rule>) -> Self {
         let pair = pair.into_inner().next().unwrap();
         match pair.as_rule() {
-            Rule::ident => QueryDataStructure::Named(Parsed::<String>::from_pair(pair)),
+            Rule::ident => QueryDataStruct::Named(Parsed::<String>::from_pair(pair)),
             Rule::field_list => {
                 let idents = pair.into_inner().map(Parsed::<String>::from_pair).collect();
-                QueryDataStructure::Implicit { idents }
+                QueryDataStruct::Implicit { idents }
             }
             _ => {
                 unreachable!()
@@ -208,19 +238,19 @@ impl FromPair for QueryDataStructure {
 #[derive(Debug)]
 pub(crate) struct QueryAnnotation {
     pub(crate) name: Parsed<String>,
-    pub(crate) param: QueryDataStructure,
-    pub(crate) row: QueryDataStructure,
+    pub(crate) param: QueryDataStruct,
+    pub(crate) row: QueryDataStruct,
 }
 
 impl FromPair for QueryAnnotation {
     fn from_pair(pair: Pair<Rule>) -> Self {
         let mut tokens = pair.into_inner();
         let name = Parsed::<String>::from_pair(tokens.next().unwrap());
-        let (mut param, mut row) = <(QueryDataStructure, QueryDataStructure)>::default();
+        let (mut param, mut row) = <(QueryDataStruct, QueryDataStruct)>::default();
         for it in tokens {
             match it.as_rule() {
-                Rule::query_param => param = QueryDataStructure::from_pair(it),
-                Rule::query_row => row = QueryDataStructure::from_pair(it),
+                Rule::query_param => param = QueryDataStruct::from_pair(it),
+                Rule::query_row => row = QueryDataStruct::from_pair(it),
                 _ => {
                     unreachable!()
                 }

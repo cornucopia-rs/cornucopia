@@ -1,7 +1,5 @@
-use std::rc::Rc;
-
 use crate::{
-    parser::{Parsed, QueryDataStructure, TypeDataStructure},
+    parser::{Parsed, TypeDataStructure},
     read_queries::ModuleInfo,
     type_registrar::CornucopiaType,
     type_registrar::TypeRegistrar,
@@ -10,12 +8,14 @@ use crate::{
 };
 use error::Error;
 use error::ErrorVariant;
-use heck::ToUpperCamelCase;
+
 use indexmap::{map::Entry, IndexMap};
 use postgres::Client;
 use postgres_types::{Kind, Type};
+use std::rc::Rc;
 
-/// This data structure is used by Cornucopia to generate all constructs related to this particular query.
+/// This data structure is used by Cornucopia to generate
+/// all constructs related to this particular query.
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedQuery {
     pub(crate) name: String,
@@ -42,7 +42,7 @@ pub(crate) struct PreparedParams {
     pub(crate) queries: Vec<usize>,
 }
 
-/// A returned row
+/// A returned row struct
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedRow {
     pub(crate) name: Parsed<String>,
@@ -93,7 +93,6 @@ impl PreparedModule {
         match self.rows.entry(name.value.clone()) {
             Entry::Occupied(o) => {
                 let prev = &o.get();
-
                 // If the row doesn't contain the same fields as a previously
                 // registered row with the same name...
                 validation::named_struct_field(
@@ -299,44 +298,22 @@ fn prepare_query(
     registrar: &mut TypeRegistrar,
     param_types: &[TypeDataStructure],
     row_types: &[TypeDataStructure],
-    query: ValidatedQuery,
-) -> Result<(), Error> {
-    // Prepare the statement
-    let stmt = client
-        .prepare(&query.sql_str)
-        .map_err(|e| Error::new(e, &query.name, module.info.clone()))?;
-
-    let ValidatedQuery {
+    ValidatedQuery {
         name,
         params,
         bind_params,
         row,
         sql_str,
-    } = query;
+    }: ValidatedQuery,
+) -> Result<(), Error> {
+    // Prepare the statement
+    let stmt = client
+        .prepare(&sql_str)
+        .map_err(|e| Error::new(e, &name, module.info.clone()))?;
 
-    let (nullable_params_fields, params_name) = match params {
-        QueryDataStructure::Implicit { idents } => {
-            (idents, name.map(|x| x.to_upper_camel_case() + "Params"))
-        }
-        QueryDataStructure::Named(name) => (
-            param_types
-                .iter()
-                .find_map(|it| (it.name == name).then(|| it.fields.clone()))
-                .unwrap_or_default(),
-            name,
-        ),
-    };
-    let (nullable_row_fields, row_name) = match row {
-        QueryDataStructure::Implicit { idents } => (idents, name.map(|x| x.to_upper_camel_case())),
-        QueryDataStructure::Named(name) => (
-            row_types
-                .iter()
-                .find_map(|it| (it.name == name).then(|| it.fields.clone()))
-                .unwrap_or_default(),
-            name,
-        ),
-    };
-
+    let (nullable_params_fields, params_name) =
+        params.name_and_fields(param_types, &name, Some("Params"));
+    let (nullable_row_fields, row_name) = row.name_and_fields(row_types, &name, None);
     let params_fields = {
         let stmt_params = stmt.params();
         let params = bind_params
@@ -390,16 +367,17 @@ fn prepare_query(
         }
 
         let mut row_fields = Vec::new();
-        for (col_name, col_ty) in stmt_cols.iter().map(|c| (c.name(), c.type_())) {
+        for (col_name, col_ty) in stmt_cols.iter().map(|c| (c.name().to_owned(), c.type_())) {
             let is_nullable = nullable_row_fields.iter().any(|x| x.value == col_name);
 
             // Register type
+            let ty = registrar
+                .register(col_ty)
+                .map_err(|e| Error::new(e, &name, module.info.clone()))?
+                .clone();
             row_fields.push(PreparedField {
-                name: col_name.to_owned(),
-                ty: registrar
-                    .register(col_ty)
-                    .map_err(|e| Error::new(e, &name, module.info.clone()))?
-                    .clone(),
+                name: col_name,
+                ty,
                 is_nullable,
                 is_inner_nullable: false, // TODO used when support null everywhere
             });
@@ -421,7 +399,6 @@ fn prepare_query(
     } else {
         None
     };
-
     let query_idx = module.add_query(name.value.clone(), params_fields, row_idx, sql_str);
     if !params_empty {
         module

@@ -4,7 +4,7 @@ use crate::prepare_queries::PreparedField;
 use crate::read_queries::ModuleInfo;
 use crate::utils::has_duplicate;
 
-use crate::parser::{Parsed, ParsedModule, Query, QueryDataStructure, TypeDataStructure};
+use crate::parser::{Parsed, ParsedModule, Query, QueryDataStruct, TypeDataStructure};
 
 #[derive(Debug)]
 pub(crate) struct ValidatedModule {
@@ -18,9 +18,9 @@ pub(crate) struct ValidatedModule {
 #[derive(Debug)]
 pub(crate) struct ValidatedQuery {
     pub(crate) name: Parsed<String>,
-    pub(crate) params: QueryDataStructure,
+    pub(crate) params: QueryDataStruct,
     pub(crate) bind_params: Vec<Parsed<String>>,
-    pub(crate) row: QueryDataStructure,
+    pub(crate) row: QueryDataStruct,
     pub(crate) sql_str: String,
 }
 
@@ -131,10 +131,10 @@ pub(crate) fn named_struct_field(
 }
 
 pub(crate) fn validate_query(info: &Rc<ModuleInfo>, query: Query) -> Result<ValidatedQuery, Error> {
-    if let QueryDataStructure::Implicit { idents } = &query.annotation.param {
+    if let QueryDataStruct::Implicit { idents } = &query.annotation.param {
         duplicate_nullable_ident(info, idents)?;
     };
-    if let QueryDataStructure::Implicit { idents } = &query.annotation.row {
+    if let QueryDataStruct::Implicit { idents } = &query.annotation.row {
         duplicate_nullable_ident(info, idents)?;
     };
     let mut bind_params = query.sql.bind_params.clone();
