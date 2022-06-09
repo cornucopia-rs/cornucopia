@@ -2508,6 +2508,42 @@ pub mod queries {
                 tricky_sql6(client, &self.price)
             }
         }
+        #[derive(Debug, Clone, Copy)]
+        pub struct TrickySql7Params {
+            pub price: f64,
+        }
+        impl TrickySql7Params {
+            pub fn tricky_sql7<'a, C: GenericClient>(
+                &'a self,
+                client: &'a mut C,
+            ) -> Result<u64, postgres::Error> {
+                tricky_sql7(client, &self.price)
+            }
+        }
+        #[derive(Debug, Clone, Copy)]
+        pub struct TrickySql8Params {
+            pub price: f64,
+        }
+        impl TrickySql8Params {
+            pub fn tricky_sql8<'a, C: GenericClient>(
+                &'a self,
+                client: &'a mut C,
+            ) -> Result<u64, postgres::Error> {
+                tricky_sql8(client, &self.price)
+            }
+        }
+        #[derive(Debug, Clone, Copy)]
+        pub struct TrickySql9Params {
+            pub price: f64,
+        }
+        impl TrickySql9Params {
+            pub fn tricky_sql9<'a, C: GenericClient>(
+                &'a self,
+                client: &'a mut C,
+            ) -> Result<u64, postgres::Error> {
+                tricky_sql9(client, &self.price)
+            }
+        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct SelectCompact {
             pub composite: super::super::types::public::CloneComposite,
@@ -2966,7 +3002,7 @@ pub mod queries {
             price: &'a f64,
         ) -> Result<u64, postgres::Error> {
             let stmt = client.prepare(
-                "INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a bind_param', $1)",
+                "INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a bind_param\', $1)",
             )?;
             client.execute(&stmt, &[price])
         }
@@ -2995,7 +3031,7 @@ pub mod queries {
         ) -> Result<u64, postgres::Error> {
             let stmt = client
                 .prepare(
-                    "INSERT INTO item (name, price, show) VALUES ($$this is not a :bind_param$$, $1, true)",
+                    "INSERT INTO syntax (\"trick:y\", price)  VALUES ($$this is not a :bind_param$$, $1)",
                 )?;
             client.execute(&stmt, &[price])
         }
@@ -3005,7 +3041,7 @@ pub mod queries {
         ) -> Result<u64, postgres::Error> {
             let stmt = client
                 .prepare(
-                    "INSERT INTO item (name, price, show) VALUES ($tag$this is not a :bind_param$tag$, $1, true)",
+                    "INSERT INTO syntax (\"trick:y\", price) VALUES ($tag$this is not a :bind_param$tag$, $1)",
                 )?;
             client.execute(&stmt, &[price])
         }
@@ -3016,6 +3052,36 @@ pub mod queries {
             let stmt = client
                 .prepare(
                     "INSERT INTO syntax (\"trick:y\", price) VALUES (e'this is not a '':bind_param''', $1)",
+                )?;
+            client.execute(&stmt, &[price])
+        }
+        pub fn tricky_sql7<'a, C: GenericClient>(
+            client: &'a mut C,
+            price: &'a f64,
+        ) -> Result<u64, postgres::Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO syntax (\"trick:y\", price) VALUES (E'this is not a \':bind_param\'', $1)",
+                )?;
+            client.execute(&stmt, &[price])
+        }
+        pub fn tricky_sql8<'a, C: GenericClient>(
+            client: &'a mut C,
+            price: &'a f64,
+        ) -> Result<u64, postgres::Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO syntax (\"trick:y\", price) VALUES (e'this is ''not'' a \':bind_param\'', $1)",
+                )?;
+            client.execute(&stmt, &[price])
+        }
+        pub fn tricky_sql9<'a, C: GenericClient>(
+            client: &'a mut C,
+            price: &'a f64,
+        ) -> Result<u64, postgres::Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO syntax (\"trick:y\", price) VALUES (E'this is \'not\' a \':bind_param\'', $1)",
                 )?;
             client.execute(&stmt, &[price])
         }

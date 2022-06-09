@@ -162,12 +162,13 @@ impl QuerySql {
             .repeated()
             .delimited_by(just("'"), just("'"))
             .ignored();
-        // E'\':bind\'' TODO not properly working
+        // E'\':bind\''
         let c_style_string = just("\\'")
+            .or(just("''"))
             .ignored()
-            .or(none_of("\\'").repeated().ignored())
+            .or(none_of("'").ignored())
             .repeated()
-            .delimited_by(one_of("eE").then(just("'")), just("'"))
+            .delimited_by(just("e'").or(just("E'")), just("'"))
             .ignored();
         // $:bind$:bind$:bind$
         let dollar_quoted = just("$")
@@ -183,8 +184,10 @@ impl QuerySql {
             .or(string)
             .or(constant)
             .or(dollar_quoted)
+            // Non c_style_string e
+            .or(one_of("eE").then(none_of("'").rewind()).ignored())
             // Non binding sql
-            .or(none_of("\"':$").repeated().at_least(1).ignored())
+            .or(none_of("\"':$eE").ignored())
             .repeated()
             .at_least(1)
             .ignored()
