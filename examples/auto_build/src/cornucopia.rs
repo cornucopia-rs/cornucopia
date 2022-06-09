@@ -74,7 +74,10 @@ pub mod queries {
                 let stmt = self.stmt().await?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .query_raw(
+                        &stmt,
+                        cornucopia_client::private::slice_iter(&self.params),
+                    )
                     .await?
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();

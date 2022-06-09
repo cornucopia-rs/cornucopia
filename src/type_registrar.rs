@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use error::{Error, UnsupportedPostgresTypeError};
 use heck::ToUpperCamelCase;
-use indexmap::IndexMap;
+use indexmap::{map::Entry, IndexMap};
 use postgres_types::{Kind, Type};
 
 use crate::utils::SchemaKey;
@@ -16,6 +16,10 @@ pub(crate) enum CornucopiaType {
         is_copy: bool,
     },
     Array {
+        inner: Rc<CornucopiaType>,
+    },
+    Domain {
+        pg_ty: Type,
         inner: Rc<CornucopiaType>,
     },
     Custom {
@@ -33,6 +37,7 @@ impl CornucopiaType {
             CornucopiaType::Simple { is_copy, .. } | CornucopiaType::Custom { is_copy, .. } => {
                 *is_copy
             }
+            CornucopiaType::Domain { inner, .. } => inner.is_copy(),
             CornucopiaType::Array { .. } => false,
         }
     }
@@ -41,15 +46,39 @@ impl CornucopiaType {
         match self {
             CornucopiaType::Simple { .. } => true,
             CornucopiaType::Array { .. } => false,
+            CornucopiaType::Domain { inner, .. } => inner.is_params(),
             CornucopiaType::Custom { is_params, .. } => *is_params,
+        }
+    }
+
+    pub(crate) fn to_sql(&self, name: &str) -> String {
+        match self {
+            CornucopiaType::Domain { inner, .. } => {
+                format!(
+                    "&cornucopia_client::private::Domain::<{}>(&self.{name})",
+                    inner.brw_struct(true, false)
+                )
+            }
+            _ => format!("&self.{name}"),
+        }
+    }
+
+    pub(crate) fn accept_to_sql(&self) -> String {
+        match self {
+            CornucopiaType::Domain { inner, .. } => format!(
+                "cornucopia_client::private::Domain::<{}>",
+                inner.brw_struct(true, false)
+            ),
+            _ => self.brw_struct(true, false),
         }
     }
 
     pub(crate) fn pg_ty(&self) -> &Type {
         match self {
-            CornucopiaType::Simple { pg_ty, .. } => pg_ty,
+            CornucopiaType::Simple { pg_ty, .. }
+            | CornucopiaType::Custom { pg_ty, .. }
+            | CornucopiaType::Domain { pg_ty, .. } => pg_ty,
             CornucopiaType::Array { inner } => inner.pg_ty(),
-            CornucopiaType::Custom { pg_ty, .. } => pg_ty,
         }
     }
 
@@ -69,18 +98,15 @@ impl CornucopiaType {
         }
 
         match self {
-            CornucopiaType::Simple { pg_ty, .. } => {
-                if matches!(*pg_ty, Type::JSON | Type::JSONB) {
-                    format!("postgres_types::Json(serde_json::from_str({name}.0.get()).unwrap())")
-                } else {
-                    format!("{name}.into()")
-                }
+            CornucopiaType::Simple { pg_ty, .. } if matches!(*pg_ty, Type::JSON | Type::JSONB) => {
+                format!("postgres_types::Json(serde_json::from_str({name}.0.get()).unwrap())")
             }
             CornucopiaType::Array { inner, .. } => {
                 let inner = inner.owning_call("v", is_inner_nullable, false);
                 format!("{name}.map(|v| {inner}).collect()")
             }
-            CornucopiaType::Custom { .. } => {
+            CornucopiaType::Domain { inner, .. } => inner.owning_call(name, is_nullable, false),
+            _ => {
                 format!("{name}.into()")
             }
         }
@@ -97,6 +123,7 @@ impl CornucopiaType {
                     format!("Vec<{own_inner}>")
                 }
             }
+            CornucopiaType::Domain { inner, .. } => inner.own_struct(false),
             CornucopiaType::Custom { struct_path, .. } => struct_path.to_string(),
         }
     }
@@ -130,6 +157,7 @@ impl CornucopiaType {
                     format!("cornucopia_client::ArrayIterator<{lifetime}, {inner}>")
                 }
             }
+            CornucopiaType::Domain { inner, .. } => inner.brw_struct(for_params, false),
             CornucopiaType::Custom {
                 struct_path,
                 is_params,
@@ -171,6 +199,13 @@ impl TypeRegistrar {
             }
         }
 
+        fn domain(ty: &Type, inner: Rc<CornucopiaType>) -> CornucopiaType {
+            CornucopiaType::Domain {
+                pg_ty: ty.clone(),
+                inner,
+            }
+        }
+
         Ok(match ty.kind() {
             Kind::Enum(_) => self.insert(ty, || custom(ty, true, true)),
             Kind::Array(inner_ty) => {
@@ -180,9 +215,8 @@ impl TypeRegistrar {
                 })
             }
             Kind::Domain(inner_ty) => {
-                let inner = self.register(inner_ty)?;
-                let (is_copy, is_params) = (inner.is_copy(), inner.is_params());
-                self.insert(ty, || custom(ty, is_copy, is_params))
+                let inner = self.register(inner_ty)?.clone();
+                self.insert(ty, || domain(ty, inner.clone()))
             }
             Kind::Composite(composite_fields) => {
                 let mut is_copy = true;
@@ -249,8 +283,8 @@ impl TypeRegistrar {
             .types
             .entry((ty.schema().to_owned(), ty.name().to_owned()))
         {
-            indexmap::map::Entry::Occupied(o) => o.index(),
-            indexmap::map::Entry::Vacant(v) => {
+            Entry::Occupied(o) => o.index(),
+            Entry::Vacant(v) => {
                 let index = v.index();
                 v.insert(Rc::new(call()));
                 index

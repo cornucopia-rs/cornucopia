@@ -13,7 +13,7 @@ pub mod types {
             Patrick,
             Squidward,
         }
-        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, PartialEq)]
+        #[derive(Debug, postgres_types::FromSql, Clone, PartialEq)]
         #[postgres(name = "custom_composite")]
         pub struct CustomComposite {
             pub wow: String,
@@ -145,78 +145,12 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(Debug, Clone, PartialEq, postgres_types::ToSql, postgres_types::FromSql)]
-        #[postgres(name = "my_domain")]
-        pub struct MyDomain(pub String);
-        #[derive(Debug)]
-        pub struct MyDomainBorrowed<'a>(pub &'a str);
-        impl<'a> From<MyDomainBorrowed<'a>> for MyDomain {
-            fn from(MyDomainBorrowed(inner): MyDomainBorrowed<'a>) -> Self {
-                Self(inner.into())
-            }
-        }
-        impl<'a> postgres_types::FromSql<'a> for MyDomainBorrowed<'a> {
-            fn from_sql(
-                ty: &postgres_types::Type,
-                out: &'a [u8],
-            ) -> Result<MyDomainBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
-            {
-                <&'a str as postgres_types::FromSql>::from_sql(ty, out).map(MyDomainBorrowed)
-            }
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                if <&'a str as postgres_types::FromSql>::accepts(ty) {
-                    return true;
-                }
-                if ty.name() != "my_domain" || ty.schema() != "public" {
-                    return false;
-                }
-                match *ty.kind() {
-                    postgres_types::Kind::Domain(ref ty) => {
-                        <&'a str as postgres_types::ToSql>::accepts(ty)
-                    }
-                    _ => false,
-                }
-            }
-        }
-        impl<'a> postgres_types::ToSql for MyDomainBorrowed<'a> {
-            fn to_sql(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let ty = match *ty.kind() {
-                    postgres_types::Kind::Domain(ref ty) => ty,
-                    _ => unreachable!(),
-                };
-                postgres_types::ToSql::to_sql(&self.0, ty, out)
-            }
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                if ty.name() != "my_domain" {
-                    return false;
-                }
-                match *ty.kind() {
-                    postgres_types::Kind::Domain(ref ty) => {
-                        <&'a str as postgres_types::ToSql>::accepts(ty)
-                    }
-                    _ => false,
-                }
-            }
-            fn to_sql_checked(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                postgres_types::__to_sql_checked(self, ty, out)
-            }
-        }
-        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, PartialEq)]
+        #[derive(Debug, postgres_types::FromSql, Clone, PartialEq)]
         #[postgres(name = "nightmare_composite")]
         pub struct NightmareComposite {
             pub custom: Vec<super::super::types::public::CustomComposite>,
             pub spongebob: Vec<super::super::types::public::SpongebobCharacter>,
-            pub domain: super::super::types::public::MyDomain,
+            pub domain: String,
         }
         #[derive(Debug)]
         pub struct NightmareCompositeBorrowed<'a> {
@@ -228,7 +162,7 @@ pub mod types {
                 'a,
                 super::super::types::public::SpongebobCharacter,
             >,
-            pub domain: super::super::types::public::MyDomainBorrowed<'a>,
+            pub domain: &'a str,
         }
         impl<'a> From<NightmareCompositeBorrowed<'a>> for NightmareComposite {
             fn from(
@@ -277,7 +211,7 @@ pub mod types {
         pub struct NightmareCompositeParams<'a> {
             pub custom: &'a [super::super::types::public::CustomCompositeBorrowed<'a>],
             pub spongebob: &'a [super::super::types::public::SpongebobCharacter],
-            pub domain: super::super::types::public::MyDomainBorrowed<'a>,
+            pub domain: &'a str,
         }
         impl<'a> postgres_types::ToSql for NightmareCompositeParams<'a> {
             fn to_sql(
@@ -300,7 +234,11 @@ pub mod types {
                         "spongebob" => {
                             postgres_types::ToSql::to_sql(&self.spongebob, field.type_(), out)
                         }
-                        "domain" => postgres_types::ToSql::to_sql(&self.domain, field.type_(), out),
+                        "domain" => postgres_types::ToSql::to_sql(
+                            &cornucopia_client::private::Domain::<&'a str>(&self.domain),
+                            field.type_(),
+                            out,
+                        ),
                         _ => unreachable!(),
                     };
                     let count = match r? {
@@ -340,8 +278,8 @@ pub mod types {
                                     )
                                 }
                                 "domain" => {
-                                    <super::super::types::public::MyDomainBorrowed<
-                                        'a,
+                                    <cornucopia_client::private::Domain::<
+                                        &'a str,
                                     > as postgres_types::ToSql>::accepts(f.type_())
                                 }
                                 _ => false,
@@ -359,7 +297,7 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, PartialEq)]
+        #[derive(Debug, postgres_types::FromSql, Clone, PartialEq)]
         #[postgres(name = "clone_composite")]
         pub struct CloneComposite {
             pub first: i32,
@@ -462,11 +400,73 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(Debug, postgres_types::ToSql, postgres_types::FromSql, Copy, Clone, PartialEq)]
+        #[derive(Debug, postgres_types::FromSql, Copy, Clone, PartialEq)]
         #[postgres(name = "copy_composite")]
         pub struct CopyComposite {
             pub first: i32,
             pub second: f64,
+        }
+        impl<'a> postgres_types::ToSql for CopyComposite {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {
+                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = out.len();
+                    out.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {
+                        "first" => postgres_types::ToSql::to_sql(&self.first, field.type_(), out),
+                        "second" => postgres_types::ToSql::to_sql(&self.second, field.type_(), out),
+                        _ => unreachable!(),
+                    };
+                    let count = match r? {
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {
+                            let len = out.len() - base - 4;
+                            if len > i32::max_value() as usize {
+                                return Err(Into::into("value too large to transmit"));
+                            }
+                            len as i32
+                        }
+                    };
+                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                }
+                Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "copy_composite" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != 2usize {
+                            return false;
+                        }
+                        fields.iter().all(|f| match f.name() {
+                            "first" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+                            "second" => <f64 as postgres_types::ToSql>::accepts(f.type_()),
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
         }
     }
 }
@@ -559,7 +559,7 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(stream)
@@ -614,7 +614,7 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(stream)
@@ -658,6 +658,247 @@ pub mod queries {
                     composite: row.get(0),
                 },
                 mapper: |it| SelectCopy::from(it),
+            }
+        }
+    }
+    pub mod domain {
+        use postgres::{fallible_iterator::FallibleIterator, GenericClient};
+        #[derive(Debug)]
+        pub struct InsertNightmareDomainParams<'a> {
+            pub arr: &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
+            pub json: postgres_types::Json<&'a serde_json::value::RawValue>,
+            pub nb: i32,
+            pub txt: &'a str,
+        }
+        impl<'a> InsertNightmareDomainParams<'a> {
+            pub fn insert_nightmare_domain<C: GenericClient>(
+                &'a self,
+                client: &'a mut C,
+            ) -> Result<u64, postgres::Error> {
+                insert_nightmare_domain(client, &self.arr, &self.json, &self.nb, &self.txt)
+            }
+        }
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct SelectNightmareDomain {
+            pub arr: Vec<postgres_types::Json<serde_json::Value>>,
+            pub json: postgres_types::Json<serde_json::Value>,
+            pub nb: i32,
+            pub txt: String,
+        }
+        pub struct SelectNightmareDomainBorrowed<'a> {
+            pub arr: cornucopia_client::ArrayIterator<
+                'a,
+                postgres_types::Json<&'a serde_json::value::RawValue>,
+            >,
+            pub json: postgres_types::Json<&'a serde_json::value::RawValue>,
+            pub nb: i32,
+            pub txt: &'a str,
+        }
+        impl<'a> From<SelectNightmareDomainBorrowed<'a>> for SelectNightmareDomain {
+            fn from(
+                SelectNightmareDomainBorrowed { arr, json, nb, txt }: SelectNightmareDomainBorrowed<
+                    'a,
+                >,
+            ) -> Self {
+                Self {
+                    arr: arr
+                        .map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap()))
+                        .collect(),
+                    json: postgres_types::Json(serde_json::from_str(json.0.get()).unwrap()),
+                    nb,
+                    txt: txt.into(),
+                }
+            }
+        }
+        pub struct SelectNightmareDomainQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a mut C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&postgres::Row) -> SelectNightmareDomainBorrowed,
+            mapper: fn(SelectNightmareDomainBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> SelectNightmareDomainQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(
+                self,
+                mapper: fn(SelectNightmareDomainBorrowed) -> R,
+            ) -> SelectNightmareDomainQuery<'a, C, R, N> {
+                SelectNightmareDomainQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
+                self.client.prepare(self.query)
+            }
+            pub fn one(mut self) -> Result<T, postgres::Error> {
+                let stmt = self.stmt()?;
+                let row = self.client.query_one(&stmt, &self.params)?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
+                self.stream()?.collect()
+            }
+            pub fn opt(mut self) -> Result<Option<T>, postgres::Error> {
+                let stmt = self.stmt()?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub fn stream(
+                mut self,
+            ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
+            {
+                let stmt = self.stmt()?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))?
+                    .iterator()
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
+                Ok(stream)
+            }
+        }
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct SelectNightmareDomainNull {
+            pub arr: Option<Vec<postgres_types::Json<serde_json::Value>>>,
+            pub json: Option<postgres_types::Json<serde_json::Value>>,
+            pub nb: Option<i32>,
+            pub txt: Option<String>,
+        }
+        pub struct SelectNightmareDomainNullBorrowed<'a> {
+            pub arr: Option<
+                cornucopia_client::ArrayIterator<
+                    'a,
+                    postgres_types::Json<&'a serde_json::value::RawValue>,
+                >,
+            >,
+            pub json: Option<postgres_types::Json<&'a serde_json::value::RawValue>>,
+            pub nb: Option<i32>,
+            pub txt: Option<&'a str>,
+        }
+        impl<'a> From<SelectNightmareDomainNullBorrowed<'a>> for SelectNightmareDomainNull {
+            fn from(
+                SelectNightmareDomainNullBorrowed {
+                    arr,
+                    json,
+                    nb,
+                    txt,
+                }: SelectNightmareDomainNullBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    arr: arr.map(|v| {
+                        v.map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap()))
+                            .collect()
+                    }),
+                    json: json
+                        .map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap())),
+                    nb,
+                    txt: txt.map(|v| v.into()),
+                }
+            }
+        }
+        pub struct SelectNightmareDomainNullQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a mut C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&postgres::Row) -> SelectNightmareDomainNullBorrowed,
+            mapper: fn(SelectNightmareDomainNullBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> SelectNightmareDomainNullQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(
+                self,
+                mapper: fn(SelectNightmareDomainNullBorrowed) -> R,
+            ) -> SelectNightmareDomainNullQuery<'a, C, R, N> {
+                SelectNightmareDomainNullQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
+                self.client.prepare(self.query)
+            }
+            pub fn one(mut self) -> Result<T, postgres::Error> {
+                let stmt = self.stmt()?;
+                let row = self.client.query_one(&stmt, &self.params)?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
+                self.stream()?.collect()
+            }
+            pub fn opt(mut self) -> Result<Option<T>, postgres::Error> {
+                let stmt = self.stmt()?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub fn stream(
+                mut self,
+            ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
+            {
+                let stmt = self.stmt()?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))?
+                    .iterator()
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
+                Ok(stream)
+            }
+        }
+        pub fn select_nightmare_domain<'a, C: GenericClient>(
+            client: &'a mut C,
+        ) -> SelectNightmareDomainQuery<'a, C, SelectNightmareDomain, 0> {
+            SelectNightmareDomainQuery {
+                client,
+                params: [],
+                query: "SELECT txt, json, nb, arr FROM nightmare_domain",
+                extractor: |row| SelectNightmareDomainBorrowed {
+                    arr: row.get(3),
+                    json: row.get(1),
+                    nb: row.get(2),
+                    txt: row.get(0),
+                },
+                mapper: |it| SelectNightmareDomain::from(it),
+            }
+        }
+        pub fn insert_nightmare_domain<'a, C: GenericClient>(
+            client: &'a mut C,
+            arr: &'a &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
+            json: &'a postgres_types::Json<&'a serde_json::value::RawValue>,
+            nb: &'a i32,
+            txt: &'a &'a str,
+        ) -> Result<u64, postgres::Error> {
+            let stmt = client.prepare(
+                "INSERT INTO nightmare_domain (txt, json, nb, arr) VALUES ($4, $2, $3, $1)",
+            )?;
+            client.execute(&stmt, &[arr, json, nb, txt])
+        }
+        pub fn select_nightmare_domain_null<'a, C: GenericClient>(
+            client: &'a mut C,
+        ) -> SelectNightmareDomainNullQuery<'a, C, SelectNightmareDomainNull, 0> {
+            SelectNightmareDomainNullQuery {
+                client,
+                params: [],
+                query: "SELECT txt, json, nb, arr FROM nightmare_domain",
+                extractor: |row| SelectNightmareDomainNullBorrowed {
+                    arr: row.get(3),
+                    json: row.get(1),
+                    nb: row.get(2),
+                    txt: row.get(0),
+                },
+                mapper: |it| SelectNightmareDomainNull::from(it),
             }
         }
     }
@@ -743,7 +984,7 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(stream)
@@ -824,7 +1065,7 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(stream)
@@ -993,7 +1234,7 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(stream)
@@ -1392,7 +1633,7 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(stream)
@@ -1594,7 +1835,7 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(stream)
@@ -1782,7 +2023,7 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(stream)
@@ -1978,7 +2219,7 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(stream)
@@ -2046,7 +2287,7 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(stream)
@@ -2606,7 +2847,7 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(stream)
@@ -2674,7 +2915,7 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(stream)
@@ -2732,7 +2973,7 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(stream)
@@ -2790,7 +3031,7 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(stream)
@@ -2845,7 +3086,7 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(stream)
@@ -2913,7 +3154,7 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(stream)

@@ -62,7 +62,6 @@ pub(crate) struct PreparedType {
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub(crate) enum PreparedContent {
     Enum(Vec<String>),
-    Domain(PreparedField),
     Composite(Vec<PreparedField>),
 }
 
@@ -233,14 +232,7 @@ fn prepare_type(
     {
         let content = match pg_ty.kind() {
             Kind::Enum(variants) => PreparedContent::Enum(variants.to_vec()),
-            Kind::Domain(inner) => {
-                PreparedContent::Domain(PreparedField {
-                    name: "inner".to_string(),
-                    ty: registrar.ref_of(inner),
-                    is_nullable: false,
-                    is_inner_nullable: false, // TODO used when support null everywhere
-                })
-            }
+            Kind::Domain(_) => return None,
             Kind::Composite(fields) => PreparedContent::Composite(
                 fields
                     .iter()

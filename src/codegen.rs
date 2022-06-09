@@ -67,98 +67,30 @@ fn is_reserved_keyword(s: &str) -> bool {
     .contains(&s)
 }
 
-fn domain_brw_fromsql(
-    w: &mut impl Write,
-    struct_name: &str,
-    inner_ty: &str,
-    name: &str,
-    schema: &str,
-) {
-    gen!(
-        w,
-        r#"impl<'a> postgres_types::FromSql<'a> for {struct_name}Borrowed<'a> {{
-            fn from_sql(ty: &postgres_types::Type, out: &'a [u8]) -> Result<
-                {struct_name}Borrowed<'a>, Box<dyn std::error::Error + Sync + Send>,
-            > {{
-                <{inner_ty} as postgres_types::FromSql>::from_sql(ty, out).map({struct_name}Borrowed)
-            }}
-            fn accepts(ty: &postgres_types::Type) -> bool {{
-                if <{inner_ty} as postgres_types::FromSql>::accepts(ty) {{
-                    return true;
-                }}
-                if ty.name() != "{name}" || ty.schema() != "{schema}" {{
-                    return false;
-                }}
-                match *ty.kind() {{
-                    postgres_types::Kind::Domain(ref ty) => {{
-                        <{inner_ty} as postgres_types::ToSql>::accepts(ty)
-                    }}
-                    _ => false,
-                }}
-            }}
-        }}"#
-    )
-}
-
-fn domain_tosql(
-    w: &mut impl Write,
-    struct_name: &str,
-    inner: &PreparedField,
-    name: &str,
-    is_params: bool,
-) {
-    let accept_ty = inner.brw_struct(true);
-    let post = if is_params { "Borrowed" } else { "Params" };
-    gen!(
-        w,
-        r#"impl <'a> postgres_types::ToSql for {struct_name}{post}<'a> {{
-            fn to_sql(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {{
-                let ty = match *ty.kind() {{
-                    postgres_types::Kind::Domain(ref ty) => ty,
-                    _ => unreachable!(),
-                }};
-                postgres_types::ToSql::to_sql(&self.0, ty, out)
-            }}
-            fn accepts(ty: &postgres_types::Type) -> bool {{
-                if ty.name() != "{name}" {{
-                    return false;
-                }}
-                match *ty.kind() {{
-                    postgres_types::Kind::Domain(ref ty) => <{accept_ty} as postgres_types::ToSql>::accepts(
-                        ty
-                    ),
-                    _ => false,
-                }}
-            }}
-            fn to_sql_checked(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {{
-                postgres_types::__to_sql_checked(self, ty, out)
-            }}
-        }}"#
-    )
-}
-
-fn composite_tosql(
+fn struct_tosql(
     w: &mut impl Write,
     struct_name: &str,
     fields: &[PreparedField],
     name: &str,
+    is_borrow: bool,
     is_params: bool,
 ) {
-    let post = if is_params { "Borrowed" } else { "Params" };
+    let post = if is_borrow {
+        if is_params {
+            "Borrowed<'a>"
+        } else {
+            "Params<'a>"
+        }
+    } else {
+        ""
+    };
     let nb_fields = fields.len();
     let write_fields = join_ln(fields.iter(), |w, f| {
         let name = &f.name;
         gen!(
             w,
-            "\"{name}\" => postgres_types::ToSql::to_sql(&self.{name},field.type_(), out),",
+            "\"{name}\" => postgres_types::ToSql::to_sql({},field.type_(), out),",
+            f.ty.to_sql(name)
         )
     });
     let accept_fields = join_ln(fields.iter(), |w, f| {
@@ -166,13 +98,13 @@ fn composite_tosql(
             w,
             "\"{}\" => <{} as postgres_types::ToSql>::accepts(f.type_()),",
             f.name,
-            f.brw_struct(true)
+            f.ty.accept_to_sql()
         )
     });
 
     gen!(
         w,
-        r#"impl<'a> postgres_types::ToSql for {struct_name}{post}<'a> {{
+        r#"impl<'a> postgres_types::ToSql for {struct_name}{post} {{
             fn to_sql(
                 &self,
                 ty: &postgres_types::Type,
@@ -440,7 +372,7 @@ fn gen_row_structs(w: &mut impl Write, row: &PreparedRow, is_async: bool) {
                     let stmt = self.stmt(){fn_await}?;
                     let stream = self
                         .client
-                        .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                        .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
                         {fn_await}?
                         {raw_pre}
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
@@ -534,51 +466,19 @@ fn gen_custom_type(w: &mut impl Write, schema: &str, prepared: &PreparedType) {
                         pub enum {struct_name} {{ {variants_str} }}",
                     )
         }
-        PreparedContent::Domain(inner) => {
-            let owned_inner = &inner.own_struct();
-            gen!(
-                        w,
-                        "#[derive(Debug, {copy}Clone, PartialEq, postgres_types::ToSql,postgres_types::FromSql)]
-                        #[postgres(name = \"{name}\")]
-                        pub struct {struct_name} (pub {owned_inner});"
-                    );
-            if !prepared.is_copy {
-                let brw_inner = inner.brw_struct(false);
-                let inner_value = inner.owning_call();
-                gen!(
-                    w,
-                    "#[derive(Debug)]
-                            pub struct {struct_name}Borrowed<'a> (pub {brw_inner});
-                            impl<'a> From<{struct_name}Borrowed<'a>> for {struct_name} {{
-                                fn from(
-                                    {struct_name}Borrowed (inner): {struct_name}Borrowed<'a>,
-                                ) -> Self {{ Self({inner_value}) }}
-                            }}"
-                );
-                domain_brw_fromsql(w, struct_name, &brw_inner, name, schema);
-                if !is_params {
-                    let field = inner.brw_struct(true);
-                    let derive = if *is_copy { ",Copy,Clone" } else { "" };
-                    gen!(
-                        w,
-                        "#[derive(Debug{derive})]
-                                pub struct {struct_name}Params<'a>(pub {field});",
-                    );
-                }
-                domain_tosql(w, struct_name, inner, name, *is_params);
-            }
-        }
         PreparedContent::Composite(fields) => {
             let fields_str = join_comma(fields, |w, f| {
                 gen!(w, "pub {} : {}", f.name, f.own_struct())
             });
             gen!(
-                        w,
-                        "#[derive(Debug,postgres_types::ToSql,postgres_types::FromSql,{copy} Clone, PartialEq)]
-                        #[postgres(name = \"{name}\")]
-                        pub struct {struct_name} {{ {fields_str} }}"
-                    );
-            if !is_copy {
+                w,
+                "#[derive(Debug,postgres_types::FromSql,{copy} Clone, PartialEq)]
+                #[postgres(name = \"{name}\")]
+                pub struct {struct_name} {{ {fields_str} }}"
+            );
+            if *is_copy {
+                struct_tosql(w, struct_name, fields, name, false, *is_params);
+            } else {
                 let brw_fields = join_comma(fields, |w, f| {
                     gen!(w, "pub {} : {}", f.name, f.brw_struct(false))
                 });
@@ -587,14 +487,14 @@ fn gen_custom_type(w: &mut impl Write, schema: &str, prepared: &PreparedType) {
                 gen!(
                     w,
                     "#[derive(Debug)]
-                            pub struct {struct_name}Borrowed<'a> {{ {brw_fields} }}
-                            impl<'a> From<{struct_name}Borrowed<'a>> for {struct_name} {{
-                                fn from(
-                                    {struct_name}Borrowed {{
-                                    {field_names}
-                                    }}: {struct_name}Borrowed<'a>,
-                                ) -> Self {{ Self {{ {fields_owning} }} }}
-                            }}",
+                    pub struct {struct_name}Borrowed<'a> {{ {brw_fields} }}
+                    impl<'a> From<{struct_name}Borrowed<'a>> for {struct_name} {{
+                        fn from(
+                            {struct_name}Borrowed {{
+                            {field_names}
+                            }}: {struct_name}Borrowed<'a>,
+                        ) -> Self {{ Self {{ {fields_owning} }} }}
+                    }}",
                 );
                 composite_fromsql(w, struct_name, fields, name, schema);
                 if !is_params {
@@ -608,7 +508,7 @@ fn gen_custom_type(w: &mut impl Write, schema: &str, prepared: &PreparedType) {
                                 pub struct {struct_name}Params<'a> {{ {fields} }}",
                     );
                 }
-                composite_tosql(w, struct_name, fields, name, *is_params);
+                struct_tosql(w, struct_name, fields, name, true, *is_params);
             }
         }
     }

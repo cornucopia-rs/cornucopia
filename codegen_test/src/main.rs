@@ -17,6 +17,10 @@ use uuid::Uuid;
 
 use crate::cornucopia_sync::{
     queries::{
+        domain::{
+            select_nightmare_domain, select_nightmare_domain_null, InsertNightmareDomainParams,
+            SelectNightmareDomain, SelectNightmareDomainNull,
+        },
         named::{item_by_id, new_item_visible, Item, ItemParams},
         params::{params_use_twice, select_book, SelectBook},
         stress::{
@@ -26,8 +30,8 @@ use crate::cornucopia_sync::{
         },
     },
     types::public::{
-        CustomComposite, CustomCompositeBorrowed, MyDomain, MyDomainBorrowed, NightmareComposite,
-        NightmareCompositeParams, SpongebobCharacter,
+        CustomComposite, CustomCompositeBorrowed, NightmareComposite, NightmareCompositeParams,
+        SpongebobCharacter,
     },
 };
 
@@ -161,6 +165,37 @@ pub fn test_copy(client: &mut Client) {
     };
     clone_params.insert_clone(client).unwrap();
     select_copy(client).one().unwrap();
+}
+
+// Test domain erasing
+pub fn domain(client: &mut Client) {
+    let json: Value = serde_json::from_str("{}").unwrap();
+    let raw_json = serde_json::value::to_raw_value(&json).unwrap();
+
+    // Erased domain not null
+    let params = InsertNightmareDomainParams {
+        arr: &[Json(&raw_json)],
+        json: Json(&raw_json),
+        nb: 42,
+        txt: "Hello world",
+    };
+    let expected = SelectNightmareDomain {
+        arr: vec![Json(json.clone())],
+        json: Json(json.clone()),
+        nb: 42,
+        txt: "Hello world".to_string(),
+    };
+    assert_eq!(1, params.insert_nightmare_domain(client).unwrap());
+    let actual = select_nightmare_domain(client).one().unwrap();
+    assert_eq!(expected, actual);
+    let expected = SelectNightmareDomainNull {
+        arr: Some(vec![Json(json.clone())]),
+        json: Some(Json(json)),
+        nb: Some(42),
+        txt: Some("Hello world".to_string()),
+    };
+    let actual = select_nightmare_domain_null(client).one().unwrap();
+    assert_eq!(expected, actual);
 }
 
 // Test hard cases
@@ -336,7 +371,7 @@ pub fn test_stress(client: &mut Client) {
                 nice: SpongebobCharacter::Squidward,
             }],
             spongebob: vec![SpongebobCharacter::Bob, SpongebobCharacter::Patrick],
-            domain: MyDomain("Hello".to_string()),
+            domain: "Hello".to_string(),
         },
     };
     let params = InsertNightmareParams {
@@ -347,7 +382,7 @@ pub fn test_stress(client: &mut Client) {
                 nice: SpongebobCharacter::Squidward,
             }],
             spongebob: &[SpongebobCharacter::Bob, SpongebobCharacter::Patrick],
-            domain: MyDomainBorrowed("Hello"),
+            domain: "Hello",
         },
     };
 

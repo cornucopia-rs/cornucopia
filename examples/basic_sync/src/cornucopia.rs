@@ -19,13 +19,7 @@ pub mod types {
             Patrick,
             Squidward,
         }
-        #[derive(
-            Debug,
-            postgres_types::ToSql,
-            postgres_types::FromSql,
-            Clone,
-            PartialEq
-        )]
+        #[derive(Debug, postgres_types::FromSql, Clone, PartialEq)]
         #[postgres(name = "custom_composite")]
         pub struct CustomComposite {
             pub name: String,
@@ -314,7 +308,10 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(
+                        &stmt,
+                        cornucopia_client::private::slice_iter(&self.params),
+                    )?
                     .iterator()
                     .map(move |res| res
                         .map(|row| (self.mapper)((self.extractor)(&row))));
@@ -385,7 +382,10 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(
+                        &stmt,
+                        cornucopia_client::private::slice_iter(&self.params),
+                    )?
                     .iterator()
                     .map(move |res| res
                         .map(|row| (self.mapper)((self.extractor)(&row))));
@@ -460,7 +460,10 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(
+                        &stmt,
+                        cornucopia_client::private::slice_iter(&self.params),
+                    )?
                     .iterator()
                     .map(move |res| res
                         .map(|row| (self.mapper)((self.extractor)(&row))));
@@ -533,7 +536,10 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(
+                        &stmt,
+                        cornucopia_client::private::slice_iter(&self.params),
+                    )?
                     .iterator()
                     .map(move |res| res
                         .map(|row| (self.mapper)((self.extractor)(&row))));
@@ -622,7 +628,10 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(
+                        &stmt,
+                        cornucopia_client::private::slice_iter(&self.params),
+                    )?
                     .iterator()
                     .map(move |res| res
                         .map(|row| (self.mapper)((self.extractor)(&row))));
@@ -695,7 +704,10 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(
+                        &stmt,
+                        cornucopia_client::private::slice_iter(&self.params),
+                    )?
                     .iterator()
                     .map(move |res| res
                         .map(|row| (self.mapper)((self.extractor)(&row))));
@@ -758,7 +770,10 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(
+                        &stmt,
+                        cornucopia_client::private::slice_iter(&self.params),
+                    )?
                     .iterator()
                     .map(move |res| res
                         .map(|row| (self.mapper)((self.extractor)(&row))));
@@ -835,7 +850,10 @@ pub mod queries {
                 let stmt = self.stmt()?;
                 let stream = self
                     .client
-                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .query_raw(
+                        &stmt,
+                        cornucopia_client::private::slice_iter(&self.params),
+                    )?
                     .iterator()
                     .map(move |res| res
                         .map(|row| (self.mapper)((self.extractor)(&row))));

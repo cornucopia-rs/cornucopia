@@ -19,3 +19,4 @@ tokio-postgres = "0.7.6"
 postgres = "0.19.3"
 async-trait = "0.1.53"
 postgres-protocol = "0.6.4"
+postgres-types = { version = "0.2.3", features = ["derive"] }
