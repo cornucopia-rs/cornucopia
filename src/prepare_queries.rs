@@ -214,7 +214,7 @@ pub(crate) fn prepare(
 }
 
 fn normalize_rust_name(name: &str) -> String {
-    name.replace(":", "_")
+    name.replace(':', "_")
 }
 
 /// Prepares database custom types
@@ -339,7 +339,7 @@ fn prepare_query(
                 .any(|x| x.value == col_name.value);
             // Register type
             param_fields.push(PreparedField {
-                name: normalize_rust_name(&col_name.value),
+                name: col_name.value.clone(),
                 ty: registrar
                     .register(&col_ty)
                     .map_err(|e| Error::new(e, &name, module.info.clone()))?
