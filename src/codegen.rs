@@ -89,7 +89,7 @@ fn struct_tosql(
         let name = &f.name;
         gen!(
             w,
-            "\"{name}\" => postgres_types::ToSql::to_sql({},field.type_(), buf),",
+            "\"{name}\" => postgres_types::ToSql::to_sql({},field.type_(), out),",
             f.ty.to_sql(name)
         )
     });
