@@ -1,6 +1,6 @@
 use std::{fmt::Display, ops::Range};
 
-use chumsky::{prelude::*, text::whitespace};
+use chumsky::prelude::*;
 use error::Error;
 use heck::ToUpperCamelCase;
 
@@ -74,10 +74,18 @@ fn space() -> impl Parser<char, (), Error = Simple<char>> {
         .ignored()
 }
 fn blank() -> impl Parser<char, (), Error = Simple<char>> {
-    whitespace().or(space()
-        .ignore_then(just("--"))
-        .ignore_then(filter(|c: &char| *c != '\n').repeated())
-        .ignore_then(ln()))
+    // We must escape a least one character per run to prevent infinite loop
+    // We want to escape valid SQL comment -- or --c while not escaping our syntax --: or --!
+    filter(|c: &char| c.is_whitespace())
+        .repeated()
+        .at_least(1)
+        .ignored()
+        .or(just("--")
+            .ignore_then(none_of(":!"))
+            .ignore_then(none_of('\n').repeated())
+            .ignored())
+        .repeated()
+        .ignored()
 }
 fn parse_nullable_ident() -> impl Parser<char, Vec<Parsed<String>>, Error = Simple<char>> {
     space()
@@ -336,10 +344,6 @@ pub(crate) fn parse_query_module(path: &str, input: &str) -> Result<ParsedModule
     TypeAnnotation::parser()
         .map(Statement::Type)
         .or(Query::parser().map(Statement::Query))
-        .map_with_span(|it, span| {
-            dbg!(&it, &span);
-            it
-        })
         .separated_by(blank())
         .allow_leading()
         .allow_trailing()
