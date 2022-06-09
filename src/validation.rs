@@ -242,23 +242,20 @@ pub mod error {
                 } => {
                     let expected_fields = expected_fields
                         .iter()
-                        .map(|f| format!("  {}: {}", f.name, f.ty.pg_ty()))
+                        .map(|f| format!("  - {}: {}", f.name, f.ty.pg_ty()))
                         .collect::<Vec<String>>()
                         .join("\n");
                     let got_fields = actual_fields
                         .iter()
-                        .map(|f| format!("  {}: {}", f.name, f.ty.pg_ty()))
+                        .map(|f| format!("  - {}: {}", f.name, f.ty.pg_ty()))
                         .collect::<Vec<String>>()
                         .join("\n");
-
                     let msg = "This named data structure has been defined elsewhere, but the fields don't match.\n";
+                    let err1 = format_err(&self.info, actual_name.start, &[msg]);
+                    let err2 = format_err(&self.info, expected_name.start, &["First defined here"]);
                     write!(
                         f,
-                        "{head}{}{}\n\n{}\n{}",
-                        format_err(&self.info, actual_name.start, &[msg]),
-                        format_err(&self.info, expected_name.start, &["First defined here"]),
-                        &format!("Expected fields: [\n{expected_fields}\n]"),
-                        &format!("Got fields: [\n{got_fields}\n]")
+                        "{head}{err1}{err2}\n\nExpected:\n{expected_fields}\nGot:\n{got_fields}",
                     )
                 }
                 ErrorVariant::DuplicateQueryName { name1, name2 } => {

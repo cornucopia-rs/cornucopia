@@ -97,10 +97,10 @@ impl PreparedModule {
                 // registered row with the same name...
                 validation::named_struct_field(
                     &self.info,
-                    &name,
-                    &fields,
                     &prev.name,
                     &prev.fields,
+                    &name,
+                    &fields,
                 )?;
 
                 let indexes: Option<Vec<_>> = prev
@@ -134,10 +134,10 @@ impl PreparedModule {
                 // registered param with the same name...
                 validation::named_struct_field(
                     &self.info,
-                    &name,
-                    fields,
                     &prev.name,
                     &prev.fields,
+                    &name,
+                    fields,
                 )?;
 
                 prev.queries.push(query_idx);
