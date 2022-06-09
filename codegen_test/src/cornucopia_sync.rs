@@ -2389,4 +2389,439 @@ pub mod queries {
             client.execute(&stmt, &[composite])
         }
     }
+    pub mod syntax {
+        use postgres::{fallible_iterator::FallibleIterator, GenericClient};
+        #[derive(Debug)]
+        pub struct ImplicitCompactParams<'a> {
+            pub name: Option<&'a str>,
+            pub price: Option<f64>,
+        }
+        impl<'a> ImplicitCompactParams<'a> {
+            pub fn implicit_compact<C: GenericClient>(
+                &'a self,
+                client: &'a mut C,
+            ) -> ImplicitCompactQuery<'a, C, ImplicitCompact, 2> {
+                implicit_compact(client, &self.name, &self.price)
+            }
+        }
+        #[derive(Debug)]
+        pub struct ImplicitSpacedParams<'a> {
+            pub name: Option<&'a str>,
+            pub price: Option<f64>,
+        }
+        impl<'a> ImplicitSpacedParams<'a> {
+            pub fn implicit_spaced<C: GenericClient>(
+                &'a self,
+                client: &'a mut C,
+            ) -> ImplicitSpacedQuery<'a, C, ImplicitSpaced, 2> {
+                implicit_spaced(client, &self.name, &self.price)
+            }
+        }
+        #[derive(Debug)]
+        pub struct Params<'a> {
+            pub name: &'a str,
+            pub price: f64,
+        }
+        impl<'a> Params<'a> {
+            pub fn named_compact<C: GenericClient>(
+                &'a self,
+                client: &'a mut C,
+            ) -> RowQuery<'a, C, Row, 2> {
+                named_compact(client, &self.name, &self.price)
+            }
+            pub fn named_spaced<C: GenericClient>(
+                &'a self,
+                client: &'a mut C,
+            ) -> RowQuery<'a, C, Row, 2> {
+                named_spaced(client, &self.name, &self.price)
+            }
+        }
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct SelectCompact {
+            pub composite: super::super::types::public::CloneComposite,
+        }
+        pub struct SelectCompactBorrowed<'a> {
+            pub composite: super::super::types::public::CloneCompositeBorrowed<'a>,
+        }
+        impl<'a> From<SelectCompactBorrowed<'a>> for SelectCompact {
+            fn from(SelectCompactBorrowed { composite }: SelectCompactBorrowed<'a>) -> Self {
+                Self {
+                    composite: composite.into(),
+                }
+            }
+        }
+        pub struct SelectCompactQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a mut C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&postgres::Row) -> SelectCompactBorrowed,
+            mapper: fn(SelectCompactBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> SelectCompactQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(
+                self,
+                mapper: fn(SelectCompactBorrowed) -> R,
+            ) -> SelectCompactQuery<'a, C, R, N> {
+                SelectCompactQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
+                self.client.prepare(self.query)
+            }
+            pub fn one(mut self) -> Result<T, postgres::Error> {
+                let stmt = self.stmt()?;
+                let row = self.client.query_one(&stmt, &self.params)?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
+                self.stream()?.collect()
+            }
+            pub fn opt(mut self) -> Result<Option<T>, postgres::Error> {
+                let stmt = self.stmt()?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub fn stream(
+                mut self,
+            ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
+            {
+                let stmt = self.stmt()?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .iterator()
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
+                Ok(stream)
+            }
+        }
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct SelectSpaced {
+            pub composite: super::super::types::public::CloneComposite,
+        }
+        pub struct SelectSpacedBorrowed<'a> {
+            pub composite: super::super::types::public::CloneCompositeBorrowed<'a>,
+        }
+        impl<'a> From<SelectSpacedBorrowed<'a>> for SelectSpaced {
+            fn from(SelectSpacedBorrowed { composite }: SelectSpacedBorrowed<'a>) -> Self {
+                Self {
+                    composite: composite.into(),
+                }
+            }
+        }
+        pub struct SelectSpacedQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a mut C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&postgres::Row) -> SelectSpacedBorrowed,
+            mapper: fn(SelectSpacedBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> SelectSpacedQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(
+                self,
+                mapper: fn(SelectSpacedBorrowed) -> R,
+            ) -> SelectSpacedQuery<'a, C, R, N> {
+                SelectSpacedQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
+                self.client.prepare(self.query)
+            }
+            pub fn one(mut self) -> Result<T, postgres::Error> {
+                let stmt = self.stmt()?;
+                let row = self.client.query_one(&stmt, &self.params)?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
+                self.stream()?.collect()
+            }
+            pub fn opt(mut self) -> Result<Option<T>, postgres::Error> {
+                let stmt = self.stmt()?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub fn stream(
+                mut self,
+            ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
+            {
+                let stmt = self.stmt()?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .iterator()
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
+                Ok(stream)
+            }
+        }
+        #[derive(Debug, Clone, PartialEq, Copy)]
+        pub struct ImplicitCompact {
+            pub id: Option<i32>,
+        }
+        pub struct ImplicitCompactQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a mut C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&postgres::Row) -> ImplicitCompact,
+            mapper: fn(ImplicitCompact) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> ImplicitCompactQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(
+                self,
+                mapper: fn(ImplicitCompact) -> R,
+            ) -> ImplicitCompactQuery<'a, C, R, N> {
+                ImplicitCompactQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
+                self.client.prepare(self.query)
+            }
+            pub fn one(mut self) -> Result<T, postgres::Error> {
+                let stmt = self.stmt()?;
+                let row = self.client.query_one(&stmt, &self.params)?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
+                self.stream()?.collect()
+            }
+            pub fn opt(mut self) -> Result<Option<T>, postgres::Error> {
+                let stmt = self.stmt()?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub fn stream(
+                mut self,
+            ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
+            {
+                let stmt = self.stmt()?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .iterator()
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
+                Ok(stream)
+            }
+        }
+        #[derive(Debug, Clone, PartialEq, Copy)]
+        pub struct ImplicitSpaced {
+            pub id: Option<i32>,
+        }
+        pub struct ImplicitSpacedQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a mut C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&postgres::Row) -> ImplicitSpaced,
+            mapper: fn(ImplicitSpaced) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> ImplicitSpacedQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(
+                self,
+                mapper: fn(ImplicitSpaced) -> R,
+            ) -> ImplicitSpacedQuery<'a, C, R, N> {
+                ImplicitSpacedQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
+                self.client.prepare(self.query)
+            }
+            pub fn one(mut self) -> Result<T, postgres::Error> {
+                let stmt = self.stmt()?;
+                let row = self.client.query_one(&stmt, &self.params)?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
+                self.stream()?.collect()
+            }
+            pub fn opt(mut self) -> Result<Option<T>, postgres::Error> {
+                let stmt = self.stmt()?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub fn stream(
+                mut self,
+            ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
+            {
+                let stmt = self.stmt()?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .iterator()
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
+                Ok(stream)
+            }
+        }
+        #[derive(Debug, Clone, PartialEq, Copy)]
+        pub struct Row {
+            pub id: i32,
+        }
+        pub struct RowQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a mut C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&postgres::Row) -> Row,
+            mapper: fn(Row) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> RowQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(self, mapper: fn(Row) -> R) -> RowQuery<'a, C, R, N> {
+                RowQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
+                self.client.prepare(self.query)
+            }
+            pub fn one(mut self) -> Result<T, postgres::Error> {
+                let stmt = self.stmt()?;
+                let row = self.client.query_one(&stmt, &self.params)?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
+                self.stream()?.collect()
+            }
+            pub fn opt(mut self) -> Result<Option<T>, postgres::Error> {
+                let stmt = self.stmt()?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub fn stream(
+                mut self,
+            ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
+            {
+                let stmt = self.stmt()?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .iterator()
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
+                Ok(stream)
+            }
+        }
+        pub fn select_compact<'a, C: GenericClient>(
+            client: &'a mut C,
+        ) -> SelectCompactQuery<'a, C, SelectCompact, 0> {
+            SelectCompactQuery {
+                client,
+                params: [],
+                query: "SELECT * FROM clone",
+                extractor: |row| SelectCompactBorrowed {
+                    composite: row.get(0),
+                },
+                mapper: |it| SelectCompact::from(it),
+            }
+        }
+        pub fn select_spaced<'a, C: GenericClient>(
+            client: &'a mut C,
+        ) -> SelectSpacedQuery<'a, C, SelectSpaced, 0> {
+            SelectSpacedQuery {
+                client,
+                params: [],
+                query: "      SELECT * FROM clone ",
+                extractor: |row| SelectSpacedBorrowed {
+                    composite: row.get(0),
+                },
+                mapper: |it| SelectSpaced::from(it),
+            }
+        }
+        pub fn implicit_compact<'a, C: GenericClient>(
+            client: &'a mut C,
+            name: &'a Option<&'a str>,
+            price: &'a Option<f64>,
+        ) -> ImplicitCompactQuery<'a, C, ImplicitCompact, 2> {
+            ImplicitCompactQuery {
+                client,
+                params: [name, price],
+                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id",
+                extractor: |row| ImplicitCompact { id: row.get(0) },
+                mapper: |it| ImplicitCompact::from(it),
+            }
+        }
+        pub fn implicit_spaced<'a, C: GenericClient>(
+            client: &'a mut C,
+            name: &'a Option<&'a str>,
+            price: &'a Option<f64>,
+        ) -> ImplicitSpacedQuery<'a, C, ImplicitSpaced, 2> {
+            ImplicitSpacedQuery {
+                client,
+                params: [name, price],
+                query: " 
+INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id",
+                extractor: |row| ImplicitSpaced { id: row.get(0) },
+                mapper: |it| ImplicitSpaced::from(it),
+            }
+        }
+        pub fn named_compact<'a, C: GenericClient>(
+            client: &'a mut C,
+            name: &'a &'a str,
+            price: &'a f64,
+        ) -> RowQuery<'a, C, Row, 2> {
+            RowQuery {
+                client,
+                params: [name, price],
+                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id",
+                extractor: |row| Row { id: row.get(0) },
+                mapper: |it| Row::from(it),
+            }
+        }
+        pub fn named_spaced<'a, C: GenericClient>(
+            client: &'a mut C,
+            name: &'a &'a str,
+            price: &'a f64,
+        ) -> RowQuery<'a, C, Row, 2> {
+            RowQuery {
+                client,
+                params: [name, price],
+                query: "  
+INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id",
+                extractor: |row| Row { id: row.get(0) },
+                mapper: |it| Row::from(it),
+            }
+        }
+    }
 }

@@ -66,10 +66,13 @@ fn ident() -> impl Parser<char, Parsed<String>, Error = Simple<char>> {
         })
 }
 fn ln() -> impl Parser<char, (), Error = Simple<char>> {
+    // TODO should allow a single new line ?
     one_of("\n\r").repeated().ignored()
 }
 fn space() -> impl Parser<char, (), Error = Simple<char>> {
-    one_of(" \t").repeated().ignored()
+    filter(|c: &char| c.is_whitespace() && *c != '\n')
+        .repeated()
+        .ignored()
 }
 fn blank() -> impl Parser<char, (), Error = Simple<char>> {
     whitespace().or(space()
@@ -334,6 +337,9 @@ pub(crate) fn parse_query_module(path: &str, input: &str) -> Result<ParsedModule
         .map(Statement::Type)
         .or(Query::parser().map(Statement::Query))
         .separated_by(blank())
+        .allow_leading()
+        .allow_trailing()
+        .then_ignore(end())
         .collect()
         .parse(input)
         .map_err(|e| Error {
