@@ -2790,8 +2790,7 @@ pub mod queries {
             ImplicitSpacedQuery {
                 client,
                 params: [name, price],
-                query: " 
-INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id",
+                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id",
                 extractor: |row| ImplicitSpaced { id: row.get(0) },
                 mapper: |it| ImplicitSpaced::from(it),
             }
@@ -2817,8 +2816,7 @@ INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id",
             RowQuery {
                 client,
                 params: [name, price],
-                query: "  
-INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id",
+                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id",
                 extractor: |row| Row { id: row.get(0) },
                 mapper: |it| Row::from(it),
             }

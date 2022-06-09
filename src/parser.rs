@@ -66,8 +66,7 @@ fn ident() -> impl Parser<char, Parsed<String>, Error = Simple<char>> {
         })
 }
 fn ln() -> impl Parser<char, (), Error = Simple<char>> {
-    // TODO should allow a single new line ?
-    one_of("\n\r").repeated().ignored()
+    just("\n").or(just("\n\r")).ignored()
 }
 fn space() -> impl Parser<char, (), Error = Simple<char>> {
     filter(|c: &char| c.is_whitespace() && *c != '\n')
@@ -204,6 +203,7 @@ pub(crate) struct Query {
 impl Query {
     fn parser() -> impl Parser<char, Self, Error = Simple<char>> {
         QueryAnnotation::parser()
+            .then_ignore(space())
             .then_ignore(ln())
             .then(QuerySql::parser())
             .map(|(annotation, sql)| Self { annotation, sql })
@@ -336,6 +336,10 @@ pub(crate) fn parse_query_module(path: &str, input: &str) -> Result<ParsedModule
     TypeAnnotation::parser()
         .map(Statement::Type)
         .or(Query::parser().map(Statement::Query))
+        .map_with_span(|it, span| {
+            dbg!(&it, &span);
+            it
+        })
         .separated_by(blank())
         .allow_leading()
         .allow_trailing()
