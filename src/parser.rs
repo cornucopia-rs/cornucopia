@@ -150,6 +150,8 @@ pub(crate) struct QuerySql {
 impl QuerySql {
     /// Escape sql string and pattern that are not bind
     fn sql_escaping() -> impl Parser<char, (), Error = Simple<char>> {
+        // https://www.postgresql.org/docs/current/sql-syntax-lexical.html
+
         // ":bind" TODO is this possible ?
         let constant = none_of("\"")
             .repeated()
@@ -167,13 +169,14 @@ impl QuerySql {
             .repeated()
             .delimited_by(one_of("eE").then(just("'")), just("'"))
             .ignored();
+        // $:bind$:bind$:bind$
         let dollar_quoted = just("$")
-            .ignore_then(none_of("$"))
-            .ignore_then(just("$"))
-            .ignore_then(none_of("$"))
-            .ignore_then(just("$"))
-            .ignore_then(none_of("$"))
-            .ignore_then(just("$"))
+            .then(none_of("$").repeated())
+            .then(just("$"))
+            .then(none_of("$").repeated())
+            .then(just("$"))
+            .then(none_of("$").repeated())
+            .then(just("$"))
             .ignored();
 
         c_style_string
@@ -228,6 +231,7 @@ impl QuerySql {
                     let end = bind_param.end - sql_start - 1;
                     sql_str.replace_range(start..=end, &format!("${}", index + 1))
                 }
+
                 Self {
                     sql_str,
                     bind_params,

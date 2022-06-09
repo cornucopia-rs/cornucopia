@@ -2537,6 +2537,30 @@ pub mod queries {
             }
         }
         #[derive(Debug, Clone, Copy)]
+        pub struct TrickySql3Params {
+            pub price: f64,
+        }
+        impl TrickySql3Params {
+            pub async fn tricky_sql3<'a, C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> Result<u64, tokio_postgres::Error> {
+                tricky_sql3(client, &self.price).await
+            }
+        }
+        #[derive(Debug, Clone, Copy)]
+        pub struct TrickySql4Params {
+            pub price: f64,
+        }
+        impl TrickySql4Params {
+            pub async fn tricky_sql4<'a, C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> Result<u64, tokio_postgres::Error> {
+                tricky_sql4(client, &self.price).await
+            }
+        }
+        #[derive(Debug, Clone, Copy)]
         pub struct TrickySql6Params {
             pub price: f64,
         }
@@ -3054,6 +3078,28 @@ pub mod queries {
             let stmt = client
                 .prepare(
                     "INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a '':bind_param''', $1)",
+                )
+                .await?;
+            client.execute(&stmt, &[price]).await
+        }
+        pub async fn tricky_sql3<'a, C: GenericClient>(
+            client: &'a C,
+            price: &'a f64,
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO item (name, price, show) VALUES ($$this is not a :bind_param$$, $1, true)",
+                )
+                .await?;
+            client.execute(&stmt, &[price]).await
+        }
+        pub async fn tricky_sql4<'a, C: GenericClient>(
+            client: &'a C,
+            price: &'a f64,
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO item (name, price, show) VALUES ($tag$this is not a :bind_param$tag$, $1, true)",
                 )
                 .await?;
             client.execute(&stmt, &[price]).await
