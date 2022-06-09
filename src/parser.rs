@@ -65,28 +65,29 @@ fn ident() -> impl Parser<char, Parsed<String>, Error = Simple<char>> {
             value,
         })
 }
+
 fn ln() -> impl Parser<char, (), Error = Simple<char>> {
     just("\n").or(just("\n\r")).ignored()
 }
+
 fn space() -> impl Parser<char, (), Error = Simple<char>> {
     filter(|c: &char| c.is_whitespace() && *c != '\n')
         .repeated()
         .ignored()
 }
+
 fn blank() -> impl Parser<char, (), Error = Simple<char>> {
-    // We must escape a least one character per run to prevent infinite loop
-    // We want to escape valid SQL comment -- or --c while not escaping our syntax --: or --!
+    // We want to escape valid SQL comment beginning with -- while not escaping our syntax --: or --!
+    let comment = just("--")
+        .then(none_of(":!").rewind())
+        .then(none_of('\n').repeated());
     filter(|c: &char| c.is_whitespace())
-        .repeated()
-        .at_least(1)
         .ignored()
-        .or(just("--")
-            .ignore_then(none_of(":!"))
-            .ignore_then(none_of('\n').repeated())
-            .ignored())
+        .or(comment.ignored())
         .repeated()
         .ignored()
 }
+
 fn parse_nullable_ident() -> impl Parser<char, Vec<Parsed<String>>, Error = Simple<char>> {
     space()
         .ignore_then(ident())
@@ -171,13 +172,10 @@ impl QuerySql {
             .delimited_by(just("e'").or(just("E'")), just("'"))
             .ignored();
         // $:bind$:bind$:bind$
-        let dollar_quoted = just("$")
-            .then(none_of("$").repeated())
-            .then(just("$"))
-            .then(none_of("$").repeated())
-            .then(just("$"))
-            .then(none_of("$").repeated())
-            .then(just("$"))
+        let dollar_tag = just("$").then(none_of("$").repeated()).then(just("$"));
+        let dollar_quoted = none_of("$")
+            .repeated()
+            .delimited_by(dollar_tag.clone(), dollar_tag)
             .ignored();
 
         c_style_string
