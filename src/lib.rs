@@ -8,6 +8,7 @@ mod read_queries;
 mod run_migrations;
 mod type_registrar;
 mod utils;
+mod validation;
 
 pub use cli::run;
 pub use error::Error;
@@ -17,13 +18,14 @@ pub mod container;
 
 use codegen::generate as generate_internal;
 use error::{NewMigrationError, WriteCodeGenFileError};
+use parser::parse_query_module;
 use postgres::Client;
 use prepare_queries::prepare;
 use read_queries::read_query_modules;
 use run_migrations::run_migrations as run_migrations_internal;
-use std::path::Path;
+use std::{path::Path, rc::Rc};
 use time::OffsetDateTime;
-use type_registrar::TypeRegistrar;
+use validation::validate_module;
 
 /// Runs the migrations at `migrations_path`.
 pub fn run_migrations(client: &mut Client, migrations_path: &str) -> Result<(), Error> {
@@ -60,12 +62,22 @@ pub fn generate_live(
     destination: Option<&str>,
     is_async: bool,
 ) -> Result<String, Error> {
-    let mut type_registrar = TypeRegistrar::default();
+    // Read
+    let modules_info = read_query_modules(queries_path)?;
 
-    let modules = read_query_modules(queries_path)?;
-    let prepared_modules = prepare(client, &mut type_registrar, modules)?;
-    let generated_code = generate_internal(&type_registrar, prepared_modules, is_async)?;
+    let mut validated_modules = Vec::new();
+    for module_info in modules_info {
+        let info = Rc::new(module_info);
+        // Parse
+        let parsed_module = parse_query_module(&info.path, &info.content)?;
+        // Validate
+        validated_modules.push(validate_module(info, parsed_module)?);
+    }
 
+    // Generate
+    let prepared_modules = prepare(client, validated_modules)?;
+    let generated_code = generate_internal(prepared_modules, is_async)?;
+    // Write
     if let Some(d) = destination {
         write_generated_code(d, &generated_code)?
     };
@@ -84,14 +96,20 @@ pub fn generate_managed(
     podman: bool,
     is_async: bool,
 ) -> Result<String, Error> {
-    let mut type_registrar = TypeRegistrar::default();
-
-    let modules = read_query_modules(queries_path)?;
+    let modules_info = read_query_modules(queries_path)?;
+    let mut validated_modules = Vec::new();
+    for info in modules_info {
+        let info = Rc::new(info);
+        // Parse
+        let parsed_module = parse_query_module(&info.path, &info.content)?;
+        // Validate
+        validated_modules.push(validate_module(info, parsed_module)?);
+    }
     container::setup(podman)?;
     let mut client = conn::cornucopia_conn()?;
     run_migrations_internal(&mut client, migrations_path)?;
-    let prepared_modules = prepare(&mut client, &mut type_registrar, modules)?;
-    let generated_code = generate_internal(&type_registrar, prepared_modules, is_async)?;
+    let prepared_modules = prepare(&mut client, validated_modules)?;
+    let generated_code = generate_internal(prepared_modules, is_async)?;
     container::cleanup(podman)?;
 
     if let Some(destination) = destination {

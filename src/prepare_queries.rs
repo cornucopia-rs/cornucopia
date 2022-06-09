@@ -1,19 +1,21 @@
-use std::rc::Rc;
-
 use crate::{
-    parser::{error::ValidationError, Parsed, ParsedQuery},
-    read_queries::Module,
+    parser::{Parsed, TypeDataStructure},
+    read_queries::ModuleInfo,
     type_registrar::CornucopiaType,
     type_registrar::TypeRegistrar,
+    utils::has_duplicate,
+    validation::{self, ValidatedModule, ValidatedQuery},
 };
 use error::Error;
 use error::ErrorVariant;
-use heck::ToUpperCamelCase;
+
 use indexmap::{map::Entry, IndexMap};
 use postgres::Client;
-use postgres_types::Kind;
+use postgres_types::{Kind, Type};
+use std::rc::Rc;
 
-/// This data structure is used by Cornucopia to generate all constructs related to this particular query.
+/// This data structure is used by Cornucopia to generate
+/// all constructs related to this particular query.
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedQuery {
     pub(crate) name: String,
@@ -24,7 +26,7 @@ pub(crate) struct PreparedQuery {
 
 /// A row or params field
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct PreparedField {
+pub struct PreparedField {
     pub(crate) name: String,
     pub(crate) ty: Rc<CornucopiaType>,
     pub(crate) is_nullable: bool,
@@ -34,24 +36,32 @@ pub(crate) struct PreparedField {
 /// A params struct
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedParams {
-    pub(crate) name: String,
+    pub(crate) name: Parsed<String>,
     pub(crate) fields: Vec<PreparedField>,
-    pub(crate) queries: Vec<usize>,
     pub(crate) is_copy: bool,
+    pub(crate) queries: Vec<usize>,
 }
 
-/// A returned row
+/// A returned row struct
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedRow {
-    pub(crate) name: String,
+    pub(crate) name: Parsed<String>,
     pub(crate) fields: Vec<PreparedField>,
     pub(crate) is_copy: bool,
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
-pub(crate) enum PreparedType {
+pub(crate) struct PreparedType {
+    pub(crate) name: String,
+    pub(crate) struct_name: String,
+    pub(crate) content: PreparedContent,
+    pub(crate) is_copy: bool,
+    pub(crate) is_params: bool,
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub(crate) enum PreparedContent {
     Enum(Vec<String>),
-    Domain(PreparedField),
     Composite(Vec<PreparedField>),
 }
 
@@ -59,7 +69,7 @@ pub(crate) enum PreparedType {
 /// the queries it contains.
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedModule {
-    pub(crate) name: String,
+    pub(crate) info: Rc<ModuleInfo>,
     pub(crate) queries: IndexMap<String, PreparedQuery>,
     pub(crate) params: IndexMap<String, PreparedParams>,
     pub(crate) rows: IndexMap<String, PreparedRow>,
@@ -68,7 +78,7 @@ pub(crate) struct PreparedModule {
 #[derive(Debug, Clone)]
 pub(crate) struct Preparation {
     pub(crate) modules: Vec<PreparedModule>,
-    pub(crate) types: IndexMap<(String, String), PreparedType>,
+    pub(crate) types: IndexMap<String, Vec<PreparedType>>,
 }
 
 impl PreparedModule {
@@ -81,22 +91,19 @@ impl PreparedModule {
         assert!(!fields.is_empty());
         match self.rows.entry(name.value.clone()) {
             Entry::Occupied(o) => {
-                let prev = &o.get().fields;
-
+                let prev = &o.get();
                 // If the row doesn't contain the same fields as a previously
                 // registered row with the same name...
-                if prev.len() != fields.len() || !prev.iter().all(|f| fields.contains(f)) {
-                    return Err(ErrorVariant::Validation(
-                        ValidationError::NamedRowInvalidFields {
-                            expected: prev.clone(),
-                            actual: fields,
-                            name: name.value,
-                            pos: name.pos,
-                        },
-                    ));
-                }
+                validation::named_struct_field(
+                    &self.info,
+                    &name,
+                    &fields,
+                    &prev.name,
+                    &prev.fields,
+                )?;
 
                 let indexes: Option<Vec<_>> = prev
+                    .fields
                     .iter()
                     .map(|f| fields.iter().position(|it| it == f))
                     .collect();
@@ -107,7 +114,7 @@ impl PreparedModule {
                 let mut tmp = fields.to_vec();
                 tmp.sort_unstable_by(|a, b| a.name.cmp(&b.name));
                 v.insert(PreparedRow {
-                    name: name.value.clone(),
+                    name: name.clone(),
                     fields: tmp,
                     is_copy,
                 });
@@ -116,166 +123,164 @@ impl PreparedModule {
         }
     }
 
-    fn add_query(
-        &mut self,
-        name: Parsed<String>,
-        params: Vec<PreparedField>,
-        row_idx: Option<(usize, Vec<usize>)>,
-        sql: String,
-    ) -> Result<usize, ErrorVariant> {
-        match self.queries.entry(name.value.clone()) {
-            Entry::Occupied(_o) => Err(ErrorVariant::Validation(
-                ValidationError::QueryNameAlreadyUsed {
-                    name: name.value,
-                    pos: name.pos,
-                },
-            )),
-            Entry::Vacant(v) => {
-                let index = v.index();
-                v.insert(PreparedQuery {
-                    name: name.value,
-                    params,
-                    row: row_idx,
-                    sql,
-                });
-                Ok(index)
-            }
-        }
-    }
-
-    fn add_params(
-        &mut self,
-        name: Parsed<String>,
-        query_idx: usize,
-    ) -> Result<usize, ErrorVariant> {
-        let params = &self.queries.get_index(query_idx).unwrap().1.params;
-        assert!(!params.is_empty());
-
+    fn add_param(&mut self, name: Parsed<String>, query_idx: usize) -> Result<usize, ErrorVariant> {
+        let fields = &self.queries.get_index(query_idx).unwrap().1.params;
+        assert!(!fields.is_empty());
         match self.params.entry(name.value.clone()) {
             Entry::Occupied(mut o) => {
                 let prev = o.get_mut();
-                // If the param struct doesn't contain the same fields as a previously
-                // registered param struct with the same name...
-                if prev.fields.len() != params.len()
-                    || !prev.fields.iter().all(|f| params.contains(f))
-                {
-                    return Err(ErrorVariant::Validation(
-                        ValidationError::NamedParamStructInvalidFields {
-                            name: name.value,
-                            pos: name.pos,
-                            expected: prev.fields.clone(),
-                            actual: params.clone(),
-                        },
-                    ));
-                }
+                // If the param doesn't contain the same fields as a previously
+                // registered param with the same name...
+                validation::named_struct_field(
+                    &self.info,
+                    &name,
+                    fields,
+                    &prev.name,
+                    &prev.fields,
+                )?;
+
                 prev.queries.push(query_idx);
+
                 Ok(o.index())
             }
             Entry::Vacant(v) => {
-                let mut fields = params.to_vec();
-                fields.sort_unstable_by(|a, b| a.name.cmp(&b.name));
-                let index = v.index();
+                let is_copy = fields.iter().all(|f| f.ty.is_copy());
+                let mut tmp = fields.to_vec();
+                tmp.sort_unstable_by(|a, b| a.name.cmp(&b.name));
                 v.insert(PreparedParams {
-                    name: name.value,
-                    is_copy: fields.iter().all(|a| a.ty.is_copy()),
-                    fields,
-                    queries: vec![query_idx],
+                    name: name.clone(),
+                    fields: tmp,
+                    is_copy,
+                    queries: vec![],
                 });
-                Ok(index)
+                self.add_param(name, query_idx)
             }
         }
     }
-}
 
-fn has_duplicate<T, U>(
-    iter: T,
-    mapper: fn(<T as IntoIterator>::Item) -> U,
-) -> Option<<T as IntoIterator>::Item>
-where
-    T: IntoIterator + Clone,
-    U: Eq + std::hash::Hash + Clone,
-{
-    let mut uniq = std::collections::HashSet::new();
-    iter.clone()
-        .into_iter()
-        .zip(iter.into_iter().map(mapper))
-        .find(|(_, u)| !uniq.insert(u.clone()))
-        .map(|(t, _)| t)
+    fn add_query(
+        &mut self,
+        name: String,
+        params: Vec<PreparedField>,
+        row_idx: Option<(usize, Vec<usize>)>,
+        sql: String,
+    ) -> usize {
+        self.queries
+            .insert_full(
+                name.clone(),
+                PreparedQuery {
+                    name,
+                    params,
+                    row: row_idx,
+                    sql,
+                },
+            )
+            .0
+    }
 }
 
 /// Prepares all modules
 pub(crate) fn prepare(
     client: &mut Client,
-    registrar: &mut TypeRegistrar,
-    modules: Vec<Module>,
+    modules: Vec<ValidatedModule>,
 ) -> Result<Preparation, Error> {
+    let mut registrar = TypeRegistrar::default();
     let mut tmp = Preparation {
         modules: Vec::new(),
         types: IndexMap::new(),
     };
     for module in modules {
-        tmp.modules.push(prepare_module(client, module, registrar)?);
+        tmp.modules
+            .push(prepare_module(client, module, &mut registrar)?);
     }
     // Sort module for consistent codegen
-    tmp.modules.sort_unstable_by(|a, b| a.name.cmp(&b.name));
-    tmp.types = registrar
-        .types
-        .iter()
-        .filter_map(|(key, ty)| {
-            match ty.as_ref() {
-                CornucopiaType::Custom { pg_ty, .. } => {
-                    Some((
-                        key.clone(),
-                        match pg_ty.kind() {
-                            Kind::Enum(variants) => PreparedType::Enum(variants.to_vec()),
-                            Kind::Domain(inner) => {
-                                PreparedType::Domain(PreparedField {
-                                    name: "inner".to_string(),
-                                    ty: registrar.ref_of(inner),
-                                    is_nullable: false,
-                                    is_inner_nullable: false, // TODO used when support null everywhere
-                                })
-                            }
-                            Kind::Composite(fields) => PreparedType::Composite(
-                                fields
-                                    .iter()
-                                    .map(|field| {
-                                        PreparedField {
-                                            name: field.name().to_string(),
-                                            ty: registrar.ref_of(field.type_()),
-                                            is_nullable: false, // TODO used when support null everywhere
-                                            is_inner_nullable: false, // TODO used when support null everywhere
-                                        }
-                                    })
-                                    .collect(),
-                            ),
-                            _ => unreachable!(),
-                        },
-                    ))
+    tmp.modules
+        .sort_unstable_by(|a, b| a.info.name.cmp(&b.info.name));
+    // Prepare types grouped by schema
+    for ((schema, name), ty) in &registrar.types {
+        if let Some(ty) = prepare_type(&registrar, name, ty) {
+            match tmp.types.entry(schema.clone()) {
+                Entry::Occupied(mut entry) => {
+                    entry.get_mut().push(ty);
                 }
-                _ => None,
+                Entry::Vacant(entry) => {
+                    entry.insert(vec![ty]);
+                }
             }
-        })
-        .collect();
+        }
+    }
     Ok(tmp)
+}
+
+/// Prepares database custom types
+fn prepare_type(
+    registrar: &TypeRegistrar,
+    name: &str,
+    ty: &CornucopiaType,
+) -> Option<PreparedType> {
+    if let CornucopiaType::Custom {
+        pg_ty,
+        struct_name,
+        is_copy,
+        is_params,
+        ..
+    } = ty
+    {
+        let content = match pg_ty.kind() {
+            Kind::Enum(variants) => PreparedContent::Enum(variants.to_vec()),
+            Kind::Domain(_) => return None,
+            Kind::Composite(fields) => PreparedContent::Composite(
+                fields
+                    .iter()
+                    .map(|field| {
+                        PreparedField {
+                            name: field.name().to_string(),
+                            ty: registrar.ref_of(field.type_()),
+                            is_nullable: false, // TODO used when support null everywhere
+                            is_inner_nullable: false, // TODO used when support null everywhere
+                        }
+                    })
+                    .collect(),
+            ),
+            _ => unreachable!(),
+        };
+        Some(PreparedType {
+            name: name.to_string(),
+            struct_name: struct_name.clone(),
+            content,
+            is_copy: *is_copy,
+            is_params: *is_params,
+        })
+    } else {
+        None
+    }
 }
 
 /// Prepares all queries in this module
 fn prepare_module(
     client: &mut Client,
-    module: Module,
+    validated_module: ValidatedModule,
     registrar: &mut TypeRegistrar,
 ) -> Result<PreparedModule, Error> {
-    let mut tmp = PreparedModule {
-        name: module.name,
+    let mut tmp_prepared_module = PreparedModule {
+        info: validated_module.info,
         queries: IndexMap::new(),
         params: IndexMap::new(),
         rows: IndexMap::new(),
     };
-    for query in module.queries {
-        prepare_query(client, &mut tmp, registrar, query, &module.path)?;
+
+    for query in validated_module.queries {
+        prepare_query(
+            client,
+            &mut tmp_prepared_module,
+            registrar,
+            &validated_module.param_types,
+            &validated_module.row_types,
+            query,
+        )?;
     }
-    Ok(tmp)
+
+    Ok(tmp_prepared_module)
 }
 
 /// Prepares a query
@@ -283,147 +288,132 @@ fn prepare_query(
     client: &mut Client,
     module: &mut PreparedModule,
     registrar: &mut TypeRegistrar,
-    query: ParsedQuery,
-    module_path: &str,
+    param_types: &[TypeDataStructure],
+    row_types: &[TypeDataStructure],
+    ValidatedQuery {
+        name,
+        params,
+        bind_params,
+        row,
+        sql_str,
+    }: ValidatedQuery,
 ) -> Result<(), Error> {
     // Prepare the statement
     let stmt = client
-        .prepare(&query.sql_str)
-        .map_err(|e| Error::new(e, &query, module_path))?;
+        .prepare(&sql_str)
+        .map_err(|e| Error::new(e, &name, module.info.clone()))?;
 
-    // Get parameter parameters
-    let mut params = Vec::new();
-    for (name, ty) in query.params.iter().zip(stmt.params().iter()) {
-        // Register type
-        params.push(PreparedField {
-            name: name.value.to_owned(),
-            ty: registrar
-                .register(ty)
-                .map_err(|e| Error::new(e, &query, module_path))?
-                .clone(),
-            is_nullable: false,       // TODO used when support null everywhere
-            is_inner_nullable: false, // TODO used when support null everywhere
-        });
-    }
+    let (nullable_params_fields, params_name) =
+        params.name_and_fields(param_types, &name, Some("Params"));
+    let (nullable_row_fields, row_name) = row.name_and_fields(row_types, &name, None);
+    let params_fields = {
+        let stmt_params = stmt.params();
+        let params = bind_params
+            .iter()
+            .zip(stmt_params)
+            .map(|(a, b)| (a.to_owned(), b.to_owned()))
+            .collect::<Vec<(Parsed<String>, Type)>>();
+        for nullable_col in &nullable_params_fields {
+            // If none of the row's columns match the nullable column
+            validation::nullable_param_name(&module.info, nullable_col, &params)
+                .map_err(ErrorVariant::from)
+                .map_err(|e| Error::new(e, &name, module.info.clone()))?;
+        }
 
-    // Get return columns
-    let stmt_cols = stmt.columns();
-    // Check for duplicate names
-    if let Some(duplicate_col) = has_duplicate(stmt_cols.iter(), |col| col.name()) {
-        return Err(Error::new(
-            ErrorVariant::ColumnNameAlreadyTaken {
-                name: duplicate_col.name().to_owned(),
-            },
-            &query,
-            module_path,
-        ));
-    };
-
-    // Nullable columns
-    let mut nullable_cols = Vec::new();
-    for nullable_col in query.nullable_columns {
-        let name = &nullable_col.value;
-
-        // Check that the nullable column's name corresponds to one of the returned columns'.
-        if stmt_cols.iter().any(|y| y.name() == name) {
-            nullable_cols.push((nullable_col.clone(), name.to_owned()))
-        } else {
-            return Err(Error {
-                err: ErrorVariant::Validation(ValidationError::InvalidNullableColumnName {
-                    name: name.to_owned(),
-                    pos: nullable_col.pos,
-                }),
-                query_name: query.name.value.clone(),
-                query_start_line: Some(query.line),
-                path: module_path.to_owned(),
+        let mut param_fields = Vec::new();
+        for (col_name, col_ty) in params {
+            let is_nullable = nullable_params_fields
+                .iter()
+                .any(|x| x.value == col_name.value);
+            // Register type
+            param_fields.push(PreparedField {
+                name: col_name.value.to_owned(),
+                ty: registrar
+                    .register(&col_ty)
+                    .map_err(|e| Error::new(e, &name, module.info.clone()))?
+                    .clone(),
+                is_nullable,
+                is_inner_nullable: false, // TODO used when support null everywhere
             });
-        };
-    }
-
-    // Check if there are duplicate nullable columns
-    if let Some((p, u)) = has_duplicate(nullable_cols.iter(), |(_, n)| n) {
-        return Err(Error {
-            query_name: query.name.value,
-            query_start_line: Some(query.line),
-            err: ErrorVariant::Validation(ValidationError::ColumnAlreadyNullable {
-                name: u.to_owned(),
-                pos: p.pos.clone(),
-            }),
-            path: module_path.to_owned(),
-        });
+        }
+        param_fields
     };
 
-    // Get return columns
-    let mut row_fields = Vec::new();
-    for column in stmt_cols {
-        let name = column.name().to_owned();
-        row_fields.push(PreparedField {
-            is_nullable: nullable_cols.iter().any(|(_, n)| *n == name),
-            is_inner_nullable: false, // TODO used when support null everywhere
-            name,
-            ty: registrar
-                .register(column.type_())
-                .map_err(|e| Error {
-                    query_start_line: Some(query.line),
-                    err: e.into(),
-                    path: String::from(module_path),
-                    query_name: query.name.value.clone(),
-                })?
-                .clone(),
-        });
-    }
+    let row_fields = {
+        let stmt_cols = stmt.columns();
+        // Check for duplicate names
+        if let Some(duplicate_col) = has_duplicate(stmt_cols.iter(), |col| col.name()) {
+            return Err(Error::new(
+                ErrorVariant::DuplicateSqlColName {
+                    name: duplicate_col.name().to_owned(),
+                },
+                &name,
+                module.info.clone(),
+            ));
+        };
+        for nullable_col in &nullable_row_fields {
+            // If none of the row's columns match the nullable column
+            validation::nullable_column_name(&module.info, nullable_col, stmt_cols)
+                .map_err(ErrorVariant::from)
+                .map_err(|e| Error::new(e, &name, module.info.clone()))?;
+        }
 
-    let row_struct_name = query
-        .named_return_struct
-        .unwrap_or_else(|| query.name.map(|x| x.to_upper_camel_case()));
-    let param_struct_name = query
-        .named_param_struct
-        .unwrap_or_else(|| query.name.map(|x| x.to_upper_camel_case() + "Params"));
+        let mut row_fields = Vec::new();
+        for (col_name, col_ty) in stmt_cols.iter().map(|c| (c.name().to_owned(), c.type_())) {
+            let is_nullable = nullable_row_fields.iter().any(|x| x.value == col_name);
 
+            // Register type
+            let ty = registrar
+                .register(col_ty)
+                .map_err(|e| Error::new(e, &name, module.info.clone()))?
+                .clone();
+            row_fields.push(PreparedField {
+                name: col_name,
+                ty,
+                is_nullable,
+                is_inner_nullable: false, // TODO used when support null everywhere
+            });
+        }
+        row_fields
+    };
+
+    let params_empty = params_fields.is_empty();
     let row_idx = if !row_fields.is_empty() {
         Some(
             module
-                .add_row(registrar, row_struct_name, row_fields)
+                .add_row(registrar, row_name, row_fields)
                 .map_err(|e| Error {
                     err: e,
-                    query_name: query.name.value.clone(),
-                    query_start_line: Some(query.line),
-                    path: module_path.to_owned(),
+                    query_name: name.clone(),
+                    module_info: module.info.clone(),
                 })?,
         )
     } else {
         None
     };
-
-    let params_not_empty = !params.is_empty();
-
-    let query_idx = module
-        .add_query(query.name.clone(), params, row_idx, query.sql_str)
-        .map_err(|e| Error {
-            err: e,
-            query_name: query.name.value.clone(),
-            query_start_line: Some(query.line),
-            path: module_path.to_owned(),
-        })?;
-    if params_not_empty {
+    let query_idx = module.add_query(name.value.clone(), params_fields, row_idx, sql_str);
+    if !params_empty {
         module
-            .add_params(param_struct_name, query_idx)
+            .add_param(params_name, query_idx)
             .map_err(|e| Error {
                 err: e,
-                query_name: query.name.value.clone(),
-                query_start_line: Some(query.line),
-                path: module_path.to_owned(),
+                query_name: name.clone(),
+                module_info: module.info.clone(),
             })?;
-    }
+    };
 
     Ok(())
 }
 
 pub(crate) mod error {
     use std::fmt::Display;
+    use std::rc::Rc;
 
-    use crate::parser::{error::ValidationError, ParsedQuery};
+    use crate::parser::Parsed;
+    use crate::read_queries::ModuleInfo;
     use crate::type_registrar::error::Error as PostgresTypeError;
+    use crate::utils::compute_line;
+    use crate::validation::error::Error as ValidationError;
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError)]
@@ -433,57 +423,51 @@ pub(crate) mod error {
         PostgresType(#[from] PostgresTypeError),
         Validation(#[from] ValidationError),
         #[error("Two or more columns have the same name: `{name}`. Consider disambiguing the column names with `AS` clauses.")]
-        ColumnNameAlreadyTaken {
+        DuplicateSqlColName {
             name: String,
         },
     }
 
     #[derive(Debug)]
     pub struct Error {
-        pub(crate) query_name: String,
-        pub(crate) query_start_line: Option<usize>,
+        pub(crate) query_name: Parsed<String>,
         pub(crate) err: ErrorVariant,
-        pub(crate) path: String,
+        pub(crate) module_info: Rc<ModuleInfo>,
     }
 
     impl Error {
-        pub(crate) fn new<E: Into<ErrorVariant>>(err: E, query: &ParsedQuery, path: &str) -> Self {
+        pub(crate) fn new<E: Into<ErrorVariant>>(
+            err: E,
+            query_name: &Parsed<String>,
+            info: Rc<ModuleInfo>,
+        ) -> Self {
             Self {
-                query_start_line: Some(query.line),
                 err: err.into(),
-                path: String::from(path),
-                query_name: query.name.value.clone(),
+                query_name: query_name.clone(),
+                module_info: info,
             }
         }
     }
 
     impl Display for Error {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            // Retrieve line index and content
+            let (_, line, _) = compute_line(&self.module_info.content, self.query_name.start);
             match &self.err {
                 ErrorVariant::Db(e) => write!(
                     f,
                     "Error while preparing query \"{}\" [file: \"{}\", line: {}] ({})",
-                    self.query_name,
-                    self.path,
-                    self.query_start_line.unwrap_or_default(),
+                    self.query_name.value,
+                    self.module_info.path,
+                    line,
                     e.as_db_error().unwrap().message()
                 ),
-                _ => match self.query_start_line {
-                    Some(line) => {
-                        write!(
-                            f,
-                            "Error while preparing query \"{}\" [file: \"{}\", line: {}]:\n{}",
-                            self.query_name, self.path, line, self.err
-                        )
-                    }
-                    None => {
-                        write!(
-                            f,
-                            "Error while preparing query \"{}\" [file: \"{}\"]: {}",
-                            self.query_name, self.path, self.err
-                        )
-                    }
-                },
+                ErrorVariant::Validation(e) => e.fmt(f),
+                _ => write!(
+                    f,
+                    "Error while preparing query \"{}\" [file: \"{}\", line: {}]:\n{}",
+                    self.query_name.value, self.module_info.path, line, self.err
+                ),
             }
         }
     }

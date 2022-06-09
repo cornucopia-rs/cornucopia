@@ -1,7 +1,11 @@
 use std::net::{IpAddr, Ipv4Addr};
 
 use cornucopia_sync::{
-    queries::copy::{select_copy, InsertCloneParams, InsertCopyParams},
+    queries::{
+        copy::{select_copy, InsertCloneParams, InsertCopyParams},
+        named::{items, Item},
+        params::insert_book,
+    },
     types::public::{CloneCompositeBorrowed, CopyComposite},
 };
 use eui48::MacAddress;
@@ -17,6 +21,8 @@ use crate::cornucopia_sync::{
             select_nightmare_domain, select_nightmare_domain_null, InsertNightmareDomainParams,
             SelectNightmareDomain, SelectNightmareDomainNull,
         },
+        named::{item_by_id, new_item_visible, ItemParams},
+        params::{params_use_twice, select_book, SelectBook},
         stress::{
             select_everything, select_everything_array, select_nightmare,
             InsertEverythingArrayParams, InsertEverythingParams, InsertNightmareParams,
@@ -42,10 +48,98 @@ pub fn main() {
         .connect(NoTls)
         .unwrap();
     test_copy(client);
+    test_params(client);
+    test_named(client);
     test_stress(client);
 }
 
 pub fn moving<T>(_item: T) {}
+
+pub fn test_params(client: &mut Client) {
+    assert_eq!(1, insert_book(client, &None, &"Necronomicon").unwrap());
+    assert_eq!(
+        1,
+        insert_book(client, &Some("Marcel Proust"), &"In Search of Lost Time").unwrap()
+    );
+    assert_eq!(
+        select_book(client).vec().unwrap(),
+        &[
+            SelectBook {
+                author: None,
+                name: "Necronomicon".into()
+            },
+            SelectBook {
+                author: Some("Marcel Proust".into()),
+                name: "In Search of Lost Time".into()
+            }
+        ]
+    );
+    params_use_twice(client, &"name").unwrap();
+}
+
+pub fn test_named(client: &mut Client) {
+    let hidden_id = ItemParams {
+        name: "secret",
+        price: Some(42.0),
+    }
+    .new_item_hidden(client)
+    .one()
+    .unwrap()
+    .id;
+    let visible_id = ItemParams {
+        name: "stuff",
+        price: Some(84.0),
+    }
+    .new_item_visible(client)
+    .one()
+    .unwrap()
+    .id;
+    let last_id = new_item_visible(client, &"can't by me", &None)
+        .one()
+        .unwrap()
+        .id;
+    assert_eq!(
+        items(client).vec().unwrap(),
+        &[
+            Item {
+                id: hidden_id,
+                name: "secret".into(),
+                price: Some(42.0),
+                show: false
+            },
+            Item {
+                id: visible_id,
+                name: "stuff".into(),
+                price: Some(84.0),
+                show: true
+            },
+            Item {
+                id: last_id,
+                name: "can't by me".into(),
+                price: None,
+                show: true
+            }
+        ]
+    );
+    assert_eq!(
+        item_by_id(client, &hidden_id).one().unwrap(),
+        Item {
+            id: hidden_id,
+            name: "secret".into(),
+            price: Some(42.0),
+            show: false
+        }
+    );
+    assert_eq!(
+        item_by_id(client, &visible_id).one().unwrap(),
+        Item {
+            id: visible_id,
+            name: "stuff".into(),
+            price: Some(84.0),
+            show: true
+        }
+    );
+}
 
 // Test we correctly implement borrowed version and copy derive
 pub fn test_copy(client: &mut Client) {

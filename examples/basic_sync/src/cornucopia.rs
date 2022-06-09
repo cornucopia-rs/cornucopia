@@ -49,32 +49,32 @@ pub mod types {
         }
         impl<'a> postgres_types::FromSql<'a> for CustomCompositeBorrowed<'a> {
             fn from_sql(
-                _type: &postgres_types::Type,
-                buf: &'a [u8],
+                ty: &postgres_types::Type,
+                out: &'a [u8],
             ) -> Result<
                 CustomCompositeBorrowed<'a>,
                 Box<dyn std::error::Error + Sync + Send>,
             > {
-                let fields = match *_type.kind() {
+                let fields = match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
                 };
-                let mut buf = buf;
-                let num_fields = postgres_types::private::read_be_i32(&mut buf)?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                let mut out = out;
+                let num_fields = postgres_types::private::read_be_i32(&mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
                 let name = postgres_types::private::read_value(
                     fields[0].type_(),
-                    &mut buf,
+                    &mut out,
                 )?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
                 let age = postgres_types::private::read_value(
                     fields[1].type_(),
-                    &mut buf,
+                    &mut out,
                 )?;
-                let _oid = postgres_types::private::read_be_i32(&mut buf)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
                 let persona = postgres_types::private::read_value(
                     fields[2].type_(),
-                    &mut buf,
+                    &mut out,
                 )?;
                 Ok(CustomCompositeBorrowed {
                     name,
@@ -82,40 +82,40 @@ pub mod types {
                     persona,
                 })
             }
-            fn accepts(type_: &postgres_types::Type) -> bool {
-                type_.name() == "custom_composite" && type_.schema() == "public"
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                ty.name() == "custom_composite" && ty.schema() == "public"
             }
         }
         impl<'a> postgres_types::ToSql for CustomCompositeBorrowed<'a> {
             fn to_sql(
                 &self,
-                _type: &postgres_types::Type,
-                buf: &mut postgres_types::private::BytesMut,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
             ) -> Result<
                 postgres_types::IsNull,
                 Box<dyn std::error::Error + Sync + Send>,
             > {
-                let fields = match *_type.kind() {
+                let fields = match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
                 };
-                buf.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
                 for field in fields {
-                    buf.extend_from_slice(&field.type_().oid().to_be_bytes());
-                    let base = buf.len();
-                    buf.extend_from_slice(&[0; 4]);
+                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = out.len();
+                    out.extend_from_slice(&[0; 4]);
                     let r = match field.name() {
                         "name" => {
-                            postgres_types::ToSql::to_sql(&self.name, field.type_(), buf)
+                            postgres_types::ToSql::to_sql(&self.name, field.type_(), out)
                         }
                         "age" => {
-                            postgres_types::ToSql::to_sql(&self.age, field.type_(), buf)
+                            postgres_types::ToSql::to_sql(&self.age, field.type_(), out)
                         }
                         "persona" => {
                             postgres_types::ToSql::to_sql(
                                 &self.persona,
                                 field.type_(),
-                                buf,
+                                out,
                             )
                         }
                         _ => unreachable!(),
@@ -123,22 +123,22 @@ pub mod types {
                     let count = match r? {
                         postgres_types::IsNull::Yes => -1,
                         postgres_types::IsNull::No => {
-                            let len = buf.len() - base - 4;
+                            let len = out.len() - base - 4;
                             if len > i32::max_value() as usize {
                                 return Err(Into::into("value too large to transmit"));
                             }
                             len as i32
                         }
                     };
-                    buf[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
                 }
                 Ok(postgres_types::IsNull::No)
             }
-            fn accepts(type_: &postgres_types::Type) -> bool {
-                if type_.name() != "custom_composite" {
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "custom_composite" {
                     return false;
                 }
-                match *type_.kind() {
+                match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => {
                         if fields.len() != 3usize {
                             return false;

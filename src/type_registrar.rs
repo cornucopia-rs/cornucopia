@@ -73,6 +73,15 @@ impl CornucopiaType {
         }
     }
 
+    pub(crate) fn pg_ty(&self) -> &Type {
+        match self {
+            CornucopiaType::Simple { pg_ty, .. }
+            | CornucopiaType::Custom { pg_ty, .. }
+            | CornucopiaType::Domain { pg_ty, .. } => pg_ty,
+            CornucopiaType::Array { inner } => inner.pg_ty(),
+        }
+    }
+
     pub(crate) fn owning_call(
         &self,
         name: &str,

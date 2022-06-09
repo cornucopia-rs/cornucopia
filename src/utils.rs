@@ -79,3 +79,37 @@ pub fn join_ln<T, I: IntoIterator<Item = T>, F: Fn(&mut Formatter, T)>(
 ) -> Joiner<T, I, F> {
     join(iter, map, '\n')
 }
+
+pub fn has_duplicate<T, U>(
+    iter: T,
+    mapper: fn(<T as IntoIterator>::Item) -> U,
+) -> Option<<T as IntoIterator>::Item>
+where
+    T: IntoIterator + Clone,
+    U: Eq + std::hash::Hash + Clone,
+{
+    let mut uniq = std::collections::HashSet::new();
+    iter.clone()
+        .into_iter()
+        .zip(iter.into_iter().map(mapper))
+        .find(|(_, u)| !uniq.insert(u.clone()))
+        .map(|(t, _)| t)
+}
+
+/// Retrieve line index and content
+// TODO not very strong
+pub fn compute_line(content: &str, pos: usize) -> (usize, usize, &str) {
+    let mut col = pos + 1;
+    let mut line = 1;
+    let mut line_str = "";
+    for l in content.split('\n') {
+        if col > l.len() {
+            line += 1;
+            col -= l.len() + 1;
+        } else {
+            line_str = l.trim_end();
+            break;
+        }
+    }
+    (col, line, line_str)
+}
