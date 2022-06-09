@@ -96,10 +96,10 @@ impl PreparedModule {
                 // registered row with the same name...
                 validation::named_struct_field(
                     &self.info,
-                    &name,
-                    &fields,
                     &prev.name,
                     &prev.fields,
+                    &name,
+                    &fields,
                 )?;
 
                 let indexes: Option<Vec<_>> = prev
@@ -133,10 +133,10 @@ impl PreparedModule {
                 // registered param with the same name...
                 validation::named_struct_field(
                     &self.info,
-                    &name,
-                    fields,
                     &prev.name,
                     &prev.fields,
+                    &name,
+                    fields,
                 )?;
 
                 prev.queries.push(query_idx);
@@ -210,6 +210,10 @@ pub(crate) fn prepare(
         }
     }
     Ok(tmp)
+}
+
+fn normalize_rust_name(name: &str) -> String {
+    name.replace(':', "_")
 }
 
 /// Prepares database custom types
@@ -327,7 +331,7 @@ fn prepare_query(
                 .any(|x| x.value == col_name.value);
             // Register type
             param_fields.push(PreparedField {
-                name: col_name.value.to_owned(),
+                name: col_name.value.clone(),
                 ty: registrar
                     .register(&col_ty)
                     .map_err(|e| Error::new(e, &name, module.info.clone()))?
@@ -368,7 +372,7 @@ fn prepare_query(
                 .map_err(|e| Error::new(e, &name, module.info.clone()))?
                 .clone();
             row_fields.push(PreparedField {
-                name: col_name,
+                name: normalize_rust_name(&col_name),
                 ty,
                 is_nullable,
                 is_inner_nullable: false, // TODO used when support null everywhere

@@ -194,12 +194,8 @@ pub mod queries {
             client: &'a C,
             title: &'a &'a str,
         ) -> Result<u64, tokio_postgres::Error> {
-            let stmt = client
-                .prepare("INSERT INTO Book (title)
-  VALUES ($1);
-
-")
-                .await?;
+            let stmt = client.prepare("INSERT INTO Book (title)
+  VALUES ($1)").await?;
             client.execute(&stmt, &[title]).await
         }
     }
@@ -875,8 +871,7 @@ pub mod queries {
                 query: "SELECT
     *
 FROM
-    Author;
-",
+    Author",
                 extractor: |row| {
                     AuthorsBorrowed {
                         country: row.get(2),
@@ -896,8 +891,7 @@ FROM
                 query: "SELECT
     Title
 FROM
-    Book;
-",
+    Book",
                 extractor: |row| { BooksBorrowed { title: row.get(0) } },
                 mapper: |it| Books::from(it),
             }
@@ -911,8 +905,7 @@ FROM
                 query: "SELECT
     Title
 FROM
-    Book;
-",
+    Book",
                 extractor: |row| {
                     BooksOptRetParamBorrowed {
                         title: row.get(0),
@@ -933,8 +926,7 @@ FROM
 FROM
     Author
 WHERE
-    Author.Id = $1;
-",
+    Author.Id = $1",
                 extractor: |row| {
                     AuthorNameByIdBorrowed {
                         name: row.get(0),
@@ -960,8 +952,7 @@ FROM
     INNER JOIN Author ON Author.id = BookAuthor.AuthorId
     INNER JOIN Book ON Book.Id = BookAuthor.BookId
 WHERE
-    Author.Name LIKE CONCAT($1::text, '%');
-",
+    Author.Name LIKE CONCAT($1::text, '%')",
                 extractor: |row| {
                     AuthorNameStartingWithBorrowed {
                         authorid: row.get(0),
@@ -982,8 +973,7 @@ WHERE
                 query: "SELECT
     col1
 FROM
-    CustomTable;
-",
+    CustomTable",
                 extractor: |row| {
                     ReturnCustomTypeBorrowed {
                         col1: row.get(0),
@@ -1003,8 +993,7 @@ FROM
     col2
 FROM
     CustomTable
-WHERE (col1).persona = $1;
-",
+WHERE (col1).persona = $1",
                 extractor: |row| {
                     SelectWhereCustomType {
                         col2: row.get(0),
@@ -1022,9 +1011,7 @@ WHERE (col1).persona = $1;
                 query: "SELECT
     Translations
 FROM
-    Book;
-
-",
+    Book",
                 extractor: |row| {
                     SelectTranslationsBorrowed {
                         translations: row.get(0),

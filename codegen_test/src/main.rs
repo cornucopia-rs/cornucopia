@@ -3,7 +3,7 @@ use std::net::{IpAddr, Ipv4Addr};
 use cornucopia_sync::{
     queries::{
         copy::{select_copy, InsertCloneParams, InsertCopyParams},
-        named::{items, Item},
+        named::items,
         params::insert_book,
     },
     types::public::{CloneCompositeBorrowed, CopyComposite},
@@ -21,7 +21,7 @@ use crate::cornucopia_sync::{
             select_nightmare_domain, select_nightmare_domain_null, InsertNightmareDomainParams,
             SelectNightmareDomain, SelectNightmareDomainNull,
         },
-        named::{item_by_id, new_item_visible, ItemParams},
+        named::{item_by_id, new_item_visible, Item, ItemParams},
         params::{params_use_twice, select_book, SelectBook},
         stress::{
             select_everything, select_everything_array, select_nightmare,
