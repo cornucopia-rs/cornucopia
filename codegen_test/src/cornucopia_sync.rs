@@ -2436,6 +2436,54 @@ pub mod queries {
                 named_spaced(client, &self.name, &self.price)
             }
         }
+        #[derive(Debug, Clone, Copy)]
+        pub struct TrickySqlParams {
+            pub price: f64,
+        }
+        impl TrickySqlParams {
+            pub fn tricky_sql<'a, C: GenericClient>(
+                &'a self,
+                client: &'a mut C,
+            ) -> Result<u64, postgres::Error> {
+                tricky_sql(client, &self.price)
+            }
+        }
+        #[derive(Debug, Clone, Copy)]
+        pub struct TrickySql1Params {
+            pub price: f64,
+        }
+        impl TrickySql1Params {
+            pub fn tricky_sql1<'a, C: GenericClient>(
+                &'a self,
+                client: &'a mut C,
+            ) -> Result<u64, postgres::Error> {
+                tricky_sql1(client, &self.price)
+            }
+        }
+        #[derive(Debug, Clone, Copy)]
+        pub struct TrickySql2Params {
+            pub price: f64,
+        }
+        impl TrickySql2Params {
+            pub fn tricky_sql2<'a, C: GenericClient>(
+                &'a self,
+                client: &'a mut C,
+            ) -> Result<u64, postgres::Error> {
+                tricky_sql2(client, &self.price)
+            }
+        }
+        #[derive(Debug, Clone, Copy)]
+        pub struct TrickySql6Params {
+            pub price: f64,
+        }
+        impl TrickySql6Params {
+            pub fn tricky_sql6<'a, C: GenericClient>(
+                &'a self,
+                client: &'a mut C,
+            ) -> Result<u64, postgres::Error> {
+                tricky_sql6(client, &self.price)
+            }
+        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct SelectCompact {
             pub composite: super::super::types::public::CloneComposite,
@@ -2743,6 +2791,74 @@ pub mod queries {
                 Ok(stream)
             }
         }
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct Syntax {
+            pub price: f64,
+            pub trick_y: String,
+        }
+        pub struct SyntaxBorrowed<'a> {
+            pub price: f64,
+            pub trick_y: &'a str,
+        }
+        impl<'a> From<SyntaxBorrowed<'a>> for Syntax {
+            fn from(SyntaxBorrowed { price, trick_y }: SyntaxBorrowed<'a>) -> Self {
+                Self {
+                    price,
+                    trick_y: trick_y.into(),
+                }
+            }
+        }
+        pub struct SyntaxQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a mut C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&postgres::Row) -> SyntaxBorrowed,
+            mapper: fn(SyntaxBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> SyntaxQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(self, mapper: fn(SyntaxBorrowed) -> R) -> SyntaxQuery<'a, C, R, N> {
+                SyntaxQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub fn stmt(&mut self) -> Result<postgres::Statement, postgres::Error> {
+                self.client.prepare(self.query)
+            }
+            pub fn one(mut self) -> Result<T, postgres::Error> {
+                let stmt = self.stmt()?;
+                let row = self.client.query_one(&stmt, &self.params)?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
+                self.stream()?.collect()
+            }
+            pub fn opt(mut self) -> Result<Option<T>, postgres::Error> {
+                let stmt = self.stmt()?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub fn stream(
+                mut self,
+            ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
+            {
+                let stmt = self.stmt()?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))?
+                    .iterator()
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
+                Ok(stream)
+            }
+        }
         pub fn select_compact<'a, C: GenericClient>(
             client: &'a mut C,
         ) -> SelectCompactQuery<'a, C, SelectCompact, 0> {
@@ -2819,6 +2935,56 @@ pub mod queries {
                 query: "INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id",
                 extractor: |row| Row { id: row.get(0) },
                 mapper: |it| Row::from(it),
+            }
+        }
+        pub fn tricky_sql<'a, C: GenericClient>(
+            client: &'a mut C,
+            price: &'a f64,
+        ) -> Result<u64, postgres::Error> {
+            let stmt = client.prepare(
+                "INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a bind_param', $1)",
+            )?;
+            client.execute(&stmt, &[price])
+        }
+        pub fn tricky_sql1<'a, C: GenericClient>(
+            client: &'a mut C,
+            price: &'a f64,
+        ) -> Result<u64, postgres::Error> {
+            let stmt = client.prepare(
+                "INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a :bind_param', $1)",
+            )?;
+            client.execute(&stmt, &[price])
+        }
+        pub fn tricky_sql2<'a, C: GenericClient>(
+            client: &'a mut C,
+            price: &'a f64,
+        ) -> Result<u64, postgres::Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a '':bind_param''', $1)",
+                )?;
+            client.execute(&stmt, &[price])
+        }
+        pub fn tricky_sql6<'a, C: GenericClient>(
+            client: &'a mut C,
+            price: &'a f64,
+        ) -> Result<u64, postgres::Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO syntax (\"trick:y\", price) VALUES (e'this is not a '':bind_param''', $1)",
+                )?;
+            client.execute(&stmt, &[price])
+        }
+        pub fn syntax<'a, C: GenericClient>(client: &'a mut C) -> SyntaxQuery<'a, C, Syntax, 0> {
+            SyntaxQuery {
+                client,
+                params: [],
+                query: "SELECT * FROM syntax",
+                extractor: |row| SyntaxBorrowed {
+                    price: row.get(1),
+                    trick_y: row.get(0),
+                },
+                mapper: |it| Syntax::from(it),
             }
         }
     }

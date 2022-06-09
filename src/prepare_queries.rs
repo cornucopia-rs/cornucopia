@@ -213,6 +213,10 @@ pub(crate) fn prepare(
     Ok(tmp)
 }
 
+fn normalize_rust_name(name: &str) -> String {
+    name.replace(":", "_")
+}
+
 /// Prepares database custom types
 fn prepare_type(
     registrar: &TypeRegistrar,
@@ -335,7 +339,7 @@ fn prepare_query(
                 .any(|x| x.value == col_name.value);
             // Register type
             param_fields.push(PreparedField {
-                name: col_name.value.to_owned(),
+                name: normalize_rust_name(&col_name.value),
                 ty: registrar
                     .register(&col_ty)
                     .map_err(|e| Error::new(e, &name, module.info.clone()))?
@@ -376,7 +380,7 @@ fn prepare_query(
                 .map_err(|e| Error::new(e, &name, module.info.clone()))?
                 .clone();
             row_fields.push(PreparedField {
-                name: col_name,
+                name: normalize_rust_name(&col_name),
                 ty,
                 is_nullable,
                 is_inner_nullable: false, // TODO used when support null everywhere

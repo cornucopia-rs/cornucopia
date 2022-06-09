@@ -148,27 +148,61 @@ pub(crate) struct QuerySql {
 }
 
 impl QuerySql {
+    /// Escape sql string and pattern that are not bind
+    fn sql_escaping() -> impl Parser<char, (), Error = Simple<char>> {
+        // ":bind" TODO is this possible ?
+        let constant = none_of("\"")
+            .repeated()
+            .delimited_by(just("\""), just("\""))
+            .ignored();
+        // ':bind'
+        let string = none_of("'")
+            .repeated()
+            .delimited_by(just("'"), just("'"))
+            .ignored();
+        // E'\':bind\'' TODO not properly working
+        let c_style_string = just("\\'")
+            .ignored()
+            .or(none_of("\\'").repeated().ignored())
+            .repeated()
+            .delimited_by(one_of("eE").then(just("'")), just("'"))
+            .ignored();
+        let dollar_quoted = just("$")
+            .ignore_then(none_of("$"))
+            .ignore_then(just("$"))
+            .ignore_then(none_of("$"))
+            .ignore_then(just("$"))
+            .ignore_then(none_of("$"))
+            .ignore_then(just("$"))
+            .ignored();
+
+        c_style_string
+            .or(string)
+            .or(constant)
+            .or(dollar_quoted)
+            // Non binding sql
+            .or(none_of("\"':$").repeated().at_least(1).ignored())
+            .repeated()
+            .at_least(1)
+            .ignored()
+    }
+
+    /// Parse all bind from an SQL query
     fn parse_bind() -> impl Parser<char, Vec<Parsed<String>>, Error = Simple<char>> {
         just(':')
             .ignore_then(ident())
-            .separated_by(filter(|c: &char| *c != ':').repeated())
+            .separated_by(Self::sql_escaping())
             .allow_leading()
             .allow_trailing()
     }
 
     fn parser() -> impl Parser<char, Self, Error = Simple<char>> {
-        filter(|c: &char| *c != ';')
+        none_of(";")
             .repeated()
             .then_ignore(just(';'))
             .collect::<String>()
-            .map_with_span(|it, span: Range<usize>| Parsed {
-                start: span.start,
-                end: span.end,
-                value: it,
-            })
-            .map(|sql_str| {
-                let sql_start = sql_str.start;
-                let mut sql_str = sql_str.value;
+            .map_with_span(|mut sql_str, span: Range<usize>| {
+                let sql_start = span.start;
                 let bind_params: Vec<_> = Self::parse_bind()
                     .parse(sql_str.clone())
                     .unwrap()
