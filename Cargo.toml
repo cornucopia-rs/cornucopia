@@ -32,3 +32,4 @@ indexmap = "1.8.2"
 
 prettyplease = "0.1.11"
 syn = { version = "1.0.95", features = ["parsing"] }
+chumsky = "0.8.0"

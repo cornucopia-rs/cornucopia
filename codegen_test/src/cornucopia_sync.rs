@@ -624,10 +624,7 @@ pub mod queries {
             client: &'a mut C,
             composite: &'a super::super::types::public::CloneCompositeBorrowed<'a>,
         ) -> Result<u64, postgres::Error> {
-            let stmt = client.prepare(
-                "INSERT INTO clone (composite) VALUES ($1);
-",
-            )?;
+            let stmt = client.prepare("INSERT INTO clone (composite) VALUES ($1)")?;
             client.execute(&stmt, &[composite])
         }
         pub fn select_clone<'a, C: GenericClient>(
@@ -636,8 +633,7 @@ pub mod queries {
             SelectCloneQuery {
                 client,
                 params: [],
-                query: "SELECT * FROM clone;
-",
+                query: "SELECT * FROM clone",
                 extractor: |row| SelectCloneBorrowed {
                     composite: row.get(0),
                 },
@@ -648,10 +644,7 @@ pub mod queries {
             client: &'a mut C,
             composite: &'a super::super::types::public::CopyComposite,
         ) -> Result<u64, postgres::Error> {
-            let stmt = client.prepare(
-                "INSERT INTO copy (composite) VALUES ($1);
-",
-            )?;
+            let stmt = client.prepare("INSERT INTO copy (composite) VALUES ($1)")?;
             client.execute(&stmt, &[composite])
         }
         pub fn select_copy<'a, C: GenericClient>(
@@ -660,7 +653,7 @@ pub mod queries {
             SelectCopyQuery {
                 client,
                 params: [],
-                query: "SELECT * FROM copy;",
+                query: "SELECT * FROM copy",
                 extractor: |row| SelectCopy {
                     composite: row.get(0),
                 },
@@ -845,8 +838,7 @@ pub mod queries {
             IdQuery {
                 client,
                 params: [name, price],
-                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, true) RETURNING id ; 
-",
+                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, true) RETURNING id ",
                 extractor: |row| Id { id: row.get(0) },
                 mapper: |it| Id::from(it),
             }
@@ -859,8 +851,7 @@ pub mod queries {
             IdQuery {
                 client,
                 params: [name, price],
-                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id;
-",
+                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id",
                 extractor: |row| Id { id: row.get(0) },
                 mapper: |it| Id::from(it),
             }
@@ -869,8 +860,7 @@ pub mod queries {
             ItemQuery {
                 client,
                 params: [],
-                query: "SELECT * FROM item;
-",
+                query: "SELECT * FROM item",
                 extractor: |row| ItemBorrowed {
                     id: row.get(0),
                     name: row.get(1),
@@ -887,8 +877,7 @@ pub mod queries {
             ItemQuery {
                 client,
                 params: [id],
-                query: "SELECT * FROM item WHERE id = $1;
-",
+                query: "SELECT * FROM item WHERE id = $1",
                 extractor: |row| ItemBorrowed {
                     id: row.get(0),
                     name: row.get(1),
@@ -1015,10 +1004,7 @@ pub mod queries {
             author: &'a Option<&'a str>,
             name: &'a &'a str,
         ) -> Result<u64, postgres::Error> {
-            let stmt = client.prepare(
-                "INSERT INTO book (author, name) VALUES ($1, $2);
-",
-            )?;
+            let stmt = client.prepare("INSERT INTO book (author, name) VALUES ($1, $2)")?;
             client.execute(&stmt, &[author, name])
         }
         pub fn select_book<'a, C: GenericClient>(
@@ -1027,8 +1013,7 @@ pub mod queries {
             SelectBookQuery {
                 client,
                 params: [],
-                query: "SELECT * FROM book;
-",
+                query: "SELECT * FROM book",
                 extractor: |row| SelectBookBorrowed {
                     author: row.get(1),
                     name: row.get(0),
@@ -1040,10 +1025,8 @@ pub mod queries {
             client: &'a mut C,
             name: &'a &'a str,
         ) -> Result<u64, postgres::Error> {
-            let stmt = client.prepare(
-                "UPDATE book SET name = $1 WHERE length(name) > 42 AND length($1) < 42;
-",
-            )?;
+            let stmt = client
+                .prepare("UPDATE book SET name = $1 WHERE length(name) > 42 AND length($1) < 42")?;
             client.execute(&stmt, &[name])
         }
         pub fn params_order<'a, C: GenericClient>(
@@ -1051,7 +1034,7 @@ pub mod queries {
             a: &'a i32,
             c: &'a i32,
         ) -> Result<u64, postgres::Error> {
-            let stmt = client.prepare("UPDATE imaginary SET c=$2, a=$1, z=$1, r=$2;")?;
+            let stmt = client.prepare("UPDATE imaginary SET c=$2, a=$1, z=$1, r=$2")?;
             client.execute(&stmt, &[a, c])
         }
     }
@@ -2075,8 +2058,7 @@ pub mod queries {
             SelectEverythingQuery {
                 client,
                 params: [],
-                query: "SELECT * FROM Everything;
-",
+                query: "SELECT * FROM Everything",
                 extractor: |row| SelectEverythingBorrowed {
                     bigserial_: row.get(13),
                     bingint_: row.get(11),
@@ -2121,8 +2103,7 @@ pub mod queries {
             SelectEverythingNullQuery {
                 client,
                 params: [],
-                query: "SELECT * FROM Everything
-",
+                query: "SELECT * FROM Everything",
                 extractor: |row| SelectEverythingNullBorrowed {
                     bigserial_: row.get(13),
                     bingint_: row.get(11),
@@ -2200,8 +2181,7 @@ pub mod queries {
             let stmt = client
                 .prepare(
                     "INSERT INTO Everything (bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
-    VALUES ($3, $4, $6, $24, $12, $25, $20, $15, $13, $23, $21, $2, $14, $1, $22, $9, $19, $10, $8, $26, $33, $5, $28, $30, $31, $29, $7, $27, $16, $17, $32, $11, $18);
-",
+    VALUES ($3, $4, $6, $24, $12, $25, $20, $15, $13, $23, $21, $2, $14, $1, $22, $9, $19, $10, $8, $26, $33, $5, $28, $30, $31, $29, $7, $27, $16, $17, $32, $11, $18)",
                 )?;
             client.execute(
                 &stmt,
@@ -2248,8 +2228,7 @@ pub mod queries {
             SelectEverythingArrayQuery {
                 client,
                 params: [],
-                query: "SELECT * FROM EverythingArray
-",
+                query: "SELECT * FROM EverythingArray",
                 extractor: |row| SelectEverythingArrayBorrowed {
                     bingint_: row.get(7),
                     bool_: row.get(0),
@@ -2288,8 +2267,7 @@ pub mod queries {
             SelectEverythingArrayNullQuery {
                 client,
                 params: [],
-                query: "SELECT * FROM EverythingArray
-",
+                query: "SELECT * FROM EverythingArray",
                 extractor: |row| SelectEverythingArrayNullBorrowed {
                     bingint_: row.get(7),
                     bool_: row.get(0),
@@ -2355,8 +2333,7 @@ pub mod queries {
             let stmt = client
                 .prepare(
                     "INSERT INTO EverythingArray (bool_, boolean_, char_, smallint_, int2_, int_, int4_, bingint_, int8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
-    VALUES ($2, $3, $5, $19, $11, $14, $12, $1, $13, $8, $18, $9, $7, $20, $27, $4, $22, $24, $25, $23, $6, $21, $15, $16, $26, $10, $17);
-",
+    VALUES ($2, $3, $5, $19, $11, $14, $12, $1, $13, $8, $18, $9, $7, $20, $27, $4, $22, $24, $25, $23, $6, $21, $15, $16, $26, $10, $17)",
                 )?;
             client.execute(
                 &stmt,
@@ -2397,8 +2374,7 @@ pub mod queries {
             SelectNightmareQuery {
                 client,
                 params: [],
-                query: "SELECT * FROM nightmare;
-",
+                query: "SELECT * FROM nightmare",
                 extractor: |row| SelectNightmareBorrowed {
                     composite: row.get(0),
                 },
@@ -2409,7 +2385,7 @@ pub mod queries {
             client: &'a mut C,
             composite: &'a super::super::types::public::NightmareCompositeParams<'a>,
         ) -> Result<u64, postgres::Error> {
-            let stmt = client.prepare("INSERT INTO nightmare (composite) VALUES ($1);")?;
+            let stmt = client.prepare("INSERT INTO nightmare (composite) VALUES ($1)")?;
             client.execute(&stmt, &[composite])
         }
     }
