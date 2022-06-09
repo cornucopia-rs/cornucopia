@@ -108,22 +108,20 @@ CREATE TABLE author (
 '''
 error = '''
 Error while validating queries [path: "queries/module_1.sql"]:
- --> 1:19
-  | 
-  | --! author_names: Row
-  |                   ^---
-  | 
-  = This named data structure has been defined elsewhere, but the fields don't match.
  --> 4:17
   | 
   | --! author_ids: Row
   |                 ^---
   | 
+  = This named data structure has been defined elsewhere, but the fields don't match.
+ --> 1:19
+  | 
+  | --! author_names: Row
+  |                   ^---
+  | 
   = First defined here
 
-Expected fields: [
-  id: int4
-]
-Got fields: [
-  name: text
-]'''
+Expected:
+  - name: text
+Got:
+  - id: int4'''

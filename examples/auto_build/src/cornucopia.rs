@@ -90,9 +90,7 @@ pub mod queries {
                 query: "SELECT
     *
 FROM
-    example_table;
-
-",
+    example_table",
                 extractor: |row| {
                     ExampleQueryBorrowed {
                         col1: row.get(0),

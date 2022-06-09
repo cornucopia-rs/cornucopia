@@ -469,6 +469,7 @@ fn gen_query_fn(
     } else {
         ("mut", "", "", "postgres")
     };
+    let sql = sql.replace('"', "\\\""); // Rust string format escaping
 
     if let Some((idx, index)) = row {
         let PreparedRow {

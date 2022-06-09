@@ -634,10 +634,7 @@ pub mod queries {
             composite: &'a super::super::types::public::CloneCompositeBorrowed<'a>,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = client
-                .prepare(
-                    "INSERT INTO clone (composite) VALUES ($1);
-",
-                )
+                .prepare("INSERT INTO clone (composite) VALUES ($1)")
                 .await?;
             client.execute(&stmt, &[composite]).await
         }
@@ -647,8 +644,7 @@ pub mod queries {
             SelectCloneQuery {
                 client,
                 params: [],
-                query: "SELECT * FROM clone;
-",
+                query: "SELECT * FROM clone",
                 extractor: |row| SelectCloneBorrowed {
                     composite: row.get(0),
                 },
@@ -660,10 +656,7 @@ pub mod queries {
             composite: &'a super::super::types::public::CopyComposite,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = client
-                .prepare(
-                    "INSERT INTO copy (composite) VALUES ($1);
-",
-                )
+                .prepare("INSERT INTO copy (composite) VALUES ($1)")
                 .await?;
             client.execute(&stmt, &[composite]).await
         }
@@ -673,7 +666,7 @@ pub mod queries {
             SelectCopyQuery {
                 client,
                 params: [],
-                query: "SELECT * FROM copy;",
+                query: "SELECT * FROM copy",
                 extractor: |row| SelectCopy {
                     composite: row.get(0),
                 },
@@ -867,8 +860,7 @@ pub mod queries {
             IdQuery {
                 client,
                 params: [name, price],
-                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, true) RETURNING id ; 
-",
+                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, true) RETURNING id ",
                 extractor: |row| Id { id: row.get(0) },
                 mapper: |it| Id::from(it),
             }
@@ -881,8 +873,7 @@ pub mod queries {
             IdQuery {
                 client,
                 params: [name, price],
-                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id;
-",
+                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id",
                 extractor: |row| Id { id: row.get(0) },
                 mapper: |it| Id::from(it),
             }
@@ -891,8 +882,7 @@ pub mod queries {
             ItemQuery {
                 client,
                 params: [],
-                query: "SELECT * FROM item;
-",
+                query: "SELECT * FROM item",
                 extractor: |row| ItemBorrowed {
                     id: row.get(0),
                     name: row.get(1),
@@ -909,8 +899,7 @@ pub mod queries {
             ItemQuery {
                 client,
                 params: [id],
-                query: "SELECT * FROM item WHERE id = $1;
-",
+                query: "SELECT * FROM item WHERE id = $1",
                 extractor: |row| ItemBorrowed {
                     id: row.get(0),
                     name: row.get(1),
@@ -1043,10 +1032,7 @@ pub mod queries {
             name: &'a &'a str,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = client
-                .prepare(
-                    "INSERT INTO book (author, name) VALUES ($1, $2);
-",
-                )
+                .prepare("INSERT INTO book (author, name) VALUES ($1, $2)")
                 .await?;
             client.execute(&stmt, &[author, name]).await
         }
@@ -1056,8 +1042,7 @@ pub mod queries {
             SelectBookQuery {
                 client,
                 params: [],
-                query: "SELECT * FROM book;
-",
+                query: "SELECT * FROM book",
                 extractor: |row| SelectBookBorrowed {
                     author: row.get(1),
                     name: row.get(0),
@@ -1070,10 +1055,7 @@ pub mod queries {
             name: &'a &'a str,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = client
-                .prepare(
-                    "UPDATE book SET name = $1 WHERE length(name) > 42 AND length($1) < 42;
-",
-                )
+                .prepare("UPDATE book SET name = $1 WHERE length(name) > 42 AND length($1) < 42")
                 .await?;
             client.execute(&stmt, &[name]).await
         }
@@ -1083,7 +1065,7 @@ pub mod queries {
             c: &'a i32,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = client
-                .prepare("UPDATE imaginary SET c=$2, a=$1, z=$1, r=$2;")
+                .prepare("UPDATE imaginary SET c=$2, a=$1, z=$1, r=$2")
                 .await?;
             client.execute(&stmt, &[a, c]).await
         }
@@ -2131,8 +2113,7 @@ pub mod queries {
             SelectEverythingQuery {
                 client,
                 params: [],
-                query: "SELECT * FROM Everything;
-",
+                query: "SELECT * FROM Everything",
                 extractor: |row| SelectEverythingBorrowed {
                     bigserial_: row.get(13),
                     bingint_: row.get(11),
@@ -2177,8 +2158,7 @@ pub mod queries {
             SelectEverythingNullQuery {
                 client,
                 params: [],
-                query: "SELECT * FROM Everything
-",
+                query: "SELECT * FROM Everything",
                 extractor: |row| SelectEverythingNullBorrowed {
                     bigserial_: row.get(13),
                     bingint_: row.get(11),
@@ -2256,8 +2236,7 @@ pub mod queries {
             let stmt = client
                 .prepare(
                     "INSERT INTO Everything (bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
-    VALUES ($3, $4, $6, $24, $12, $25, $20, $15, $13, $23, $21, $2, $14, $1, $22, $9, $19, $10, $8, $26, $33, $5, $28, $30, $31, $29, $7, $27, $16, $17, $32, $11, $18);
-",
+    VALUES ($3, $4, $6, $24, $12, $25, $20, $15, $13, $23, $21, $2, $14, $1, $22, $9, $19, $10, $8, $26, $33, $5, $28, $30, $31, $29, $7, $27, $16, $17, $32, $11, $18)",
                 )
                 .await?;
             client
@@ -2307,8 +2286,7 @@ pub mod queries {
             SelectEverythingArrayQuery {
                 client,
                 params: [],
-                query: "SELECT * FROM EverythingArray
-",
+                query: "SELECT * FROM EverythingArray",
                 extractor: |row| SelectEverythingArrayBorrowed {
                     bingint_: row.get(7),
                     bool_: row.get(0),
@@ -2347,8 +2325,7 @@ pub mod queries {
             SelectEverythingArrayNullQuery {
                 client,
                 params: [],
-                query: "SELECT * FROM EverythingArray
-",
+                query: "SELECT * FROM EverythingArray",
                 extractor: |row| SelectEverythingArrayNullBorrowed {
                     bingint_: row.get(7),
                     bool_: row.get(0),
@@ -2414,8 +2391,7 @@ pub mod queries {
             let stmt = client
                 .prepare(
                     "INSERT INTO EverythingArray (bool_, boolean_, char_, smallint_, int2_, int_, int4_, bingint_, int8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
-    VALUES ($2, $3, $5, $19, $11, $14, $12, $1, $13, $8, $18, $9, $7, $20, $27, $4, $22, $24, $25, $23, $6, $21, $15, $16, $26, $10, $17);
-",
+    VALUES ($2, $3, $5, $19, $11, $14, $12, $1, $13, $8, $18, $9, $7, $20, $27, $4, $22, $24, $25, $23, $6, $21, $15, $16, $26, $10, $17)",
                 )
                 .await?;
             client
@@ -2459,8 +2435,7 @@ pub mod queries {
             SelectNightmareQuery {
                 client,
                 params: [],
-                query: "SELECT * FROM nightmare;
-",
+                query: "SELECT * FROM nightmare",
                 extractor: |row| SelectNightmareBorrowed {
                     composite: row.get(0),
                 },
@@ -2472,9 +2447,754 @@ pub mod queries {
             composite: &'a super::super::types::public::NightmareCompositeParams<'a>,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = client
-                .prepare("INSERT INTO nightmare (composite) VALUES ($1);")
+                .prepare("INSERT INTO nightmare (composite) VALUES ($1)")
                 .await?;
             client.execute(&stmt, &[composite]).await
+        }
+    }
+    pub mod syntax {
+        use cornucopia_client::GenericClient;
+        use futures::{StreamExt, TryStreamExt};
+        #[derive(Debug)]
+        pub struct ImplicitCompactParams<'a> {
+            pub name: Option<&'a str>,
+            pub price: Option<f64>,
+        }
+        impl<'a> ImplicitCompactParams<'a> {
+            pub fn implicit_compact<C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> ImplicitCompactQuery<'a, C, ImplicitCompact, 2> {
+                implicit_compact(client, &self.name, &self.price)
+            }
+        }
+        #[derive(Debug)]
+        pub struct ImplicitSpacedParams<'a> {
+            pub name: Option<&'a str>,
+            pub price: Option<f64>,
+        }
+        impl<'a> ImplicitSpacedParams<'a> {
+            pub fn implicit_spaced<C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> ImplicitSpacedQuery<'a, C, ImplicitSpaced, 2> {
+                implicit_spaced(client, &self.name, &self.price)
+            }
+        }
+        #[derive(Debug)]
+        pub struct Params<'a> {
+            pub name: &'a str,
+            pub price: f64,
+        }
+        impl<'a> Params<'a> {
+            pub fn named_compact<C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> RowQuery<'a, C, Row, 2> {
+                named_compact(client, &self.name, &self.price)
+            }
+            pub fn named_spaced<C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> RowQuery<'a, C, Row, 2> {
+                named_spaced(client, &self.name, &self.price)
+            }
+        }
+        #[derive(Debug, Clone, Copy)]
+        pub struct TrickySqlParams {
+            pub price: f64,
+        }
+        impl TrickySqlParams {
+            pub async fn tricky_sql<'a, C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> Result<u64, tokio_postgres::Error> {
+                tricky_sql(client, &self.price).await
+            }
+        }
+        #[derive(Debug, Clone, Copy)]
+        pub struct TrickySql1Params {
+            pub price: f64,
+        }
+        impl TrickySql1Params {
+            pub async fn tricky_sql1<'a, C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> Result<u64, tokio_postgres::Error> {
+                tricky_sql1(client, &self.price).await
+            }
+        }
+        #[derive(Debug, Clone, Copy)]
+        pub struct TrickySql2Params {
+            pub price: f64,
+        }
+        impl TrickySql2Params {
+            pub async fn tricky_sql2<'a, C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> Result<u64, tokio_postgres::Error> {
+                tricky_sql2(client, &self.price).await
+            }
+        }
+        #[derive(Debug, Clone, Copy)]
+        pub struct TrickySql3Params {
+            pub price: f64,
+        }
+        impl TrickySql3Params {
+            pub async fn tricky_sql3<'a, C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> Result<u64, tokio_postgres::Error> {
+                tricky_sql3(client, &self.price).await
+            }
+        }
+        #[derive(Debug, Clone, Copy)]
+        pub struct TrickySql4Params {
+            pub price: f64,
+        }
+        impl TrickySql4Params {
+            pub async fn tricky_sql4<'a, C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> Result<u64, tokio_postgres::Error> {
+                tricky_sql4(client, &self.price).await
+            }
+        }
+        #[derive(Debug, Clone, Copy)]
+        pub struct TrickySql6Params {
+            pub price: f64,
+        }
+        impl TrickySql6Params {
+            pub async fn tricky_sql6<'a, C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> Result<u64, tokio_postgres::Error> {
+                tricky_sql6(client, &self.price).await
+            }
+        }
+        #[derive(Debug, Clone, Copy)]
+        pub struct TrickySql7Params {
+            pub price: f64,
+        }
+        impl TrickySql7Params {
+            pub async fn tricky_sql7<'a, C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> Result<u64, tokio_postgres::Error> {
+                tricky_sql7(client, &self.price).await
+            }
+        }
+        #[derive(Debug, Clone, Copy)]
+        pub struct TrickySql8Params {
+            pub price: f64,
+        }
+        impl TrickySql8Params {
+            pub async fn tricky_sql8<'a, C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> Result<u64, tokio_postgres::Error> {
+                tricky_sql8(client, &self.price).await
+            }
+        }
+        #[derive(Debug, Clone, Copy)]
+        pub struct TrickySql9Params {
+            pub price: f64,
+        }
+        impl TrickySql9Params {
+            pub async fn tricky_sql9<'a, C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> Result<u64, tokio_postgres::Error> {
+                tricky_sql9(client, &self.price).await
+            }
+        }
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct SelectCompact {
+            pub composite: super::super::types::public::CloneComposite,
+        }
+        pub struct SelectCompactBorrowed<'a> {
+            pub composite: super::super::types::public::CloneCompositeBorrowed<'a>,
+        }
+        impl<'a> From<SelectCompactBorrowed<'a>> for SelectCompact {
+            fn from(SelectCompactBorrowed { composite }: SelectCompactBorrowed<'a>) -> Self {
+                Self {
+                    composite: composite.into(),
+                }
+            }
+        }
+        pub struct SelectCompactQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> SelectCompactBorrowed,
+            mapper: fn(SelectCompactBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> SelectCompactQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(
+                self,
+                mapper: fn(SelectCompactBorrowed) -> R,
+            ) -> SelectCompactQuery<'a, C, R, N> {
+                SelectCompactQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+                self.client.prepare(self.query).await
+            }
+            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                let row = self.client.query_one(&stmt, &self.params).await?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.stream().await?.try_collect().await
+            }
+            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub async fn stream(
+                self,
+            ) -> Result<
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
+                let stmt = self.stmt().await?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .await?
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                    .into_stream();
+                Ok(stream)
+            }
+        }
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct SelectSpaced {
+            pub composite: super::super::types::public::CloneComposite,
+        }
+        pub struct SelectSpacedBorrowed<'a> {
+            pub composite: super::super::types::public::CloneCompositeBorrowed<'a>,
+        }
+        impl<'a> From<SelectSpacedBorrowed<'a>> for SelectSpaced {
+            fn from(SelectSpacedBorrowed { composite }: SelectSpacedBorrowed<'a>) -> Self {
+                Self {
+                    composite: composite.into(),
+                }
+            }
+        }
+        pub struct SelectSpacedQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> SelectSpacedBorrowed,
+            mapper: fn(SelectSpacedBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> SelectSpacedQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(
+                self,
+                mapper: fn(SelectSpacedBorrowed) -> R,
+            ) -> SelectSpacedQuery<'a, C, R, N> {
+                SelectSpacedQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+                self.client.prepare(self.query).await
+            }
+            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                let row = self.client.query_one(&stmt, &self.params).await?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.stream().await?.try_collect().await
+            }
+            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub async fn stream(
+                self,
+            ) -> Result<
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
+                let stmt = self.stmt().await?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .await?
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                    .into_stream();
+                Ok(stream)
+            }
+        }
+        #[derive(Debug, Clone, PartialEq, Copy)]
+        pub struct ImplicitCompact {
+            pub id: Option<i32>,
+        }
+        pub struct ImplicitCompactQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> ImplicitCompact,
+            mapper: fn(ImplicitCompact) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> ImplicitCompactQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(
+                self,
+                mapper: fn(ImplicitCompact) -> R,
+            ) -> ImplicitCompactQuery<'a, C, R, N> {
+                ImplicitCompactQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+                self.client.prepare(self.query).await
+            }
+            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                let row = self.client.query_one(&stmt, &self.params).await?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.stream().await?.try_collect().await
+            }
+            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub async fn stream(
+                self,
+            ) -> Result<
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
+                let stmt = self.stmt().await?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .await?
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                    .into_stream();
+                Ok(stream)
+            }
+        }
+        #[derive(Debug, Clone, PartialEq, Copy)]
+        pub struct ImplicitSpaced {
+            pub id: Option<i32>,
+        }
+        pub struct ImplicitSpacedQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> ImplicitSpaced,
+            mapper: fn(ImplicitSpaced) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> ImplicitSpacedQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(
+                self,
+                mapper: fn(ImplicitSpaced) -> R,
+            ) -> ImplicitSpacedQuery<'a, C, R, N> {
+                ImplicitSpacedQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+                self.client.prepare(self.query).await
+            }
+            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                let row = self.client.query_one(&stmt, &self.params).await?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.stream().await?.try_collect().await
+            }
+            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub async fn stream(
+                self,
+            ) -> Result<
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
+                let stmt = self.stmt().await?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .await?
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                    .into_stream();
+                Ok(stream)
+            }
+        }
+        #[derive(Debug, Clone, PartialEq, Copy)]
+        pub struct Row {
+            pub id: i32,
+        }
+        pub struct RowQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> Row,
+            mapper: fn(Row) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> RowQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(self, mapper: fn(Row) -> R) -> RowQuery<'a, C, R, N> {
+                RowQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+                self.client.prepare(self.query).await
+            }
+            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                let row = self.client.query_one(&stmt, &self.params).await?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.stream().await?.try_collect().await
+            }
+            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub async fn stream(
+                self,
+            ) -> Result<
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
+                let stmt = self.stmt().await?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .await?
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                    .into_stream();
+                Ok(stream)
+            }
+        }
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct Syntax {
+            pub price: f64,
+            pub trick_y: String,
+        }
+        pub struct SyntaxBorrowed<'a> {
+            pub price: f64,
+            pub trick_y: &'a str,
+        }
+        impl<'a> From<SyntaxBorrowed<'a>> for Syntax {
+            fn from(SyntaxBorrowed { price, trick_y }: SyntaxBorrowed<'a>) -> Self {
+                Self {
+                    price,
+                    trick_y: trick_y.into(),
+                }
+            }
+        }
+        pub struct SyntaxQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> SyntaxBorrowed,
+            mapper: fn(SyntaxBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> SyntaxQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(self, mapper: fn(SyntaxBorrowed) -> R) -> SyntaxQuery<'a, C, R, N> {
+                SyntaxQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+                self.client.prepare(self.query).await
+            }
+            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                let row = self.client.query_one(&stmt, &self.params).await?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.stream().await?.try_collect().await
+            }
+            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub async fn stream(
+                self,
+            ) -> Result<
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
+                let stmt = self.stmt().await?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::slice_iter(&self.params))
+                    .await?
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                    .into_stream();
+                Ok(stream)
+            }
+        }
+        pub fn select_compact<'a, C: GenericClient>(
+            client: &'a C,
+        ) -> SelectCompactQuery<'a, C, SelectCompact, 0> {
+            SelectCompactQuery {
+                client,
+                params: [],
+                query: "SELECT * FROM clone",
+                extractor: |row| SelectCompactBorrowed {
+                    composite: row.get(0),
+                },
+                mapper: |it| SelectCompact::from(it),
+            }
+        }
+        pub fn select_spaced<'a, C: GenericClient>(
+            client: &'a C,
+        ) -> SelectSpacedQuery<'a, C, SelectSpaced, 0> {
+            SelectSpacedQuery {
+                client,
+                params: [],
+                query: "      SELECT * FROM clone ",
+                extractor: |row| SelectSpacedBorrowed {
+                    composite: row.get(0),
+                },
+                mapper: |it| SelectSpaced::from(it),
+            }
+        }
+        pub fn implicit_compact<'a, C: GenericClient>(
+            client: &'a C,
+            name: &'a Option<&'a str>,
+            price: &'a Option<f64>,
+        ) -> ImplicitCompactQuery<'a, C, ImplicitCompact, 2> {
+            ImplicitCompactQuery {
+                client,
+                params: [name, price],
+                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id",
+                extractor: |row| ImplicitCompact { id: row.get(0) },
+                mapper: |it| ImplicitCompact::from(it),
+            }
+        }
+        pub fn implicit_spaced<'a, C: GenericClient>(
+            client: &'a C,
+            name: &'a Option<&'a str>,
+            price: &'a Option<f64>,
+        ) -> ImplicitSpacedQuery<'a, C, ImplicitSpaced, 2> {
+            ImplicitSpacedQuery {
+                client,
+                params: [name, price],
+                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id",
+                extractor: |row| ImplicitSpaced { id: row.get(0) },
+                mapper: |it| ImplicitSpaced::from(it),
+            }
+        }
+        pub fn named_compact<'a, C: GenericClient>(
+            client: &'a C,
+            name: &'a &'a str,
+            price: &'a f64,
+        ) -> RowQuery<'a, C, Row, 2> {
+            RowQuery {
+                client,
+                params: [name, price],
+                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id",
+                extractor: |row| Row { id: row.get(0) },
+                mapper: |it| Row::from(it),
+            }
+        }
+        pub fn named_spaced<'a, C: GenericClient>(
+            client: &'a C,
+            name: &'a &'a str,
+            price: &'a f64,
+        ) -> RowQuery<'a, C, Row, 2> {
+            RowQuery {
+                client,
+                params: [name, price],
+                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id",
+                extractor: |row| Row { id: row.get(0) },
+                mapper: |it| Row::from(it),
+            }
+        }
+        pub async fn tricky_sql<'a, C: GenericClient>(
+            client: &'a C,
+            price: &'a f64,
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a bind_param\', $1)",
+                )
+                .await?;
+            client.execute(&stmt, &[price]).await
+        }
+        pub async fn tricky_sql1<'a, C: GenericClient>(
+            client: &'a C,
+            price: &'a f64,
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a :bind_param', $1)",
+                )
+                .await?;
+            client.execute(&stmt, &[price]).await
+        }
+        pub async fn tricky_sql2<'a, C: GenericClient>(
+            client: &'a C,
+            price: &'a f64,
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a '':bind_param''', $1)",
+                )
+                .await?;
+            client.execute(&stmt, &[price]).await
+        }
+        pub async fn tricky_sql3<'a, C: GenericClient>(
+            client: &'a C,
+            price: &'a f64,
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO syntax (\"trick:y\", price)  VALUES ($$this is not a :bind_param$$, $1)",
+                )
+                .await?;
+            client.execute(&stmt, &[price]).await
+        }
+        pub async fn tricky_sql4<'a, C: GenericClient>(
+            client: &'a C,
+            price: &'a f64,
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO syntax (\"trick:y\", price) VALUES ($tag$this is not a :bind_param$tag$, $1)",
+                )
+                .await?;
+            client.execute(&stmt, &[price]).await
+        }
+        pub async fn tricky_sql6<'a, C: GenericClient>(
+            client: &'a C,
+            price: &'a f64,
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO syntax (\"trick:y\", price) VALUES (e'this is not a '':bind_param''', $1)",
+                )
+                .await?;
+            client.execute(&stmt, &[price]).await
+        }
+        pub async fn tricky_sql7<'a, C: GenericClient>(
+            client: &'a C,
+            price: &'a f64,
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO syntax (\"trick:y\", price) VALUES (E'this is not a \':bind_param\'', $1)",
+                )
+                .await?;
+            client.execute(&stmt, &[price]).await
+        }
+        pub async fn tricky_sql8<'a, C: GenericClient>(
+            client: &'a C,
+            price: &'a f64,
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO syntax (\"trick:y\", price) VALUES (e'this is ''not'' a \':bind_param\'', $1)",
+                )
+                .await?;
+            client.execute(&stmt, &[price]).await
+        }
+        pub async fn tricky_sql9<'a, C: GenericClient>(
+            client: &'a C,
+            price: &'a f64,
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare(
+                    "INSERT INTO syntax (\"trick:y\", price) VALUES (E'this is \'not\' a \':bind_param\'', $1)",
+                )
+                .await?;
+            client.execute(&stmt, &[price]).await
+        }
+        pub fn syntax<'a, C: GenericClient>(client: &'a C) -> SyntaxQuery<'a, C, Syntax, 0> {
+            SyntaxQuery {
+                client,
+                params: [],
+                query: "SELECT * FROM syntax",
+                extractor: |row| SyntaxBorrowed {
+                    price: row.get(1),
+                    trick_y: row.get(0),
+                },
+                mapper: |it| Syntax::from(it),
+            }
         }
     }
 }
