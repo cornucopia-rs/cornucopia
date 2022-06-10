@@ -686,8 +686,8 @@ pub mod queries {
         use futures::{StreamExt, TryStreamExt};
         #[derive(Debug)]
         pub struct InsertNightmareDomainParams<'a> {
-            pub arr: &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
-            pub json: postgres_types::Json<&'a serde_json::value::RawValue>,
+            pub arr: &'a [&'a serde_json::value::Value],
+            pub json: &'a serde_json::value::Value,
             pub nb: i32,
             pub txt: &'a str,
         }
@@ -903,8 +903,8 @@ pub mod queries {
         }
         pub async fn insert_nightmare_domain<'a, C: GenericClient>(
             client: &'a C,
-            arr: &'a &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
-            json: &'a postgres_types::Json<&'a serde_json::value::RawValue>,
+            arr: &'a &'a [&'a serde_json::value::Value],
+            json: &'a &'a serde_json::value::Value,
             nb: &'a i32,
             txt: &'a &'a str,
         ) -> Result<u64, tokio_postgres::Error> {
@@ -1348,8 +1348,8 @@ pub mod queries {
             pub int4_: i32,
             pub int8_: i64,
             pub int_: i32,
-            pub json_: postgres_types::Json<&'a serde_json::value::RawValue>,
-            pub jsonb_: postgres_types::Json<&'a serde_json::value::RawValue>,
+            pub json_: &'a serde_json::value::Value,
+            pub jsonb_: &'a serde_json::value::Value,
             pub macaddr_: eui48::MacAddress,
             pub real_: f32,
             pub serial2_: i16,
@@ -1427,8 +1427,8 @@ pub mod queries {
             pub int4_: &'a [i32],
             pub int8_: &'a [i64],
             pub int_: &'a [i32],
-            pub json_: &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
-            pub jsonb_: &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
+            pub json_: &'a [&'a serde_json::value::Value],
+            pub jsonb_: &'a [&'a serde_json::value::Value],
             pub macaddr_: &'a [eui48::MacAddress],
             pub real_: &'a [f32],
             pub smallint_: &'a [i16],
@@ -2470,8 +2470,8 @@ pub mod queries {
             int4_: &'a i32,
             int8_: &'a i64,
             int_: &'a i32,
-            json_: &'a postgres_types::Json<&'a serde_json::value::RawValue>,
-            jsonb_: &'a postgres_types::Json<&'a serde_json::value::RawValue>,
+            json_: &'a &'a serde_json::value::Value,
+            jsonb_: &'a &'a serde_json::value::Value,
             macaddr_: &'a eui48::MacAddress,
             real_: &'a f32,
             serial2_: &'a i16,
@@ -2630,8 +2630,8 @@ pub mod queries {
             int4_: &'a &'a [i32],
             int8_: &'a &'a [i64],
             int_: &'a &'a [i32],
-            json_: &'a &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
-            jsonb_: &'a &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
+            json_: &'a &'a [&'a serde_json::value::Value],
+            jsonb_: &'a &'a [&'a serde_json::value::Value],
             macaddr_: &'a &'a [eui48::MacAddress],
             real_: &'a &'a [f32],
             smallint_: &'a &'a [i16],

@@ -145,7 +145,11 @@ impl CornucopiaType {
                 Type::BYTEA => format!("&{lifetime} [u8]"),
                 Type::TEXT | Type::VARCHAR => format!("&{lifetime} str"),
                 Type::JSON | Type::JSONB => {
-                    format!("postgres_types::Json<&{lifetime} serde_json::value::RawValue>")
+                    if for_params {
+                        format!("&{lifetime} serde_json::value::Value")
+                    } else {
+                        format!("postgres_types::Json<&{lifetime} serde_json::value::RawValue>")
+                    }
                 }
                 _ => rust_name.to_string(),
             },

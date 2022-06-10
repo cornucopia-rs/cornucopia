@@ -170,12 +170,11 @@ pub fn test_copy(client: &mut Client) {
 // Test domain erasing
 pub fn domain(client: &mut Client) {
     let json: Value = serde_json::from_str("{}").unwrap();
-    let raw_json = &*serde_json::value::to_raw_value(&json).unwrap();
 
     // Erased domain not null
     let params = InsertNightmareDomainParams {
-        arr: &[Json(raw_json)],
-        json: Json(raw_json),
+        arr: &[&json],
+        json: &json,
         nb: 42,
         txt: "Hello world",
     };
@@ -210,7 +209,6 @@ pub fn test_stress(client: &mut Client) {
     )
     .unwrap();
     let json: Value = serde_json::from_str("{}").unwrap();
-    let raw_json = &*serde_json::value::to_raw_value(&json).unwrap();
 
     // Every supported type
     let expected = SelectEverything {
@@ -264,8 +262,8 @@ pub fn test_stress(client: &mut Client) {
         int4_: expected.int4_,
         int8_: expected.int8_,
         int_: expected.int_,
-        json_: Json(raw_json),
-        jsonb_: Json(raw_json),
+        json_: &json,
+        jsonb_: &json,
         macaddr_: expected.macaddr_,
         real_: expected.real_,
         serial2_: expected.serial2_,
@@ -312,7 +310,7 @@ pub fn test_stress(client: &mut Client) {
         date_: vec![time::Date::from_calendar_date(1999, time::Month::January, 8).unwrap()],
         time_: vec![time::Time::from_hms_milli(4, 5, 6, 789).unwrap()],
         json_: vec![json.clone()],
-        jsonb_: vec![json],
+        jsonb_: vec![json.clone()],
         uuid_: vec![Uuid::parse_str("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11").unwrap()],
         inet_: vec![IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))],
         macaddr_: vec![MacAddress::new([8, 0, 43, 1, 2, 3])],
@@ -336,8 +334,8 @@ pub fn test_stress(client: &mut Client) {
         int4_: &expected.int4_,
         int8_: &expected.int8_,
         int_: &expected.int_,
-        json_: &[Json(raw_json)],
-        jsonb_: &[Json(raw_json)],
+        json_: &[&json],
+        jsonb_: &[&json],
         macaddr_: &expected.macaddr_,
         real_: &expected.real_,
         smallint_: &expected.smallint_,
