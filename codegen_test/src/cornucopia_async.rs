@@ -4,177 +4,6 @@
 #![allow(dead_code)]
 pub mod types {
     pub mod public {
-        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
-        #[postgres(name = "clone_composite")]
-        pub struct CloneComposite {
-            pub first: i32,
-            pub second: String,
-        }
-        #[derive(Debug)]
-        pub struct CloneCompositeBorrowed<'a> {
-            pub first: i32,
-            pub second: &'a str,
-        }
-        impl<'a> From<CloneCompositeBorrowed<'a>> for CloneComposite {
-            fn from(CloneCompositeBorrowed { first, second }: CloneCompositeBorrowed<'a>) -> Self {
-                Self {
-                    first,
-                    second: second.into(),
-                }
-            }
-        }
-        impl<'a> postgres_types::FromSql<'a> for CloneCompositeBorrowed<'a> {
-            fn from_sql(
-                ty: &postgres_types::Type,
-                out: &'a [u8],
-            ) -> Result<CloneCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let fields = match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                let mut out = out;
-                let num_fields = postgres_types::private::read_be_i32(&mut out)?;
-                let _oid = postgres_types::private::read_be_i32(&mut out)?;
-                let first = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
-                let _oid = postgres_types::private::read_be_i32(&mut out)?;
-                let second = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
-                Ok(CloneCompositeBorrowed { first, second })
-            }
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                ty.name() == "clone_composite" && ty.schema() == "public"
-            }
-        }
-        impl<'a> postgres_types::ToSql for CloneCompositeBorrowed<'a> {
-            fn to_sql(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let fields = match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
-                for field in fields {
-                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
-                    let base = out.len();
-                    out.extend_from_slice(&[0; 4]);
-                    let r = match field.name() {
-                        "first" => postgres_types::ToSql::to_sql(&self.first, field.type_(), out),
-                        "second" => postgres_types::ToSql::to_sql(&self.second, field.type_(), out),
-                        _ => unreachable!(),
-                    };
-                    let count = match r? {
-                        postgres_types::IsNull::Yes => -1,
-                        postgres_types::IsNull::No => {
-                            let len = out.len() - base - 4;
-                            if len > i32::max_value() as usize {
-                                return Err(Into::into("value too large to transmit"));
-                            }
-                            len as i32
-                        }
-                    };
-                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
-                }
-                Ok(postgres_types::IsNull::No)
-            }
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                if ty.name() != "clone_composite" {
-                    return false;
-                }
-                match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 2usize {
-                            return false;
-                        }
-                        fields.iter().all(|f| match f.name() {
-                            "first" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
-                            "second" => <&'a str as postgres_types::ToSql>::accepts(f.type_()),
-                            _ => false,
-                        })
-                    }
-                    _ => false,
-                }
-            }
-            fn to_sql_checked(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                postgres_types::__to_sql_checked(self, ty, out)
-            }
-        }
-        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Copy, Clone, PartialEq)]
-        #[postgres(name = "copy_composite")]
-        pub struct CopyComposite {
-            pub first: i32,
-            pub second: f64,
-        }
-        impl<'a> postgres_types::ToSql for CopyComposite {
-            fn to_sql(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let fields = match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
-                for field in fields {
-                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
-                    let base = out.len();
-                    out.extend_from_slice(&[0; 4]);
-                    let r = match field.name() {
-                        "first" => postgres_types::ToSql::to_sql(&self.first, field.type_(), out),
-                        "second" => postgres_types::ToSql::to_sql(&self.second, field.type_(), out),
-                        _ => unreachable!(),
-                    };
-                    let count = match r? {
-                        postgres_types::IsNull::Yes => -1,
-                        postgres_types::IsNull::No => {
-                            let len = out.len() - base - 4;
-                            if len > i32::max_value() as usize {
-                                return Err(Into::into("value too large to transmit"));
-                            }
-                            len as i32
-                        }
-                    };
-                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
-                }
-                Ok(postgres_types::IsNull::No)
-            }
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                if ty.name() != "copy_composite" {
-                    return false;
-                }
-                match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 2usize {
-                            return false;
-                        }
-                        fields.iter().all(|f| match f.name() {
-                            "first" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
-                            "second" => <f64 as postgres_types::ToSql>::accepts(f.type_()),
-                            _ => false,
-                        })
-                    }
-                    _ => false,
-                }
-            }
-            fn to_sql_checked(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                postgres_types::__to_sql_checked(self, ty, out)
-            }
-        }
         #[derive(
             serde::Serialize,
             Debug,
@@ -475,6 +304,177 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
+        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
+        #[postgres(name = "clone_composite")]
+        pub struct CloneComposite {
+            pub first: i32,
+            pub second: String,
+        }
+        #[derive(Debug)]
+        pub struct CloneCompositeBorrowed<'a> {
+            pub first: i32,
+            pub second: &'a str,
+        }
+        impl<'a> From<CloneCompositeBorrowed<'a>> for CloneComposite {
+            fn from(CloneCompositeBorrowed { first, second }: CloneCompositeBorrowed<'a>) -> Self {
+                Self {
+                    first,
+                    second: second.into(),
+                }
+            }
+        }
+        impl<'a> postgres_types::FromSql<'a> for CloneCompositeBorrowed<'a> {
+            fn from_sql(
+                ty: &postgres_types::Type,
+                out: &'a [u8],
+            ) -> Result<CloneCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                let mut out = out;
+                let num_fields = postgres_types::private::read_be_i32(&mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let first = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let second = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
+                Ok(CloneCompositeBorrowed { first, second })
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                ty.name() == "clone_composite" && ty.schema() == "public"
+            }
+        }
+        impl<'a> postgres_types::ToSql for CloneCompositeBorrowed<'a> {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {
+                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = out.len();
+                    out.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {
+                        "first" => postgres_types::ToSql::to_sql(&self.first, field.type_(), out),
+                        "second" => postgres_types::ToSql::to_sql(&self.second, field.type_(), out),
+                        _ => unreachable!(),
+                    };
+                    let count = match r? {
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {
+                            let len = out.len() - base - 4;
+                            if len > i32::max_value() as usize {
+                                return Err(Into::into("value too large to transmit"));
+                            }
+                            len as i32
+                        }
+                    };
+                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                }
+                Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "clone_composite" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != 2usize {
+                            return false;
+                        }
+                        fields.iter().all(|f| match f.name() {
+                            "first" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+                            "second" => <&'a str as postgres_types::ToSql>::accepts(f.type_()),
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Copy, Clone, PartialEq)]
+        #[postgres(name = "copy_composite")]
+        pub struct CopyComposite {
+            pub first: i32,
+            pub second: f64,
+        }
+        impl<'a> postgres_types::ToSql for CopyComposite {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {
+                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = out.len();
+                    out.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {
+                        "first" => postgres_types::ToSql::to_sql(&self.first, field.type_(), out),
+                        "second" => postgres_types::ToSql::to_sql(&self.second, field.type_(), out),
+                        _ => unreachable!(),
+                    };
+                    let count = match r? {
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {
+                            let len = out.len() - base - 4;
+                            if len > i32::max_value() as usize {
+                                return Err(Into::into("value too large to transmit"));
+                            }
+                            len as i32
+                        }
+                    };
+                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                }
+                Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "copy_composite" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != 2usize {
+                            return false;
+                        }
+                        fields.iter().all(|f| match f.name() {
+                            "first" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+                            "second" => <f64 as postgres_types::ToSql>::accepts(f.type_()),
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
     }
 }
 pub mod queries {
@@ -686,8 +686,8 @@ pub mod queries {
         use futures::{StreamExt, TryStreamExt};
         #[derive(Debug)]
         pub struct InsertNightmareDomainParams<'a> {
-            pub arr: &'a [cornucopia_client::Json<&'a serde_json::value::RawValue>],
-            pub json: cornucopia_client::Json<&'a serde_json::value::RawValue>,
+            pub arr: &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
+            pub json: postgres_types::Json<&'a serde_json::value::RawValue>,
             pub nb: i32,
             pub txt: &'a str,
         }
@@ -701,17 +701,17 @@ pub mod queries {
         }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct SelectNightmareDomain {
-            pub arr: Vec<cornucopia_client::Json<serde_json::Value>>,
-            pub json: cornucopia_client::Json<serde_json::Value>,
+            pub arr: Vec<serde_json::Value>,
+            pub json: serde_json::Value,
             pub nb: i32,
             pub txt: String,
         }
         pub struct SelectNightmareDomainBorrowed<'a> {
             pub arr: cornucopia_client::ArrayIterator<
                 'a,
-                cornucopia_client::Json<&'a serde_json::value::RawValue>,
+                postgres_types::Json<&'a serde_json::value::RawValue>,
             >,
-            pub json: cornucopia_client::Json<&'a serde_json::value::RawValue>,
+            pub json: postgres_types::Json<&'a serde_json::value::RawValue>,
             pub nb: i32,
             pub txt: &'a str,
         }
@@ -723,17 +723,9 @@ pub mod queries {
             ) -> Self {
                 Self {
                     arr: arr
-                        .map(|v| <cornucopia_client::Json<
-                            serde_json::Value,
-                        > as From<
-                            serde_json::Value,
-                        >>::from(serde_json::from_str(v.value().get()).unwrap()))
+                        .map(|v| serde_json::from_str(v.0.get()).unwrap())
                         .collect(),
-                    json: <cornucopia_client::Json<
-                        serde_json::Value,
-                    > as From<
-                        serde_json::Value,
-                    >>::from(serde_json::from_str(json.value().get()).unwrap()),
+                    json: serde_json::from_str(json.0.get()).unwrap(),
                     nb,
                     txt: txt.into(),
                 }
@@ -799,8 +791,8 @@ pub mod queries {
         }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct SelectNightmareDomainNull {
-            pub arr: Option<Vec<cornucopia_client::Json<serde_json::Value>>>,
-            pub json: Option<cornucopia_client::Json<serde_json::Value>>,
+            pub arr: Option<Vec<serde_json::Value>>,
+            pub json: Option<serde_json::Value>,
             pub nb: Option<i32>,
             pub txt: Option<String>,
         }
@@ -808,10 +800,10 @@ pub mod queries {
             pub arr: Option<
                 cornucopia_client::ArrayIterator<
                     'a,
-                    cornucopia_client::Json<&'a serde_json::value::RawValue>,
+                    postgres_types::Json<&'a serde_json::value::RawValue>,
                 >,
             >,
-            pub json: Option<cornucopia_client::Json<&'a serde_json::value::RawValue>>,
+            pub json: Option<postgres_types::Json<&'a serde_json::value::RawValue>>,
             pub nb: Option<i32>,
             pub txt: Option<&'a str>,
         }
@@ -826,22 +818,10 @@ pub mod queries {
             ) -> Self {
                 Self {
                     arr: arr.map(|v| {
-                        v.map(|v| {
-                            <cornucopia_client::Json<serde_json::Value> as From<
-                                serde_json::Value,
-                            >>::from(
-                                serde_json::from_str(v.value().get()).unwrap()
-                            )
-                        })
-                        .collect()
+                        v.map(|v| serde_json::from_str(v.0.get()).unwrap())
+                            .collect()
                     }),
-                    json: json.map(|v| {
-                        <cornucopia_client::Json<
-                            serde_json::Value,
-                        > as From<
-                            serde_json::Value,
-                        >>::from(serde_json::from_str(v.value().get()).unwrap())
-                    }),
+                    json: json.map(|v| serde_json::from_str(v.0.get()).unwrap()),
                     nb,
                     txt: txt.map(|v| v.into()),
                 }
@@ -923,8 +903,8 @@ pub mod queries {
         }
         pub async fn insert_nightmare_domain<'a, C: GenericClient>(
             client: &'a C,
-            arr: &'a &'a [cornucopia_client::Json<&'a serde_json::value::RawValue>],
-            json: &'a cornucopia_client::Json<&'a serde_json::value::RawValue>,
+            arr: &'a &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
+            json: &'a postgres_types::Json<&'a serde_json::value::RawValue>,
             nb: &'a i32,
             txt: &'a &'a str,
         ) -> Result<u64, tokio_postgres::Error> {
@@ -1368,8 +1348,8 @@ pub mod queries {
             pub int4_: i32,
             pub int8_: i64,
             pub int_: i32,
-            pub json_: cornucopia_client::Json<&'a serde_json::value::RawValue>,
-            pub jsonb_: cornucopia_client::Json<&'a serde_json::value::RawValue>,
+            pub json_: postgres_types::Json<&'a serde_json::value::RawValue>,
+            pub jsonb_: postgres_types::Json<&'a serde_json::value::RawValue>,
             pub macaddr_: eui48::MacAddress,
             pub real_: f32,
             pub serial2_: i16,
@@ -1447,8 +1427,8 @@ pub mod queries {
             pub int4_: &'a [i32],
             pub int8_: &'a [i64],
             pub int_: &'a [i32],
-            pub json_: &'a [cornucopia_client::Json<&'a serde_json::value::RawValue>],
-            pub jsonb_: &'a [cornucopia_client::Json<&'a serde_json::value::RawValue>],
+            pub json_: &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
+            pub jsonb_: &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
             pub macaddr_: &'a [eui48::MacAddress],
             pub real_: &'a [f32],
             pub smallint_: &'a [i16],
@@ -1528,8 +1508,8 @@ pub mod queries {
             pub int4_: i32,
             pub int8_: i64,
             pub int_: i32,
-            pub json_: cornucopia_client::Json<serde_json::Value>,
-            pub jsonb_: cornucopia_client::Json<serde_json::Value>,
+            pub json_: serde_json::Value,
+            pub jsonb_: serde_json::Value,
             pub macaddr_: eui48::MacAddress,
             pub real_: f32,
             pub serial2_: i16,
@@ -1563,8 +1543,8 @@ pub mod queries {
             pub int4_: i32,
             pub int8_: i64,
             pub int_: i32,
-            pub json_: cornucopia_client::Json<&'a serde_json::value::RawValue>,
-            pub jsonb_: cornucopia_client::Json<&'a serde_json::value::RawValue>,
+            pub json_: postgres_types::Json<&'a serde_json::value::RawValue>,
+            pub jsonb_: postgres_types::Json<&'a serde_json::value::RawValue>,
             pub macaddr_: eui48::MacAddress,
             pub real_: f32,
             pub serial2_: i16,
@@ -1636,16 +1616,8 @@ pub mod queries {
                     int4_,
                     int8_,
                     int_,
-                    json_: <cornucopia_client::Json<serde_json::Value> as From<
-                        serde_json::Value,
-                    >>::from(
-                        serde_json::from_str(json_.value().get()).unwrap()
-                    ),
-                    jsonb_: <cornucopia_client::Json<serde_json::Value> as From<
-                        serde_json::Value,
-                    >>::from(
-                        serde_json::from_str(jsonb_.value().get()).unwrap()
-                    ),
+                    json_: serde_json::from_str(json_.0.get()).unwrap(),
+                    jsonb_: serde_json::from_str(jsonb_.0.get()).unwrap(),
                     macaddr_,
                     real_,
                     serial2_,
@@ -1740,8 +1712,8 @@ pub mod queries {
             pub int4_: Option<i32>,
             pub int8_: Option<i64>,
             pub int_: Option<i32>,
-            pub json_: Option<cornucopia_client::Json<serde_json::Value>>,
-            pub jsonb_: Option<cornucopia_client::Json<serde_json::Value>>,
+            pub json_: Option<serde_json::Value>,
+            pub jsonb_: Option<serde_json::Value>,
             pub macaddr_: Option<eui48::MacAddress>,
             pub real_: Option<f32>,
             pub serial2_: Option<i16>,
@@ -1775,8 +1747,8 @@ pub mod queries {
             pub int4_: Option<i32>,
             pub int8_: Option<i64>,
             pub int_: Option<i32>,
-            pub json_: Option<cornucopia_client::Json<&'a serde_json::value::RawValue>>,
-            pub jsonb_: Option<cornucopia_client::Json<&'a serde_json::value::RawValue>>,
+            pub json_: Option<postgres_types::Json<&'a serde_json::value::RawValue>>,
+            pub jsonb_: Option<postgres_types::Json<&'a serde_json::value::RawValue>>,
             pub macaddr_: Option<eui48::MacAddress>,
             pub real_: Option<f32>,
             pub serial2_: Option<i16>,
@@ -1848,20 +1820,8 @@ pub mod queries {
                     int4_,
                     int8_,
                     int_,
-                    json_: json_.map(|v| {
-                        <cornucopia_client::Json<
-                            serde_json::Value,
-                        > as From<
-                            serde_json::Value,
-                        >>::from(serde_json::from_str(v.value().get()).unwrap())
-                    }),
-                    jsonb_: jsonb_.map(|v| {
-                        <cornucopia_client::Json<
-                            serde_json::Value,
-                        > as From<
-                            serde_json::Value,
-                        >>::from(serde_json::from_str(v.value().get()).unwrap())
-                    }),
+                    json_: json_.map(|v| serde_json::from_str(v.0.get()).unwrap()),
+                    jsonb_: jsonb_.map(|v| serde_json::from_str(v.0.get()).unwrap()),
                     macaddr_,
                     real_,
                     serial2_,
@@ -1955,8 +1915,8 @@ pub mod queries {
             pub int4_: Vec<i32>,
             pub int8_: Vec<i64>,
             pub int_: Vec<i32>,
-            pub json_: Vec<cornucopia_client::Json<serde_json::Value>>,
-            pub jsonb_: Vec<cornucopia_client::Json<serde_json::Value>>,
+            pub json_: Vec<serde_json::Value>,
+            pub jsonb_: Vec<serde_json::Value>,
             pub macaddr_: Vec<eui48::MacAddress>,
             pub real_: Vec<f32>,
             pub smallint_: Vec<i16>,
@@ -1986,11 +1946,11 @@ pub mod queries {
             pub int_: cornucopia_client::ArrayIterator<'a, i32>,
             pub json_: cornucopia_client::ArrayIterator<
                 'a,
-                cornucopia_client::Json<&'a serde_json::value::RawValue>,
+                postgres_types::Json<&'a serde_json::value::RawValue>,
             >,
             pub jsonb_: cornucopia_client::ArrayIterator<
                 'a,
-                cornucopia_client::Json<&'a serde_json::value::RawValue>,
+                postgres_types::Json<&'a serde_json::value::RawValue>,
             >,
             pub macaddr_: cornucopia_client::ArrayIterator<'a, eui48::MacAddress>,
             pub real_: cornucopia_client::ArrayIterator<'a, f32>,
@@ -2054,22 +2014,10 @@ pub mod queries {
                     int8_: int8_.map(|v| v).collect(),
                     int_: int_.map(|v| v).collect(),
                     json_: json_
-                        .map(|v| {
-                            <cornucopia_client::Json<serde_json::Value> as From<
-                                serde_json::Value,
-                            >>::from(
-                                serde_json::from_str(v.value().get()).unwrap()
-                            )
-                        })
+                        .map(|v| serde_json::from_str(v.0.get()).unwrap())
                         .collect(),
                     jsonb_: jsonb_
-                        .map(|v| {
-                            <cornucopia_client::Json<serde_json::Value> as From<
-                                serde_json::Value,
-                            >>::from(
-                                serde_json::from_str(v.value().get()).unwrap()
-                            )
-                        })
+                        .map(|v| serde_json::from_str(v.0.get()).unwrap())
                         .collect(),
                     macaddr_: macaddr_.map(|v| v).collect(),
                     real_: real_.map(|v| v).collect(),
@@ -2159,8 +2107,8 @@ pub mod queries {
             pub int4_: Option<Vec<i32>>,
             pub int8_: Option<Vec<i64>>,
             pub int_: Option<Vec<i32>>,
-            pub json_: Option<Vec<cornucopia_client::Json<serde_json::Value>>>,
-            pub jsonb_: Option<Vec<cornucopia_client::Json<serde_json::Value>>>,
+            pub json_: Option<Vec<serde_json::Value>>,
+            pub jsonb_: Option<Vec<serde_json::Value>>,
             pub macaddr_: Option<Vec<eui48::MacAddress>>,
             pub real_: Option<Vec<f32>>,
             pub smallint_: Option<Vec<i16>>,
@@ -2191,13 +2139,13 @@ pub mod queries {
             pub json_: Option<
                 cornucopia_client::ArrayIterator<
                     'a,
-                    cornucopia_client::Json<&'a serde_json::value::RawValue>,
+                    postgres_types::Json<&'a serde_json::value::RawValue>,
                 >,
             >,
             pub jsonb_: Option<
                 cornucopia_client::ArrayIterator<
                     'a,
-                    cornucopia_client::Json<&'a serde_json::value::RawValue>,
+                    postgres_types::Json<&'a serde_json::value::RawValue>,
                 >,
             >,
             pub macaddr_: Option<cornucopia_client::ArrayIterator<'a, eui48::MacAddress>>,
@@ -2262,24 +2210,12 @@ pub mod queries {
                     int8_: int8_.map(|v| v.map(|v| v).collect()),
                     int_: int_.map(|v| v.map(|v| v).collect()),
                     json_: json_.map(|v| {
-                        v.map(|v| {
-                            <cornucopia_client::Json<serde_json::Value> as From<
-                                serde_json::Value,
-                            >>::from(
-                                serde_json::from_str(v.value().get()).unwrap()
-                            )
-                        })
-                        .collect()
+                        v.map(|v| serde_json::from_str(v.0.get()).unwrap())
+                            .collect()
                     }),
                     jsonb_: jsonb_.map(|v| {
-                        v.map(|v| {
-                            <cornucopia_client::Json<serde_json::Value> as From<
-                                serde_json::Value,
-                            >>::from(
-                                serde_json::from_str(v.value().get()).unwrap()
-                            )
-                        })
-                        .collect()
+                        v.map(|v| serde_json::from_str(v.0.get()).unwrap())
+                            .collect()
                     }),
                     macaddr_: macaddr_.map(|v| v.map(|v| v).collect()),
                     real_: real_.map(|v| v.map(|v| v).collect()),
@@ -2534,8 +2470,8 @@ pub mod queries {
             int4_: &'a i32,
             int8_: &'a i64,
             int_: &'a i32,
-            json_: &'a cornucopia_client::Json<&'a serde_json::value::RawValue>,
-            jsonb_: &'a cornucopia_client::Json<&'a serde_json::value::RawValue>,
+            json_: &'a postgres_types::Json<&'a serde_json::value::RawValue>,
+            jsonb_: &'a postgres_types::Json<&'a serde_json::value::RawValue>,
             macaddr_: &'a eui48::MacAddress,
             real_: &'a f32,
             serial2_: &'a i16,
@@ -2694,8 +2630,8 @@ pub mod queries {
             int4_: &'a &'a [i32],
             int8_: &'a &'a [i64],
             int_: &'a &'a [i32],
-            json_: &'a &'a [cornucopia_client::Json<&'a serde_json::value::RawValue>],
-            jsonb_: &'a &'a [cornucopia_client::Json<&'a serde_json::value::RawValue>],
+            json_: &'a &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
+            jsonb_: &'a &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
             macaddr_: &'a &'a [eui48::MacAddress],
             real_: &'a &'a [f32],
             smallint_: &'a &'a [i16],
