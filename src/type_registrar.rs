@@ -99,7 +99,7 @@ impl CornucopiaType {
 
         match self {
             CornucopiaType::Simple { pg_ty, .. } if matches!(*pg_ty, Type::JSON | Type::JSONB) => {
-                format!("postgres_types::Json(serde_json::from_str({name}.0.get()).unwrap())")
+                format!("<cornucopia_client::Json<serde_json::Value> as From<serde_json::Value>>::from(serde_json::from_str({name}.value().get()).unwrap())")
             }
             CornucopiaType::Array { inner, .. } => {
                 let inner = inner.owning_call("v", is_inner_nullable, false);
@@ -139,7 +139,7 @@ impl CornucopiaType {
                 Type::BYTEA => format!("&{lifetime} [u8]"),
                 Type::TEXT | Type::VARCHAR => format!("&{lifetime} str"),
                 Type::JSON | Type::JSONB => {
-                    format!("postgres_types::Json<&{lifetime} serde_json::value::RawValue>")
+                    format!("cornucopia_client::Json<&{lifetime} serde_json::value::RawValue>")
                 }
                 _ => rust_name.to_string(),
             },
@@ -243,7 +243,9 @@ impl TypeRegistrar {
                     Type::TIMESTAMPTZ => ("time::OffsetDateTime", true),
                     Type::DATE => ("time::Date", true),
                     Type::TIME => ("time::Time", true),
-                    Type::JSON | Type::JSONB => ("postgres_types::Json<serde_json::Value>", false),
+                    Type::JSON | Type::JSONB => {
+                        ("cornucopia_client::Json<serde_json::Value>", false)
+                    }
                     Type::UUID => ("uuid::Uuid", true),
                     Type::INET => ("std::net::IpAddr", true),
                     Type::MACADDR => ("eui48::MacAddress", true),

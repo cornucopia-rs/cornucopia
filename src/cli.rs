@@ -37,9 +37,12 @@ enum Action {
         destination: String,
         #[clap(subcommand)]
         action: Option<GenerateLiveAction>,
-        /// Generate synchronous rust code
+        /// Generate synchronous rust code. Async otherwise.
         #[clap(long)]
         sync: bool,
+        /// Derive serde's `Serialize` trait for generated types.
+        #[clap(long)]
+        serialize: bool,
     },
 }
 
@@ -87,11 +90,18 @@ pub fn run() -> Result<(), Error> {
             queries_path,
             destination,
             sync,
+            serialize,
         } => {
             match action {
                 Some(GenerateLiveAction::Live { url }) => {
                     let mut client = conn::from_url(&url)?;
-                    generate_live(&mut client, &queries_path, Some(&destination), !sync)?;
+                    generate_live(
+                        &mut client,
+                        &queries_path,
+                        Some(&destination),
+                        !sync,
+                        serialize,
+                    )?;
                 }
                 None => {
                     // Run the generate command. If the command is unsuccessful, cleanup Cornucopia's container
@@ -101,6 +111,7 @@ pub fn run() -> Result<(), Error> {
                         Some(&destination),
                         podman,
                         !sync,
+                        serialize,
                     ) {
                         container::cleanup(podman)?;
                         return Err(e);

@@ -61,6 +61,7 @@ pub fn generate_live(
     queries_path: &str,
     destination: Option<&str>,
     is_async: bool,
+    serialize: bool,
 ) -> Result<String, Error> {
     // Read
     let modules_info = read_query_modules(queries_path)?;
@@ -76,7 +77,7 @@ pub fn generate_live(
 
     // Generate
     let prepared_modules = prepare(client, validated_modules)?;
-    let generated_code = generate_internal(prepared_modules, is_async)?;
+    let generated_code = generate_internal(prepared_modules, is_async, serialize)?;
     // Write
     if let Some(d) = destination {
         write_generated_code(d, &generated_code)?
@@ -95,6 +96,7 @@ pub fn generate_managed(
     destination: Option<&str>,
     podman: bool,
     is_async: bool,
+    serialize: bool,
 ) -> Result<String, Error> {
     let modules_info = read_query_modules(queries_path)?;
     let mut validated_modules = Vec::new();
@@ -109,7 +111,7 @@ pub fn generate_managed(
     let mut client = conn::cornucopia_conn()?;
     run_migrations_internal(&mut client, migrations_path)?;
     let prepared_modules = prepare(&mut client, validated_modules)?;
-    let generated_code = generate_internal(prepared_modules, is_async)?;
+    let generated_code = generate_internal(prepared_modules, is_async, serialize)?;
     container::cleanup(podman)?;
 
     if let Some(destination) = destination {

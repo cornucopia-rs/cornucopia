@@ -4,6 +4,8 @@ use async_trait::async_trait;
 use deadpool_postgres::{Client, ClientWrapper, Transaction};
 use postgres::fallible_iterator::FallibleIterator;
 use postgres_protocol::types::{array_from_sql, ArrayValues};
+use postgres_types::ToSql;
+use serde::{Deserialize, Serialize};
 use tokio_postgres::{
     types::{BorrowToSql, FromSql, Kind, Type},
     Client as PgClient, Error, RowStream, Statement, ToStatement, Transaction as PgTransaction,
@@ -290,6 +292,67 @@ impl GenericClient for PgClient {
         I::IntoIter: ExactSizeIterator,
     {
         PgClient::query_raw(self, statement, params).await
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Json<T: Debug>(postgres_types::Json<T>);
+impl<'a, T: Debug + Serialize + Deserialize<'a>> From<T> for Json<T> {
+    fn from(v: T) -> Self {
+        Json(postgres_types::Json(v))
+    }
+}
+impl<'a, T: Debug + Serialize + Deserialize<'a>> Serialize for Json<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.value().serialize(serializer)
+    }
+}
+impl<'a, T: Debug + Serialize + Deserialize<'a>> Json<T> {
+    pub fn value(&self) -> &T {
+        &(self.0).0
+    }
+}
+impl<'a, T: Debug + Serialize + Deserialize<'a>> ToSql for Json<T> {
+    fn to_sql(
+        &self,
+        ty: &Type,
+        out: &mut postgres_types::private::BytesMut,
+    ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+    where
+        Self: Sized,
+    {
+        self.0.to_sql(ty, out)
+    }
+
+    fn accepts(ty: &Type) -> bool
+    where
+        Self: Sized,
+    {
+        <postgres_types::Json<T> as ToSql>::accepts(ty)
+    }
+
+    fn to_sql_checked(
+        &self,
+        ty: &Type,
+        out: &mut postgres_types::private::BytesMut,
+    ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {
+        self.0.to_sql_checked(ty, out)
+    }
+}
+
+impl<'a, T: Debug + Serialize + Deserialize<'a>> FromSql<'a> for Json<T> {
+    fn from_sql(
+        ty: &Type,
+        raw: &'a [u8],
+    ) -> Result<Self, Box<dyn std::error::Error + Sync + Send>> {
+        postgres_types::Json::from_sql(ty, raw).map(Self)
+    }
+
+    fn accepts(ty: &Type) -> bool {
+        <postgres_types::Json<T> as FromSql>::accepts(ty)
     }
 }
 
