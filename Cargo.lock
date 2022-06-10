@@ -232,6 +232,8 @@ dependencies = [
  "postgres",
  "postgres-protocol",
  "postgres-types",
+ "serde",
+ "serde_json",
  "tokio",
  "tokio-postgres",
 ]
@@ -314,6 +316,7 @@ checksum = "887418ac5e8d57c2e66e04bdc2fe15f9a5407be20b54a82c86bd0e368b709701"
 dependencies = [
  "regex",
  "rustc-serialize",
+ "serde",
 ]
 
 [[package]]
@@ -1045,6 +1048,7 @@ checksum = "c2702e08a7a860f005826c6815dcac101b19b5eb330c27fe4a5928fec1d20ddd"
 dependencies = [
  "libc",
  "num_threads",
+ "serde",
 ]
 
 [[package]]
@@ -1200,6 +1204,9 @@ name = "uuid"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c6d5d669b51467dcf7b2f1a796ce0f955f05f01cafda6c19d6e95f730df29238"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "version_check"

@@ -124,7 +124,7 @@ fn run_errors_test(
             // Run codegen
             let result: Result<(), cornucopia::Error> = (|| {
                 cornucopia::run_migrations(client, "migrations")?;
-                cornucopia::generate_live(client, "queries", None, false)?;
+                cornucopia::generate_live(client, "queries", None, false, false)?;
                 Ok(())
             })();
 
@@ -169,8 +169,20 @@ fn run_codegen_test(client: &mut postgres::Client) -> Result<bool, Box<dyn std::
 
     // Run codegen
     cornucopia::run_migrations(client, "migrations")?;
-    cornucopia::generate_live(client, "queries", Some("src/cornucopia_async.rs"), true)?;
-    cornucopia::generate_live(client, "queries", Some("src/cornucopia_sync.rs"), false)?;
+    cornucopia::generate_live(
+        client,
+        "queries",
+        Some("src/cornucopia_async.rs"),
+        true,
+        true,
+    )?;
+    cornucopia::generate_live(
+        client,
+        "queries",
+        Some("src/cornucopia_sync.rs"),
+        false,
+        true,
+    )?;
 
     // Run test
     print!("{}", "[codegen]".magenta(),);
@@ -214,6 +226,7 @@ fn run_examples_test(client: &mut postgres::Client) -> Result<bool, Box<dyn std:
             "queries",
             Some("src/cornucopia.rs"),
             !name.contains("sync"),
+            false,
         )?;
 
         // Run example
