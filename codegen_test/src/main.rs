@@ -10,7 +10,6 @@ use cornucopia_sync::{
 };
 use eui48::MacAddress;
 use postgres::{Client, Config, NoTls};
-use postgres_types::Json;
 use serde_json::Value;
 use time::{OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;

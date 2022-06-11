@@ -73,7 +73,7 @@ impl CornucopiaType {
                 inner.brw_struct(true, false)
             ),
             CornucopiaType::Simple { pg_ty, .. } if matches!(*pg_ty, Type::JSON | Type::JSONB) => {
-                format!("postgres_types::Json")
+                String::from("postgres_types::Json")
             }
             _ => self.brw_struct(true, false),
         }
