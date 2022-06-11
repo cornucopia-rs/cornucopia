@@ -11,13 +11,9 @@ categories = ["database"]
 keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 
 [features]
-default = ["async"]
-async = [
-    "dep:tokio",
-    "dep:tokio-postgres",
-    "dep:async-trait",
-    "dep:deadpool-postgres",
-]
+default = ["deadpool"]
+async = ["dep:tokio", "dep:tokio-postgres", "dep:async-trait"]
+deadpool = ["async", "dep:deadpool-postgres"]
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
