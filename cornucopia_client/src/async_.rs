@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use tokio_postgres::{
-    types::BorrowToSql, Client as PgClient, Error, RowStream, Statement, ToStatement,
-    Transaction as PgTransaction,
+    types::BorrowToSql, Client, Error, RowStream, Statement, ToStatement, Transaction,
 };
 
 #[async_trait]
@@ -45,9 +44,9 @@ pub trait GenericClient {
 }
 
 #[async_trait]
-impl GenericClient for PgTransaction<'_> {
+impl GenericClient for Transaction<'_> {
     async fn prepare(&self, query: &str) -> Result<Statement, Error> {
-        PgTransaction::prepare(self, query).await
+        Transaction::prepare(self, query).await
     }
 
     async fn execute<T>(
@@ -58,7 +57,7 @@ impl GenericClient for PgTransaction<'_> {
     where
         T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
     {
-        PgTransaction::execute(self, query, params).await
+        Transaction::execute(self, query, params).await
     }
 
     async fn query_one<T>(
@@ -69,7 +68,7 @@ impl GenericClient for PgTransaction<'_> {
     where
         T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
     {
-        PgTransaction::query_one(self, statement, params).await
+        Transaction::query_one(self, statement, params).await
     }
 
     async fn query_opt<T>(
@@ -80,7 +79,7 @@ impl GenericClient for PgTransaction<'_> {
     where
         T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
     {
-        PgTransaction::query_opt(self, statement, params).await
+        Transaction::query_opt(self, statement, params).await
     }
 
     async fn query<T>(
@@ -91,7 +90,7 @@ impl GenericClient for PgTransaction<'_> {
     where
         T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
     {
-        PgTransaction::query(self, query, params).await
+        Transaction::query(self, query, params).await
     }
 
     async fn query_raw<T, P, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
@@ -101,14 +100,14 @@ impl GenericClient for PgTransaction<'_> {
         I: IntoIterator<Item = P> + Sync + Send,
         I::IntoIter: ExactSizeIterator,
     {
-        PgTransaction::query_raw(self, statement, params).await
+        Transaction::query_raw(self, statement, params).await
     }
 }
 
 #[async_trait]
-impl GenericClient for PgClient {
+impl GenericClient for Client {
     async fn prepare(&self, query: &str) -> Result<Statement, Error> {
-        PgClient::prepare(self, query).await
+        Client::prepare(self, query).await
     }
 
     async fn execute<T>(
@@ -119,7 +118,7 @@ impl GenericClient for PgClient {
     where
         T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
     {
-        PgClient::execute(self, query, params).await
+        Client::execute(self, query, params).await
     }
 
     async fn query_one<T>(
@@ -130,7 +129,7 @@ impl GenericClient for PgClient {
     where
         T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
     {
-        PgClient::query_one(self, statement, params).await
+        Client::query_one(self, statement, params).await
     }
 
     async fn query_opt<T>(
@@ -141,7 +140,7 @@ impl GenericClient for PgClient {
     where
         T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
     {
-        PgClient::query_opt(self, statement, params).await
+        Client::query_opt(self, statement, params).await
     }
 
     async fn query<T>(
@@ -152,7 +151,7 @@ impl GenericClient for PgClient {
     where
         T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
     {
-        PgClient::query(self, query, params).await
+        Client::query(self, query, params).await
     }
 
     async fn query_raw<T, P, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
@@ -162,6 +161,6 @@ impl GenericClient for PgClient {
         I: IntoIterator<Item = P> + Sync + Send,
         I::IntoIter: ExactSizeIterator,
     {
-        PgClient::query_raw(self, statement, params).await
+        Client::query_raw(self, statement, params).await
     }
 }
