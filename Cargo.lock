@@ -229,7 +229,7 @@ version = "0.2.2"
 dependencies = [
  "async-trait",
  "deadpool-postgres",
- "postgres",
+ "fallible-iterator",
  "postgres-protocol",
  "postgres-types",
  "tokio",
