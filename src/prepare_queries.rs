@@ -1,5 +1,5 @@
 use crate::{
-    parser::{Parsed, TypeDataStructure},
+    parser::{Parsed, TypeAnnotation},
     read_queries::ModuleInfo,
     type_registrar::CornucopiaType,
     type_registrar::TypeRegistrar,
@@ -191,7 +191,7 @@ pub(crate) fn prepare(
     };
     let declared: Vec<_> = modules
         .iter()
-        .flat_map(|it| &it.db_types)
+        .flat_map(|it| &it.types)
         .map(|ty| (*ty).clone())
         .collect();
 
@@ -227,7 +227,7 @@ fn prepare_type(
     registrar: &TypeRegistrar,
     name: &str,
     ty: &CornucopiaType,
-    types: &[TypeDataStructure],
+    types: &[TypeAnnotation],
 ) -> Option<PreparedType> {
     if let CornucopiaType::Custom {
         pg_ty,
@@ -249,12 +249,12 @@ fn prepare_type(
                 fields
                     .iter()
                     .map(|field| {
-                        let nullity = declared.iter().find(|it| it.value == field.name());
+                        let nullity = declared.iter().find(|it| it.name.value == field.name());
                         PreparedField {
                             name: field.name().to_string(),
                             ty: registrar.ref_of(field.type_()),
-                            is_nullable: nullity.is_some(),
-                            is_inner_nullable: false, // TODO used when support null everywhere
+                            is_nullable: nullity.map(|it| it.nullable).unwrap_or(false),
+                            is_inner_nullable: nullity.map(|it| it.inner_nullable).unwrap_or(false),
                         }
                     })
                     .collect(),
@@ -291,8 +291,7 @@ fn prepare_module(
             client,
             &mut tmp_prepared_module,
             registrar,
-            &validated_module.param_types,
-            &validated_module.row_types,
+            &validated_module.types,
             query,
         )?;
     }
@@ -305,8 +304,7 @@ fn prepare_query(
     client: &mut Client,
     module: &mut PreparedModule,
     registrar: &mut TypeRegistrar,
-    param_types: &[TypeDataStructure],
-    row_types: &[TypeDataStructure],
+    types: &[TypeAnnotation],
     ValidatedQuery {
         name,
         params,
@@ -321,8 +319,8 @@ fn prepare_query(
         .map_err(|e| Error::new(e, &name, module.info.clone()))?;
 
     let (nullable_params_fields, params_name) =
-        params.name_and_fields(param_types, &name, Some("Params"));
-    let (nullable_row_fields, row_name) = row.name_and_fields(row_types, &name, None);
+        params.name_and_fields(types, &name, Some("Params"));
+    let (nullable_row_fields, row_name) = row.name_and_fields(types, &name, None);
     let params_fields = {
         let stmt_params = stmt.params();
         let params = bind_params
@@ -341,7 +339,7 @@ fn prepare_query(
         for (col_name, col_ty) in params {
             let is_nullable = nullable_params_fields
                 .iter()
-                .any(|x| x.value == col_name.value);
+                .any(|x| x.name.value == col_name.value);
             // Register type
             param_fields.push(PreparedField {
                 name: col_name.value.clone(),
@@ -377,7 +375,7 @@ fn prepare_query(
 
         let mut row_fields = Vec::new();
         for (col_name, col_ty) in stmt_cols.iter().map(|c| (c.name().to_owned(), c.type_())) {
-            let is_nullable = nullable_row_fields.iter().any(|x| x.value == col_name);
+            let is_nullable = nullable_row_fields.iter().any(|x| x.name.value == col_name);
 
             // Register type
             let ty = registrar
