@@ -1,3 +1,5 @@
+use cornucopia::CodegenSettings;
+
 // This script will generate a new cornucopia file every time your migrations or queries change.
 fn main() -> Result<(), std::io::Error> {
     // For the sake of simplicity, this example uses the defaults.
@@ -20,8 +22,10 @@ fn main() -> Result<(), std::io::Error> {
         migrations_path,
         Some(destination),
         false,
-        true,
-        false,
+        CodegenSettings {
+            is_async: true,
+            derive_ser: false,
+        },
     )
     .unwrap();
 

@@ -5,6 +5,7 @@ use crate::{
         PreparedType,
     },
     utils::{join_comma, join_ln},
+    CodegenSettings,
 };
 use error::Error;
 use indexmap::IndexMap;
@@ -209,7 +210,7 @@ fn gen_params_struct(
     w: &mut impl Write,
     module: &PreparedModule,
     params: &PreparedParams,
-    is_async: bool,
+    CodegenSettings { is_async, .. }: CodegenSettings,
 ) {
     let PreparedParams {
         name,
@@ -262,7 +263,14 @@ fn gen_params_struct(
     );
 }
 
-fn gen_row_structs(w: &mut impl Write, row: &PreparedRow, is_async: bool, derive_ser: bool) {
+fn gen_row_structs(
+    w: &mut impl Write,
+    row: &PreparedRow,
+    CodegenSettings {
+        is_async,
+        derive_ser,
+    }: CodegenSettings,
+) {
     let PreparedRow {
         name,
         fields,
@@ -388,7 +396,7 @@ fn gen_query_fn(
     w: &mut impl Write,
     module: &PreparedModule,
     query: &PreparedQuery,
-    is_async: bool,
+    CodegenSettings { is_async, .. }: CodegenSettings,
 ) {
     let PreparedQuery {
         name,
@@ -449,7 +457,12 @@ fn gen_query_fn(
 
 /// Generates type definitions for custom user types. This includes domains, composites and enums.
 /// If the type is not `Copy`, then a Borrowed version will be generated.
-fn gen_custom_type(w: &mut impl Write, schema: &str, prepared: &PreparedType, derive_ser: bool) {
+fn gen_custom_type(
+    w: &mut impl Write,
+    schema: &str,
+    prepared: &PreparedType,
+    CodegenSettings { derive_ser, .. }: CodegenSettings,
+) {
     let PreparedType {
         struct_name,
         content,
@@ -520,11 +533,11 @@ fn gen_custom_type(w: &mut impl Write, schema: &str, prepared: &PreparedType, de
 fn gen_type_modules(
     w: &mut impl Write,
     prepared: &IndexMap<String, Vec<PreparedType>>,
-    derive_ser: bool,
+    settings: CodegenSettings,
 ) -> Result<(), Error> {
     // Generate each module
     let modules_str = join_ln(prepared, |w, (schema, types)| {
-        let tys_str = join_ln(types, |w, ty| gen_custom_type(w, schema, ty, derive_ser));
+        let tys_str = join_ln(types, |w, ty| gen_custom_type(w, schema, ty, settings));
         gen!(w, "pub mod {schema} {{ {tys_str} }}")
     });
 
@@ -534,10 +547,9 @@ fn gen_type_modules(
 
 pub(crate) fn generate(
     preparation: Preparation,
-    is_async: bool,
-    derive_ser: bool,
+    settings: CodegenSettings,
 ) -> Result<String, Error> {
-    let import = if is_async {
+    let import = if settings.is_async {
         "use futures::{{StreamExt, TryStreamExt}};use cornucopia_client::GenericClient;"
     } else {
         "use postgres::{{fallible_iterator::FallibleIterator,GenericClient}};"
@@ -550,17 +562,17 @@ pub(crate) fn generate(
     "
     .to_string();
     // Generate database type
-    gen_type_modules(&mut buff, &preparation.types, derive_ser)?;
+    gen_type_modules(&mut buff, &preparation.types, settings)?;
     // Generate queries
     let query_modules = join_ln(preparation.modules, |w, module| {
         let queries_string = join_ln(module.queries.values(), |w, query| {
-            gen_query_fn(w, &module, query, is_async)
+            gen_query_fn(w, &module, query, settings)
         });
         let params_string = join_ln(module.params.values(), |w, it| {
-            gen_params_struct(w, &module, it, is_async)
+            gen_params_struct(w, &module, it, settings)
         });
         let rows_string = join_ln(module.rows.values(), |w, query| {
-            gen_row_structs(w, query, is_async, derive_ser)
+            gen_row_structs(w, query, settings)
         });
         gen!(
             w,

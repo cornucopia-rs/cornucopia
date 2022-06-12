@@ -1,5 +1,6 @@
 use crate::{
     conn, container, error::Error, generate_live, generate_managed, new_migration, run_migrations,
+    CodegenSettings,
 };
 use clap::{Parser, Subcommand};
 
@@ -99,8 +100,10 @@ pub fn run() -> Result<(), Error> {
                         &mut client,
                         &queries_path,
                         Some(&destination),
-                        !sync,
-                        serialize,
+                        CodegenSettings {
+                            is_async: !sync,
+                            derive_ser: serialize,
+                        },
                     )?;
                 }
                 None => {
@@ -110,8 +113,10 @@ pub fn run() -> Result<(), Error> {
                         &migrations_path,
                         Some(&destination),
                         podman,
-                        !sync,
-                        serialize,
+                        CodegenSettings {
+                            is_async: !sync,
+                            derive_ser: serialize,
+                        },
                     ) {
                         container::cleanup(podman)?;
                         return Err(e);

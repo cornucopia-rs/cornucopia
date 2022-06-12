@@ -54,14 +54,19 @@ pub fn new_migration(migrations_path: &str, name: &str) -> Result<(), Error> {
     )
 }
 
+#[derive(Clone, Copy)]
+pub struct CodegenSettings {
+    pub is_async: bool,
+    pub derive_ser: bool,
+}
+
 /// Generates your cornucopia queries residing in `queries_path`.
 /// If some `destination` is given, the generated code will be written at that path.
 pub fn generate_live(
     client: &mut Client,
     queries_path: &str,
     destination: Option<&str>,
-    is_async: bool,
-    serialize: bool,
+    settings: CodegenSettings,
 ) -> Result<String, Error> {
     // Read
     let modules_info = read_query_modules(queries_path)?;
@@ -77,7 +82,7 @@ pub fn generate_live(
 
     // Generate
     let prepared_modules = prepare(client, validated_modules)?;
-    let generated_code = generate_internal(prepared_modules, is_async, serialize)?;
+    let generated_code = generate_internal(prepared_modules, settings)?;
     // Write
     if let Some(d) = destination {
         write_generated_code(d, &generated_code)?
@@ -95,8 +100,7 @@ pub fn generate_managed(
     migrations_path: &str,
     destination: Option<&str>,
     podman: bool,
-    is_async: bool,
-    serialize: bool,
+    settings: CodegenSettings,
 ) -> Result<String, Error> {
     let modules_info = read_query_modules(queries_path)?;
     let mut validated_modules = Vec::new();
@@ -111,7 +115,7 @@ pub fn generate_managed(
     let mut client = conn::cornucopia_conn()?;
     run_migrations_internal(&mut client, migrations_path)?;
     let prepared_modules = prepare(&mut client, validated_modules)?;
-    let generated_code = generate_internal(prepared_modules, is_async, serialize)?;
+    let generated_code = generate_internal(prepared_modules, settings)?;
     container::cleanup(podman)?;
 
     if let Some(destination) = destination {
