@@ -5,7 +5,7 @@ use std::{
 };
 
 use clap::Parser;
-use cornucopia::container;
+use cornucopia::{container, CodegenSettings};
 use owo_colors::OwoColorize;
 
 /// Start cornucopia test runner
@@ -124,7 +124,15 @@ fn run_errors_test(
             // Run codegen
             let result: Result<(), cornucopia::Error> = (|| {
                 cornucopia::run_migrations(client, "migrations")?;
-                cornucopia::generate_live(client, "queries", None, false)?;
+                cornucopia::generate_live(
+                    client,
+                    "queries",
+                    None,
+                    CodegenSettings {
+                        is_async: false,
+                        derive_ser: false,
+                    },
+                )?;
                 Ok(())
             })();
 
@@ -169,8 +177,24 @@ fn run_codegen_test(client: &mut postgres::Client) -> Result<bool, Box<dyn std::
 
     // Run codegen
     cornucopia::run_migrations(client, "migrations")?;
-    cornucopia::generate_live(client, "queries", Some("src/cornucopia_async.rs"), true)?;
-    cornucopia::generate_live(client, "queries", Some("src/cornucopia_sync.rs"), false)?;
+    cornucopia::generate_live(
+        client,
+        "queries",
+        Some("src/cornucopia_async.rs"),
+        CodegenSettings {
+            is_async: true,
+            derive_ser: true,
+        },
+    )?;
+    cornucopia::generate_live(
+        client,
+        "queries",
+        Some("src/cornucopia_sync.rs"),
+        CodegenSettings {
+            is_async: false,
+            derive_ser: true,
+        },
+    )?;
 
     // Run test
     print!("{}", "[codegen]".magenta(),);
@@ -213,7 +237,10 @@ fn run_examples_test(client: &mut postgres::Client) -> Result<bool, Box<dyn std:
             client,
             "queries",
             Some("src/cornucopia.rs"),
-            !name.contains("sync"),
+            CodegenSettings {
+                is_async: !name.contains("sync"),
+                derive_ser: false,
+            },
         )?;
 
         // Run example

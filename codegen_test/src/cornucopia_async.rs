@@ -5,7 +5,14 @@
 pub mod types {
     pub mod public {
         #[derive(
-            Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, Copy, PartialEq, Eq,
+            serde::Serialize,
+            Debug,
+            postgres_types::ToSql,
+            postgres_types::FromSql,
+            Clone,
+            Copy,
+            PartialEq,
+            Eq,
         )]
         #[postgres(name = "spongebob_character")]
         pub enum SpongebobCharacter {
@@ -13,7 +20,7 @@ pub mod types {
             Patrick,
             Squidward,
         }
-        #[derive(Debug, postgres_types::FromSql, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
         #[postgres(name = "custom_composite")]
         pub struct CustomComposite {
             pub wow: String,
@@ -145,7 +152,7 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(Debug, postgres_types::FromSql, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
         #[postgres(name = "nightmare_composite")]
         pub struct NightmareComposite {
             pub custom: Vec<super::super::types::public::CustomComposite>,
@@ -297,7 +304,7 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(Debug, postgres_types::FromSql, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
         #[postgres(name = "clone_composite")]
         pub struct CloneComposite {
             pub first: i32,
@@ -400,7 +407,7 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(Debug, postgres_types::FromSql, Copy, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Copy, Clone, PartialEq)]
         #[postgres(name = "copy_composite")]
         pub struct CopyComposite {
             pub first: i32,
@@ -498,7 +505,7 @@ pub mod queries {
                 insert_copy(client, &self.composite).await
             }
         }
-        #[derive(Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct SelectClone {
             pub composite: super::super::types::public::CloneComposite,
         }
@@ -570,7 +577,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(Debug, Clone, PartialEq, Copy)]
+        #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
         pub struct SelectCopy {
             pub composite: super::super::types::public::CopyComposite,
         }
@@ -679,8 +686,8 @@ pub mod queries {
         use futures::{StreamExt, TryStreamExt};
         #[derive(Debug)]
         pub struct InsertNightmareDomainParams<'a> {
-            pub arr: &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
-            pub json: postgres_types::Json<&'a serde_json::value::RawValue>,
+            pub arr: &'a [&'a serde_json::value::Value],
+            pub json: &'a serde_json::value::Value,
             pub nb: i32,
             pub txt: &'a str,
         }
@@ -692,10 +699,10 @@ pub mod queries {
                 insert_nightmare_domain(client, &self.arr, &self.json, &self.nb, &self.txt).await
             }
         }
-        #[derive(Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct SelectNightmareDomain {
-            pub arr: Vec<postgres_types::Json<serde_json::Value>>,
-            pub json: postgres_types::Json<serde_json::Value>,
+            pub arr: Vec<serde_json::Value>,
+            pub json: serde_json::Value,
             pub nb: i32,
             pub txt: String,
         }
@@ -716,9 +723,9 @@ pub mod queries {
             ) -> Self {
                 Self {
                     arr: arr
-                        .map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap()))
+                        .map(|v| serde_json::from_str(v.0.get()).unwrap())
                         .collect(),
-                    json: postgres_types::Json(serde_json::from_str(json.0.get()).unwrap()),
+                    json: serde_json::from_str(json.0.get()).unwrap(),
                     nb,
                     txt: txt.into(),
                 }
@@ -782,10 +789,10 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct SelectNightmareDomainNull {
-            pub arr: Option<Vec<postgres_types::Json<serde_json::Value>>>,
-            pub json: Option<postgres_types::Json<serde_json::Value>>,
+            pub arr: Option<Vec<serde_json::Value>>,
+            pub json: Option<serde_json::Value>,
             pub nb: Option<i32>,
             pub txt: Option<String>,
         }
@@ -811,11 +818,10 @@ pub mod queries {
             ) -> Self {
                 Self {
                     arr: arr.map(|v| {
-                        v.map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap()))
+                        v.map(|v| serde_json::from_str(v.0.get()).unwrap())
                             .collect()
                     }),
-                    json: json
-                        .map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap())),
+                    json: json.map(|v| serde_json::from_str(v.0.get()).unwrap()),
                     nb,
                     txt: txt.map(|v| v.into()),
                 }
@@ -897,8 +903,8 @@ pub mod queries {
         }
         pub async fn insert_nightmare_domain<'a, C: GenericClient>(
             client: &'a C,
-            arr: &'a &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
-            json: &'a postgres_types::Json<&'a serde_json::value::RawValue>,
+            arr: &'a &'a [&'a serde_json::value::Value],
+            json: &'a &'a serde_json::value::Value,
             nb: &'a i32,
             txt: &'a &'a str,
         ) -> Result<u64, tokio_postgres::Error> {
@@ -960,7 +966,7 @@ pub mod queries {
                 item_by_id(client, &self.id)
             }
         }
-        #[derive(Debug, Clone, PartialEq, Copy)]
+        #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
         pub struct Id {
             pub id: i32,
         }
@@ -1019,7 +1025,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct Item {
             pub id: i32,
             pub name: String,
@@ -1203,7 +1209,7 @@ pub mod queries {
                 params_order(client, &self.a, &self.c).await
             }
         }
-        #[derive(Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct SelectBook {
             pub author: Option<String>,
             pub name: String,
@@ -1342,8 +1348,8 @@ pub mod queries {
             pub int4_: i32,
             pub int8_: i64,
             pub int_: i32,
-            pub json_: postgres_types::Json<&'a serde_json::value::RawValue>,
-            pub jsonb_: postgres_types::Json<&'a serde_json::value::RawValue>,
+            pub json_: &'a serde_json::value::Value,
+            pub jsonb_: &'a serde_json::value::Value,
             pub macaddr_: eui48::MacAddress,
             pub real_: f32,
             pub serial2_: i16,
@@ -1421,8 +1427,8 @@ pub mod queries {
             pub int4_: &'a [i32],
             pub int8_: &'a [i64],
             pub int_: &'a [i32],
-            pub json_: &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
-            pub jsonb_: &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
+            pub json_: &'a [&'a serde_json::value::Value],
+            pub jsonb_: &'a [&'a serde_json::value::Value],
             pub macaddr_: &'a [eui48::MacAddress],
             pub real_: &'a [f32],
             pub smallint_: &'a [i16],
@@ -1485,7 +1491,7 @@ pub mod queries {
                 insert_nightmare(client, &self.composite).await
             }
         }
-        #[derive(Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct SelectEverything {
             pub bigserial_: i64,
             pub bingint_: i64,
@@ -1502,8 +1508,8 @@ pub mod queries {
             pub int4_: i32,
             pub int8_: i64,
             pub int_: i32,
-            pub json_: postgres_types::Json<serde_json::Value>,
-            pub jsonb_: postgres_types::Json<serde_json::Value>,
+            pub json_: serde_json::Value,
+            pub jsonb_: serde_json::Value,
             pub macaddr_: eui48::MacAddress,
             pub real_: f32,
             pub serial2_: i16,
@@ -1610,8 +1616,8 @@ pub mod queries {
                     int4_,
                     int8_,
                     int_,
-                    json_: postgres_types::Json(serde_json::from_str(json_.0.get()).unwrap()),
-                    jsonb_: postgres_types::Json(serde_json::from_str(jsonb_.0.get()).unwrap()),
+                    json_: serde_json::from_str(json_.0.get()).unwrap(),
+                    jsonb_: serde_json::from_str(jsonb_.0.get()).unwrap(),
                     macaddr_,
                     real_,
                     serial2_,
@@ -1689,7 +1695,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct SelectEverythingNull {
             pub bigserial_: Option<i64>,
             pub bingint_: Option<i64>,
@@ -1706,8 +1712,8 @@ pub mod queries {
             pub int4_: Option<i32>,
             pub int8_: Option<i64>,
             pub int_: Option<i32>,
-            pub json_: Option<postgres_types::Json<serde_json::Value>>,
-            pub jsonb_: Option<postgres_types::Json<serde_json::Value>>,
+            pub json_: Option<serde_json::Value>,
+            pub jsonb_: Option<serde_json::Value>,
             pub macaddr_: Option<eui48::MacAddress>,
             pub real_: Option<f32>,
             pub serial2_: Option<i16>,
@@ -1814,10 +1820,8 @@ pub mod queries {
                     int4_,
                     int8_,
                     int_,
-                    json_: json_
-                        .map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap())),
-                    jsonb_: jsonb_
-                        .map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap())),
+                    json_: json_.map(|v| serde_json::from_str(v.0.get()).unwrap()),
+                    jsonb_: jsonb_.map(|v| serde_json::from_str(v.0.get()).unwrap()),
                     macaddr_,
                     real_,
                     serial2_,
@@ -1895,7 +1899,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct SelectEverythingArray {
             pub bingint_: Vec<i64>,
             pub bool_: Vec<bool>,
@@ -1911,8 +1915,8 @@ pub mod queries {
             pub int4_: Vec<i32>,
             pub int8_: Vec<i64>,
             pub int_: Vec<i32>,
-            pub json_: Vec<postgres_types::Json<serde_json::Value>>,
-            pub jsonb_: Vec<postgres_types::Json<serde_json::Value>>,
+            pub json_: Vec<serde_json::Value>,
+            pub jsonb_: Vec<serde_json::Value>,
             pub macaddr_: Vec<eui48::MacAddress>,
             pub real_: Vec<f32>,
             pub smallint_: Vec<i16>,
@@ -2010,10 +2014,10 @@ pub mod queries {
                     int8_: int8_.map(|v| v).collect(),
                     int_: int_.map(|v| v).collect(),
                     json_: json_
-                        .map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap()))
+                        .map(|v| serde_json::from_str(v.0.get()).unwrap())
                         .collect(),
                     jsonb_: jsonb_
-                        .map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap()))
+                        .map(|v| serde_json::from_str(v.0.get()).unwrap())
                         .collect(),
                     macaddr_: macaddr_.map(|v| v).collect(),
                     real_: real_.map(|v| v).collect(),
@@ -2087,7 +2091,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct SelectEverythingArrayNull {
             pub bingint_: Option<Vec<i64>>,
             pub bool_: Option<Vec<bool>>,
@@ -2103,8 +2107,8 @@ pub mod queries {
             pub int4_: Option<Vec<i32>>,
             pub int8_: Option<Vec<i64>>,
             pub int_: Option<Vec<i32>>,
-            pub json_: Option<Vec<postgres_types::Json<serde_json::Value>>>,
-            pub jsonb_: Option<Vec<postgres_types::Json<serde_json::Value>>>,
+            pub json_: Option<Vec<serde_json::Value>>,
+            pub jsonb_: Option<Vec<serde_json::Value>>,
             pub macaddr_: Option<Vec<eui48::MacAddress>>,
             pub real_: Option<Vec<f32>>,
             pub smallint_: Option<Vec<i16>>,
@@ -2206,11 +2210,11 @@ pub mod queries {
                     int8_: int8_.map(|v| v.map(|v| v).collect()),
                     int_: int_.map(|v| v.map(|v| v).collect()),
                     json_: json_.map(|v| {
-                        v.map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap()))
+                        v.map(|v| serde_json::from_str(v.0.get()).unwrap())
                             .collect()
                     }),
                     jsonb_: jsonb_.map(|v| {
-                        v.map(|v| postgres_types::Json(serde_json::from_str(v.0.get()).unwrap()))
+                        v.map(|v| serde_json::from_str(v.0.get()).unwrap())
                             .collect()
                     }),
                     macaddr_: macaddr_.map(|v| v.map(|v| v).collect()),
@@ -2287,7 +2291,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct SelectNightmare {
             pub composite: super::super::types::public::NightmareComposite,
         }
@@ -2466,8 +2470,8 @@ pub mod queries {
             int4_: &'a i32,
             int8_: &'a i64,
             int_: &'a i32,
-            json_: &'a postgres_types::Json<&'a serde_json::value::RawValue>,
-            jsonb_: &'a postgres_types::Json<&'a serde_json::value::RawValue>,
+            json_: &'a &'a serde_json::value::Value,
+            jsonb_: &'a &'a serde_json::value::Value,
             macaddr_: &'a eui48::MacAddress,
             real_: &'a f32,
             serial2_: &'a i16,
@@ -2626,8 +2630,8 @@ pub mod queries {
             int4_: &'a &'a [i32],
             int8_: &'a &'a [i64],
             int_: &'a &'a [i32],
-            json_: &'a &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
-            jsonb_: &'a &'a [postgres_types::Json<&'a serde_json::value::RawValue>],
+            json_: &'a &'a [&'a serde_json::value::Value],
+            jsonb_: &'a &'a [&'a serde_json::value::Value],
             macaddr_: &'a &'a [eui48::MacAddress],
             real_: &'a &'a [f32],
             smallint_: &'a &'a [i16],
@@ -2860,7 +2864,7 @@ pub mod queries {
                 tricky_sql9(client, &self.price).await
             }
         }
-        #[derive(Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct SelectCompact {
             pub composite: super::super::types::public::CloneComposite,
         }
@@ -2932,7 +2936,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct SelectSpaced {
             pub composite: super::super::types::public::CloneComposite,
         }
@@ -3004,7 +3008,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(Debug, Clone, PartialEq, Copy)]
+        #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
         pub struct ImplicitCompact {
             pub id: Option<i32>,
         }
@@ -3066,7 +3070,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(Debug, Clone, PartialEq, Copy)]
+        #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
         pub struct ImplicitSpaced {
             pub id: Option<i32>,
         }
@@ -3128,7 +3132,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(Debug, Clone, PartialEq, Copy)]
+        #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
         pub struct Row {
             pub id: i32,
         }
@@ -3187,7 +3191,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct Syntax {
             pub price: f64,
             pub trick_y: String,

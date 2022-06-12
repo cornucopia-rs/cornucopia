@@ -13,10 +13,10 @@ keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = { version = "1.18.2", features = ["full"] }
+tokio = { version = "1.18.2" }
 deadpool-postgres = "0.10.2"
 tokio-postgres = "0.7.6"
 postgres = "0.19.3"
 async-trait = "0.1.53"
 postgres-protocol = "0.6.4"
-postgres-types = { version = "0.2.3", features = ["derive"] }
+postgres-types = { version = "0.2.3" }
