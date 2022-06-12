@@ -189,6 +189,12 @@ pub(crate) fn prepare(
         modules: Vec::new(),
         types: IndexMap::new(),
     };
+    let declared: Vec<_> = modules
+        .iter()
+        .flat_map(|it| &it.db_types)
+        .map(|ty| (*ty).clone())
+        .collect();
+
     for module in modules {
         tmp.modules
             .push(prepare_module(client, module, &mut registrar)?);
@@ -198,7 +204,7 @@ pub(crate) fn prepare(
         .sort_unstable_by(|a, b| a.info.name.cmp(&b.info.name));
     // Prepare types grouped by schema
     for ((schema, name), ty) in &registrar.types {
-        if let Some(ty) = prepare_type(&registrar, name, ty) {
+        if let Some(ty) = prepare_type(&registrar, name, ty, &declared) {
             match tmp.types.entry(schema.clone()) {
                 Entry::Occupied(mut entry) => {
                     entry.get_mut().push(ty);
@@ -221,6 +227,7 @@ fn prepare_type(
     registrar: &TypeRegistrar,
     name: &str,
     ty: &CornucopiaType,
+    types: &[TypeDataStructure],
 ) -> Option<PreparedType> {
     if let CornucopiaType::Custom {
         pg_ty,
@@ -230,6 +237,11 @@ fn prepare_type(
         ..
     } = ty
     {
+        let declared = types
+            .iter()
+            .find(|it| it.name.value == pg_ty.name())
+            .map(|it| it.fields.as_slice())
+            .unwrap_or(&[]);
         let content = match pg_ty.kind() {
             Kind::Enum(variants) => PreparedContent::Enum(variants.to_vec()),
             Kind::Domain(_) => return None,
@@ -237,10 +249,11 @@ fn prepare_type(
                 fields
                     .iter()
                     .map(|field| {
+                        let nullity = declared.iter().find(|it| it.value == field.name());
                         PreparedField {
                             name: field.name().to_string(),
                             ty: registrar.ref_of(field.type_()),
-                            is_nullable: false, // TODO used when support null everywhere
+                            is_nullable: nullity.is_some(),
                             is_inner_nullable: false, // TODO used when support null everywhere
                         }
                     })

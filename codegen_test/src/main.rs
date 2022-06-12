@@ -3,7 +3,6 @@ use std::net::{IpAddr, Ipv4Addr};
 use cornucopia_sync::{
     queries::{
         copy::{select_copy, InsertCloneParams, InsertCopyParams},
-        named::items,
         params::insert_book,
     },
     types::public::{CloneCompositeBorrowed, CopyComposite},
@@ -20,7 +19,10 @@ use crate::cornucopia_sync::{
             select_nightmare_domain, select_nightmare_domain_null, InsertNightmareDomainParams,
             SelectNightmareDomain, SelectNightmareDomainNull,
         },
-        named::{item_by_id, new_item_visible, Item, ItemParams},
+        named::{
+            named, named_by_id, named_complex, new_named_visible, Named, NamedComplex,
+            NamedComplexParams, NamedParams,
+        },
         params::{params_use_twice, select_book, SelectBook},
         stress::{
             select_everything, select_everything_array, select_nightmare,
@@ -29,8 +31,8 @@ use crate::cornucopia_sync::{
         },
     },
     types::public::{
-        CustomComposite, CustomCompositeBorrowed, NightmareComposite, NightmareCompositeParams,
-        SpongebobCharacter,
+        CustomComposite, CustomCompositeBorrowed, NamedComposite, NamedCompositeBorrowed,
+        NightmareComposite, NightmareCompositeParams, SpongebobCharacter,
     },
 };
 
@@ -77,42 +79,42 @@ pub fn test_params(client: &mut Client) {
 }
 
 pub fn test_named(client: &mut Client) {
-    let hidden_id = ItemParams {
+    let hidden_id = NamedParams {
         name: "secret",
         price: Some(42.0),
     }
-    .new_item_hidden(client)
+    .new_named_hidden(client)
     .one()
     .unwrap()
     .id;
-    let visible_id = ItemParams {
+    let visible_id = NamedParams {
         name: "stuff",
         price: Some(84.0),
     }
-    .new_item_visible(client)
+    .new_named_visible(client)
     .one()
     .unwrap()
     .id;
-    let last_id = new_item_visible(client, &"can't by me", &None)
+    let last_id = new_named_visible(client, &"can't by me", &None)
         .one()
         .unwrap()
         .id;
     assert_eq!(
-        items(client).vec().unwrap(),
+        named(client).vec().unwrap(),
         &[
-            Item {
+            Named {
                 id: hidden_id,
                 name: "secret".into(),
                 price: Some(42.0),
                 show: false
             },
-            Item {
+            Named {
                 id: visible_id,
                 name: "stuff".into(),
                 price: Some(84.0),
                 show: true
             },
-            Item {
+            Named {
                 id: last_id,
                 name: "can't by me".into(),
                 price: None,
@@ -121,8 +123,8 @@ pub fn test_named(client: &mut Client) {
         ]
     );
     assert_eq!(
-        item_by_id(client, &hidden_id).one().unwrap(),
-        Item {
+        named_by_id(client, &hidden_id).one().unwrap(),
+        Named {
             id: hidden_id,
             name: "secret".into(),
             price: Some(42.0),
@@ -130,12 +132,35 @@ pub fn test_named(client: &mut Client) {
         }
     );
     assert_eq!(
-        item_by_id(client, &visible_id).one().unwrap(),
-        Item {
+        named_by_id(client, &visible_id).one().unwrap(),
+        Named {
             id: visible_id,
             name: "stuff".into(),
             price: Some(84.0),
             show: true
+        }
+    );
+    assert_eq!(
+        named(client).map(|it| it.id).vec().unwrap(),
+        &[hidden_id, visible_id, last_id]
+    );
+
+    NamedComplexParams {
+        named: NamedCompositeBorrowed {
+            wow: Some("Hello world"),
+            such_cool: None,
+        },
+    }
+    .new_named_complex(client)
+    .unwrap();
+
+    assert_eq!(
+        named_complex(client).one().unwrap(),
+        NamedComplex {
+            named: NamedComposite {
+                wow: Some("Hello world".into()),
+                such_cool: None,
+            },
         }
     );
 }

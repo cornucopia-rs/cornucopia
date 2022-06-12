@@ -116,7 +116,7 @@ impl TypeAnnotationKind {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct TypeDataStructure {
     pub(crate) name: Parsed<String>,
     pub(crate) fields: Vec<Parsed<String>>,

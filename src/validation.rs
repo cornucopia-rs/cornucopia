@@ -6,12 +6,14 @@ use crate::utils::has_duplicate;
 
 use crate::parser::{Parsed, ParsedModule, Query, QueryDataStruct, TypeDataStructure};
 
+// TODO check params and rows name are unique across both declared and generated
+
 #[derive(Debug)]
 pub(crate) struct ValidatedModule {
     pub(crate) info: Rc<ModuleInfo>,
     pub(crate) param_types: Vec<TypeDataStructure>,
     pub(crate) row_types: Vec<TypeDataStructure>,
-    pub(crate) _db_types: Vec<TypeDataStructure>,
+    pub(crate) db_types: Vec<TypeDataStructure>,
     pub(crate) queries: Vec<ValidatedQuery>,
 }
 
@@ -173,7 +175,7 @@ pub(crate) fn validate_module(
         info,
         param_types: module.param_types,
         row_types: module.row_types,
-        _db_types: module.db_types,
+        db_types: module.db_types,
         queries: validated_queries,
     })
 }
