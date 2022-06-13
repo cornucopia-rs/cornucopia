@@ -427,7 +427,7 @@ fn gen_query_fn(
             gen!(w, "{}: row.get({})", f.name, index[i])
         });
         let nb_params = params.len();
-        let param_names = join_comma(params, |w, p| gen!(w, "{}", p.name));
+        let param_names = join_comma(params, |w, p| gen!(w, "{}", p.ty.to_param(&p.name)));
         let client_mut = if is_async { "" } else { "mut" };
         gen!(w,
             "pub fn {name}<'a, C: GenericClient>(client: &'a {client_mut} C, {param_list}) -> {row_name}Query<'a,C, {row_name}, {nb_params}> {{
@@ -445,7 +445,7 @@ fn gen_query_fn(
         let param_list = join_comma(params, |w, p| {
             gen!(w, "{} : &'a {}", p.name, p.brw_struct(true))
         });
-        let param_names = join_comma(params, |w, p| gen!(w, "{}", p.name));
+        let param_names = join_comma(params, |w, p| gen!(w, "{}", p.ty.to_param(&p.name)));
         gen!(w,
             "pub {fn_async} fn {name}<'a, C: GenericClient>(client: &'a {client_mut} C, {param_list}) -> Result<u64, {backend}::Error> {{
                 let stmt = client.prepare(\"{sql}\"){fn_await}?;

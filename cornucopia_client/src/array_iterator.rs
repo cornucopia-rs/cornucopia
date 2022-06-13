@@ -3,6 +3,8 @@ use postgres_protocol::types::{array_from_sql, ArrayValues};
 use postgres_types::{FromSql, Kind, Type};
 use std::{fmt::Debug, marker::PhantomData};
 
+use crate::private::escape_domain;
+
 pub struct ArrayIterator<'a, T: FromSql<'a>> {
     values: ArrayValues<'a>,
     ty: Type,
@@ -35,9 +37,9 @@ impl<'a, T: FromSql<'a>> FromSql<'a> for ArrayIterator<'a, T> {
         ty: &Type,
         raw: &'a [u8],
     ) -> Result<ArrayIterator<'a, T>, Box<dyn std::error::Error + Sync + Send>> {
-        let member_type = match *ty.kind() {
-            Kind::Array(ref member) => member,
-            _ => panic!("expected array type"),
+        let member_type = match *escape_domain(ty).kind() {
+            Kind::Array(ref member) => escape_domain(member),
+            _ => panic!("expected array type got {}", ty),
         };
 
         let array = array_from_sql(raw)?;
@@ -54,7 +56,7 @@ impl<'a, T: FromSql<'a>> FromSql<'a> for ArrayIterator<'a, T> {
 
     fn accepts(ty: &Type) -> bool {
         match *ty.kind() {
-            Kind::Array(ref inner) => T::accepts(inner),
+            Kind::Array(ref inner) => T::accepts(escape_domain(inner)),
             _ => false,
         }
     }

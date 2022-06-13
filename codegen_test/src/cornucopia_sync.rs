@@ -242,7 +242,7 @@ pub mod types {
                             postgres_types::ToSql::to_sql(&self.spongebob, field.type_(), out)
                         }
                         "domain" => postgres_types::ToSql::to_sql(
-                            &cornucopia_client::private::Domain::<&'a str>(&self.domain),
+                            &cornucopia_client::private::Domain(&self.domain),
                             field.type_(),
                             out,
                         ),
@@ -461,6 +461,173 @@ pub mod types {
                             "first" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
                             "second" => <f64 as postgres_types::ToSql>::accepts(f.type_()),
                             _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
+        #[postgres(name = "domain_composite")]
+        pub struct DomainComposite {
+            pub txt: String,
+            pub json: serde_json::Value,
+            pub nb: i32,
+            pub arr: Vec<serde_json::Value>,
+        }
+        #[derive(Debug)]
+        pub struct DomainCompositeBorrowed<'a> {
+            pub txt: &'a str,
+            pub json: postgres_types::Json<&'a serde_json::value::RawValue>,
+            pub nb: i32,
+            pub arr: cornucopia_client::ArrayIterator<
+                'a,
+                postgres_types::Json<&'a serde_json::value::RawValue>,
+            >,
+        }
+        impl<'a> From<DomainCompositeBorrowed<'a>> for DomainComposite {
+            fn from(
+                DomainCompositeBorrowed { txt, json, nb, arr }: DomainCompositeBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    txt: txt.into(),
+                    json: serde_json::from_str(json.0.get()).unwrap(),
+                    nb,
+                    arr: arr
+                        .map(|v| serde_json::from_str(v.0.get()).unwrap())
+                        .collect(),
+                }
+            }
+        }
+        impl<'a> postgres_types::FromSql<'a> for DomainCompositeBorrowed<'a> {
+            fn from_sql(
+                ty: &postgres_types::Type,
+                out: &'a [u8],
+            ) -> Result<DomainCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                let mut out = out;
+                let num_fields = postgres_types::private::read_be_i32(&mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let txt = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let json = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let nb = postgres_types::private::read_value(fields[2].type_(), &mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let arr = postgres_types::private::read_value(fields[3].type_(), &mut out)?;
+                Ok(DomainCompositeBorrowed { txt, json, nb, arr })
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                ty.name() == "domain_composite" && ty.schema() == "public"
+            }
+        }
+        #[derive(Debug)]
+        pub struct DomainCompositeParams<'a> {
+            pub txt: &'a str,
+            pub json: &'a serde_json::value::Value,
+            pub nb: i32,
+            pub arr: &'a [&'a serde_json::value::Value],
+        }
+        impl<'a> postgres_types::ToSql for DomainCompositeParams<'a> {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {
+                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = out.len();
+                    out.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {
+                        "txt" => postgres_types::ToSql::to_sql(
+                            &cornucopia_client::private::Domain(&self.txt),
+                            field.type_(),
+                            out,
+                        ),
+                        "json" => postgres_types::ToSql::to_sql(
+                            &cornucopia_client::private::Domain(&self.json),
+                            field.type_(),
+                            out,
+                        ),
+                        "nb" => postgres_types::ToSql::to_sql(
+                            &cornucopia_client::private::Domain(&self.nb),
+                            field.type_(),
+                            out,
+                        ),
+                        "arr" => postgres_types::ToSql::to_sql(
+                            &cornucopia_client::private::Domain(
+                                &cornucopia_client::private::DomainArray(&self.arr),
+                            ),
+                            field.type_(),
+                            out,
+                        ),
+                        _ => unreachable!(),
+                    };
+                    let count = match r? {
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {
+                            let len = out.len() - base - 4;
+                            if len > i32::max_value() as usize {
+                                return Err(Into::into("value too large to transmit"));
+                            }
+                            len as i32
+                        }
+                    };
+                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                }
+                Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "domain_composite" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != 4usize {
+                            return false;
+                        }
+                        fields.iter().all(|f| {
+                            match f.name() {
+                                "txt" => {
+                                    <cornucopia_client::private::Domain::<
+                                        &'a str,
+                                    > as postgres_types::ToSql>::accepts(f.type_())
+                                }
+                                "json" => {
+                                    <cornucopia_client::private::Domain::<
+                                        &'a serde_json::value::Value,
+                                    > as postgres_types::ToSql>::accepts(f.type_())
+                                }
+                                "nb" => {
+                                    <cornucopia_client::private::Domain::<
+                                        i32,
+                                    > as postgres_types::ToSql>::accepts(f.type_())
+                                }
+                                "arr" => {
+                                    <cornucopia_client::private::Domain::<
+                                        &'a [&'a serde_json::value::Value],
+                                    > as postgres_types::ToSql>::accepts(f.type_())
+                                }
+                                _ => false,
+                            }
                         })
                     }
                     _ => false,
@@ -900,6 +1067,7 @@ pub mod queries {
         #[derive(Debug)]
         pub struct InsertNightmareDomainParams<'a> {
             pub arr: &'a [&'a serde_json::value::Value],
+            pub composite: Option<super::super::types::public::DomainCompositeParams<'a>>,
             pub json: &'a serde_json::value::Value,
             pub nb: i32,
             pub txt: &'a str,
@@ -909,7 +1077,14 @@ pub mod queries {
                 &'a self,
                 client: &'a mut C,
             ) -> Result<u64, postgres::Error> {
-                insert_nightmare_domain(client, &self.arr, &self.json, &self.nb, &self.txt)
+                insert_nightmare_domain(
+                    client,
+                    &self.arr,
+                    &self.composite,
+                    &self.json,
+                    &self.nb,
+                    &self.txt,
+                )
             }
         }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
@@ -1000,7 +1175,8 @@ pub mod queries {
         }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct SelectNightmareDomainNull {
-            pub arr: Option<Vec<serde_json::Value>>,
+            pub arr: Option<Vec<Option<serde_json::Value>>>,
+            pub composite: Option<super::super::types::public::DomainComposite>,
             pub json: Option<serde_json::Value>,
             pub nb: Option<i32>,
             pub txt: Option<String>,
@@ -1009,9 +1185,10 @@ pub mod queries {
             pub arr: Option<
                 cornucopia_client::ArrayIterator<
                     'a,
-                    postgres_types::Json<&'a serde_json::value::RawValue>,
+                    Option<postgres_types::Json<&'a serde_json::value::RawValue>>,
                 >,
             >,
+            pub composite: Option<super::super::types::public::DomainCompositeBorrowed<'a>>,
             pub json: Option<postgres_types::Json<&'a serde_json::value::RawValue>>,
             pub nb: Option<i32>,
             pub txt: Option<&'a str>,
@@ -1020,6 +1197,7 @@ pub mod queries {
             fn from(
                 SelectNightmareDomainNullBorrowed {
                     arr,
+                    composite,
                     json,
                     nb,
                     txt,
@@ -1027,9 +1205,10 @@ pub mod queries {
             ) -> Self {
                 Self {
                     arr: arr.map(|v| {
-                        v.map(|v| serde_json::from_str(v.0.get()).unwrap())
+                        v.map(|v| v.map(|v| serde_json::from_str(v.0.get()).unwrap()))
                             .collect()
                     }),
+                    composite: composite.map(|v| v.into()),
                     json: json.map(|v| serde_json::from_str(v.0.get()).unwrap()),
                     nb,
                     txt: txt.map(|v| v.into()),
@@ -1109,14 +1288,27 @@ pub mod queries {
         pub fn insert_nightmare_domain<'a, C: GenericClient>(
             client: &'a mut C,
             arr: &'a &'a [&'a serde_json::value::Value],
+            composite: &'a Option<super::super::types::public::DomainCompositeParams<'a>>,
             json: &'a &'a serde_json::value::Value,
             nb: &'a i32,
             txt: &'a &'a str,
         ) -> Result<u64, postgres::Error> {
-            let stmt = client.prepare(
-                "INSERT INTO nightmare_domain (txt, json, nb, arr) VALUES ($4, $2, $3, $1)",
-            )?;
-            client.execute(&stmt, &[arr, json, nb, txt])
+            let stmt = client
+                .prepare(
+                    "INSERT INTO nightmare_domain (txt, json, nb, arr, composite) VALUES ($5, $3, $4, $1, $2)",
+                )?;
+            client.execute(
+                &stmt,
+                &[
+                    &cornucopia_client::private::Domain(&cornucopia_client::private::DomainArray(
+                        arr,
+                    )),
+                    composite,
+                    &cornucopia_client::private::Domain(json),
+                    &cornucopia_client::private::Domain(nb),
+                    &cornucopia_client::private::Domain(txt),
+                ],
+            )
         }
         pub fn select_nightmare_domain_null<'a, C: GenericClient>(
             client: &'a mut C,
@@ -1124,9 +1316,10 @@ pub mod queries {
             SelectNightmareDomainNullQuery {
                 client,
                 params: [],
-                query: "SELECT txt, json, nb, arr FROM nightmare_domain",
+                query: "SELECT * FROM nightmare_domain",
                 extractor: |row| SelectNightmareDomainNullBorrowed {
                     arr: row.get(3),
+                    composite: row.get(4),
                     json: row.get(1),
                     nb: row.get(2),
                     txt: row.get(0),

@@ -35,8 +35,9 @@ use crate::cornucopia_sync::{
         },
     },
     types::public::{
-        CustomComposite, CustomCompositeBorrowed, NamedComposite, NamedCompositeBorrowed,
-        NightmareComposite, NightmareCompositeParams, SpongebobCharacter,
+        CustomComposite, CustomCompositeBorrowed, DomainComposite, DomainCompositeParams,
+        NamedComposite, NamedCompositeBorrowed, NightmareComposite, NightmareCompositeParams,
+        SpongebobCharacter,
     },
 };
 
@@ -53,11 +54,11 @@ pub fn main() {
         .connect(NoTls)
         .unwrap();
     test_copy(client);
-    // test_domain(client); // TODO inserting array of domain does not work
     test_params(client);
     test_named(client);
     test_nullity(client);
     test_stress(client);
+    test_domain(client);
 }
 
 pub fn moving<T>(_item: T) {}
@@ -223,14 +224,21 @@ pub fn test_copy(client: &mut Client) {
 
 // Test domain erasing
 pub fn test_domain(client: &mut Client) {
-    let json: Value = serde_json::from_str("{}").unwrap();
+    let json: Value = serde_json::from_str(r#"{"name": "James Bond"}"#).unwrap();
 
     // Erased domain not null
+    let arr = &[&json];
     let params = InsertNightmareDomainParams {
-        arr: &[&json],
+        arr,
         json: &json,
         nb: 42,
         txt: "Hello world",
+        composite: Some(DomainCompositeParams {
+            arr,
+            json: &json,
+            nb: 42,
+            txt: "Hello world",
+        }),
     };
     let expected = SelectNightmareDomain {
         arr: vec![json.clone()],
@@ -242,10 +250,16 @@ pub fn test_domain(client: &mut Client) {
     let actual = select_nightmare_domain(client).one().unwrap();
     assert_eq!(expected, actual);
     let expected = SelectNightmareDomainNull {
-        arr: Some(vec![json.clone()]),
+        arr: Some(vec![Some(json.clone())]),
         json: Some(json.clone()),
         nb: Some(42),
         txt: Some("Hello world".to_string()),
+        composite: Some(DomainComposite {
+            arr: vec![json.clone()],
+            json: json.clone(),
+            nb: 42,
+            txt: "Hello world".to_string(),
+        }),
     };
     let actual = select_nightmare_domain_null(client).one().unwrap();
     assert_eq!(expected, actual);
