@@ -337,9 +337,9 @@ fn prepare_query(
 
         let mut param_fields = Vec::new();
         for (col_name, col_ty) in params {
-            let is_nullable = nullable_params_fields
+            let nullity = nullable_params_fields
                 .iter()
-                .any(|x| x.name.value == col_name.value);
+                .find(|x| x.name.value == col_name.value);
             // Register type
             param_fields.push(PreparedField {
                 name: col_name.value.clone(),
@@ -347,8 +347,8 @@ fn prepare_query(
                     .register(&col_ty)
                     .map_err(|e| Error::new(e, &name, module.info.clone()))?
                     .clone(),
-                is_nullable,
-                is_inner_nullable: false, // TODO used when support null everywhere
+                is_nullable: nullity.map(|it| it.nullable).unwrap_or(false),
+                is_inner_nullable: nullity.map(|it| it.inner_nullable).unwrap_or(false),
             });
         }
         param_fields
@@ -375,8 +375,9 @@ fn prepare_query(
 
         let mut row_fields = Vec::new();
         for (col_name, col_ty) in stmt_cols.iter().map(|c| (c.name().to_owned(), c.type_())) {
-            let is_nullable = nullable_row_fields.iter().any(|x| x.name.value == col_name);
-
+            let nullity = nullable_row_fields
+                .iter()
+                .find(|x| x.name.value == col_name);
             // Register type
             let ty = registrar
                 .register(col_ty)
@@ -385,8 +386,8 @@ fn prepare_query(
             row_fields.push(PreparedField {
                 name: normalize_rust_name(&col_name),
                 ty,
-                is_nullable,
-                is_inner_nullable: false, // TODO used when support null everywhere
+                is_nullable: nullity.map(|it| it.nullable).unwrap_or(false),
+                is_inner_nullable: nullity.map(|it| it.inner_nullable).unwrap_or(false),
             });
         }
         row_fields

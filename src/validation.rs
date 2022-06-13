@@ -6,8 +6,6 @@ use crate::utils::has_duplicate;
 
 use crate::parser::{NullableIdent, Parsed, ParsedModule, Query, QueryDataStruct, TypeAnnotation};
 
-// TODO check params and rows name are unique across both declared and generated
-
 #[derive(Debug)]
 pub(crate) struct ValidatedModule {
     pub(crate) info: Rc<ModuleInfo>,

@@ -3,9 +3,12 @@ use std::net::{IpAddr, Ipv4Addr};
 use cornucopia_sync::{
     queries::{
         copy::{select_copy, InsertCloneParams, InsertCopyParams},
+        nullity::{Nullity, NullityParams},
         params::insert_book,
     },
-    types::public::{CloneCompositeBorrowed, CopyComposite},
+    types::public::{
+        CloneCompositeBorrowed, CopyComposite, NullityComposite, NullityCompositeParams,
+    },
 };
 use eui48::MacAddress;
 use postgres::{Client, Config, NoTls};
@@ -23,6 +26,7 @@ use crate::cornucopia_sync::{
             named, named_by_id, named_complex, new_named_visible, Named, NamedComplex,
             NamedComplexParams, NamedParams,
         },
+        nullity::nullity,
         params::{params_use_twice, select_book, SelectBook},
         stress::{
             select_everything, select_everything_array, select_nightmare,
@@ -49,8 +53,10 @@ pub fn main() {
         .connect(NoTls)
         .unwrap();
     test_copy(client);
+    // test_domain(client); // TODO inserting array of domain does not work
     test_params(client);
     test_named(client);
+    test_nullity(client);
     test_stress(client);
 }
 
@@ -76,6 +82,30 @@ pub fn test_params(client: &mut Client) {
         ]
     );
     params_use_twice(client, &"name").unwrap();
+}
+
+pub fn test_nullity(client: &mut Client) {
+    NullityParams {
+        composite: Some(NullityCompositeParams {
+            jsons: Some(&[None]),
+            id: 42,
+        }),
+        name: "James Bond",
+        texts: &[Some("Hello"), Some("world"), None],
+    }
+    .new_nullity(client)
+    .unwrap();
+    assert_eq!(
+        nullity(client).one().unwrap(),
+        Nullity {
+            composite: Some(NullityComposite {
+                jsons: Some(vec![None]),
+                id: 42,
+            }),
+            name: "James Bond".to_string(),
+            texts: vec![Some("Hello".to_string()), Some("world".to_string()), None],
+        }
+    );
 }
 
 pub fn test_named(client: &mut Client) {
@@ -192,7 +222,7 @@ pub fn test_copy(client: &mut Client) {
 }
 
 // Test domain erasing
-pub fn domain(client: &mut Client) {
+pub fn test_domain(client: &mut Client) {
     let json: Value = serde_json::from_str("{}").unwrap();
 
     // Erased domain not null

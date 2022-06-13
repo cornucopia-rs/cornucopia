@@ -124,7 +124,7 @@ impl CornucopiaType {
             CornucopiaType::Array { inner, .. } => {
                 let own_inner = inner.own_struct(false);
                 if is_inner_nullable {
-                    format!("Option<Vec<{own_inner}>>")
+                    format!("Vec<Option<{own_inner}>>")
                 } else {
                     format!("Vec<{own_inner}>")
                 }

@@ -476,6 +476,128 @@ pub mod types {
             }
         }
         #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
+        #[postgres(name = "nullity_composite")]
+        pub struct NullityComposite {
+            pub jsons: Option<Vec<Option<serde_json::Value>>>,
+            pub id: i32,
+        }
+        #[derive(Debug)]
+        pub struct NullityCompositeBorrowed<'a> {
+            pub jsons: Option<
+                cornucopia_client::ArrayIterator<
+                    'a,
+                    Option<postgres_types::Json<&'a serde_json::value::RawValue>>,
+                >,
+            >,
+            pub id: i32,
+        }
+        impl<'a> From<NullityCompositeBorrowed<'a>> for NullityComposite {
+            fn from(NullityCompositeBorrowed { jsons, id }: NullityCompositeBorrowed<'a>) -> Self {
+                Self {
+                    jsons: jsons.map(|v| {
+                        v.map(|v| v.map(|v| serde_json::from_str(v.0.get()).unwrap()))
+                            .collect()
+                    }),
+                    id,
+                }
+            }
+        }
+        impl<'a> postgres_types::FromSql<'a> for NullityCompositeBorrowed<'a> {
+            fn from_sql(
+                ty: &postgres_types::Type,
+                out: &'a [u8],
+            ) -> Result<NullityCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                let mut out = out;
+                let num_fields = postgres_types::private::read_be_i32(&mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let jsons = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let id = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
+                Ok(NullityCompositeBorrowed { jsons, id })
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                ty.name() == "nullity_composite" && ty.schema() == "public"
+            }
+        }
+        #[derive(Debug)]
+        pub struct NullityCompositeParams<'a> {
+            pub jsons: Option<&'a [Option<&'a serde_json::value::Value>]>,
+            pub id: i32,
+        }
+        impl<'a> postgres_types::ToSql for NullityCompositeParams<'a> {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {
+                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = out.len();
+                    out.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {
+                        "jsons" => postgres_types::ToSql::to_sql(&self.jsons, field.type_(), out),
+                        "id" => postgres_types::ToSql::to_sql(&self.id, field.type_(), out),
+                        _ => unreachable!(),
+                    };
+                    let count = match r? {
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {
+                            let len = out.len() - base - 4;
+                            if len > i32::max_value() as usize {
+                                return Err(Into::into("value too large to transmit"));
+                            }
+                            len as i32
+                        }
+                    };
+                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                }
+                Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "nullity_composite" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != 2usize {
+                            return false;
+                        }
+                        fields
+                            .iter()
+                            .all(|f| match f.name() {
+                                "jsons" => {
+                                    <&'a [&'a serde_json::value::Value] as postgres_types::ToSql>::accepts(
+                                        f.type_(),
+                                    )
+                                }
+                                "id" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+                                _ => false,
+                            })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
         #[postgres(name = "named_composite")]
         pub struct NamedComposite {
             pub wow: Option<String>,
@@ -1374,6 +1496,129 @@ pub mod queries {
                 query: "SELECT * FROM named_complex",
                 extractor: |row| NamedComplexBorrowed { named: row.get(0) },
                 mapper: |it| NamedComplex::from(it),
+            }
+        }
+    }
+    pub mod nullity {
+        use cornucopia_client::GenericClient;
+        use futures::{StreamExt, TryStreamExt};
+        #[derive(Debug)]
+        pub struct NullityParams<'a> {
+            pub composite: Option<super::super::types::public::NullityCompositeParams<'a>>,
+            pub name: &'a str,
+            pub texts: &'a [Option<&'a str>],
+        }
+        impl<'a> NullityParams<'a> {
+            pub async fn new_nullity<C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> Result<u64, tokio_postgres::Error> {
+                new_nullity(client, &self.composite, &self.name, &self.texts).await
+            }
+        }
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
+        pub struct Nullity {
+            pub composite: Option<super::super::types::public::NullityComposite>,
+            pub name: String,
+            pub texts: Vec<Option<String>>,
+        }
+        pub struct NullityBorrowed<'a> {
+            pub composite: Option<super::super::types::public::NullityCompositeBorrowed<'a>>,
+            pub name: &'a str,
+            pub texts: cornucopia_client::ArrayIterator<'a, Option<&'a str>>,
+        }
+        impl<'a> From<NullityBorrowed<'a>> for Nullity {
+            fn from(
+                NullityBorrowed {
+                    composite,
+                    name,
+                    texts,
+                }: NullityBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    composite: composite.map(|v| v.into()),
+                    name: name.into(),
+                    texts: texts.map(|v| v.map(|v| v.into())).collect(),
+                }
+            }
+        }
+        pub struct NullityQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> NullityBorrowed,
+            mapper: fn(NullityBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> NullityQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(self, mapper: fn(NullityBorrowed) -> R) -> NullityQuery<'a, C, R, N> {
+                NullityQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+                self.client.prepare(self.query).await
+            }
+            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                let row = self.client.query_one(&stmt, &self.params).await?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.stream().await?.try_collect().await
+            }
+            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub async fn stream(
+                self,
+            ) -> Result<
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
+                let stmt = self.stmt().await?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
+                    .await?
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                    .into_stream();
+                Ok(stream)
+            }
+        }
+        pub async fn new_nullity<'a, C: GenericClient>(
+            client: &'a C,
+            composite: &'a Option<super::super::types::public::NullityCompositeParams<'a>>,
+            name: &'a &'a str,
+            texts: &'a &'a [Option<&'a str>],
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare("INSERT INTO nullity(texts, name, composite) VALUES ($3, $2, $1)")
+                .await?;
+            client.execute(&stmt, &[composite, name, texts]).await
+        }
+        pub fn nullity<'a, C: GenericClient>(client: &'a C) -> NullityQuery<'a, C, Nullity, 0> {
+            NullityQuery {
+                client,
+                params: [],
+                query: "SELECT * FROM nullity",
+                extractor: |row| NullityBorrowed {
+                    composite: row.get(2),
+                    name: row.get(1),
+                    texts: row.get(0),
+                },
+                mapper: |it| Nullity::from(it),
             }
         }
     }
