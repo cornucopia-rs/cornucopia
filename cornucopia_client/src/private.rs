@@ -5,15 +5,15 @@ use std::{
     fmt::{Debug, Formatter},
 };
 
-pub struct Domain<'a, T: ToSql>(pub &'a T);
+pub struct Domain<T: ToSql>(pub T);
 
-impl<'a, T: ToSql + Debug> Debug for Domain<'a, T> {
+impl<T: ToSql + Debug> Debug for Domain<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("DomainWrapper").field(&self.0).finish()
     }
 }
 
-impl<'a, T: ToSql> ToSql for Domain<'a, T> {
+impl<T: ToSql> ToSql for Domain<T> {
     fn to_sql(&self, ty: &Type, out: &mut BytesMut) -> Result<IsNull, Box<dyn Error + Sync + Send>>
     where
         Self: Sized,

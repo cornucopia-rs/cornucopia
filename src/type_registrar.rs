@@ -66,9 +66,9 @@ impl CornucopiaType {
                         inner.to_param(name)
                     )
                 }
-                _ => format!("{name}"),
+                _ => name.to_string(),
             },
-            _ => format!("{name}"),
+            _ => name.to_string(),
         }
     }
 
