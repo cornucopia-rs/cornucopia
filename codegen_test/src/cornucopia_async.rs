@@ -1,309 +1,10 @@
+// This file was generated with `cornucopia`. Do not modify.
 #![allow(clippy::all)]
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 #![allow(dead_code)]
 pub mod types {
     pub mod public {
-        #[derive(
-            serde::Serialize,
-            Debug,
-            postgres_types::ToSql,
-            postgres_types::FromSql,
-            Clone,
-            Copy,
-            PartialEq,
-            Eq,
-        )]
-        #[postgres(name = "spongebob_character")]
-        pub enum SpongebobCharacter {
-            Bob,
-            Patrick,
-            Squidward,
-        }
-        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
-        #[postgres(name = "custom_composite")]
-        pub struct CustomComposite {
-            pub wow: String,
-            pub such_cool: i32,
-            pub nice: super::super::types::public::SpongebobCharacter,
-        }
-        #[derive(Debug)]
-        pub struct CustomCompositeBorrowed<'a> {
-            pub wow: &'a str,
-            pub such_cool: i32,
-            pub nice: super::super::types::public::SpongebobCharacter,
-        }
-        impl<'a> From<CustomCompositeBorrowed<'a>> for CustomComposite {
-            fn from(
-                CustomCompositeBorrowed {
-                    wow,
-                    such_cool,
-                    nice,
-                }: CustomCompositeBorrowed<'a>,
-            ) -> Self {
-                Self {
-                    wow: wow.into(),
-                    such_cool,
-                    nice,
-                }
-            }
-        }
-        impl<'a> postgres_types::FromSql<'a> for CustomCompositeBorrowed<'a> {
-            fn from_sql(
-                ty: &postgres_types::Type,
-                out: &'a [u8],
-            ) -> Result<CustomCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let fields = match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                let mut out = out;
-                let num_fields = postgres_types::private::read_be_i32(&mut out)?;
-                let _oid = postgres_types::private::read_be_i32(&mut out)?;
-                let wow = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
-                let _oid = postgres_types::private::read_be_i32(&mut out)?;
-                let such_cool = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
-                let _oid = postgres_types::private::read_be_i32(&mut out)?;
-                let nice = postgres_types::private::read_value(fields[2].type_(), &mut out)?;
-                Ok(CustomCompositeBorrowed {
-                    wow,
-                    such_cool,
-                    nice,
-                })
-            }
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                ty.name() == "custom_composite" && ty.schema() == "public"
-            }
-        }
-        impl<'a> postgres_types::ToSql for CustomCompositeBorrowed<'a> {
-            fn to_sql(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let fields = match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
-                for field in fields {
-                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
-                    let base = out.len();
-                    out.extend_from_slice(&[0; 4]);
-                    let r = match field.name() {
-                        "wow" => postgres_types::ToSql::to_sql(&self.wow, field.type_(), out),
-                        "such_cool" => {
-                            postgres_types::ToSql::to_sql(&self.such_cool, field.type_(), out)
-                        }
-                        "nice" => postgres_types::ToSql::to_sql(&self.nice, field.type_(), out),
-                        _ => unreachable!(),
-                    };
-                    let count = match r? {
-                        postgres_types::IsNull::Yes => -1,
-                        postgres_types::IsNull::No => {
-                            let len = out.len() - base - 4;
-                            if len > i32::max_value() as usize {
-                                return Err(Into::into("value too large to transmit"));
-                            }
-                            len as i32
-                        }
-                    };
-                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
-                }
-                Ok(postgres_types::IsNull::No)
-            }
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                if ty.name() != "custom_composite" {
-                    return false;
-                }
-                match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 3usize {
-                            return false;
-                        }
-                        fields
-                            .iter()
-                            .all(|f| match f.name() {
-                                "wow" => {
-                                    <&'a str as postgres_types::ToSql>::accepts(f.type_())
-                                }
-                                "such_cool" => {
-                                    <i32 as postgres_types::ToSql>::accepts(f.type_())
-                                }
-                                "nice" => {
-                                    <super::super::types::public::SpongebobCharacter as postgres_types::ToSql>::accepts(
-                                        f.type_(),
-                                    )
-                                }
-                                _ => false,
-                            })
-                    }
-                    _ => false,
-                }
-            }
-            fn to_sql_checked(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                postgres_types::__to_sql_checked(self, ty, out)
-            }
-        }
-        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
-        #[postgres(name = "nightmare_composite")]
-        pub struct NightmareComposite {
-            pub custom: Vec<super::super::types::public::CustomComposite>,
-            pub spongebob: Vec<super::super::types::public::SpongebobCharacter>,
-            pub domain: String,
-        }
-        #[derive(Debug)]
-        pub struct NightmareCompositeBorrowed<'a> {
-            pub custom: cornucopia_client::ArrayIterator<
-                'a,
-                super::super::types::public::CustomCompositeBorrowed<'a>,
-            >,
-            pub spongebob: cornucopia_client::ArrayIterator<
-                'a,
-                super::super::types::public::SpongebobCharacter,
-            >,
-            pub domain: &'a str,
-        }
-        impl<'a> From<NightmareCompositeBorrowed<'a>> for NightmareComposite {
-            fn from(
-                NightmareCompositeBorrowed {
-                    custom,
-                    spongebob,
-                    domain,
-                }: NightmareCompositeBorrowed<'a>,
-            ) -> Self {
-                Self {
-                    custom: custom.map(|v| v.into()).collect(),
-                    spongebob: spongebob.map(|v| v).collect(),
-                    domain: domain.into(),
-                }
-            }
-        }
-        impl<'a> postgres_types::FromSql<'a> for NightmareCompositeBorrowed<'a> {
-            fn from_sql(
-                ty: &postgres_types::Type,
-                out: &'a [u8],
-            ) -> Result<NightmareCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let fields = match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                let mut out = out;
-                let num_fields = postgres_types::private::read_be_i32(&mut out)?;
-                let _oid = postgres_types::private::read_be_i32(&mut out)?;
-                let custom = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
-                let _oid = postgres_types::private::read_be_i32(&mut out)?;
-                let spongebob = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
-                let _oid = postgres_types::private::read_be_i32(&mut out)?;
-                let domain = postgres_types::private::read_value(fields[2].type_(), &mut out)?;
-                Ok(NightmareCompositeBorrowed {
-                    custom,
-                    spongebob,
-                    domain,
-                })
-            }
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                ty.name() == "nightmare_composite" && ty.schema() == "public"
-            }
-        }
-        #[derive(Debug)]
-        pub struct NightmareCompositeParams<'a> {
-            pub custom: &'a [super::super::types::public::CustomCompositeBorrowed<'a>],
-            pub spongebob: &'a [super::super::types::public::SpongebobCharacter],
-            pub domain: &'a str,
-        }
-        impl<'a> postgres_types::ToSql for NightmareCompositeParams<'a> {
-            fn to_sql(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let fields = match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
-                for field in fields {
-                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
-                    let base = out.len();
-                    out.extend_from_slice(&[0; 4]);
-                    let r = match field.name() {
-                        "custom" => postgres_types::ToSql::to_sql(&self.custom, field.type_(), out),
-                        "spongebob" => {
-                            postgres_types::ToSql::to_sql(&self.spongebob, field.type_(), out)
-                        }
-                        "domain" => postgres_types::ToSql::to_sql(
-                            &cornucopia_client::private::Domain(&self.domain),
-                            field.type_(),
-                            out,
-                        ),
-                        _ => unreachable!(),
-                    };
-                    let count = match r? {
-                        postgres_types::IsNull::Yes => -1,
-                        postgres_types::IsNull::No => {
-                            let len = out.len() - base - 4;
-                            if len > i32::max_value() as usize {
-                                return Err(Into::into("value too large to transmit"));
-                            }
-                            len as i32
-                        }
-                    };
-                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
-                }
-                Ok(postgres_types::IsNull::No)
-            }
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                if ty.name() != "nightmare_composite" {
-                    return false;
-                }
-                match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 3usize {
-                            return false;
-                        }
-                        fields
-                            .iter()
-                            .all(|f| match f.name() {
-                                "custom" => {
-                                    <&'a [super::super::types::public::CustomCompositeBorrowed<
-                                        'a,
-                                    >] as postgres_types::ToSql>::accepts(f.type_())
-                                }
-                                "spongebob" => {
-                                    <&'a [super::super::types::public::SpongebobCharacter] as postgres_types::ToSql>::accepts(
-                                        f.type_(),
-                                    )
-                                }
-                                "domain" => {
-                                    <cornucopia_client::private::Domain::<
-                                        &'a str,
-                                    > as postgres_types::ToSql>::accepts(f.type_())
-                                }
-                                _ => false,
-                            })
-                    }
-                    _ => false,
-                }
-            }
-            fn to_sql_checked(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                postgres_types::__to_sql_checked(self, ty, out)
-            }
-        }
         #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
         #[postgres(name = "clone_composite")]
         pub struct CloneComposite {
@@ -341,6 +42,7 @@ pub mod types {
                 let second = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
                 Ok(CloneCompositeBorrowed { first, second })
             }
+
             fn accepts(ty: &postgres_types::Type) -> bool {
                 ty.name() == "clone_composite" && ty.schema() == "public"
             }
@@ -475,6 +177,284 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
+        #[derive(
+            serde::Serialize,
+            Debug,
+            postgres_types::ToSql,
+            postgres_types::FromSql,
+            Clone,
+            Copy,
+            PartialEq,
+            Eq,
+        )]
+        #[postgres(name = "spongebob_character")]
+        pub enum SpongebobCharacter {
+            Bob,
+            Patrick,
+            Squidward,
+        }
+        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
+        #[postgres(name = "custom_composite")]
+        pub struct CustomComposite {
+            pub wow: String,
+            pub such_cool: i32,
+            pub nice: super::super::types::public::SpongebobCharacter,
+        }
+        #[derive(Debug)]
+        pub struct CustomCompositeBorrowed<'a> {
+            pub wow: &'a str,
+            pub such_cool: i32,
+            pub nice: super::super::types::public::SpongebobCharacter,
+        }
+        impl<'a> From<CustomCompositeBorrowed<'a>> for CustomComposite {
+            fn from(
+                CustomCompositeBorrowed {
+                    wow,
+                    such_cool,
+                    nice,
+                }: CustomCompositeBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    wow: wow.into(),
+                    such_cool,
+                    nice,
+                }
+            }
+        }
+        impl<'a> postgres_types::FromSql<'a> for CustomCompositeBorrowed<'a> {
+            fn from_sql(
+                ty: &postgres_types::Type,
+                out: &'a [u8],
+            ) -> Result<CustomCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                let mut out = out;
+                let num_fields = postgres_types::private::read_be_i32(&mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let wow = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let such_cool = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let nice = postgres_types::private::read_value(fields[2].type_(), &mut out)?;
+                Ok(CustomCompositeBorrowed {
+                    wow,
+                    such_cool,
+                    nice,
+                })
+            }
+
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                ty.name() == "custom_composite" && ty.schema() == "public"
+            }
+        }
+        impl<'a> postgres_types::ToSql for CustomCompositeBorrowed<'a> {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {
+                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = out.len();
+                    out.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {
+                        "wow" => postgres_types::ToSql::to_sql(&self.wow, field.type_(), out),
+                        "such_cool" => {
+                            postgres_types::ToSql::to_sql(&self.such_cool, field.type_(), out)
+                        }
+                        "nice" => postgres_types::ToSql::to_sql(&self.nice, field.type_(), out),
+                        _ => unreachable!(),
+                    };
+                    let count = match r? {
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {
+                            let len = out.len() - base - 4;
+                            if len > i32::max_value() as usize {
+                                return Err(Into::into("value too large to transmit"));
+                            }
+                            len as i32
+                        }
+                    };
+                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                }
+                Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "custom_composite" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != 3usize {
+                            return false;
+                        }
+                        fields.iter().all(|f| match f.name() {
+                            "wow" => <&'a str as postgres_types::ToSql>::accepts(f.type_()),
+"such_cool" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+"nice" => <super::super::types::public::SpongebobCharacter as postgres_types::ToSql>::accepts(f.type_()),
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
+        #[postgres(name = "nightmare_composite")]
+        pub struct NightmareComposite {
+            pub custom: Vec<super::super::types::public::CustomComposite>,
+            pub spongebob: Vec<super::super::types::public::SpongebobCharacter>,
+            pub domain: String,
+        }
+        #[derive(Debug)]
+        pub struct NightmareCompositeBorrowed<'a> {
+            pub custom: cornucopia_client::ArrayIterator<
+                'a,
+                super::super::types::public::CustomCompositeBorrowed<'a>,
+            >,
+            pub spongebob: cornucopia_client::ArrayIterator<
+                'a,
+                super::super::types::public::SpongebobCharacter,
+            >,
+            pub domain: &'a str,
+        }
+        impl<'a> From<NightmareCompositeBorrowed<'a>> for NightmareComposite {
+            fn from(
+                NightmareCompositeBorrowed {
+                    custom,
+                    spongebob,
+                    domain,
+                }: NightmareCompositeBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    custom: custom.map(|v| v.into()).collect(),
+                    spongebob: spongebob.map(|v| v).collect(),
+                    domain: domain.into(),
+                }
+            }
+        }
+        impl<'a> postgres_types::FromSql<'a> for NightmareCompositeBorrowed<'a> {
+            fn from_sql(
+                ty: &postgres_types::Type,
+                out: &'a [u8],
+            ) -> Result<NightmareCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                let mut out = out;
+                let num_fields = postgres_types::private::read_be_i32(&mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let custom = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let spongebob = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let domain = postgres_types::private::read_value(fields[2].type_(), &mut out)?;
+                Ok(NightmareCompositeBorrowed {
+                    custom,
+                    spongebob,
+                    domain,
+                })
+            }
+
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                ty.name() == "nightmare_composite" && ty.schema() == "public"
+            }
+        }
+        #[derive(Debug)]
+        pub struct NightmareCompositeParams<'a> {
+            pub custom: &'a [super::super::types::public::CustomCompositeBorrowed<'a>],
+            pub spongebob: &'a [super::super::types::public::SpongebobCharacter],
+            pub domain: &'a str,
+        }
+        impl<'a> postgres_types::ToSql for NightmareCompositeParams<'a> {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {
+                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = out.len();
+                    out.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {
+                        "custom" => postgres_types::ToSql::to_sql(&self.custom, field.type_(), out),
+                        "spongebob" => {
+                            postgres_types::ToSql::to_sql(&self.spongebob, field.type_(), out)
+                        }
+                        "domain" => postgres_types::ToSql::to_sql(
+                            &cornucopia_client::private::Domain(&self.domain),
+                            field.type_(),
+                            out,
+                        ),
+                        _ => unreachable!(),
+                    };
+                    let count = match r? {
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {
+                            let len = out.len() - base - 4;
+                            if len > i32::max_value() as usize {
+                                return Err(Into::into("value too large to transmit"));
+                            }
+                            len as i32
+                        }
+                    };
+                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                }
+                Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "nightmare_composite" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != 3usize {
+                            return false;
+                        }
+                        fields.iter().all(|f| match f.name() {
+                            "custom" => <&'a [super::super::types::public::CustomCompositeBorrowed<'a>] as postgres_types::ToSql>::accepts(f.type_()),
+"spongebob" => <&'a [super::super::types::public::SpongebobCharacter] as postgres_types::ToSql>::accepts(f.type_()),
+"domain" => <cornucopia_client::private::Domain::<&'a str> as postgres_types::ToSql>::accepts(f.type_()),
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
         #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
         #[postgres(name = "domain_composite")]
         pub struct DomainComposite {
@@ -529,6 +509,7 @@ pub mod types {
                 let arr = postgres_types::private::read_value(fields[3].type_(), &mut out)?;
                 Ok(DomainCompositeBorrowed { txt, json, nb, arr })
             }
+
             fn accepts(ty: &postgres_types::Type) -> bool {
                 ty.name() == "domain_composite" && ty.schema() == "public"
             }
@@ -604,32 +585,118 @@ pub mod types {
                         if fields.len() != 4usize {
                             return false;
                         }
-                        fields.iter().all(|f| {
-                            match f.name() {
-                                "txt" => {
-                                    <cornucopia_client::private::Domain::<
-                                        &'a str,
-                                    > as postgres_types::ToSql>::accepts(f.type_())
-                                }
-                                "json" => {
-                                    <cornucopia_client::private::Domain::<
-                                        &'a serde_json::value::Value,
-                                    > as postgres_types::ToSql>::accepts(f.type_())
-                                }
-                                "nb" => {
-                                    <cornucopia_client::private::Domain::<
-                                        i32,
-                                    > as postgres_types::ToSql>::accepts(f.type_())
-                                }
-                                "arr" => {
-                                    <cornucopia_client::private::Domain::<
-                                        cornucopia_client::private::DomainArray::<
-                                            &'a serde_json::value::Value,
-                                        >,
-                                    > as postgres_types::ToSql>::accepts(f.type_())
-                                }
-                                _ => false,
+                        fields.iter().all(|f| match f.name() {
+                            "txt" => <cornucopia_client::private::Domain::<&'a str> as postgres_types::ToSql>::accepts(f.type_()),
+"json" => <cornucopia_client::private::Domain::<&'a serde_json::value::Value> as postgres_types::ToSql>::accepts(f.type_()),
+"nb" => <cornucopia_client::private::Domain::<i32> as postgres_types::ToSql>::accepts(f.type_()),
+"arr" => <cornucopia_client::private::Domain::<cornucopia_client::private::DomainArray::<&'a serde_json::value::Value>> as postgres_types::ToSql>::accepts(f.type_()),
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
+        #[postgres(name = "named_composite")]
+        pub struct NamedComposite {
+            pub wow: Option<String>,
+            pub such_cool: Option<i32>,
+        }
+        #[derive(Debug)]
+        pub struct NamedCompositeBorrowed<'a> {
+            pub wow: Option<&'a str>,
+            pub such_cool: Option<i32>,
+        }
+        impl<'a> From<NamedCompositeBorrowed<'a>> for NamedComposite {
+            fn from(NamedCompositeBorrowed { wow, such_cool }: NamedCompositeBorrowed<'a>) -> Self {
+                Self {
+                    wow: wow.map(|v| v.into()),
+                    such_cool,
+                }
+            }
+        }
+        impl<'a> postgres_types::FromSql<'a> for NamedCompositeBorrowed<'a> {
+            fn from_sql(
+                ty: &postgres_types::Type,
+                out: &'a [u8],
+            ) -> Result<NamedCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                let mut out = out;
+                let num_fields = postgres_types::private::read_be_i32(&mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let wow = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let such_cool = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
+                Ok(NamedCompositeBorrowed { wow, such_cool })
+            }
+
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                ty.name() == "named_composite" && ty.schema() == "public"
+            }
+        }
+        impl<'a> postgres_types::ToSql for NamedCompositeBorrowed<'a> {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {
+                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = out.len();
+                    out.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {
+                        "wow" => postgres_types::ToSql::to_sql(&self.wow, field.type_(), out),
+                        "such_cool" => {
+                            postgres_types::ToSql::to_sql(&self.such_cool, field.type_(), out)
+                        }
+                        _ => unreachable!(),
+                    };
+                    let count = match r? {
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {
+                            let len = out.len() - base - 4;
+                            if len > i32::max_value() as usize {
+                                return Err(Into::into("value too large to transmit"));
                             }
+                            len as i32
+                        }
+                    };
+                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                }
+                Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "named_composite" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != 2usize {
+                            return false;
+                        }
+                        fields.iter().all(|f| match f.name() {
+                            "wow" => <&'a str as postgres_types::ToSql>::accepts(f.type_()),
+                            "such_cool" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+                            _ => false,
                         })
                     }
                     _ => false,
@@ -689,6 +756,7 @@ pub mod types {
                 let id = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
                 Ok(NullityCompositeBorrowed { jsons, id })
             }
+
             fn accepts(ty: &postgres_types::Type) -> bool {
                 ty.name() == "nullity_composite" && ty.schema() == "public"
             }
@@ -742,120 +810,9 @@ pub mod types {
                         if fields.len() != 2usize {
                             return false;
                         }
-                        fields
-                            .iter()
-                            .all(|f| match f.name() {
-                                "jsons" => {
-                                    <&'a [&'a serde_json::value::Value] as postgres_types::ToSql>::accepts(
-                                        f.type_(),
-                                    )
-                                }
-                                "id" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
-                                _ => false,
-                            })
-                    }
-                    _ => false,
-                }
-            }
-            fn to_sql_checked(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                postgres_types::__to_sql_checked(self, ty, out)
-            }
-        }
-        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
-        #[postgres(name = "named_composite")]
-        pub struct NamedComposite {
-            pub wow: Option<String>,
-            pub such_cool: Option<i32>,
-        }
-        #[derive(Debug)]
-        pub struct NamedCompositeBorrowed<'a> {
-            pub wow: Option<&'a str>,
-            pub such_cool: Option<i32>,
-        }
-        impl<'a> From<NamedCompositeBorrowed<'a>> for NamedComposite {
-            fn from(NamedCompositeBorrowed { wow, such_cool }: NamedCompositeBorrowed<'a>) -> Self {
-                Self {
-                    wow: wow.map(|v| v.into()),
-                    such_cool,
-                }
-            }
-        }
-        impl<'a> postgres_types::FromSql<'a> for NamedCompositeBorrowed<'a> {
-            fn from_sql(
-                ty: &postgres_types::Type,
-                out: &'a [u8],
-            ) -> Result<NamedCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let fields = match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                let mut out = out;
-                let num_fields = postgres_types::private::read_be_i32(&mut out)?;
-                let _oid = postgres_types::private::read_be_i32(&mut out)?;
-                let wow = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
-                let _oid = postgres_types::private::read_be_i32(&mut out)?;
-                let such_cool = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
-                Ok(NamedCompositeBorrowed { wow, such_cool })
-            }
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                ty.name() == "named_composite" && ty.schema() == "public"
-            }
-        }
-        impl<'a> postgres_types::ToSql for NamedCompositeBorrowed<'a> {
-            fn to_sql(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let fields = match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
-                for field in fields {
-                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
-                    let base = out.len();
-                    out.extend_from_slice(&[0; 4]);
-                    let r = match field.name() {
-                        "wow" => postgres_types::ToSql::to_sql(&self.wow, field.type_(), out),
-                        "such_cool" => {
-                            postgres_types::ToSql::to_sql(&self.such_cool, field.type_(), out)
-                        }
-                        _ => unreachable!(),
-                    };
-                    let count = match r? {
-                        postgres_types::IsNull::Yes => -1,
-                        postgres_types::IsNull::No => {
-                            let len = out.len() - base - 4;
-                            if len > i32::max_value() as usize {
-                                return Err(Into::into("value too large to transmit"));
-                            }
-                            len as i32
-                        }
-                    };
-                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
-                }
-                Ok(postgres_types::IsNull::No)
-            }
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                if ty.name() != "named_composite" {
-                    return false;
-                }
-                match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 2usize {
-                            return false;
-                        }
                         fields.iter().all(|f| match f.name() {
-                            "wow" => <&'a str as postgres_types::ToSql>::accepts(f.type_()),
-                            "such_cool" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+                            "jsons" => <&'a [&'a serde_json::value::Value] as postgres_types::ToSql>::accepts(f.type_()),
+"id" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
                             _ => false,
                         })
                     }
@@ -938,17 +895,21 @@ pub mod queries {
                     mapper,
                 }
             }
+
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
+
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
+
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
             }
+
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 Ok(self
@@ -957,6 +918,7 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
+
             pub async fn stream(
                 self,
             ) -> Result<
@@ -997,17 +959,21 @@ pub mod queries {
                     mapper,
                 }
             }
+
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
+
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
+
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
             }
+
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 Ok(self
@@ -1016,6 +982,7 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
+
             pub async fn stream(
                 self,
             ) -> Result<
@@ -1159,17 +1126,21 @@ pub mod queries {
                     mapper,
                 }
             }
+
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
+
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
+
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
             }
+
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 Ok(self
@@ -1178,6 +1149,7 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
+
             pub async fn stream(
                 self,
             ) -> Result<
@@ -1259,17 +1231,21 @@ pub mod queries {
                     mapper,
                 }
             }
+
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
+
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
+
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
             }
+
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 Ok(self
@@ -1278,6 +1254,7 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
+
             pub async fn stream(
                 self,
             ) -> Result<
@@ -1318,11 +1295,7 @@ pub mod queries {
             nb: &'a i32,
             txt: &'a &'a str,
         ) -> Result<u64, tokio_postgres::Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO nightmare_domain (txt, json, nb, arr, composite) VALUES ($5, $3, $4, $1, $2)",
-                )
-                .await?;
+            let stmt = client.prepare("INSERT INTO nightmare_domain (txt, json, nb, arr, composite) VALUES ($5, $3, $4, $1, $2)").await?;
             client
                 .execute(
                     &stmt,
@@ -1426,17 +1399,21 @@ pub mod queries {
                     mapper,
                 }
             }
+
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
+
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
+
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
             }
+
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 Ok(self
@@ -1445,6 +1422,7 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
+
             pub async fn stream(
                 self,
             ) -> Result<
@@ -1511,17 +1489,21 @@ pub mod queries {
                     mapper,
                 }
             }
+
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
+
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
+
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
             }
+
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 Ok(self
@@ -1530,6 +1512,7 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
+
             pub async fn stream(
                 self,
             ) -> Result<
@@ -1583,17 +1566,21 @@ pub mod queries {
                     mapper,
                 }
             }
+
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
+
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
+
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
             }
+
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 Ok(self
@@ -1602,6 +1589,7 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
+
             pub async fn stream(
                 self,
             ) -> Result<
@@ -1759,17 +1747,21 @@ pub mod queries {
                     mapper,
                 }
             }
+
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
+
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
+
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
             }
+
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 Ok(self
@@ -1778,6 +1770,7 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
+
             pub async fn stream(
                 self,
             ) -> Result<
@@ -1900,17 +1893,21 @@ pub mod queries {
                     mapper,
                 }
             }
+
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
+
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
+
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
             }
+
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 Ok(self
@@ -1919,6 +1916,7 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
+
             pub async fn stream(
                 self,
             ) -> Result<
@@ -2311,17 +2309,21 @@ pub mod queries {
                     mapper,
                 }
             }
+
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
+
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
+
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
             }
+
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 Ok(self
@@ -2330,6 +2332,7 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
+
             pub async fn stream(
                 self,
             ) -> Result<
@@ -2515,17 +2518,21 @@ pub mod queries {
                     mapper,
                 }
             }
+
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
+
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
+
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
             }
+
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 Ok(self
@@ -2534,6 +2541,7 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
+
             pub async fn stream(
                 self,
             ) -> Result<
@@ -2707,17 +2715,21 @@ pub mod queries {
                     mapper,
                 }
             }
+
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
+
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
+
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
             }
+
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 Ok(self
@@ -2726,6 +2738,7 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
+
             pub async fn stream(
                 self,
             ) -> Result<
@@ -2907,17 +2920,21 @@ pub mod queries {
                     mapper,
                 }
             }
+
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
+
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
+
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
             }
+
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 Ok(self
@@ -2926,6 +2943,7 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
+
             pub async fn stream(
                 self,
             ) -> Result<
@@ -2979,17 +2997,21 @@ pub mod queries {
                     mapper,
                 }
             }
+
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
+
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
+
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
             }
+
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 Ok(self
@@ -2998,6 +3020,7 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
+
             pub async fn stream(
                 self,
             ) -> Result<
@@ -3140,12 +3163,8 @@ pub mod queries {
             uuid_: &'a uuid::Uuid,
             varchar_: &'a &'a str,
         ) -> Result<u64, tokio_postgres::Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO Everything (bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
-    VALUES ($3, $4, $6, $24, $12, $25, $20, $15, $13, $23, $21, $2, $14, $1, $22, $9, $19, $10, $8, $26, $33, $5, $28, $30, $31, $29, $7, $27, $16, $17, $32, $11, $18)",
-                )
-                .await?;
+            let stmt = client.prepare("INSERT INTO Everything (bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
+    VALUES ($3, $4, $6, $24, $12, $25, $20, $15, $13, $23, $21, $2, $14, $1, $22, $9, $19, $10, $8, $26, $33, $5, $28, $30, $31, $29, $7, $27, $16, $17, $32, $11, $18)").await?;
             client
                 .execute(
                     &stmt,
@@ -3295,12 +3314,8 @@ pub mod queries {
             uuid_: &'a &'a [uuid::Uuid],
             varchar_: &'a &'a [&'a str],
         ) -> Result<u64, tokio_postgres::Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO EverythingArray (bool_, boolean_, char_, smallint_, int2_, int_, int4_, bingint_, int8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
-    VALUES ($2, $3, $5, $19, $11, $14, $12, $1, $13, $8, $18, $9, $7, $20, $27, $4, $22, $24, $25, $23, $6, $21, $15, $16, $26, $10, $17)",
-                )
-                .await?;
+            let stmt = client.prepare("INSERT INTO EverythingArray (bool_, boolean_, char_, smallint_, int2_, int_, int4_, bingint_, int8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
+    VALUES ($2, $3, $5, $19, $11, $14, $12, $1, $13, $8, $18, $9, $7, $20, $27, $4, $22, $24, $25, $23, $6, $21, $15, $16, $26, $10, $17)").await?;
             client
                 .execute(
                     &stmt,
@@ -3552,17 +3567,21 @@ pub mod queries {
                     mapper,
                 }
             }
+
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
+
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
+
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
             }
+
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 Ok(self
@@ -3571,6 +3590,7 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
+
             pub async fn stream(
                 self,
             ) -> Result<
@@ -3624,17 +3644,21 @@ pub mod queries {
                     mapper,
                 }
             }
+
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
+
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
+
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
             }
+
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 Ok(self
@@ -3643,6 +3667,7 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
+
             pub async fn stream(
                 self,
             ) -> Result<
@@ -3686,17 +3711,21 @@ pub mod queries {
                     mapper,
                 }
             }
+
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
+
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
+
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
             }
+
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 Ok(self
@@ -3705,6 +3734,7 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
+
             pub async fn stream(
                 self,
             ) -> Result<
@@ -3748,17 +3778,21 @@ pub mod queries {
                     mapper,
                 }
             }
+
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
+
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
+
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
             }
+
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 Ok(self
@@ -3767,6 +3801,7 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
+
             pub async fn stream(
                 self,
             ) -> Result<
@@ -3807,17 +3842,21 @@ pub mod queries {
                     mapper,
                 }
             }
+
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
+
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
+
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
             }
+
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 Ok(self
@@ -3826,6 +3865,7 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
+
             pub async fn stream(
                 self,
             ) -> Result<
@@ -3879,17 +3919,21 @@ pub mod queries {
                     mapper,
                 }
             }
+
             pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
                 self.client.prepare(self.query).await
             }
+
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 let row = self.client.query_one(&stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
+
             pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.stream().await?.try_collect().await
             }
+
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt().await?;
                 Ok(self
@@ -3898,6 +3942,7 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
+
             pub async fn stream(
                 self,
             ) -> Result<
@@ -3996,99 +4041,63 @@ pub mod queries {
             client: &'a C,
             price: &'a f64,
         ) -> Result<u64, tokio_postgres::Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a bind_param\', $1)",
-                )
-                .await?;
+            let stmt = client.prepare("INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a bind_param\', $1)").await?;
             client.execute(&stmt, &[price]).await
         }
         pub async fn tricky_sql1<'a, C: GenericClient>(
             client: &'a C,
             price: &'a f64,
         ) -> Result<u64, tokio_postgres::Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a :bind_param', $1)",
-                )
-                .await?;
+            let stmt = client.prepare("INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a :bind_param', $1)").await?;
             client.execute(&stmt, &[price]).await
         }
         pub async fn tricky_sql2<'a, C: GenericClient>(
             client: &'a C,
             price: &'a f64,
         ) -> Result<u64, tokio_postgres::Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a '':bind_param''', $1)",
-                )
-                .await?;
+            let stmt = client.prepare("INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a '':bind_param''', $1)").await?;
             client.execute(&stmt, &[price]).await
         }
         pub async fn tricky_sql3<'a, C: GenericClient>(
             client: &'a C,
             price: &'a f64,
         ) -> Result<u64, tokio_postgres::Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO syntax (\"trick:y\", price)  VALUES ($$this is not a :bind_param$$, $1)",
-                )
-                .await?;
+            let stmt = client.prepare("INSERT INTO syntax (\"trick:y\", price)  VALUES ($$this is not a :bind_param$$, $1)").await?;
             client.execute(&stmt, &[price]).await
         }
         pub async fn tricky_sql4<'a, C: GenericClient>(
             client: &'a C,
             price: &'a f64,
         ) -> Result<u64, tokio_postgres::Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO syntax (\"trick:y\", price) VALUES ($tag$this is not a :bind_param$tag$, $1)",
-                )
-                .await?;
+            let stmt = client.prepare("INSERT INTO syntax (\"trick:y\", price) VALUES ($tag$this is not a :bind_param$tag$, $1)").await?;
             client.execute(&stmt, &[price]).await
         }
         pub async fn tricky_sql6<'a, C: GenericClient>(
             client: &'a C,
             price: &'a f64,
         ) -> Result<u64, tokio_postgres::Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO syntax (\"trick:y\", price) VALUES (e'this is not a '':bind_param''', $1)",
-                )
-                .await?;
+            let stmt = client.prepare("INSERT INTO syntax (\"trick:y\", price) VALUES (e'this is not a '':bind_param''', $1)").await?;
             client.execute(&stmt, &[price]).await
         }
         pub async fn tricky_sql7<'a, C: GenericClient>(
             client: &'a C,
             price: &'a f64,
         ) -> Result<u64, tokio_postgres::Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO syntax (\"trick:y\", price) VALUES (E'this is not a \':bind_param\'', $1)",
-                )
-                .await?;
+            let stmt = client.prepare("INSERT INTO syntax (\"trick:y\", price) VALUES (E'this is not a \':bind_param\'', $1)").await?;
             client.execute(&stmt, &[price]).await
         }
         pub async fn tricky_sql8<'a, C: GenericClient>(
             client: &'a C,
             price: &'a f64,
         ) -> Result<u64, tokio_postgres::Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO syntax (\"trick:y\", price) VALUES (e'this is ''not'' a \':bind_param\'', $1)",
-                )
-                .await?;
+            let stmt = client.prepare("INSERT INTO syntax (\"trick:y\", price) VALUES (e'this is ''not'' a \':bind_param\'', $1)").await?;
             client.execute(&stmt, &[price]).await
         }
         pub async fn tricky_sql9<'a, C: GenericClient>(
             client: &'a C,
             price: &'a f64,
         ) -> Result<u64, tokio_postgres::Error> {
-            let stmt = client
-                .prepare(
-                    "INSERT INTO syntax (\"trick:y\", price) VALUES (E'this is \'not\' a \':bind_param\'', $1)",
-                )
-                .await?;
+            let stmt = client.prepare("INSERT INTO syntax (\"trick:y\", price) VALUES (E'this is \'not\' a \':bind_param\'', $1)").await?;
             client.execute(&stmt, &[price]).await
         }
         pub fn syntax<'a, C: GenericClient>(client: &'a C) -> SyntaxQuery<'a, C, Syntax, 0> {

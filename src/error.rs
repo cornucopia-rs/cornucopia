@@ -1,4 +1,3 @@
-use crate::codegen::error::Error as CodegenError;
 use crate::container::error::Error as ContainerError;
 use crate::parser::error::Error as ParserError;
 use crate::prepare_queries::error::Error as PrepareQueriesError;
@@ -14,7 +13,6 @@ pub enum Error {
     ParseQueries(#[from] ParserError),
     ValidateQueries(#[from] ValidationError),
     Container(#[from] ContainerError),
-    Codegen(#[from] CodegenError),
     PrepareQueries(#[from] PrepareQueriesError),
     NewMigration(#[from] NewMigrationError),
     Migration(#[from] MigrationError),

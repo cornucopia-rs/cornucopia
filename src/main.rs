@@ -1,9 +1,15 @@
+use std::fmt::Display;
+
 use cornucopia::{run, Error};
 
-fn main() -> Result<(), Error> {
-    let result = run();
-    if let Err(e) = &result {
-        eprintln!("{e}");
+struct ErrorWrapper(Error);
+
+impl std::fmt::Debug for ErrorWrapper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        <Error as Display>::fmt(&self.0, f)
     }
-    result
+}
+
+fn main() -> Result<(), ErrorWrapper> {
+    run().map_err(ErrorWrapper)
 }
