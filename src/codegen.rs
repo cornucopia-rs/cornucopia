@@ -7,7 +7,6 @@ use crate::{
     utils::{join_comma, join_ln},
     CodegenSettings,
 };
-use error::Error;
 use indexmap::IndexMap;
 use std::fmt::Write;
 
@@ -534,7 +533,7 @@ fn gen_type_modules(
     w: &mut impl Write,
     prepared: &IndexMap<String, Vec<PreparedType>>,
     settings: CodegenSettings,
-) -> Result<(), Error> {
+) {
     // Generate each module
     let modules_str = join_ln(prepared, |w, (schema, types)| {
         let tys_str = join_ln(types, |w, ty| gen_custom_type(w, schema, ty, settings));
@@ -542,13 +541,9 @@ fn gen_type_modules(
     });
 
     gen!(w, "pub mod types {{ {modules_str} }}");
-    Ok(())
 }
 
-pub(crate) fn generate(
-    preparation: Preparation,
-    settings: CodegenSettings,
-) -> Result<String, Error> {
+pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> String {
     let import = if settings.is_async {
         "use futures::{{StreamExt, TryStreamExt}};use cornucopia_client::GenericClient;"
     } else {
@@ -562,7 +557,7 @@ pub(crate) fn generate(
     "
     .to_string();
     // Generate database type
-    gen_type_modules(&mut buff, &preparation.types, settings)?;
+    gen_type_modules(&mut buff, &preparation.types, settings);
     // Generate queries
     let query_modules = join_ln(preparation.modules, |w, module| {
         let queries_string = join_ln(module.queries.values(), |w, query| {
@@ -581,23 +576,5 @@ pub(crate) fn generate(
         )
     });
     gen!(&mut buff, "pub mod queries {{ {} }}", query_modules);
-    Ok(prettyplease::unparse(&syn::parse_str(&buff)?))
-}
-
-pub(crate) mod error {
-    use thiserror::Error as ThisError;
-
-    #[derive(Debug, ThisError)]
-    #[error("{0}")]
-    pub enum Error {
-        Io(#[from] WriteFileError),
-        Fmt(#[from] syn::parse::Error),
-    }
-
-    #[derive(Debug, ThisError)]
-    #[error("Error while trying to write to destination file \"{path}\": {err}.")]
-    pub struct WriteFileError {
-        pub(crate) err: std::io::Error,
-        pub(crate) path: String,
-    }
+    buff
 }
