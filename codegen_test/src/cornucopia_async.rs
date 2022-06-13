@@ -623,7 +623,9 @@ pub mod types {
                                 }
                                 "arr" => {
                                     <cornucopia_client::private::Domain::<
-                                        &'a [&'a serde_json::value::Value],
+                                        cornucopia_client::private::DomainArray::<
+                                            &'a serde_json::value::Value,
+                                        >,
                                     > as postgres_types::ToSql>::accepts(f.type_())
                                 }
                                 _ => false,

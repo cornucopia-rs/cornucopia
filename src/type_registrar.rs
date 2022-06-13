@@ -97,11 +97,17 @@ impl CornucopiaType {
         match self {
             CornucopiaType::Domain { inner, .. } => format!(
                 "cornucopia_client::private::Domain::<{}>",
-                inner.brw_struct(true, false)
+                inner.accept_to_sql()
             ),
-            CornucopiaType::Simple { pg_ty, .. } if matches!(*pg_ty, Type::JSON | Type::JSONB) => {
-                String::from("postgres_types::Json")
-            }
+            CornucopiaType::Array { inner } => match inner.as_ref() {
+                CornucopiaType::Domain { inner, .. } => {
+                    format!(
+                        "cornucopia_client::private::DomainArray::<{}>",
+                        inner.accept_to_sql()
+                    )
+                }
+                _ => self.brw_struct(true, false),
+            },
             _ => self.brw_struct(true, false),
         }
     }

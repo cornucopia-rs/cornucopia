@@ -25,7 +25,6 @@ impl<'a, T: ToSql> ToSql for Domain<'a, T> {
     where
         Self: Sized,
     {
-        return true; // TODO dirty fix
         return T::accepts(escape_domain(ty));
     }
 
