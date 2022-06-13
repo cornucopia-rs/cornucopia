@@ -4,14 +4,12 @@ use crate::prepare_queries::PreparedField;
 use crate::read_queries::ModuleInfo;
 use crate::utils::has_duplicate;
 
-use crate::parser::{Parsed, ParsedModule, Query, QueryDataStruct, TypeDataStructure};
+use crate::parser::{NullableIdent, Parsed, ParsedModule, Query, QueryDataStruct, TypeAnnotation};
 
 #[derive(Debug)]
 pub(crate) struct ValidatedModule {
     pub(crate) info: Rc<ModuleInfo>,
-    pub(crate) param_types: Vec<TypeDataStructure>,
-    pub(crate) row_types: Vec<TypeDataStructure>,
-    pub(crate) _db_types: Vec<TypeDataStructure>,
+    pub(crate) types: Vec<TypeAnnotation>,
     pub(crate) queries: Vec<ValidatedQuery>,
 }
 
@@ -30,11 +28,13 @@ use postgres_types::Type;
 
 pub(crate) fn duplicate_nullable_ident(
     info: &Rc<ModuleInfo>,
-    idents: &[Parsed<String>],
+    idents: &[NullableIdent],
 ) -> Result<(), Error> {
-    if let Some(dup) = has_duplicate(idents, |p| &p.value) {
+    if let Some(dup) = has_duplicate(idents, |p| &p.name.value) {
         return Err(Error {
-            err: ErrorVariant::DuplicateCol { pos: dup.start },
+            err: ErrorVariant::DuplicateCol {
+                pos: dup.name.start,
+            },
             info: info.clone(),
         });
     }
@@ -68,19 +68,19 @@ pub(crate) fn query_name_already_used(
 
 pub(crate) fn nullable_column_name(
     info: &Rc<ModuleInfo>,
-    nullable_col: &Parsed<String>,
+    nullable_col: &NullableIdent,
     stmt_cols: &[Column],
 ) -> Result<(), Error> {
     // If none of the row's columns match the nullable column
     if stmt_cols
         .iter()
-        .any(|row_col| row_col.name() == nullable_col.value)
+        .any(|row_col| row_col.name() == nullable_col.name.value)
     {
         Ok(())
     } else {
         Err(Error {
             err: ErrorVariant::InvalidNullableColumnName {
-                nullable_col: nullable_col.clone(),
+                nullable_col: nullable_col.name.clone(),
             },
             info: info.clone(),
         })
@@ -89,19 +89,19 @@ pub(crate) fn nullable_column_name(
 
 pub(crate) fn nullable_param_name(
     info: &Rc<ModuleInfo>,
-    nullable_col: &Parsed<String>,
+    nullable_col: &NullableIdent,
     params: &[(Parsed<String>, Type)],
 ) -> Result<(), Error> {
     // If none of the row's columns match the nullable column
     if params
         .iter()
-        .any(|(name, _)| name.value == nullable_col.value)
+        .any(|(name, _)| name.value == nullable_col.name.value)
     {
         Ok(())
     } else {
         Err(Error {
             err: ErrorVariant::InvalidNullableColumnName {
-                nullable_col: nullable_col.clone(),
+                nullable_col: nullable_col.name.clone(),
             },
             info: info.clone(),
         })
@@ -157,12 +157,7 @@ pub(crate) fn validate_module(
     module: ParsedModule,
 ) -> Result<ValidatedModule, Error> {
     query_name_already_used(&info, &module.queries)?;
-    for ty in module
-        .param_types
-        .iter()
-        .chain(module.row_types.iter())
-        .chain(module.db_types.iter())
-    {
+    for ty in module.types.iter() {
         duplicate_nullable_ident(&info, &ty.fields)?;
     }
     let mut validated_queries = Vec::new();
@@ -171,9 +166,7 @@ pub(crate) fn validate_module(
     }
     Ok(ValidatedModule {
         info,
-        param_types: module.param_types,
-        row_types: module.row_types,
-        _db_types: module.db_types,
+        types: module.types,
         queries: validated_queries,
     })
 }

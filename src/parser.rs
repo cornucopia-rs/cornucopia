@@ -88,57 +88,43 @@ fn blank() -> impl Parser<char, (), Error = Simple<char>> {
         .ignored()
 }
 
-fn parse_nullable_ident() -> impl Parser<char, Vec<Parsed<String>>, Error = Simple<char>> {
+#[derive(Debug, Clone)]
+pub struct NullableIdent {
+    pub name: Parsed<String>,
+    pub nullable: bool,
+    pub inner_nullable: bool,
+}
+
+fn parse_nullable_ident() -> impl Parser<char, Vec<NullableIdent>, Error = Simple<char>> {
     space()
         .ignore_then(ident())
-        .then_ignore(just('?'))
+        .then(just('?').or_not())
+        .then(just("[?]").or_not())
+        .map(|((name, null), inner_null)| NullableIdent {
+            name,
+            nullable: null.is_some(),
+            inner_nullable: inner_null.is_some(),
+        })
         .then_ignore(space())
         .separated_by(just(','))
         .allow_trailing()
         .delimited_by(just('('), just(')'))
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum TypeAnnotationKind {
-    Param,
-    Row,
-    Db,
-}
-
-impl TypeAnnotationKind {
-    fn parser() -> impl Parser<char, Self, Error = Simple<char>> {
-        ident().map(|it| match it.value.to_lowercase().as_str() {
-            "param" => Self::Param,
-            "row" => Self::Row,
-            "db" => Self::Db,
-            _ => unreachable!(),
-        })
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct TypeDataStructure {
-    pub(crate) name: Parsed<String>,
-    pub(crate) fields: Vec<Parsed<String>>,
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TypeAnnotation {
-    pub kind: TypeAnnotationKind,
     pub name: Parsed<String>,
-    pub fields: Vec<Parsed<String>>,
+    pub fields: Vec<NullableIdent>,
 }
 
 impl TypeAnnotation {
     fn parser() -> impl Parser<char, Self, Error = Simple<char>> {
         just("--:")
             .ignore_then(space())
-            .ignore_then(TypeAnnotationKind::parser())
-            .then_ignore(space())
-            .then(ident())
+            .ignore_then(ident())
             .then_ignore(space())
             .then(parse_nullable_ident())
-            .map(|((kind, name), fields)| Self { kind, name, fields })
+            .map(|(name, fields)| Self { name, fields })
     }
 }
 
@@ -259,17 +245,17 @@ impl Query {
 
 #[derive(Debug)]
 pub(crate) enum QueryDataStruct {
-    Implicit { idents: Vec<Parsed<String>> },
+    Implicit { idents: Vec<NullableIdent> },
     Named(Parsed<String>),
 }
 
 impl QueryDataStruct {
     pub(crate) fn name_and_fields(
         self,
-        registered_structs: &[TypeDataStructure],
+        registered_structs: &[TypeAnnotation],
         query_name: &Parsed<String>,
         name_suffix: Option<&str>,
-    ) -> (Vec<Parsed<String>>, Parsed<String>) {
+    ) -> (Vec<NullableIdent>, Parsed<String>) {
         match self {
             QueryDataStruct::Implicit { idents } => (
                 idents,
@@ -343,38 +329,21 @@ enum Statement {
 
 #[derive(Debug)]
 pub(crate) struct ParsedModule {
-    pub(crate) param_types: Vec<TypeDataStructure>,
-    pub(crate) row_types: Vec<TypeDataStructure>,
-    pub(crate) db_types: Vec<TypeDataStructure>,
+    pub(crate) types: Vec<TypeAnnotation>,
     pub(crate) queries: Vec<Query>,
 }
 
 impl FromIterator<Statement> for ParsedModule {
     fn from_iter<T: IntoIterator<Item = Statement>>(iter: T) -> Self {
-        let mut param_types = Vec::new();
-        let mut row_types = Vec::new();
-        let mut db_types = Vec::new();
+        let mut types = Vec::new();
         let mut queries = Vec::new();
         for item in iter {
             match item {
-                Statement::Type(TypeAnnotation { kind, name, fields }) => {
-                    let ty_item = TypeDataStructure { name, fields };
-                    match kind {
-                        TypeAnnotationKind::Param => param_types.push(ty_item),
-                        TypeAnnotationKind::Row => row_types.push(ty_item),
-                        TypeAnnotationKind::Db => db_types.push(ty_item),
-                    }
-                }
+                Statement::Type(it) => types.push(it),
                 Statement::Query(it) => queries.push(it),
             }
         }
-
-        ParsedModule {
-            param_types,
-            row_types,
-            db_types,
-            queries,
-        }
+        ParsedModule { types, queries }
     }
 }
 

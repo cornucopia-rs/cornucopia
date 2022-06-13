@@ -1,14 +1,19 @@
---: row Item(price?)
---: param ItemParams(price?)
+--: Named(price?)
+--: NamedParams(price?)
 
---! new_item_visible ItemParams: Id
-INSERT INTO item (name, price, show) VALUES (:name, :price, true) RETURNING id ; 
+--! new_named_visible NamedParams: Id
+INSERT INTO named (name, price, show) VALUES (:name, :price, true) RETURNING id ; 
+--! new_named_hidden NamedParams: Id
+INSERT INTO named (name, price, show) VALUES (:name, :price, false) RETURNING id;
+--! named: Named
+SELECT * FROM named;
+--! named_by_id: Named
+SELECT * FROM named WHERE id = :id;
 
---! new_item_hidden ItemParams: Id
-INSERT INTO item (name, price, show) VALUES (:name, :price, false) RETURNING id;
+--: NamedComplexParams()
+--: named_composite(wow?,such_cool?)
 
---! items: Item
-SELECT * FROM item;
-
---! item_by_id: Item
-SELECT * FROM item WHERE id = :id;
+--! new_named_complex NamedComplexParams
+INSERT INTO named_complex (named) VALUES (:named);
+--! named_complex
+SELECT * FROM named_complex;

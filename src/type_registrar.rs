@@ -51,17 +51,44 @@ impl CornucopiaType {
         }
     }
 
+    pub(crate) fn to_param(&self, name: &str) -> String {
+        match self {
+            CornucopiaType::Domain { inner, .. } => {
+                format!(
+                    "&cornucopia_client::private::Domain({})",
+                    inner.to_param(name)
+                )
+            }
+            CornucopiaType::Array { inner } => match inner.as_ref() {
+                CornucopiaType::Domain { inner, .. } => {
+                    format!(
+                        "&cornucopia_client::private::DomainArray({})",
+                        inner.to_param(name)
+                    )
+                }
+                _ => name.to_string(),
+            },
+            _ => name.to_string(),
+        }
+    }
+
     pub(crate) fn to_sql(&self, name: &str) -> String {
         match self {
             CornucopiaType::Domain { inner, .. } => {
                 format!(
-                    "&cornucopia_client::private::Domain::<{}>(&self.{name})",
-                    inner.brw_struct(true, false)
+                    "&cornucopia_client::private::Domain({})",
+                    inner.to_sql(name)
                 )
             }
-            CornucopiaType::Simple { pg_ty, .. } if matches!(*pg_ty, Type::JSON | Type::JSONB) => {
-                format!("postgres_types::Json(serde_json::from_str({name}.0.get()))")
-            }
+            CornucopiaType::Array { inner } => match inner.as_ref() {
+                CornucopiaType::Domain { inner, .. } => {
+                    format!(
+                        "&cornucopia_client::private::DomainArray({})",
+                        inner.to_sql(name)
+                    )
+                }
+                _ => format!("&self.{name}"),
+            },
             _ => format!("&self.{name}"),
         }
     }
@@ -70,11 +97,17 @@ impl CornucopiaType {
         match self {
             CornucopiaType::Domain { inner, .. } => format!(
                 "cornucopia_client::private::Domain::<{}>",
-                inner.brw_struct(true, false)
+                inner.accept_to_sql()
             ),
-            CornucopiaType::Simple { pg_ty, .. } if matches!(*pg_ty, Type::JSON | Type::JSONB) => {
-                String::from("postgres_types::Json")
-            }
+            CornucopiaType::Array { inner } => match inner.as_ref() {
+                CornucopiaType::Domain { inner, .. } => {
+                    format!(
+                        "cornucopia_client::private::DomainArray::<{}>",
+                        inner.accept_to_sql()
+                    )
+                }
+                _ => self.brw_struct(true, false),
+            },
             _ => self.brw_struct(true, false),
         }
     }
@@ -124,7 +157,7 @@ impl CornucopiaType {
             CornucopiaType::Array { inner, .. } => {
                 let own_inner = inner.own_struct(false);
                 if is_inner_nullable {
-                    format!("Option<Vec<{own_inner}>>")
+                    format!("Vec<Option<{own_inner}>>")
                 } else {
                     format!("Vec<{own_inner}>")
                 }

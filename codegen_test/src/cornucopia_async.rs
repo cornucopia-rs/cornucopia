@@ -4,177 +4,6 @@
 #![allow(dead_code)]
 pub mod types {
     pub mod public {
-        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
-        #[postgres(name = "clone_composite")]
-        pub struct CloneComposite {
-            pub first: i32,
-            pub second: String,
-        }
-        #[derive(Debug)]
-        pub struct CloneCompositeBorrowed<'a> {
-            pub first: i32,
-            pub second: &'a str,
-        }
-        impl<'a> From<CloneCompositeBorrowed<'a>> for CloneComposite {
-            fn from(CloneCompositeBorrowed { first, second }: CloneCompositeBorrowed<'a>) -> Self {
-                Self {
-                    first,
-                    second: second.into(),
-                }
-            }
-        }
-        impl<'a> postgres_types::FromSql<'a> for CloneCompositeBorrowed<'a> {
-            fn from_sql(
-                ty: &postgres_types::Type,
-                out: &'a [u8],
-            ) -> Result<CloneCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let fields = match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                let mut out = out;
-                let num_fields = postgres_types::private::read_be_i32(&mut out)?;
-                let _oid = postgres_types::private::read_be_i32(&mut out)?;
-                let first = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
-                let _oid = postgres_types::private::read_be_i32(&mut out)?;
-                let second = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
-                Ok(CloneCompositeBorrowed { first, second })
-            }
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                ty.name() == "clone_composite" && ty.schema() == "public"
-            }
-        }
-        impl<'a> postgres_types::ToSql for CloneCompositeBorrowed<'a> {
-            fn to_sql(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let fields = match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
-                for field in fields {
-                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
-                    let base = out.len();
-                    out.extend_from_slice(&[0; 4]);
-                    let r = match field.name() {
-                        "first" => postgres_types::ToSql::to_sql(&self.first, field.type_(), out),
-                        "second" => postgres_types::ToSql::to_sql(&self.second, field.type_(), out),
-                        _ => unreachable!(),
-                    };
-                    let count = match r? {
-                        postgres_types::IsNull::Yes => -1,
-                        postgres_types::IsNull::No => {
-                            let len = out.len() - base - 4;
-                            if len > i32::max_value() as usize {
-                                return Err(Into::into("value too large to transmit"));
-                            }
-                            len as i32
-                        }
-                    };
-                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
-                }
-                Ok(postgres_types::IsNull::No)
-            }
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                if ty.name() != "clone_composite" {
-                    return false;
-                }
-                match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 2usize {
-                            return false;
-                        }
-                        fields.iter().all(|f| match f.name() {
-                            "first" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
-                            "second" => <&'a str as postgres_types::ToSql>::accepts(f.type_()),
-                            _ => false,
-                        })
-                    }
-                    _ => false,
-                }
-            }
-            fn to_sql_checked(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                postgres_types::__to_sql_checked(self, ty, out)
-            }
-        }
-        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Copy, Clone, PartialEq)]
-        #[postgres(name = "copy_composite")]
-        pub struct CopyComposite {
-            pub first: i32,
-            pub second: f64,
-        }
-        impl<'a> postgres_types::ToSql for CopyComposite {
-            fn to_sql(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let fields = match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
-                for field in fields {
-                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
-                    let base = out.len();
-                    out.extend_from_slice(&[0; 4]);
-                    let r = match field.name() {
-                        "first" => postgres_types::ToSql::to_sql(&self.first, field.type_(), out),
-                        "second" => postgres_types::ToSql::to_sql(&self.second, field.type_(), out),
-                        _ => unreachable!(),
-                    };
-                    let count = match r? {
-                        postgres_types::IsNull::Yes => -1,
-                        postgres_types::IsNull::No => {
-                            let len = out.len() - base - 4;
-                            if len > i32::max_value() as usize {
-                                return Err(Into::into("value too large to transmit"));
-                            }
-                            len as i32
-                        }
-                    };
-                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
-                }
-                Ok(postgres_types::IsNull::No)
-            }
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                if ty.name() != "copy_composite" {
-                    return false;
-                }
-                match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 2usize {
-                            return false;
-                        }
-                        fields.iter().all(|f| match f.name() {
-                            "first" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
-                            "second" => <f64 as postgres_types::ToSql>::accepts(f.type_()),
-                            _ => false,
-                        })
-                    }
-                    _ => false,
-                }
-            }
-            fn to_sql_checked(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                postgres_types::__to_sql_checked(self, ty, out)
-            }
-        }
         #[derive(
             serde::Serialize,
             Debug,
@@ -413,7 +242,7 @@ pub mod types {
                             postgres_types::ToSql::to_sql(&self.spongebob, field.type_(), out)
                         }
                         "domain" => postgres_types::ToSql::to_sql(
-                            &cornucopia_client::private::Domain::<&'a str>(&self.domain),
+                            &cornucopia_client::private::Domain(&self.domain),
                             field.type_(),
                             out,
                         ),
@@ -462,6 +291,573 @@ pub mod types {
                                 }
                                 _ => false,
                             })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
+        #[postgres(name = "clone_composite")]
+        pub struct CloneComposite {
+            pub first: i32,
+            pub second: String,
+        }
+        #[derive(Debug)]
+        pub struct CloneCompositeBorrowed<'a> {
+            pub first: i32,
+            pub second: &'a str,
+        }
+        impl<'a> From<CloneCompositeBorrowed<'a>> for CloneComposite {
+            fn from(CloneCompositeBorrowed { first, second }: CloneCompositeBorrowed<'a>) -> Self {
+                Self {
+                    first,
+                    second: second.into(),
+                }
+            }
+        }
+        impl<'a> postgres_types::FromSql<'a> for CloneCompositeBorrowed<'a> {
+            fn from_sql(
+                ty: &postgres_types::Type,
+                out: &'a [u8],
+            ) -> Result<CloneCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                let mut out = out;
+                let num_fields = postgres_types::private::read_be_i32(&mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let first = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let second = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
+                Ok(CloneCompositeBorrowed { first, second })
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                ty.name() == "clone_composite" && ty.schema() == "public"
+            }
+        }
+        impl<'a> postgres_types::ToSql for CloneCompositeBorrowed<'a> {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {
+                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = out.len();
+                    out.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {
+                        "first" => postgres_types::ToSql::to_sql(&self.first, field.type_(), out),
+                        "second" => postgres_types::ToSql::to_sql(&self.second, field.type_(), out),
+                        _ => unreachable!(),
+                    };
+                    let count = match r? {
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {
+                            let len = out.len() - base - 4;
+                            if len > i32::max_value() as usize {
+                                return Err(Into::into("value too large to transmit"));
+                            }
+                            len as i32
+                        }
+                    };
+                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                }
+                Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "clone_composite" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != 2usize {
+                            return false;
+                        }
+                        fields.iter().all(|f| match f.name() {
+                            "first" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+                            "second" => <&'a str as postgres_types::ToSql>::accepts(f.type_()),
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Copy, Clone, PartialEq)]
+        #[postgres(name = "copy_composite")]
+        pub struct CopyComposite {
+            pub first: i32,
+            pub second: f64,
+        }
+        impl<'a> postgres_types::ToSql for CopyComposite {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {
+                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = out.len();
+                    out.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {
+                        "first" => postgres_types::ToSql::to_sql(&self.first, field.type_(), out),
+                        "second" => postgres_types::ToSql::to_sql(&self.second, field.type_(), out),
+                        _ => unreachable!(),
+                    };
+                    let count = match r? {
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {
+                            let len = out.len() - base - 4;
+                            if len > i32::max_value() as usize {
+                                return Err(Into::into("value too large to transmit"));
+                            }
+                            len as i32
+                        }
+                    };
+                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                }
+                Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "copy_composite" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != 2usize {
+                            return false;
+                        }
+                        fields.iter().all(|f| match f.name() {
+                            "first" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+                            "second" => <f64 as postgres_types::ToSql>::accepts(f.type_()),
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
+        #[postgres(name = "domain_composite")]
+        pub struct DomainComposite {
+            pub txt: String,
+            pub json: serde_json::Value,
+            pub nb: i32,
+            pub arr: Vec<serde_json::Value>,
+        }
+        #[derive(Debug)]
+        pub struct DomainCompositeBorrowed<'a> {
+            pub txt: &'a str,
+            pub json: postgres_types::Json<&'a serde_json::value::RawValue>,
+            pub nb: i32,
+            pub arr: cornucopia_client::ArrayIterator<
+                'a,
+                postgres_types::Json<&'a serde_json::value::RawValue>,
+            >,
+        }
+        impl<'a> From<DomainCompositeBorrowed<'a>> for DomainComposite {
+            fn from(
+                DomainCompositeBorrowed { txt, json, nb, arr }: DomainCompositeBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    txt: txt.into(),
+                    json: serde_json::from_str(json.0.get()).unwrap(),
+                    nb,
+                    arr: arr
+                        .map(|v| serde_json::from_str(v.0.get()).unwrap())
+                        .collect(),
+                }
+            }
+        }
+        impl<'a> postgres_types::FromSql<'a> for DomainCompositeBorrowed<'a> {
+            fn from_sql(
+                ty: &postgres_types::Type,
+                out: &'a [u8],
+            ) -> Result<DomainCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                let mut out = out;
+                let num_fields = postgres_types::private::read_be_i32(&mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let txt = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let json = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let nb = postgres_types::private::read_value(fields[2].type_(), &mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let arr = postgres_types::private::read_value(fields[3].type_(), &mut out)?;
+                Ok(DomainCompositeBorrowed { txt, json, nb, arr })
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                ty.name() == "domain_composite" && ty.schema() == "public"
+            }
+        }
+        #[derive(Debug)]
+        pub struct DomainCompositeParams<'a> {
+            pub txt: &'a str,
+            pub json: &'a serde_json::value::Value,
+            pub nb: i32,
+            pub arr: &'a [&'a serde_json::value::Value],
+        }
+        impl<'a> postgres_types::ToSql for DomainCompositeParams<'a> {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {
+                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = out.len();
+                    out.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {
+                        "txt" => postgres_types::ToSql::to_sql(
+                            &cornucopia_client::private::Domain(&self.txt),
+                            field.type_(),
+                            out,
+                        ),
+                        "json" => postgres_types::ToSql::to_sql(
+                            &cornucopia_client::private::Domain(&self.json),
+                            field.type_(),
+                            out,
+                        ),
+                        "nb" => postgres_types::ToSql::to_sql(
+                            &cornucopia_client::private::Domain(&self.nb),
+                            field.type_(),
+                            out,
+                        ),
+                        "arr" => postgres_types::ToSql::to_sql(
+                            &cornucopia_client::private::Domain(
+                                &cornucopia_client::private::DomainArray(&self.arr),
+                            ),
+                            field.type_(),
+                            out,
+                        ),
+                        _ => unreachable!(),
+                    };
+                    let count = match r? {
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {
+                            let len = out.len() - base - 4;
+                            if len > i32::max_value() as usize {
+                                return Err(Into::into("value too large to transmit"));
+                            }
+                            len as i32
+                        }
+                    };
+                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                }
+                Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "domain_composite" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != 4usize {
+                            return false;
+                        }
+                        fields.iter().all(|f| {
+                            match f.name() {
+                                "txt" => {
+                                    <cornucopia_client::private::Domain::<
+                                        &'a str,
+                                    > as postgres_types::ToSql>::accepts(f.type_())
+                                }
+                                "json" => {
+                                    <cornucopia_client::private::Domain::<
+                                        &'a serde_json::value::Value,
+                                    > as postgres_types::ToSql>::accepts(f.type_())
+                                }
+                                "nb" => {
+                                    <cornucopia_client::private::Domain::<
+                                        i32,
+                                    > as postgres_types::ToSql>::accepts(f.type_())
+                                }
+                                "arr" => {
+                                    <cornucopia_client::private::Domain::<
+                                        cornucopia_client::private::DomainArray::<
+                                            &'a serde_json::value::Value,
+                                        >,
+                                    > as postgres_types::ToSql>::accepts(f.type_())
+                                }
+                                _ => false,
+                            }
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
+        #[postgres(name = "nullity_composite")]
+        pub struct NullityComposite {
+            pub jsons: Option<Vec<Option<serde_json::Value>>>,
+            pub id: i32,
+        }
+        #[derive(Debug)]
+        pub struct NullityCompositeBorrowed<'a> {
+            pub jsons: Option<
+                cornucopia_client::ArrayIterator<
+                    'a,
+                    Option<postgres_types::Json<&'a serde_json::value::RawValue>>,
+                >,
+            >,
+            pub id: i32,
+        }
+        impl<'a> From<NullityCompositeBorrowed<'a>> for NullityComposite {
+            fn from(NullityCompositeBorrowed { jsons, id }: NullityCompositeBorrowed<'a>) -> Self {
+                Self {
+                    jsons: jsons.map(|v| {
+                        v.map(|v| v.map(|v| serde_json::from_str(v.0.get()).unwrap()))
+                            .collect()
+                    }),
+                    id,
+                }
+            }
+        }
+        impl<'a> postgres_types::FromSql<'a> for NullityCompositeBorrowed<'a> {
+            fn from_sql(
+                ty: &postgres_types::Type,
+                out: &'a [u8],
+            ) -> Result<NullityCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                let mut out = out;
+                let num_fields = postgres_types::private::read_be_i32(&mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let jsons = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let id = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
+                Ok(NullityCompositeBorrowed { jsons, id })
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                ty.name() == "nullity_composite" && ty.schema() == "public"
+            }
+        }
+        #[derive(Debug)]
+        pub struct NullityCompositeParams<'a> {
+            pub jsons: Option<&'a [Option<&'a serde_json::value::Value>]>,
+            pub id: i32,
+        }
+        impl<'a> postgres_types::ToSql for NullityCompositeParams<'a> {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {
+                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = out.len();
+                    out.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {
+                        "jsons" => postgres_types::ToSql::to_sql(&self.jsons, field.type_(), out),
+                        "id" => postgres_types::ToSql::to_sql(&self.id, field.type_(), out),
+                        _ => unreachable!(),
+                    };
+                    let count = match r? {
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {
+                            let len = out.len() - base - 4;
+                            if len > i32::max_value() as usize {
+                                return Err(Into::into("value too large to transmit"));
+                            }
+                            len as i32
+                        }
+                    };
+                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                }
+                Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "nullity_composite" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != 2usize {
+                            return false;
+                        }
+                        fields
+                            .iter()
+                            .all(|f| match f.name() {
+                                "jsons" => {
+                                    <&'a [&'a serde_json::value::Value] as postgres_types::ToSql>::accepts(
+                                        f.type_(),
+                                    )
+                                }
+                                "id" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+                                _ => false,
+                            })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
+        #[postgres(name = "named_composite")]
+        pub struct NamedComposite {
+            pub wow: Option<String>,
+            pub such_cool: Option<i32>,
+        }
+        #[derive(Debug)]
+        pub struct NamedCompositeBorrowed<'a> {
+            pub wow: Option<&'a str>,
+            pub such_cool: Option<i32>,
+        }
+        impl<'a> From<NamedCompositeBorrowed<'a>> for NamedComposite {
+            fn from(NamedCompositeBorrowed { wow, such_cool }: NamedCompositeBorrowed<'a>) -> Self {
+                Self {
+                    wow: wow.map(|v| v.into()),
+                    such_cool,
+                }
+            }
+        }
+        impl<'a> postgres_types::FromSql<'a> for NamedCompositeBorrowed<'a> {
+            fn from_sql(
+                ty: &postgres_types::Type,
+                out: &'a [u8],
+            ) -> Result<NamedCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                let mut out = out;
+                let num_fields = postgres_types::private::read_be_i32(&mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let wow = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
+                let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                let such_cool = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
+                Ok(NamedCompositeBorrowed { wow, such_cool })
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                ty.name() == "named_composite" && ty.schema() == "public"
+            }
+        }
+        impl<'a> postgres_types::ToSql for NamedCompositeBorrowed<'a> {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {
+                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = out.len();
+                    out.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {
+                        "wow" => postgres_types::ToSql::to_sql(&self.wow, field.type_(), out),
+                        "such_cool" => {
+                            postgres_types::ToSql::to_sql(&self.such_cool, field.type_(), out)
+                        }
+                        _ => unreachable!(),
+                    };
+                    let count = match r? {
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {
+                            let len = out.len() - base - 4;
+                            if len > i32::max_value() as usize {
+                                return Err(Into::into("value too large to transmit"));
+                            }
+                            len as i32
+                        }
+                    };
+                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                }
+                Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "named_composite" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != 2usize {
+                            return false;
+                        }
+                        fields.iter().all(|f| match f.name() {
+                            "wow" => <&'a str as postgres_types::ToSql>::accepts(f.type_()),
+                            "such_cool" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+                            _ => false,
+                        })
                     }
                     _ => false,
                 }
@@ -687,6 +1083,7 @@ pub mod queries {
         #[derive(Debug)]
         pub struct InsertNightmareDomainParams<'a> {
             pub arr: &'a [&'a serde_json::value::Value],
+            pub composite: Option<super::super::types::public::DomainCompositeParams<'a>>,
             pub json: &'a serde_json::value::Value,
             pub nb: i32,
             pub txt: &'a str,
@@ -696,7 +1093,15 @@ pub mod queries {
                 &'a self,
                 client: &'a C,
             ) -> Result<u64, tokio_postgres::Error> {
-                insert_nightmare_domain(client, &self.arr, &self.json, &self.nb, &self.txt).await
+                insert_nightmare_domain(
+                    client,
+                    &self.arr,
+                    &self.composite,
+                    &self.json,
+                    &self.nb,
+                    &self.txt,
+                )
+                .await
             }
         }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
@@ -791,7 +1196,8 @@ pub mod queries {
         }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct SelectNightmareDomainNull {
-            pub arr: Option<Vec<serde_json::Value>>,
+            pub arr: Option<Vec<Option<serde_json::Value>>>,
+            pub composite: Option<super::super::types::public::DomainComposite>,
             pub json: Option<serde_json::Value>,
             pub nb: Option<i32>,
             pub txt: Option<String>,
@@ -800,9 +1206,10 @@ pub mod queries {
             pub arr: Option<
                 cornucopia_client::ArrayIterator<
                     'a,
-                    postgres_types::Json<&'a serde_json::value::RawValue>,
+                    Option<postgres_types::Json<&'a serde_json::value::RawValue>>,
                 >,
             >,
+            pub composite: Option<super::super::types::public::DomainCompositeBorrowed<'a>>,
             pub json: Option<postgres_types::Json<&'a serde_json::value::RawValue>>,
             pub nb: Option<i32>,
             pub txt: Option<&'a str>,
@@ -811,6 +1218,7 @@ pub mod queries {
             fn from(
                 SelectNightmareDomainNullBorrowed {
                     arr,
+                    composite,
                     json,
                     nb,
                     txt,
@@ -818,9 +1226,10 @@ pub mod queries {
             ) -> Self {
                 Self {
                     arr: arr.map(|v| {
-                        v.map(|v| serde_json::from_str(v.0.get()).unwrap())
+                        v.map(|v| v.map(|v| serde_json::from_str(v.0.get()).unwrap()))
                             .collect()
                     }),
+                    composite: composite.map(|v| v.into()),
                     json: json.map(|v| serde_json::from_str(v.0.get()).unwrap()),
                     nb,
                     txt: txt.map(|v| v.into()),
@@ -904,16 +1313,30 @@ pub mod queries {
         pub async fn insert_nightmare_domain<'a, C: GenericClient>(
             client: &'a C,
             arr: &'a &'a [&'a serde_json::value::Value],
+            composite: &'a Option<super::super::types::public::DomainCompositeParams<'a>>,
             json: &'a &'a serde_json::value::Value,
             nb: &'a i32,
             txt: &'a &'a str,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = client
                 .prepare(
-                    "INSERT INTO nightmare_domain (txt, json, nb, arr) VALUES ($4, $2, $3, $1)",
+                    "INSERT INTO nightmare_domain (txt, json, nb, arr, composite) VALUES ($5, $3, $4, $1, $2)",
                 )
                 .await?;
-            client.execute(&stmt, &[arr, json, nb, txt]).await
+            client
+                .execute(
+                    &stmt,
+                    &[
+                        &cornucopia_client::private::Domain(
+                            &cornucopia_client::private::DomainArray(arr),
+                        ),
+                        composite,
+                        &cornucopia_client::private::Domain(json),
+                        &cornucopia_client::private::Domain(nb),
+                        &cornucopia_client::private::Domain(txt),
+                    ],
+                )
+                .await
         }
         pub fn select_nightmare_domain_null<'a, C: GenericClient>(
             client: &'a C,
@@ -921,9 +1344,10 @@ pub mod queries {
             SelectNightmareDomainNullQuery {
                 client,
                 params: [],
-                query: "SELECT txt, json, nb, arr FROM nightmare_domain",
+                query: "SELECT * FROM nightmare_domain",
                 extractor: |row| SelectNightmareDomainNullBorrowed {
                     arr: row.get(3),
+                    composite: row.get(4),
                     json: row.get(1),
                     nb: row.get(2),
                     txt: row.get(0),
@@ -936,34 +1360,46 @@ pub mod queries {
         use cornucopia_client::GenericClient;
         use futures::{StreamExt, TryStreamExt};
         #[derive(Debug)]
-        pub struct ItemParams<'a> {
+        pub struct NamedParams<'a> {
             pub name: &'a str,
             pub price: Option<f64>,
         }
-        impl<'a> ItemParams<'a> {
-            pub fn new_item_visible<C: GenericClient>(
+        impl<'a> NamedParams<'a> {
+            pub fn new_named_visible<C: GenericClient>(
                 &'a self,
                 client: &'a C,
             ) -> IdQuery<'a, C, Id, 2> {
-                new_item_visible(client, &self.name, &self.price)
+                new_named_visible(client, &self.name, &self.price)
             }
-            pub fn new_item_hidden<C: GenericClient>(
+            pub fn new_named_hidden<C: GenericClient>(
                 &'a self,
                 client: &'a C,
             ) -> IdQuery<'a, C, Id, 2> {
-                new_item_hidden(client, &self.name, &self.price)
+                new_named_hidden(client, &self.name, &self.price)
             }
         }
         #[derive(Debug, Clone, Copy)]
-        pub struct ItemByIdParams {
+        pub struct NamedByIdParams {
             pub id: i32,
         }
-        impl ItemByIdParams {
-            pub fn item_by_id<'a, C: GenericClient>(
+        impl NamedByIdParams {
+            pub fn named_by_id<'a, C: GenericClient>(
                 &'a self,
                 client: &'a C,
-            ) -> ItemQuery<'a, C, Item, 1> {
-                item_by_id(client, &self.id)
+            ) -> NamedQuery<'a, C, Named, 1> {
+                named_by_id(client, &self.id)
+            }
+        }
+        #[derive(Debug)]
+        pub struct NamedComplexParams<'a> {
+            pub named: super::super::types::public::NamedCompositeBorrowed<'a>,
+        }
+        impl<'a> NamedComplexParams<'a> {
+            pub async fn new_named_complex<C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> Result<u64, tokio_postgres::Error> {
+                new_named_complex(client, &self.named).await
             }
         }
         #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
@@ -1026,26 +1462,26 @@ pub mod queries {
             }
         }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
-        pub struct Item {
+        pub struct Named {
             pub id: i32,
             pub name: String,
             pub price: Option<f64>,
             pub show: bool,
         }
-        pub struct ItemBorrowed<'a> {
+        pub struct NamedBorrowed<'a> {
             pub id: i32,
             pub name: &'a str,
             pub price: Option<f64>,
             pub show: bool,
         }
-        impl<'a> From<ItemBorrowed<'a>> for Item {
+        impl<'a> From<NamedBorrowed<'a>> for Named {
             fn from(
-                ItemBorrowed {
+                NamedBorrowed {
                     id,
                     name,
                     price,
                     show,
-                }: ItemBorrowed<'a>,
+                }: NamedBorrowed<'a>,
             ) -> Self {
                 Self {
                     id,
@@ -1055,19 +1491,19 @@ pub mod queries {
                 }
             }
         }
-        pub struct ItemQuery<'a, C: GenericClient, T, const N: usize> {
+        pub struct NamedQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             query: &'static str,
-            extractor: fn(&tokio_postgres::Row) -> ItemBorrowed,
-            mapper: fn(ItemBorrowed) -> T,
+            extractor: fn(&tokio_postgres::Row) -> NamedBorrowed,
+            mapper: fn(NamedBorrowed) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> ItemQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> NamedQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
-            pub fn map<R>(self, mapper: fn(ItemBorrowed) -> R) -> ItemQuery<'a, C, R, N> {
-                ItemQuery {
+            pub fn map<R>(self, mapper: fn(NamedBorrowed) -> R) -> NamedQuery<'a, C, R, N> {
+                NamedQuery {
                     client: self.client,
                     params: self.params,
                     query: self.query,
@@ -1110,7 +1546,79 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        pub fn new_item_visible<'a, C: GenericClient>(
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
+        pub struct NamedComplex {
+            pub named: super::super::types::public::NamedComposite,
+        }
+        pub struct NamedComplexBorrowed<'a> {
+            pub named: super::super::types::public::NamedCompositeBorrowed<'a>,
+        }
+        impl<'a> From<NamedComplexBorrowed<'a>> for NamedComplex {
+            fn from(NamedComplexBorrowed { named }: NamedComplexBorrowed<'a>) -> Self {
+                Self {
+                    named: named.into(),
+                }
+            }
+        }
+        pub struct NamedComplexQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> NamedComplexBorrowed,
+            mapper: fn(NamedComplexBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> NamedComplexQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(
+                self,
+                mapper: fn(NamedComplexBorrowed) -> R,
+            ) -> NamedComplexQuery<'a, C, R, N> {
+                NamedComplexQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+                self.client.prepare(self.query).await
+            }
+            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                let row = self.client.query_one(&stmt, &self.params).await?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.stream().await?.try_collect().await
+            }
+            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub async fn stream(
+                self,
+            ) -> Result<
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
+                let stmt = self.stmt().await?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
+                    .await?
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                    .into_stream();
+                Ok(stream)
+            }
+        }
+        pub fn new_named_visible<'a, C: GenericClient>(
             client: &'a C,
             name: &'a &'a str,
             price: &'a Option<f64>,
@@ -1118,12 +1626,12 @@ pub mod queries {
             IdQuery {
                 client,
                 params: [name, price],
-                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, true) RETURNING id ",
+                query: "INSERT INTO named (name, price, show) VALUES ($1, $2, true) RETURNING id ",
                 extractor: |row| Id { id: row.get(0) },
                 mapper: |it| Id::from(it),
             }
         }
-        pub fn new_item_hidden<'a, C: GenericClient>(
+        pub fn new_named_hidden<'a, C: GenericClient>(
             client: &'a C,
             name: &'a &'a str,
             price: &'a Option<f64>,
@@ -1131,40 +1639,183 @@ pub mod queries {
             IdQuery {
                 client,
                 params: [name, price],
-                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id",
+                query: "INSERT INTO named (name, price, show) VALUES ($1, $2, false) RETURNING id",
                 extractor: |row| Id { id: row.get(0) },
                 mapper: |it| Id::from(it),
             }
         }
-        pub fn items<'a, C: GenericClient>(client: &'a C) -> ItemQuery<'a, C, Item, 0> {
-            ItemQuery {
+        pub fn named<'a, C: GenericClient>(client: &'a C) -> NamedQuery<'a, C, Named, 0> {
+            NamedQuery {
                 client,
                 params: [],
-                query: "SELECT * FROM item",
-                extractor: |row| ItemBorrowed {
+                query: "SELECT * FROM named",
+                extractor: |row| NamedBorrowed {
                     id: row.get(0),
                     name: row.get(1),
                     price: row.get(2),
                     show: row.get(3),
                 },
-                mapper: |it| Item::from(it),
+                mapper: |it| Named::from(it),
             }
         }
-        pub fn item_by_id<'a, C: GenericClient>(
+        pub fn named_by_id<'a, C: GenericClient>(
             client: &'a C,
             id: &'a i32,
-        ) -> ItemQuery<'a, C, Item, 1> {
-            ItemQuery {
+        ) -> NamedQuery<'a, C, Named, 1> {
+            NamedQuery {
                 client,
                 params: [id],
-                query: "SELECT * FROM item WHERE id = $1",
-                extractor: |row| ItemBorrowed {
+                query: "SELECT * FROM named WHERE id = $1",
+                extractor: |row| NamedBorrowed {
                     id: row.get(0),
                     name: row.get(1),
                     price: row.get(2),
                     show: row.get(3),
                 },
-                mapper: |it| Item::from(it),
+                mapper: |it| Named::from(it),
+            }
+        }
+        pub async fn new_named_complex<'a, C: GenericClient>(
+            client: &'a C,
+            named: &'a super::super::types::public::NamedCompositeBorrowed<'a>,
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare("INSERT INTO named_complex (named) VALUES ($1)")
+                .await?;
+            client.execute(&stmt, &[named]).await
+        }
+        pub fn named_complex<'a, C: GenericClient>(
+            client: &'a C,
+        ) -> NamedComplexQuery<'a, C, NamedComplex, 0> {
+            NamedComplexQuery {
+                client,
+                params: [],
+                query: "SELECT * FROM named_complex",
+                extractor: |row| NamedComplexBorrowed { named: row.get(0) },
+                mapper: |it| NamedComplex::from(it),
+            }
+        }
+    }
+    pub mod nullity {
+        use cornucopia_client::GenericClient;
+        use futures::{StreamExt, TryStreamExt};
+        #[derive(Debug)]
+        pub struct NullityParams<'a> {
+            pub composite: Option<super::super::types::public::NullityCompositeParams<'a>>,
+            pub name: &'a str,
+            pub texts: &'a [Option<&'a str>],
+        }
+        impl<'a> NullityParams<'a> {
+            pub async fn new_nullity<C: GenericClient>(
+                &'a self,
+                client: &'a C,
+            ) -> Result<u64, tokio_postgres::Error> {
+                new_nullity(client, &self.composite, &self.name, &self.texts).await
+            }
+        }
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
+        pub struct Nullity {
+            pub composite: Option<super::super::types::public::NullityComposite>,
+            pub name: String,
+            pub texts: Vec<Option<String>>,
+        }
+        pub struct NullityBorrowed<'a> {
+            pub composite: Option<super::super::types::public::NullityCompositeBorrowed<'a>>,
+            pub name: &'a str,
+            pub texts: cornucopia_client::ArrayIterator<'a, Option<&'a str>>,
+        }
+        impl<'a> From<NullityBorrowed<'a>> for Nullity {
+            fn from(
+                NullityBorrowed {
+                    composite,
+                    name,
+                    texts,
+                }: NullityBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    composite: composite.map(|v| v.into()),
+                    name: name.into(),
+                    texts: texts.map(|v| v.map(|v| v.into())).collect(),
+                }
+            }
+        }
+        pub struct NullityQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            query: &'static str,
+            extractor: fn(&tokio_postgres::Row) -> NullityBorrowed,
+            mapper: fn(NullityBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> NullityQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(self, mapper: fn(NullityBorrowed) -> R) -> NullityQuery<'a, C, R, N> {
+                NullityQuery {
+                    client: self.client,
+                    params: self.params,
+                    query: self.query,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub async fn stmt(&self) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
+                self.client.prepare(self.query).await
+            }
+            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                let row = self.client.query_one(&stmt, &self.params).await?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.stream().await?.try_collect().await
+            }
+            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+                let stmt = self.stmt().await?;
+                Ok(self
+                    .client
+                    .query_opt(&stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub async fn stream(
+                self,
+            ) -> Result<
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
+                let stmt = self.stmt().await?;
+                let stream = self
+                    .client
+                    .query_raw(&stmt, cornucopia_client::private::slice_iter(&self.params))
+                    .await?
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                    .into_stream();
+                Ok(stream)
+            }
+        }
+        pub async fn new_nullity<'a, C: GenericClient>(
+            client: &'a C,
+            composite: &'a Option<super::super::types::public::NullityCompositeParams<'a>>,
+            name: &'a &'a str,
+            texts: &'a &'a [Option<&'a str>],
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = client
+                .prepare("INSERT INTO nullity(texts, name, composite) VALUES ($3, $2, $1)")
+                .await?;
+            client.execute(&stmt, &[composite, name, texts]).await
+        }
+        pub fn nullity<'a, C: GenericClient>(client: &'a C) -> NullityQuery<'a, C, Nullity, 0> {
+            NullityQuery {
+                client,
+                params: [],
+                query: "SELECT * FROM nullity",
+                extractor: |row| NullityBorrowed {
+                    composite: row.get(2),
+                    name: row.get(1),
+                    texts: row.get(0),
+                },
+                mapper: |it| Nullity::from(it),
             }
         }
     }
@@ -3297,7 +3948,7 @@ pub mod queries {
             ImplicitCompactQuery {
                 client,
                 params: [name, price],
-                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id",
+                query: "INSERT INTO named (name, price, show) VALUES ($1, $2, false) RETURNING id",
                 extractor: |row| ImplicitCompact { id: row.get(0) },
                 mapper: |it| ImplicitCompact::from(it),
             }
@@ -3310,7 +3961,7 @@ pub mod queries {
             ImplicitSpacedQuery {
                 client,
                 params: [name, price],
-                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id",
+                query: "INSERT INTO named (name, price, show) VALUES ($1, $2, false) RETURNING id",
                 extractor: |row| ImplicitSpaced { id: row.get(0) },
                 mapper: |it| ImplicitSpaced::from(it),
             }
@@ -3323,7 +3974,7 @@ pub mod queries {
             RowQuery {
                 client,
                 params: [name, price],
-                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id",
+                query: "INSERT INTO named (name, price, show) VALUES ($1, $2, false) RETURNING id",
                 extractor: |row| Row { id: row.get(0) },
                 mapper: |it| Row::from(it),
             }
@@ -3336,7 +3987,7 @@ pub mod queries {
             RowQuery {
                 client,
                 params: [name, price],
-                query: "INSERT INTO item (name, price, show) VALUES ($1, $2, false) RETURNING id",
+                query: "INSERT INTO named (name, price, show) VALUES ($1, $2, false) RETURNING id",
                 extractor: |row| Row { id: row.get(0) },
                 mapper: |it| Row::from(it),
             }
