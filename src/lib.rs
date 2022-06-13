@@ -82,7 +82,7 @@ pub fn generate_live(
 
     // Generate
     let prepared_modules = prepare(client, validated_modules)?;
-    let generated_code = generate_internal(prepared_modules, settings)?;
+    let generated_code = generate_internal(prepared_modules, settings);
     // Write
     if let Some(d) = destination {
         write_generated_code(d, &generated_code)?
@@ -115,7 +115,7 @@ pub fn generate_managed(
     let mut client = conn::cornucopia_conn()?;
     run_migrations_internal(&mut client, migrations_path)?;
     let prepared_modules = prepare(&mut client, validated_modules)?;
-    let generated_code = generate_internal(prepared_modules, settings)?;
+    let generated_code = generate_internal(prepared_modules, settings);
     container::cleanup(podman)?;
 
     if let Some(destination) = destination {

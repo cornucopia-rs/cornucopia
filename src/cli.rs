@@ -118,7 +118,7 @@ pub fn run() -> Result<(), Error> {
                             derive_ser: serialize,
                         },
                     ) {
-                        container::cleanup(podman)?;
+                        let _ = container::cleanup(podman);
                         return Err(e);
                     }
                 }
