@@ -11,6 +11,7 @@ pub use array_iterator::ArrayIterator;
 pub mod sync {
     use postgres::Statement;
 
+    /// Cached statement
     pub struct Stmt {
         query: &'static str,
         cached: Option<Statement>,
@@ -32,7 +33,7 @@ pub mod sync {
                 let stmt = client.prepare(self.query)?;
                 self.cached = Some(stmt);
             }
-
+            // the statement is always prepared at this point
             Ok(unsafe { self.cached.as_ref().unwrap_unchecked() })
         }
     }

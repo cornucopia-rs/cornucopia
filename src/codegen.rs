@@ -437,8 +437,6 @@ fn gen_query_fn(
             impl {struct_name}Stmt {{"
         );
     }
-    let nb_params = params.len();
-
     if let Some((idx, index)) = row {
         let PreparedRow {
             name: row_name,
@@ -454,7 +452,7 @@ fn gen_query_fn(
             gen!(w, "{}: row.get({})", f.name, index[i])
         });
         let param_names = join_comma(params, |w, p| gen!(w, "{}", p.name));
-        let client_mut = if is_async { "" } else { "mut" };
+        let nb_params = params.len();
         gen!(w,
             "pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, {param_list}) -> {row_name}Query<'a,C, {row_name}, {nb_params}> {{
                 {row_name}Query {{
