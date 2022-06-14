@@ -2,7 +2,7 @@ use std::net::{IpAddr, Ipv4Addr};
 
 use cornucopia_sync::{
     queries::{
-        copy::{select_copy, InsertCloneParams, InsertCopyParams},
+        copy::{insert_clone, insert_copy, select_copy, InsertCloneParams, InsertCopyParams},
         nullity::{Nullity, NullityParams},
         params::insert_book,
     },
@@ -19,19 +19,20 @@ use uuid::Uuid;
 use crate::cornucopia_sync::{
     queries::{
         domain::{
-            select_nightmare_domain, select_nightmare_domain_null, InsertNightmareDomainParams,
-            SelectNightmareDomain, SelectNightmareDomainNull,
+            insert_nightmare_domain, select_nightmare_domain, select_nightmare_domain_null,
+            InsertNightmareDomainParams, SelectNightmareDomain, SelectNightmareDomainNull,
         },
         named::{
-            named, named_by_id, named_complex, new_named_visible, Named, NamedComplex,
-            NamedComplexParams, NamedParams,
+            named, named_by_id, named_complex, new_named_complex, new_named_hidden,
+            new_named_visible, Named, NamedComplex, NamedComplexParams, NamedParams,
         },
-        nullity::nullity,
+        nullity::{new_nullity, nullity},
         params::{params_use_twice, select_book, SelectBook},
         stress::{
-            select_everything, select_everything_array, select_nightmare,
-            InsertEverythingArrayParams, InsertEverythingParams, InsertNightmareParams,
-            SelectEverything, SelectEverythingArray, SelectNightmare,
+            insert_everything, insert_everything_array, insert_nightmare, select_everything,
+            select_everything_array, select_nightmare, InsertEverythingArrayParams,
+            InsertEverythingParams, InsertNightmareParams, SelectEverything, SelectEverythingArray,
+            SelectNightmare,
         },
     },
     types::public::{
@@ -41,7 +42,9 @@ use crate::cornucopia_sync::{
     },
 };
 
+#[rustfmt::skip]
 mod cornucopia_async;
+#[rustfmt::skip]
 mod cornucopia_sync;
 
 pub fn main() {
@@ -64,13 +67,18 @@ pub fn main() {
 pub fn moving<T>(_item: T) {}
 
 pub fn test_params(client: &mut Client) {
-    assert_eq!(1, insert_book(client, &None, &"Necronomicon").unwrap());
     assert_eq!(
         1,
-        insert_book(client, &Some("Marcel Proust"), &"In Search of Lost Time").unwrap()
+        insert_book().bind(client, &None, &"Necronomicon").unwrap()
     );
     assert_eq!(
-        select_book(client).vec().unwrap(),
+        1,
+        insert_book()
+            .bind(client, &Some("Marcel Proust"), &"In Search of Lost Time")
+            .unwrap()
+    );
+    assert_eq!(
+        select_book().bind(client).vec().unwrap(),
         &[
             SelectBook {
                 author: None,
@@ -82,22 +90,25 @@ pub fn test_params(client: &mut Client) {
             }
         ]
     );
-    params_use_twice(client, &"name").unwrap();
+    params_use_twice().bind(client, &"name").unwrap();
 }
 
 pub fn test_nullity(client: &mut Client) {
-    NullityParams {
-        composite: Some(NullityCompositeParams {
-            jsons: Some(&[None]),
-            id: 42,
-        }),
-        name: "James Bond",
-        texts: &[Some("Hello"), Some("world"), None],
-    }
-    .new_nullity(client)
-    .unwrap();
+    new_nullity()
+        .params(
+            client,
+            &NullityParams {
+                composite: Some(NullityCompositeParams {
+                    jsons: Some(&[None]),
+                    id: 42,
+                }),
+                name: "James Bond",
+                texts: &[Some("Hello"), Some("world"), None],
+            },
+        )
+        .unwrap();
     assert_eq!(
-        nullity(client).one().unwrap(),
+        nullity().bind(client).one().unwrap(),
         Nullity {
             composite: Some(NullityComposite {
                 jsons: Some(vec![None]),
@@ -110,28 +121,35 @@ pub fn test_nullity(client: &mut Client) {
 }
 
 pub fn test_named(client: &mut Client) {
-    let hidden_id = NamedParams {
-        name: "secret",
-        price: Some(42.0),
-    }
-    .new_named_hidden(client)
-    .one()
-    .unwrap()
-    .id;
-    let visible_id = NamedParams {
-        name: "stuff",
-        price: Some(84.0),
-    }
-    .new_named_visible(client)
-    .one()
-    .unwrap()
-    .id;
-    let last_id = new_named_visible(client, &"can't by me", &None)
+    let hidden_id = new_named_hidden()
+        .params(
+            client,
+            &NamedParams {
+                name: "secret",
+                price: Some(42.0),
+            },
+        )
+        .one()
+        .unwrap()
+        .id;
+    let visible_id = new_named_visible()
+        .params(
+            client,
+            &NamedParams {
+                name: "stuff",
+                price: Some(84.0),
+            },
+        )
+        .one()
+        .unwrap()
+        .id;
+    let last_id = new_named_visible()
+        .bind(client, &"can't by me", &None)
         .one()
         .unwrap()
         .id;
     assert_eq!(
-        named(client).vec().unwrap(),
+        named().bind(client).vec().unwrap(),
         &[
             Named {
                 id: hidden_id,
@@ -154,7 +172,7 @@ pub fn test_named(client: &mut Client) {
         ]
     );
     assert_eq!(
-        named_by_id(client, &hidden_id).one().unwrap(),
+        named_by_id().bind(client, &hidden_id).one().unwrap(),
         Named {
             id: hidden_id,
             name: "secret".into(),
@@ -163,7 +181,7 @@ pub fn test_named(client: &mut Client) {
         }
     );
     assert_eq!(
-        named_by_id(client, &visible_id).one().unwrap(),
+        named_by_id().bind(client, &visible_id).one().unwrap(),
         Named {
             id: visible_id,
             name: "stuff".into(),
@@ -172,21 +190,24 @@ pub fn test_named(client: &mut Client) {
         }
     );
     assert_eq!(
-        named(client).map(|it| it.id).vec().unwrap(),
+        named().bind(client).map(|it| it.id).vec().unwrap(),
         &[hidden_id, visible_id, last_id]
     );
 
-    NamedComplexParams {
-        named: NamedCompositeBorrowed {
-            wow: Some("Hello world"),
-            such_cool: None,
-        },
-    }
-    .new_named_complex(client)
-    .unwrap();
+    new_named_complex()
+        .params(
+            client,
+            &NamedComplexParams {
+                named: NamedCompositeBorrowed {
+                    wow: Some("Hello world"),
+                    such_cool: None,
+                },
+            },
+        )
+        .unwrap();
 
     assert_eq!(
-        named_complex(client).one().unwrap(),
+        named_complex().bind(client).one().unwrap(),
         NamedComplex {
             named: NamedComposite {
                 wow: Some("Hello world".into()),
@@ -206,8 +227,8 @@ pub fn test_copy(client: &mut Client) {
         },
     };
     moving(copy_params); // Ignore if copied
-    copy_params.insert_copy(client).unwrap();
-    let copy_row = select_copy(client).one().unwrap();
+    insert_copy().params(client, &copy_params).unwrap();
+    let copy_row = select_copy().bind(client).one().unwrap();
     moving(copy_row); // Ignore if copied
     moving(copy_row);
 
@@ -218,8 +239,8 @@ pub fn test_copy(client: &mut Client) {
             second: "Hello world",
         },
     };
-    clone_params.insert_clone(client).unwrap();
-    select_copy(client).one().unwrap();
+    insert_clone().params(client, &clone_params).unwrap();
+    select_copy().bind(client).one().unwrap();
 }
 
 // Test domain erasing
@@ -246,8 +267,11 @@ pub fn test_domain(client: &mut Client) {
         nb: 42,
         txt: "Hello world".to_string(),
     };
-    assert_eq!(1, params.insert_nightmare_domain(client).unwrap());
-    let actual = select_nightmare_domain(client).one().unwrap();
+    assert_eq!(
+        1,
+        insert_nightmare_domain().params(client, &params).unwrap()
+    );
+    let actual = select_nightmare_domain().bind(client).one().unwrap();
     assert_eq!(expected, actual);
     let expected = SelectNightmareDomainNull {
         arr: Some(vec![Some(json.clone())]),
@@ -261,7 +285,7 @@ pub fn test_domain(client: &mut Client) {
             txt: "Hello world".to_string(),
         }),
     };
-    let actual = select_nightmare_domain_null(client).one().unwrap();
+    let actual = select_nightmare_domain_null().bind(client).one().unwrap();
     assert_eq!(expected, actual);
 }
 
@@ -319,7 +343,7 @@ pub fn test_stress(client: &mut Client) {
         bingint_: expected.bingint_,
         bool_: expected.bool_,
         boolean_: expected.boolean_,
-        bytea_: &expected.bytea_,
+        bytea_: expected.bytea_.as_slice(),
         char_: expected.char_,
         date_: expected.date_,
         double_precision_: expected.double_precision_,
@@ -340,7 +364,7 @@ pub fn test_stress(client: &mut Client) {
         serial_: expected.serial_,
         smallint_: expected.smallint_,
         smallserial_: expected.smallserial_,
-        text_: &expected.text_,
+        text_: expected.text_.as_str(),
         time_: expected.time_,
         timestamp_: expected.timestamp_,
         timestamp_with_time_zone_: expected.timestamp_with_time_zone_,
@@ -349,8 +373,8 @@ pub fn test_stress(client: &mut Client) {
         uuid_: expected.uuid_,
         varchar_: &expected.varchar_,
     };
-    assert_eq!(1, params.insert_everything(client).unwrap());
-    let actual = select_everything(client).one().unwrap();
+    assert_eq!(1, insert_everything().params(client, &params).unwrap());
+    let actual = select_everything().bind(client).one().unwrap();
     assert_eq!(expected, actual);
 
     // Every supported array type
@@ -383,15 +407,22 @@ pub fn test_stress(client: &mut Client) {
         inet_: vec![IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))],
         macaddr_: vec![MacAddress::new([8, 0, 43, 1, 2, 3])],
     };
+
+    let bytea = expected
+        .bytea_
+        .iter()
+        .map(|v| v.as_slice())
+        .collect::<Vec<_>>();
+    let txt = &expected
+        .text_
+        .iter()
+        .map(|v| v.as_str())
+        .collect::<Vec<_>>();
     let params = InsertEverythingArrayParams {
         bingint_: &expected.bingint_,
         bool_: &expected.bool_,
         boolean_: &expected.boolean_,
-        bytea_: &expected
-            .bytea_
-            .iter()
-            .map(|v| v.as_slice())
-            .collect::<Vec<_>>(),
+        bytea_: &bytea,
         char_: &expected.char_,
         date_: &expected.date_,
         double_precision_: &expected.double_precision_,
@@ -407,25 +438,20 @@ pub fn test_stress(client: &mut Client) {
         macaddr_: &expected.macaddr_,
         real_: &expected.real_,
         smallint_: &expected.smallint_,
-        text_: &expected
-            .text_
-            .iter()
-            .map(|v| v.as_str())
-            .collect::<Vec<_>>(),
+        text_: txt,
         time_: &expected.time_,
         timestamp_: &expected.timestamp_,
         timestamp_with_time_zone_: &expected.timestamp_with_time_zone_,
         timestamp_without_time_zone_: &expected.timestamp_without_time_zone_,
         timestamptz_: &expected.timestamptz_,
         uuid_: &expected.uuid_,
-        varchar_: &expected
-            .varchar_
-            .iter()
-            .map(|v| v.as_str())
-            .collect::<Vec<_>>(),
+        varchar_: txt,
     };
-    assert_eq!(1, params.insert_everything_array(client).unwrap());
-    let actual = select_everything_array(client).one().unwrap();
+    assert_eq!(
+        1,
+        insert_everything_array().params(client, &params).unwrap()
+    );
+    let actual = select_everything_array().bind(client).one().unwrap();
     assert_eq!(expected, actual);
 
     // Complex mix of enum, domain and composite types
@@ -452,7 +478,7 @@ pub fn test_stress(client: &mut Client) {
         },
     };
 
-    assert_eq!(1, params.insert_nightmare(client).unwrap());
-    let actual = select_nightmare(client).one().unwrap();
+    assert_eq!(1, insert_nightmare().params(client, &params).unwrap());
+    let actual = select_nightmare().bind(client).one().unwrap();
     assert_eq!(expected, actual);
 }

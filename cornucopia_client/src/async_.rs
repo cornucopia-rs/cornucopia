@@ -164,3 +164,34 @@ impl GenericClient for Client {
         Client::query_raw(self, statement, params).await
     }
 }
+
+/// Cached statement
+pub struct Stmt {
+    query: &'static str,
+    cached: Option<Statement>,
+}
+
+impl Stmt {
+    pub fn new(query: &'static str) -> Self {
+        Self {
+            query,
+            cached: None,
+        }
+    }
+
+    pub async fn prepare<'a, C: GenericClient>(
+        &'a mut self,
+        client: &C,
+    ) -> Result<&'a Statement, Error> {
+        if self.cached.is_none() {
+            let stmt = client.prepare(self.query).await?;
+            self.cached = Some(stmt);
+        }
+        // the statement is always prepared at this point
+        Ok(unsafe { self.cached.as_ref().unwrap_unchecked() })
+    }
+}
+
+pub trait Params<'a, S, O, C> {
+    fn bind(&'a self, client: &'a C, stmt: &'a mut S) -> O;
+}

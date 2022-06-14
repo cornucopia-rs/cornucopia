@@ -61,7 +61,9 @@ fn test(apply: bool) -> bool {
             && display(run_examples_test(&mut client)).unwrap()
     });
     // Format all to prevent CLI errors
-    Command::new("cargo").args(["fmt", "--all"]).output().ok();
+    if successful.is_ok() {
+        Command::new("cargo").args(["fmt", "--all"]).output().ok();
+    }
     container::cleanup(false).unwrap();
     successful.unwrap()
 }
