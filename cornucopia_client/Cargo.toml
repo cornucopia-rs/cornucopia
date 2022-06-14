@@ -21,6 +21,7 @@ deadpool = ["async", "dep:deadpool-postgres"]
 [dependencies]
 tokio = { version = "1.18.2", optional = true }
 tokio-postgres = { version = "0.7.6", optional = true }
+postgres = "0.19.3"
 async-trait = { version = "0.1.53", optional = true }
 
 deadpool-postgres = { version = "0.10.2", optional = true }

@@ -1,4 +1,3 @@
-use crate::GenericClient;
 use async_trait::async_trait;
 use deadpool_postgres::{
     Client as DeadpoolClient, ClientWrapper, Transaction as DeadpoolTransaction,
@@ -7,6 +6,8 @@ use tokio_postgres::{
     types::BorrowToSql, Client as PgClient, Error, RowStream, Statement, ToStatement,
     Transaction as PgTransaction,
 };
+
+use crate::async_::GenericClient;
 
 #[async_trait]
 impl GenericClient for DeadpoolClient {

@@ -10,7 +10,7 @@ use crate::cornucopia::{
     queries::{
         module_1::insert_book,
         module_2::{
-            author_name_by_id, authors, books, select_where_custom_type,
+            author_name_by_id, author_name_starting_with, authors, books, select_where_custom_type,
             AuthorNameStartingWithParams,
         },
     },
@@ -31,31 +31,35 @@ pub async fn main() {
     let mut client = pool.get().await.unwrap();
 
     // Queries accept regular clients.
-    println!("{:?}", authors(&client).vec().await.unwrap());
+    println!("{:?}", authors().bind(&client).vec().await.unwrap());
 
     // Queries also accept transactions
     // Don't forget to `.commit()` when you're done!
     {
         let transaction = client.transaction().await.unwrap();
         // Insert a book
-        insert_book(&transaction, &"The Great Gatsby")
+        insert_book()
+            .bind(&transaction, &"The Great Gatsby")
             .await
             .unwrap();
         // Use a map if needed
-        let books = books(&transaction).vec().await.unwrap();
+        let books = books().bind(&transaction).vec().await.unwrap();
         println!("{books:?}");
         transaction.commit().await.unwrap();
     }
 
     // Using opt returns an optional row (zero or one).
-    println!("{:?}", author_name_by_id(&client, &0).opt().await.unwrap());
+    println!(
+        "{:?}",
+        author_name_by_id().bind(&client, &0).opt().await.unwrap()
+    );
 
     // The param struct can be more convenient
     // and less error-prone in some cases
     println!(
         "{:?}",
-        AuthorNameStartingWithParams { start_str: "Jo" }
-            .author_name_starting_with(&client)
+        author_name_starting_with()
+            .params(&client, &AuthorNameStartingWithParams { start_str: "Jo" })
             .vec()
             .await
             .unwrap()
@@ -64,7 +68,8 @@ pub async fn main() {
     // Custom types from your queries also work!
     println!(
         "{:?}",
-        select_where_custom_type(&client, &SpongebobCharacter::Patrick)
+        select_where_custom_type()
+            .bind(&client, &SpongebobCharacter::Patrick)
             .one()
             .await
             .unwrap()

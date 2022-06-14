@@ -228,6 +228,7 @@ dependencies = [
  "async-trait",
  "deadpool-postgres",
  "fallible-iterator",
+ "postgres",
  "postgres-protocol",
  "postgres-types",
  "tokio",
