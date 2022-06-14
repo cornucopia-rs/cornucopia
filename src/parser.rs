@@ -123,8 +123,11 @@ impl TypeAnnotation {
             .ignore_then(space())
             .ignore_then(ident())
             .then_ignore(space())
-            .then(parse_nullable_ident())
-            .map(|(name, fields)| Self { name, fields })
+            .then(parse_nullable_ident().or_not())
+            .map(|(name, fields)| Self {
+                name,
+                fields: fields.unwrap_or_default(),
+            })
     }
 }
 
