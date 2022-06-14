@@ -42,7 +42,7 @@ use crate::cornucopia_sync::{
     },
 };
 
-//mod cornucopia_async;
+mod cornucopia_async;
 mod cornucopia_sync;
 
 pub fn main() {

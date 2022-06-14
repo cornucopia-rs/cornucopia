@@ -65,11 +65,8 @@
 FROM
     example_table"))
             }
-
             pub struct ExampleQueryStmt(cornucopia_client::async_::Stmt);
-
-            impl ExampleQueryStmt {
-            pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a  C, ) -> ExampleQueryQuery<'a,C, ExampleQuery, 0> {
+            impl ExampleQueryStmt {pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a  C, ) -> ExampleQueryQuery<'a,C, ExampleQuery, 0> {
                 ExampleQueryQuery {
                     client,
                     params: [],

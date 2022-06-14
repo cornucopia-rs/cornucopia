@@ -192,5 +192,5 @@ impl Stmt {
 }
 
 pub trait Params<'a, S, O, C> {
-    fn params(&'a self, client: &'a C, stmt: &'a mut S) -> O;
+    fn bind(&'a self, client: &'a C, stmt: &'a mut S) -> O;
 }

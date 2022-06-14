@@ -841,7 +841,7 @@ pub mod queries {
             cornucopia_client::sync::Params<'a, InsertCloneStmt, Result<u64, postgres::Error>, C>
             for InsertCloneParams<'a>
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut InsertCloneStmt,
@@ -857,7 +857,7 @@ pub mod queries {
             cornucopia_client::sync::Params<'a, InsertCopyStmt, Result<u64, postgres::Error>, C>
             for InsertCopyParams
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut InsertCopyStmt,
@@ -995,9 +995,7 @@ pub mod queries {
                 "INSERT INTO clone (composite) VALUES ($1)",
             ))
         }
-
         pub struct InsertCloneStmt(cornucopia_client::sync::Stmt);
-
         impl InsertCloneStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -1017,15 +1015,13 @@ pub mod queries {
                     C,
                 >,
             ) -> Result<u64, postgres::Error> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn select_clone() -> SelectCloneStmt {
             SelectCloneStmt(cornucopia_client::sync::Stmt::new("SELECT * FROM clone"))
         }
-
         pub struct SelectCloneStmt(cornucopia_client::sync::Stmt);
-
         impl SelectCloneStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -1047,9 +1043,7 @@ pub mod queries {
                 "INSERT INTO copy (composite) VALUES ($1)",
             ))
         }
-
         pub struct InsertCopyStmt(cornucopia_client::sync::Stmt);
-
         impl InsertCopyStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -1069,15 +1063,13 @@ pub mod queries {
                     C,
                 >,
             ) -> Result<u64, postgres::Error> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn select_copy() -> SelectCopyStmt {
             SelectCopyStmt(cornucopia_client::sync::Stmt::new("SELECT * FROM copy"))
         }
-
         pub struct SelectCopyStmt(cornucopia_client::sync::Stmt);
-
         impl SelectCopyStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -1113,7 +1105,7 @@ pub mod queries {
                 C,
             > for InsertNightmareDomainParams<'a>
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut InsertNightmareDomainStmt,
@@ -1317,9 +1309,7 @@ pub mod queries {
                 "SELECT txt, json, nb, arr FROM nightmare_domain",
             ))
         }
-
         pub struct SelectNightmareDomainStmt(cornucopia_client::sync::Stmt);
-
         impl SelectNightmareDomainStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -1342,9 +1332,7 @@ pub mod queries {
         pub fn insert_nightmare_domain() -> InsertNightmareDomainStmt {
             InsertNightmareDomainStmt(cornucopia_client::sync::Stmt::new("INSERT INTO nightmare_domain (txt, json, nb, arr, composite) VALUES ($5, $3, $4, $1, $2)"))
         }
-
         pub struct InsertNightmareDomainStmt(cornucopia_client::sync::Stmt);
-
         impl InsertNightmareDomainStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -1379,7 +1367,7 @@ pub mod queries {
                     C,
                 >,
             ) -> Result<u64, postgres::Error> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn select_nightmare_domain_null() -> SelectNightmareDomainNullStmt {
@@ -1387,9 +1375,7 @@ pub mod queries {
                 "SELECT * FROM nightmare_domain",
             ))
         }
-
         pub struct SelectNightmareDomainNullStmt(cornucopia_client::sync::Stmt);
-
         impl SelectNightmareDomainNullStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -1422,7 +1408,7 @@ pub mod queries {
             cornucopia_client::sync::Params<'a, NewNamedVisibleStmt, IdQuery<'a, C, Id, 2>, C>
             for NamedParams<'a>
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut NewNamedVisibleStmt,
@@ -1434,7 +1420,7 @@ pub mod queries {
             cornucopia_client::sync::Params<'a, NewNamedHiddenStmt, IdQuery<'a, C, Id, 2>, C>
             for NamedParams<'a>
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut NewNamedHiddenStmt,
@@ -1450,7 +1436,7 @@ pub mod queries {
             cornucopia_client::sync::Params<'a, NamedByIdStmt, NamedQuery<'a, C, Named, 1>, C>
             for NamedByIdParams
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut NamedByIdStmt,
@@ -1470,7 +1456,7 @@ pub mod queries {
                 C,
             > for NamedComplexParams<'a>
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut NewNamedComplexStmt,
@@ -1690,9 +1676,7 @@ pub mod queries {
                 "INSERT INTO named (name, price, show) VALUES ($1, $2, true) RETURNING id ",
             ))
         }
-
         pub struct NewNamedVisibleStmt(cornucopia_client::sync::Stmt);
-
         impl NewNamedVisibleStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -1713,7 +1697,7 @@ pub mod queries {
                 client: &'a mut C,
                 params: &'a impl cornucopia_client::sync::Params<'a, Self, IdQuery<'a, C, Id, 2>, C>,
             ) -> IdQuery<'a, C, Id, 2> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn new_named_hidden() -> NewNamedHiddenStmt {
@@ -1721,9 +1705,7 @@ pub mod queries {
                 "INSERT INTO named (name, price, show) VALUES ($1, $2, false) RETURNING id",
             ))
         }
-
         pub struct NewNamedHiddenStmt(cornucopia_client::sync::Stmt);
-
         impl NewNamedHiddenStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -1744,15 +1726,13 @@ pub mod queries {
                 client: &'a mut C,
                 params: &'a impl cornucopia_client::sync::Params<'a, Self, IdQuery<'a, C, Id, 2>, C>,
             ) -> IdQuery<'a, C, Id, 2> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn named() -> NamedStmt {
             NamedStmt(cornucopia_client::sync::Stmt::new("SELECT * FROM named"))
         }
-
         pub struct NamedStmt(cornucopia_client::sync::Stmt);
-
         impl NamedStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -1777,9 +1757,7 @@ pub mod queries {
                 "SELECT * FROM named WHERE id = $1",
             ))
         }
-
         pub struct NamedByIdStmt(cornucopia_client::sync::Stmt);
-
         impl NamedByIdStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -1809,7 +1787,7 @@ pub mod queries {
                     C,
                 >,
             ) -> NamedQuery<'a, C, Named, 1> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn new_named_complex() -> NewNamedComplexStmt {
@@ -1817,9 +1795,7 @@ pub mod queries {
                 "INSERT INTO named_complex (named) VALUES ($1)",
             ))
         }
-
         pub struct NewNamedComplexStmt(cornucopia_client::sync::Stmt);
-
         impl NewNamedComplexStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -1839,7 +1815,7 @@ pub mod queries {
                     C,
                 >,
             ) -> Result<u64, postgres::Error> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn named_complex() -> NamedComplexStmt {
@@ -1847,9 +1823,7 @@ pub mod queries {
                 "SELECT * FROM named_complex",
             ))
         }
-
         pub struct NamedComplexStmt(cornucopia_client::sync::Stmt);
-
         impl NamedComplexStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -1877,7 +1851,7 @@ pub mod queries {
             cornucopia_client::sync::Params<'a, NewNullityStmt, Result<u64, postgres::Error>, C>
             for NullityParams<'a>
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut NewNullityStmt,
@@ -1968,9 +1942,7 @@ pub mod queries {
                 "INSERT INTO nullity(texts, name, composite) VALUES ($3, $2, $1)",
             ))
         }
-
         pub struct NewNullityStmt(cornucopia_client::sync::Stmt);
-
         impl NewNullityStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -1992,15 +1964,13 @@ pub mod queries {
                     C,
                 >,
             ) -> Result<u64, postgres::Error> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn nullity() -> NullityStmt {
             NullityStmt(cornucopia_client::sync::Stmt::new("SELECT * FROM nullity"))
         }
-
         pub struct NullityStmt(cornucopia_client::sync::Stmt);
-
         impl NullityStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -2031,7 +2001,7 @@ pub mod queries {
             cornucopia_client::sync::Params<'a, InsertBookStmt, Result<u64, postgres::Error>, C>
             for InsertBookParams<'a>
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut InsertBookStmt,
@@ -2047,7 +2017,7 @@ pub mod queries {
             cornucopia_client::sync::Params<'a, ParamsUseTwiceStmt, Result<u64, postgres::Error>, C>
             for ParamsUseTwiceParams<'a>
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut ParamsUseTwiceStmt,
@@ -2064,7 +2034,7 @@ pub mod queries {
             cornucopia_client::sync::Params<'a, ParamsOrderStmt, Result<u64, postgres::Error>, C>
             for ParamsOrderParams
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut ParamsOrderStmt,
@@ -2149,9 +2119,7 @@ pub mod queries {
                 "INSERT INTO book (author, name) VALUES ($1, $2)",
             ))
         }
-
         pub struct InsertBookStmt(cornucopia_client::sync::Stmt);
-
         impl InsertBookStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -2172,15 +2140,13 @@ pub mod queries {
                     C,
                 >,
             ) -> Result<u64, postgres::Error> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn select_book() -> SelectBookStmt {
             SelectBookStmt(cornucopia_client::sync::Stmt::new("SELECT * FROM book"))
         }
-
         pub struct SelectBookStmt(cornucopia_client::sync::Stmt);
-
         impl SelectBookStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -2203,9 +2169,7 @@ pub mod queries {
                 "UPDATE book SET name = $1 WHERE length(name) > 42 AND length($1) < 42",
             ))
         }
-
         pub struct ParamsUseTwiceStmt(cornucopia_client::sync::Stmt);
-
         impl ParamsUseTwiceStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -2225,7 +2189,7 @@ pub mod queries {
                     C,
                 >,
             ) -> Result<u64, postgres::Error> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn params_order() -> ParamsOrderStmt {
@@ -2233,9 +2197,7 @@ pub mod queries {
                 "UPDATE imaginary SET c=$2, a=$1, z=$1, r=$2",
             ))
         }
-
         pub struct ParamsOrderStmt(cornucopia_client::sync::Stmt);
-
         impl ParamsOrderStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -2256,7 +2218,7 @@ pub mod queries {
                     C,
                 >,
             ) -> Result<u64, postgres::Error> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
     }
@@ -2306,7 +2268,7 @@ pub mod queries {
                 C,
             > for InsertEverythingParams<'a>
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut InsertEverythingStmt,
@@ -2387,7 +2349,7 @@ pub mod queries {
                 C,
             > for InsertEverythingArrayParams<'a>
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut InsertEverythingArrayStmt,
@@ -2436,7 +2398,7 @@ pub mod queries {
                 C,
             > for InsertNightmareParams<'a>
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut InsertNightmareStmt,
@@ -3306,9 +3268,7 @@ pub mod queries {
                 "SELECT * FROM Everything",
             ))
         }
-
         pub struct SelectEverythingStmt(cornucopia_client::sync::Stmt);
-
         impl SelectEverythingStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -3362,9 +3322,7 @@ pub mod queries {
                 "SELECT * FROM Everything",
             ))
         }
-
         pub struct SelectEverythingNullStmt(cornucopia_client::sync::Stmt);
-
         impl SelectEverythingNullStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -3417,9 +3375,7 @@ pub mod queries {
             InsertEverythingStmt(cornucopia_client::sync::Stmt::new("INSERT INTO Everything (bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
     VALUES ($3, $4, $6, $24, $12, $25, $20, $15, $13, $23, $21, $2, $14, $1, $22, $9, $19, $10, $8, $26, $33, $5, $28, $30, $31, $29, $7, $27, $16, $17, $32, $11, $18)"))
         }
-
         pub struct InsertEverythingStmt(cornucopia_client::sync::Stmt);
-
         impl InsertEverythingStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -3508,7 +3464,7 @@ pub mod queries {
                     C,
                 >,
             ) -> Result<u64, postgres::Error> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn select_everything_array() -> SelectEverythingArrayStmt {
@@ -3516,9 +3472,7 @@ pub mod queries {
                 "SELECT * FROM EverythingArray",
             ))
         }
-
         pub struct SelectEverythingArrayStmt(cornucopia_client::sync::Stmt);
-
         impl SelectEverythingArrayStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -3566,9 +3520,7 @@ pub mod queries {
                 "SELECT * FROM EverythingArray",
             ))
         }
-
         pub struct SelectEverythingArrayNullStmt(cornucopia_client::sync::Stmt);
-
         impl SelectEverythingArrayNullStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -3615,9 +3567,7 @@ pub mod queries {
             InsertEverythingArrayStmt(cornucopia_client::sync::Stmt::new("INSERT INTO EverythingArray (bool_, boolean_, char_, smallint_, int2_, int_, int4_, bingint_, int8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
     VALUES ($2, $3, $5, $19, $11, $14, $12, $1, $13, $8, $18, $9, $7, $20, $27, $4, $22, $24, $25, $23, $6, $21, $15, $16, $26, $10, $17)"))
         }
-
         pub struct InsertEverythingArrayStmt(cornucopia_client::sync::Stmt);
-
         impl InsertEverythingArrayStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -3694,7 +3644,7 @@ pub mod queries {
                     C,
                 >,
             ) -> Result<u64, postgres::Error> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn select_nightmare() -> SelectNightmareStmt {
@@ -3702,9 +3652,7 @@ pub mod queries {
                 "SELECT * FROM nightmare",
             ))
         }
-
         pub struct SelectNightmareStmt(cornucopia_client::sync::Stmt);
-
         impl SelectNightmareStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -3726,9 +3674,7 @@ pub mod queries {
                 "INSERT INTO nightmare (composite) VALUES ($1)",
             ))
         }
-
         pub struct InsertNightmareStmt(cornucopia_client::sync::Stmt);
-
         impl InsertNightmareStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -3748,7 +3694,7 @@ pub mod queries {
                     C,
                 >,
             ) -> Result<u64, postgres::Error> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
     }
@@ -3767,7 +3713,7 @@ pub mod queries {
                 C,
             > for ImplicitCompactParams<'a>
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut ImplicitCompactStmt,
@@ -3788,7 +3734,7 @@ pub mod queries {
                 C,
             > for ImplicitSpacedParams<'a>
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut ImplicitSpacedStmt,
@@ -3805,7 +3751,7 @@ pub mod queries {
             cornucopia_client::sync::Params<'a, NamedCompactStmt, RowQuery<'a, C, Row, 2>, C>
             for Params<'a>
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut NamedCompactStmt,
@@ -3817,7 +3763,7 @@ pub mod queries {
             cornucopia_client::sync::Params<'a, NamedSpacedStmt, RowQuery<'a, C, Row, 2>, C>
             for Params<'a>
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut NamedSpacedStmt,
@@ -3833,7 +3779,7 @@ pub mod queries {
             cornucopia_client::sync::Params<'a, TrickySqlStmt, Result<u64, postgres::Error>, C>
             for TrickySqlParams
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut TrickySqlStmt,
@@ -3849,7 +3795,7 @@ pub mod queries {
             cornucopia_client::sync::Params<'a, TrickySql1Stmt, Result<u64, postgres::Error>, C>
             for TrickySql1Params
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut TrickySql1Stmt,
@@ -3865,7 +3811,7 @@ pub mod queries {
             cornucopia_client::sync::Params<'a, TrickySql2Stmt, Result<u64, postgres::Error>, C>
             for TrickySql2Params
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut TrickySql2Stmt,
@@ -3881,7 +3827,7 @@ pub mod queries {
             cornucopia_client::sync::Params<'a, TrickySql3Stmt, Result<u64, postgres::Error>, C>
             for TrickySql3Params
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut TrickySql3Stmt,
@@ -3897,7 +3843,7 @@ pub mod queries {
             cornucopia_client::sync::Params<'a, TrickySql4Stmt, Result<u64, postgres::Error>, C>
             for TrickySql4Params
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut TrickySql4Stmt,
@@ -3913,7 +3859,7 @@ pub mod queries {
             cornucopia_client::sync::Params<'a, TrickySql6Stmt, Result<u64, postgres::Error>, C>
             for TrickySql6Params
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut TrickySql6Stmt,
@@ -3929,7 +3875,7 @@ pub mod queries {
             cornucopia_client::sync::Params<'a, TrickySql7Stmt, Result<u64, postgres::Error>, C>
             for TrickySql7Params
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut TrickySql7Stmt,
@@ -3945,7 +3891,7 @@ pub mod queries {
             cornucopia_client::sync::Params<'a, TrickySql8Stmt, Result<u64, postgres::Error>, C>
             for TrickySql8Params
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut TrickySql8Stmt,
@@ -3961,7 +3907,7 @@ pub mod queries {
             cornucopia_client::sync::Params<'a, TrickySql9Stmt, Result<u64, postgres::Error>, C>
             for TrickySql9Params
         {
-            fn params(
+            fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut TrickySql9Stmt,
@@ -4353,9 +4299,7 @@ pub mod queries {
         pub fn select_compact() -> SelectCompactStmt {
             SelectCompactStmt(cornucopia_client::sync::Stmt::new("SELECT * FROM clone"))
         }
-
         pub struct SelectCompactStmt(cornucopia_client::sync::Stmt);
-
         impl SelectCompactStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -4377,9 +4321,7 @@ pub mod queries {
                 "      SELECT * FROM clone ",
             ))
         }
-
         pub struct SelectSpacedStmt(cornucopia_client::sync::Stmt);
-
         impl SelectSpacedStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -4401,9 +4343,7 @@ pub mod queries {
                 "INSERT INTO named (name, price, show) VALUES ($1, $2, false) RETURNING id",
             ))
         }
-
         pub struct ImplicitCompactStmt(cornucopia_client::sync::Stmt);
-
         impl ImplicitCompactStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -4429,7 +4369,7 @@ pub mod queries {
                     C,
                 >,
             ) -> ImplicitCompactQuery<'a, C, ImplicitCompact, 2> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn implicit_spaced() -> ImplicitSpacedStmt {
@@ -4437,9 +4377,7 @@ pub mod queries {
                 "INSERT INTO named (name, price, show) VALUES ($1, $2, false) RETURNING id",
             ))
         }
-
         pub struct ImplicitSpacedStmt(cornucopia_client::sync::Stmt);
-
         impl ImplicitSpacedStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -4465,7 +4403,7 @@ pub mod queries {
                     C,
                 >,
             ) -> ImplicitSpacedQuery<'a, C, ImplicitSpaced, 2> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn named_compact() -> NamedCompactStmt {
@@ -4473,9 +4411,7 @@ pub mod queries {
                 "INSERT INTO named (name, price, show) VALUES ($1, $2, false) RETURNING id",
             ))
         }
-
         pub struct NamedCompactStmt(cornucopia_client::sync::Stmt);
-
         impl NamedCompactStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -4496,7 +4432,7 @@ pub mod queries {
                 client: &'a mut C,
                 params: &'a impl cornucopia_client::sync::Params<'a, Self, RowQuery<'a, C, Row, 2>, C>,
             ) -> RowQuery<'a, C, Row, 2> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn named_spaced() -> NamedSpacedStmt {
@@ -4504,9 +4440,7 @@ pub mod queries {
                 "INSERT INTO named (name, price, show) VALUES ($1, $2, false) RETURNING id",
             ))
         }
-
         pub struct NamedSpacedStmt(cornucopia_client::sync::Stmt);
-
         impl NamedSpacedStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -4527,7 +4461,7 @@ pub mod queries {
                 client: &'a mut C,
                 params: &'a impl cornucopia_client::sync::Params<'a, Self, RowQuery<'a, C, Row, 2>, C>,
             ) -> RowQuery<'a, C, Row, 2> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn tricky_sql() -> TrickySqlStmt {
@@ -4535,9 +4469,7 @@ pub mod queries {
                 "INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a bind_param\', $1)",
             ))
         }
-
         pub struct TrickySqlStmt(cornucopia_client::sync::Stmt);
-
         impl TrickySqlStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -4557,7 +4489,7 @@ pub mod queries {
                     C,
                 >,
             ) -> Result<u64, postgres::Error> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn tricky_sql1() -> TrickySql1Stmt {
@@ -4565,9 +4497,7 @@ pub mod queries {
                 "INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a :bind_param', $1)",
             ))
         }
-
         pub struct TrickySql1Stmt(cornucopia_client::sync::Stmt);
-
         impl TrickySql1Stmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -4587,15 +4517,13 @@ pub mod queries {
                     C,
                 >,
             ) -> Result<u64, postgres::Error> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn tricky_sql2() -> TrickySql2Stmt {
             TrickySql2Stmt(cornucopia_client::sync::Stmt::new("INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a '':bind_param''', $1)"))
         }
-
         pub struct TrickySql2Stmt(cornucopia_client::sync::Stmt);
-
         impl TrickySql2Stmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -4615,15 +4543,13 @@ pub mod queries {
                     C,
                 >,
             ) -> Result<u64, postgres::Error> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn tricky_sql3() -> TrickySql3Stmt {
             TrickySql3Stmt(cornucopia_client::sync::Stmt::new("INSERT INTO syntax (\"trick:y\", price)  VALUES ($$this is not a :bind_param$$, $1)"))
         }
-
         pub struct TrickySql3Stmt(cornucopia_client::sync::Stmt);
-
         impl TrickySql3Stmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -4643,15 +4569,13 @@ pub mod queries {
                     C,
                 >,
             ) -> Result<u64, postgres::Error> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn tricky_sql4() -> TrickySql4Stmt {
             TrickySql4Stmt(cornucopia_client::sync::Stmt::new("INSERT INTO syntax (\"trick:y\", price) VALUES ($tag$this is not a :bind_param$tag$, $1)"))
         }
-
         pub struct TrickySql4Stmt(cornucopia_client::sync::Stmt);
-
         impl TrickySql4Stmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -4671,15 +4595,13 @@ pub mod queries {
                     C,
                 >,
             ) -> Result<u64, postgres::Error> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn tricky_sql6() -> TrickySql6Stmt {
             TrickySql6Stmt(cornucopia_client::sync::Stmt::new("INSERT INTO syntax (\"trick:y\", price) VALUES (e'this is not a '':bind_param''', $1)"))
         }
-
         pub struct TrickySql6Stmt(cornucopia_client::sync::Stmt);
-
         impl TrickySql6Stmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -4699,15 +4621,13 @@ pub mod queries {
                     C,
                 >,
             ) -> Result<u64, postgres::Error> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn tricky_sql7() -> TrickySql7Stmt {
             TrickySql7Stmt(cornucopia_client::sync::Stmt::new("INSERT INTO syntax (\"trick:y\", price) VALUES (E'this is not a \':bind_param\'', $1)"))
         }
-
         pub struct TrickySql7Stmt(cornucopia_client::sync::Stmt);
-
         impl TrickySql7Stmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -4727,15 +4647,13 @@ pub mod queries {
                     C,
                 >,
             ) -> Result<u64, postgres::Error> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn tricky_sql8() -> TrickySql8Stmt {
             TrickySql8Stmt(cornucopia_client::sync::Stmt::new("INSERT INTO syntax (\"trick:y\", price) VALUES (e'this is ''not'' a \':bind_param\'', $1)"))
         }
-
         pub struct TrickySql8Stmt(cornucopia_client::sync::Stmt);
-
         impl TrickySql8Stmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -4755,15 +4673,13 @@ pub mod queries {
                     C,
                 >,
             ) -> Result<u64, postgres::Error> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn tricky_sql9() -> TrickySql9Stmt {
             TrickySql9Stmt(cornucopia_client::sync::Stmt::new("INSERT INTO syntax (\"trick:y\", price) VALUES (E'this is \'not\' a \':bind_param\'', $1)"))
         }
-
         pub struct TrickySql9Stmt(cornucopia_client::sync::Stmt);
-
         impl TrickySql9Stmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -4783,15 +4699,13 @@ pub mod queries {
                     C,
                 >,
             ) -> Result<u64, postgres::Error> {
-                params.params(client, self)
+                params.bind(client, self)
             }
         }
         pub fn syntax() -> SyntaxStmt {
             SyntaxStmt(cornucopia_client::sync::Stmt::new("SELECT * FROM syntax"))
         }
-
         pub struct SyntaxStmt(cornucopia_client::sync::Stmt);
-
         impl SyntaxStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,

@@ -247,37 +247,25 @@ fn gen_params_struct(
         let struct_name = query_name.to_upper_camel_case();
 
         let param_values = join_comma(params, |w, p| gen!(w, "&self.{}", p.name));
-        let ret_type = if let Some((idx, _)) = row {
+        let (ret_type, pre, post) = if let Some((idx, _)) = row {
             let name = &module.rows.get_index(*idx).unwrap().1.name;
             let nb_params = params.len();
-            format!("{name}Query<'a, C, {name}, {nb_params}>")
+            (format!("{name}Query<'a, C, {name}, {nb_params}>"), "", "")
         } else if row.is_none() && is_async {
-            format!(
+            (format!(
                     "std::pin::Pin<Box<dyn futures::Future<Output = Result<u64, {backend}::Error>> + 'a>>"
-                )
+                ), "Box::pin(", ")")
         } else {
-            format!("Result<u64, {backend}::Error>")
+            (format!("Result<u64, {backend}::Error>"), "", "")
         };
-        // Generate params struct
-        if row.is_none() && is_async {
-            gen!(
+        gen!(
             w,
             "impl <'a, C: GenericClient> cornucopia_client::{mod_name}::Params<'a, {struct_name}Stmt, {ret_type}, C> for {name}{lifetime}  {{ 
-                fn params(&'a self, client: &'a {client_mut} C, stmt: &'a mut {struct_name}Stmt) -> {ret_type} {{
-                   Box::pin(stmt.bind(client, {param_values}))
+                fn bind(&'a self, client: &'a {client_mut} C, stmt: &'a mut {struct_name}Stmt) -> {ret_type} {{
+                    {pre}stmt.bind(client, {param_values}){post}
                 }}
             }}"
         )
-        } else {
-            gen!(
-            w,
-            "impl <'a, C: GenericClient> cornucopia_client::{mod_name}::Params<'a, {struct_name}Stmt, {ret_type}, C> for {name}{lifetime}  {{ 
-                fn params(&'a self, client: &'a {client_mut} C, stmt: &'a mut {struct_name}Stmt) -> {ret_type} {{
-                    stmt.bind(client, {param_values})
-                }}
-            }}"
-        )
-        }
     }
 }
 
@@ -445,11 +433,8 @@ fn gen_query_fn(
             "pub fn {name}() -> {struct_name}Stmt {{
                 {struct_name}Stmt(cornucopia_client::{mod_name}::Stmt::new(\"{sql}\"))
             }}
-
             pub struct {struct_name}Stmt(cornucopia_client::{mod_name}::Stmt);
-
-            impl {struct_name}Stmt {{
-            "
+            impl {struct_name}Stmt {{"
         );
     }
     let nb_params = params.len();
@@ -483,7 +468,7 @@ fn gen_query_fn(
         );
         if !params.is_empty() {
             gen!(w,"pub fn params<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, params: &'a impl cornucopia_client::{mod_name}::Params<'a, Self, {row_name}Query<'a,C, {row_name}, {nb_params}>, C>) -> {row_name}Query<'a,C, {row_name}, {nb_params}> {{
-                    params.params(client, self)
+                    params.bind(client, self)
                 }}"
             );
         }
@@ -500,19 +485,16 @@ fn gen_query_fn(
             }}"
         );
         if !params.is_empty() {
-            if is_async {
-                gen!(w,
-                "pub {fn_async} fn params<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, params: &'a impl cornucopia_client::{mod_name}::Params<'a, Self, std::pin::Pin<Box<dyn futures::Future<Output = Result<u64, {backend}::Error>>>>, C>) -> Result<u64, {backend}::Error> {{
-                    params.params(client, self){fn_await}
-                }}"
-            );
+            let (pre, post) = if is_async {
+                ("std::pin::Pin<Box<dyn futures::Future<Output = ", ">>>")
             } else {
-                gen!(w,
-                "pub {fn_async} fn params<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, params: &'a impl cornucopia_client::{mod_name}::Params<'a, Self, Result<u64, {backend}::Error>, C>) -> Result<u64, {backend}::Error> {{
-                    params.params(client, self){fn_await}
+                ("", "")
+            };
+            gen!(w,
+                "pub {fn_async} fn params<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, params: &'a impl cornucopia_client::{mod_name}::Params<'a, Self, {pre}Result<u64, {backend}::Error>{post}, C>) -> Result<u64, {backend}::Error> {{
+                    params.bind(client, self){fn_await}
                 }}"
             );
-            }
         }
     }
     gen!(w, "}}");

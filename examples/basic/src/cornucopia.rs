@@ -101,38 +101,35 @@ let _oid = postgres_types::private::read_be_i32(&mut out)?;
             }
         } } }pub mod queries { pub mod module_1 { use futures::{{StreamExt, TryStreamExt}};use futures; use cornucopia_client::async_::GenericClient; #[derive(Debug)]
         pub struct InsertBookParams<'a> { pub title : &'a str }impl <'a, C: GenericClient> cornucopia_client::async_::Params<'a, InsertBookStmt, std::pin::Pin<Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>>, C> for InsertBookParams<'a>  { 
-                fn params(&'a self, client: &'a  C, stmt: &'a mut InsertBookStmt) -> std::pin::Pin<Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>> {
-                   Box::pin(stmt.bind(client, &self.title))
+                fn bind(&'a self, client: &'a  C, stmt: &'a mut InsertBookStmt) -> std::pin::Pin<Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>> {
+                    Box::pin(stmt.bind(client, &self.title))
                 }
             }  pub fn insert_book() -> InsertBookStmt {
                 InsertBookStmt(cornucopia_client::async_::Stmt::new("INSERT INTO Book (title)
   VALUES ($1)"))
             }
-
             pub struct InsertBookStmt(cornucopia_client::async_::Stmt);
-
-            impl InsertBookStmt {
-            pub async fn bind<'a, C: GenericClient>(&'a mut self, client: &'a  C, title : &'a &'a str) -> Result<u64, tokio_postgres::Error> {
+            impl InsertBookStmt {pub async fn bind<'a, C: GenericClient>(&'a mut self, client: &'a  C, title : &'a &'a str) -> Result<u64, tokio_postgres::Error> {
                 let stmt = self.0.prepare(client).await?;
                 client.execute(stmt, &[title]).await
             }pub async fn params<'a, C: GenericClient>(&'a mut self, client: &'a  C, params: &'a impl cornucopia_client::async_::Params<'a, Self, std::pin::Pin<Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>>>, C>) -> Result<u64, tokio_postgres::Error> {
-                    params.params(client, self).await
+                    params.bind(client, self).await
                 }} }
 pub mod module_2 { use futures::{{StreamExt, TryStreamExt}};use futures; use cornucopia_client::async_::GenericClient; #[derive(Clone,Copy,Debug)]
         pub struct AuthorNameByIdParams { pub id : i32 }impl <'a, C: GenericClient> cornucopia_client::async_::Params<'a, AuthorNameByIdStmt, AuthorNameByIdQuery<'a, C, AuthorNameById, 1>, C> for AuthorNameByIdParams  { 
-                fn params(&'a self, client: &'a  C, stmt: &'a mut AuthorNameByIdStmt) -> AuthorNameByIdQuery<'a, C, AuthorNameById, 1> {
+                fn bind(&'a self, client: &'a  C, stmt: &'a mut AuthorNameByIdStmt) -> AuthorNameByIdQuery<'a, C, AuthorNameById, 1> {
                     stmt.bind(client, &self.id)
                 }
             }
 #[derive(Debug)]
         pub struct AuthorNameStartingWithParams<'a> { pub start_str : &'a str }impl <'a, C: GenericClient> cornucopia_client::async_::Params<'a, AuthorNameStartingWithStmt, AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith, 1>, C> for AuthorNameStartingWithParams<'a>  { 
-                fn params(&'a self, client: &'a  C, stmt: &'a mut AuthorNameStartingWithStmt) -> AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith, 1> {
+                fn bind(&'a self, client: &'a  C, stmt: &'a mut AuthorNameStartingWithStmt) -> AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith, 1> {
                     stmt.bind(client, &self.start_str)
                 }
             }
 #[derive(Clone,Copy,Debug)]
         pub struct SelectWhereCustomTypeParams { pub spongebob_character : super::super::types::public::SpongebobCharacter }impl <'a, C: GenericClient> cornucopia_client::async_::Params<'a, SelectWhereCustomTypeStmt, SelectWhereCustomTypeQuery<'a, C, SelectWhereCustomType, 1>, C> for SelectWhereCustomTypeParams  { 
-                fn params(&'a self, client: &'a  C, stmt: &'a mut SelectWhereCustomTypeStmt) -> SelectWhereCustomTypeQuery<'a, C, SelectWhereCustomType, 1> {
+                fn bind(&'a self, client: &'a  C, stmt: &'a mut SelectWhereCustomTypeStmt) -> SelectWhereCustomTypeQuery<'a, C, SelectWhereCustomType, 1> {
                     stmt.bind(client, &self.spongebob_character)
                 }
             } #[derive( Debug, Clone, PartialEq,)] pub struct Authors { pub country : String,pub id : i32,pub name : String }pub struct AuthorsBorrowed<'a> { pub country : &'a str,pub id : i32,pub name : &'a str }
@@ -591,11 +588,8 @@ pub mod module_2 { use futures::{{StreamExt, TryStreamExt}};use futures; use cor
 FROM
     Author"))
             }
-
             pub struct AuthorsStmt(cornucopia_client::async_::Stmt);
-
-            impl AuthorsStmt {
-            pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a  C, ) -> AuthorsQuery<'a,C, Authors, 0> {
+            impl AuthorsStmt {pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a  C, ) -> AuthorsQuery<'a,C, Authors, 0> {
                 AuthorsQuery {
                     client,
                     params: [],
@@ -610,11 +604,8 @@ pub fn books() -> BooksStmt {
 FROM
     Book"))
             }
-
             pub struct BooksStmt(cornucopia_client::async_::Stmt);
-
-            impl BooksStmt {
-            pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a  C, ) -> BooksQuery<'a,C, Books, 0> {
+            impl BooksStmt {pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a  C, ) -> BooksQuery<'a,C, Books, 0> {
                 BooksQuery {
                     client,
                     params: [],
@@ -629,11 +620,8 @@ pub fn books_opt_ret_param() -> BooksOptRetParamStmt {
 FROM
     Book"))
             }
-
             pub struct BooksOptRetParamStmt(cornucopia_client::async_::Stmt);
-
-            impl BooksOptRetParamStmt {
-            pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a  C, ) -> BooksOptRetParamQuery<'a,C, BooksOptRetParam, 0> {
+            impl BooksOptRetParamStmt {pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a  C, ) -> BooksOptRetParamQuery<'a,C, BooksOptRetParam, 0> {
                 BooksOptRetParamQuery {
                     client,
                     params: [],
@@ -650,11 +638,8 @@ FROM
 WHERE
     Author.Id = $1"))
             }
-
             pub struct AuthorNameByIdStmt(cornucopia_client::async_::Stmt);
-
-            impl AuthorNameByIdStmt {
-            pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a  C, id : &'a i32) -> AuthorNameByIdQuery<'a,C, AuthorNameById, 1> {
+            impl AuthorNameByIdStmt {pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a  C, id : &'a i32) -> AuthorNameByIdQuery<'a,C, AuthorNameById, 1> {
                 AuthorNameByIdQuery {
                     client,
                     params: [id],
@@ -663,7 +648,7 @@ WHERE
                     mapper: |it| AuthorNameById::from(it),
                 }
             }pub fn params<'a, C: GenericClient>(&'a mut self, client: &'a  C, params: &'a impl cornucopia_client::async_::Params<'a, Self, AuthorNameByIdQuery<'a,C, AuthorNameById, 1>, C>) -> AuthorNameByIdQuery<'a,C, AuthorNameById, 1> {
-                    params.params(client, self)
+                    params.bind(client, self)
                 }}
 pub fn author_name_starting_with() -> AuthorNameStartingWithStmt {
                 AuthorNameStartingWithStmt(cornucopia_client::async_::Stmt::new("SELECT
@@ -678,11 +663,8 @@ FROM
 WHERE
     Author.Name LIKE CONCAT($1::text, '%')"))
             }
-
             pub struct AuthorNameStartingWithStmt(cornucopia_client::async_::Stmt);
-
-            impl AuthorNameStartingWithStmt {
-            pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a  C, start_str : &'a &'a str) -> AuthorNameStartingWithQuery<'a,C, AuthorNameStartingWith, 1> {
+            impl AuthorNameStartingWithStmt {pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a  C, start_str : &'a &'a str) -> AuthorNameStartingWithQuery<'a,C, AuthorNameStartingWith, 1> {
                 AuthorNameStartingWithQuery {
                     client,
                     params: [start_str],
@@ -691,7 +673,7 @@ WHERE
                     mapper: |it| AuthorNameStartingWith::from(it),
                 }
             }pub fn params<'a, C: GenericClient>(&'a mut self, client: &'a  C, params: &'a impl cornucopia_client::async_::Params<'a, Self, AuthorNameStartingWithQuery<'a,C, AuthorNameStartingWith, 1>, C>) -> AuthorNameStartingWithQuery<'a,C, AuthorNameStartingWith, 1> {
-                    params.params(client, self)
+                    params.bind(client, self)
                 }}
 pub fn return_custom_type() -> ReturnCustomTypeStmt {
                 ReturnCustomTypeStmt(cornucopia_client::async_::Stmt::new("SELECT
@@ -699,11 +681,8 @@ pub fn return_custom_type() -> ReturnCustomTypeStmt {
 FROM
     CustomTable"))
             }
-
             pub struct ReturnCustomTypeStmt(cornucopia_client::async_::Stmt);
-
-            impl ReturnCustomTypeStmt {
-            pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a  C, ) -> ReturnCustomTypeQuery<'a,C, ReturnCustomType, 0> {
+            impl ReturnCustomTypeStmt {pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a  C, ) -> ReturnCustomTypeQuery<'a,C, ReturnCustomType, 0> {
                 ReturnCustomTypeQuery {
                     client,
                     params: [],
@@ -719,11 +698,8 @@ FROM
     CustomTable
 WHERE (col1).persona = $1"))
             }
-
             pub struct SelectWhereCustomTypeStmt(cornucopia_client::async_::Stmt);
-
-            impl SelectWhereCustomTypeStmt {
-            pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a  C, spongebob_character : &'a super::super::types::public::SpongebobCharacter) -> SelectWhereCustomTypeQuery<'a,C, SelectWhereCustomType, 1> {
+            impl SelectWhereCustomTypeStmt {pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a  C, spongebob_character : &'a super::super::types::public::SpongebobCharacter) -> SelectWhereCustomTypeQuery<'a,C, SelectWhereCustomType, 1> {
                 SelectWhereCustomTypeQuery {
                     client,
                     params: [spongebob_character],
@@ -732,7 +708,7 @@ WHERE (col1).persona = $1"))
                     mapper: |it| SelectWhereCustomType::from(it),
                 }
             }pub fn params<'a, C: GenericClient>(&'a mut self, client: &'a  C, params: &'a impl cornucopia_client::async_::Params<'a, Self, SelectWhereCustomTypeQuery<'a,C, SelectWhereCustomType, 1>, C>) -> SelectWhereCustomTypeQuery<'a,C, SelectWhereCustomType, 1> {
-                    params.params(client, self)
+                    params.bind(client, self)
                 }}
 pub fn select_translations() -> SelectTranslationsStmt {
                 SelectTranslationsStmt(cornucopia_client::async_::Stmt::new("SELECT
@@ -740,11 +716,8 @@ pub fn select_translations() -> SelectTranslationsStmt {
 FROM
     Book"))
             }
-
             pub struct SelectTranslationsStmt(cornucopia_client::async_::Stmt);
-
-            impl SelectTranslationsStmt {
-            pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a  C, ) -> SelectTranslationsQuery<'a,C, SelectTranslations, 0> {
+            impl SelectTranslationsStmt {pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a  C, ) -> SelectTranslationsQuery<'a,C, SelectTranslations, 0> {
                 SelectTranslationsQuery {
                     client,
                     params: [],
