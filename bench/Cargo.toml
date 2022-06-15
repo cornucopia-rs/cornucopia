@@ -11,6 +11,7 @@ postgres = "0.19.3"
 postgres-types = "0.2.3"
 cornucopia = { path = ".." }
 cornucopia_client = { path = "../cornucopia_client" }
+diesel = { version = "2.0.0-rc.0", features = ["postgres"] }
 
 [[bench]]
 name = "bench"

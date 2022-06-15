@@ -2,12 +2,14 @@ use std::fmt::Write;
 
 use cornucopia::conn::cornucopia_conn;
 use criterion::{BenchmarkId, Criterion};
+use diesel::{Connection, PgConnection};
 use postgres::{fallible_iterator::FallibleIterator, Client};
 
 const QUERY_SIZE: &[usize] = &[1, 100, 10_000];
 const INSERT_SIZE: &[usize] = &[1, 100, 1000];
 
 mod cornucopia_benches;
+mod diesel_benches;
 mod postgres_benches;
 
 fn clear(client: &mut Client) {
@@ -125,18 +127,30 @@ fn bench(c: &mut Criterion) {
     cornucopia::container::cleanup(false).ok();
     cornucopia::container::setup(false).unwrap();
     let client = &mut cornucopia_conn().unwrap();
+    let conn =
+        &mut PgConnection::establish("postgresql://postgres:postgres@127.0.0.1:5432/postgres")
+            .unwrap();
     cornucopia::run_migrations(client, "benches/cornucopia_benches/migrations").unwrap();
     {
         let mut group = c.benchmark_group("bench_trivial_query");
         for size in QUERY_SIZE {
             prepare_client(*size, client, |_| None);
-            group.bench_with_input(BenchmarkId::new("postgres_by_id", size), size, |b, _| {
+            group.bench_function(BenchmarkId::new("diesel", size), |b| {
+                diesel_benches::bench_trivial_query(b, conn)
+            });
+            group.bench_function(BenchmarkId::new("diesel_boxed", size), |b| {
+                diesel_benches::bench_trivial_query_boxed(b, conn)
+            });
+            group.bench_function(BenchmarkId::new("diesel_raw", size), |b| {
+                diesel_benches::bench_trivial_query_raw(b, conn)
+            });
+            group.bench_function(BenchmarkId::new("postgres_by_id", size), |b| {
                 postgres_benches::bench_trivial_query_by_id(b, client);
             });
-            group.bench_with_input(BenchmarkId::new("postgres_by_name", size), size, |b, _| {
+            group.bench_function(BenchmarkId::new("postgres_by_name", size), |b| {
                 postgres_benches::bench_trivial_query_by_name(b, client);
             });
-            group.bench_with_input(BenchmarkId::new("cornucopia", size), size, |b, _| {
+            group.bench_function(BenchmarkId::new("cornucopia", size), |b| {
                 cornucopia_benches::bench_trivial_query(b, client);
             });
         }
@@ -148,13 +162,22 @@ fn bench(c: &mut Criterion) {
             prepare_client(*size, client, |i| {
                 Some(if i % 2 == 0 { "black" } else { "brown" })
             });
-            group.bench_with_input(BenchmarkId::new("postgres_by_id", size), size, |b, _| {
+            group.bench_function(BenchmarkId::new("diesel", size), |b| {
+                diesel_benches::bench_medium_complex_query(b, conn)
+            });
+            group.bench_function(BenchmarkId::new("diesel_boxed", size), |b| {
+                diesel_benches::bench_medium_complex_query_boxed(b, conn)
+            });
+            group.bench_function(BenchmarkId::new("diesel_queryable_by_name", size), |b| {
+                diesel_benches::bench_medium_complex_query_queryable_by_name(b, conn)
+            });
+            group.bench_function(BenchmarkId::new("postgres_by_id", size), |b| {
                 postgres_benches::bench_medium_complex_query_by_id(b, client);
             });
-            group.bench_with_input(BenchmarkId::new("postgres_by_name", size), size, |b, _| {
+            group.bench_function(BenchmarkId::new("postgres_by_name", size), |b| {
                 postgres_benches::bench_medium_complex_query_by_name(b, client);
             });
-            group.bench_with_input(BenchmarkId::new("cornucopia", size), size, |b, _| {
+            group.bench_function(BenchmarkId::new("cornucopia", size), |b| {
                 cornucopia_benches::bench_medium_complex_query(b, client);
             });
         }
@@ -163,6 +186,9 @@ fn bench(c: &mut Criterion) {
     {
         let mut group = c.benchmark_group("bench_loading_associations_sequentially");
         prepare_full(client);
+        group.bench_function("diesel", |b| {
+            diesel_benches::loading_associations_sequentially(b, conn)
+        });
         group.bench_function("postgres", |b| {
             postgres_benches::loading_associations_sequentially(b, client)
         });
@@ -174,6 +200,10 @@ fn bench(c: &mut Criterion) {
     {
         let mut group = c.benchmark_group("bench_insert");
         for size in INSERT_SIZE {
+            group.bench_with_input(BenchmarkId::new("diesel", size), size, |b, i| {
+                clear(client);
+                diesel_benches::bench_insert(b, conn, *i)
+            });
             group.bench_with_input(BenchmarkId::new("postgres", size), size, |b, i| {
                 clear(client);
                 postgres_benches::bench_insert(b, client, *i);
