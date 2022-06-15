@@ -137,14 +137,11 @@ pub(crate) fn validate_query(info: &Rc<ModuleInfo>, query: Query) -> Result<Vali
     if let QueryDataStruct::Implicit { idents } = &query.annotation.row {
         duplicate_nullable_ident(info, idents)?;
     };
-    let mut bind_params = query.sql.bind_params.clone();
-    bind_params.sort();
-    bind_params.dedup();
 
     let validated_query = ValidatedQuery {
         name: query.annotation.name,
         params: query.annotation.param,
-        bind_params,
+        bind_params: query.sql.bind_params,
         row: query.annotation.row,
         sql_str: query.sql.sql_str,
     };

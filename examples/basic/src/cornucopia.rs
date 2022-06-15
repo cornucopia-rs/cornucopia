@@ -44,6 +44,9 @@ let _oid = postgres_types::private::read_be_i32(&mut out)?;
                 ty: &postgres_types::Type,
                 out: &mut postgres_types::private::BytesMut,
             ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>,> {
+                let CustomCompositeBorrowed {
+                    name,age,persona
+                } = self;
                 let fields = match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
@@ -54,9 +57,9 @@ let _oid = postgres_types::private::read_be_i32(&mut out)?;
                     let base = out.len();
                     out.extend_from_slice(&[0; 4]);
                     let r = match field.name() {
-                        "name" => postgres_types::ToSql::to_sql(&self.name,field.type_(), out),
-"age" => postgres_types::ToSql::to_sql(&self.age,field.type_(), out),
-"persona" => postgres_types::ToSql::to_sql(&self.persona,field.type_(), out),
+                        "name" => postgres_types::ToSql::to_sql(name,field.type_(), out),
+"age" => postgres_types::ToSql::to_sql(age,field.type_(), out),
+"persona" => postgres_types::ToSql::to_sql(persona,field.type_(), out),
                         _ => unreachable!()
                     };
                     let count = match r? {
@@ -132,10 +135,10 @@ pub mod module_2 { use futures::{{StreamExt, TryStreamExt}};use futures; use cor
                 fn bind(&'a self, client: &'a  C, stmt: &'a mut SelectWhereCustomTypeStmt) -> SelectWhereCustomTypeQuery<'a, C, SelectWhereCustomType, 1> {
                     stmt.bind(client, &self.spongebob_character)
                 }
-            } #[derive( Debug, Clone, PartialEq,)] pub struct Authors { pub country : String,pub id : i32,pub name : String }pub struct AuthorsBorrowed<'a> { pub country : &'a str,pub id : i32,pub name : &'a str }
+            } #[derive( Debug, Clone, PartialEq,)] pub struct Authors { pub id : i32,pub name : String,pub country : String }pub struct AuthorsBorrowed<'a> { pub id : i32,pub name : &'a str,pub country : &'a str }
                 impl<'a> From<AuthorsBorrowed<'a>> for Authors {
-                    fn from(AuthorsBorrowed { country,id,name }: AuthorsBorrowed<'a>) -> Self {
-                        Self { country: country.into(),id,name: name.into() }
+                    fn from(AuthorsBorrowed { id,name,country }: AuthorsBorrowed<'a>) -> Self {
+                        Self { id,name: name.into(),country: country.into() }
                     }
                 }
             pub struct AuthorsQuery<'a, C: GenericClient, T, const N: usize> {
@@ -360,10 +363,10 @@ pub mod module_2 { use futures::{{StreamExt, TryStreamExt}};use futures; use cor
                     Ok(stream)
                 }
             }
-#[derive( Debug, Clone, PartialEq,)] pub struct AuthorNameStartingWith { pub authorid : i32,pub bookid : i32,pub name : String,pub title : String }pub struct AuthorNameStartingWithBorrowed<'a> { pub authorid : i32,pub bookid : i32,pub name : &'a str,pub title : &'a str }
+#[derive( Debug, Clone, PartialEq,)] pub struct AuthorNameStartingWith { pub authorid : i32,pub name : String,pub bookid : i32,pub title : String }pub struct AuthorNameStartingWithBorrowed<'a> { pub authorid : i32,pub name : &'a str,pub bookid : i32,pub title : &'a str }
                 impl<'a> From<AuthorNameStartingWithBorrowed<'a>> for AuthorNameStartingWith {
-                    fn from(AuthorNameStartingWithBorrowed { authorid,bookid,name,title }: AuthorNameStartingWithBorrowed<'a>) -> Self {
-                        Self { authorid,bookid,name: name.into(),title: title.into() }
+                    fn from(AuthorNameStartingWithBorrowed { authorid,name,bookid,title }: AuthorNameStartingWithBorrowed<'a>) -> Self {
+                        Self { authorid,name: name.into(),bookid,title: title.into() }
                     }
                 }
             pub struct AuthorNameStartingWithQuery<'a, C: GenericClient, T, const N: usize> {
@@ -594,7 +597,7 @@ FROM
                     client,
                     params: [],
                     stmt: &mut self.0,
-                    extractor: |row| { AuthorsBorrowed {country: row.get(2),id: row.get(0),name: row.get(1)} },
+                    extractor: |row| { AuthorsBorrowed {id: row.get(0),name: row.get(1),country: row.get(2)} },
                     mapper: |it| Authors::from(it),
                 }
             }}
@@ -669,7 +672,7 @@ WHERE
                     client,
                     params: [start_str],
                     stmt: &mut self.0,
-                    extractor: |row| { AuthorNameStartingWithBorrowed {authorid: row.get(0),bookid: row.get(2),name: row.get(1),title: row.get(3)} },
+                    extractor: |row| { AuthorNameStartingWithBorrowed {authorid: row.get(0),name: row.get(1),bookid: row.get(2),title: row.get(3)} },
                     mapper: |it| AuthorNameStartingWith::from(it),
                 }
             }pub fn params<'a, C: GenericClient>(&'a mut self, client: &'a  C, params: &'a impl cornucopia_client::async_::Params<'a, Self, AuthorNameStartingWithQuery<'a,C, AuthorNameStartingWith, 1>, C>) -> AuthorNameStartingWithQuery<'a,C, AuthorNameStartingWith, 1> {

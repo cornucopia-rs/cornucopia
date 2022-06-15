@@ -206,17 +206,17 @@ impl QuerySql {
                         it
                     })
                     .collect();
-
-                // Normalize
-                let mut deduped_bind_params = bind_params.clone();
-                deduped_bind_params.sort_unstable();
-                deduped_bind_params.dedup();
+                // Remove duplicate
+                let dedup_params: Vec<_> = bind_params
+                    .iter()
+                    .enumerate()
+                    .rev()
+                    .filter_map(|(i, u)| (!bind_params[..i].contains(u)).then(|| u.clone()))
+                    .rev()
+                    .collect();
 
                 for bind_param in bind_params.iter().rev() {
-                    let index = deduped_bind_params
-                        .iter()
-                        .position(|bp| bp == bind_param)
-                        .unwrap();
+                    let index = dedup_params.iter().position(|bp| bp == bind_param).unwrap();
                     let start = bind_param.start - sql_start - 1;
                     let end = bind_param.end - sql_start - 1;
                     sql_str.replace_range(start..=end, &format!("${}", index + 1))
@@ -224,7 +224,7 @@ impl QuerySql {
 
                 Self {
                     sql_str,
-                    bind_params,
+                    bind_params: dedup_params,
                 }
             })
     }
