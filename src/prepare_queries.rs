@@ -3,11 +3,9 @@ use crate::{
     read_queries::ModuleInfo,
     type_registrar::CornucopiaType,
     type_registrar::TypeRegistrar,
-    utils::has_duplicate,
-    validation::{self, ValidatedModule, ValidatedQuery},
+    validation,
 };
 use error::Error;
-use error::ErrorVariant;
 
 use indexmap::{map::Entry, IndexMap};
 use postgres::Client;
@@ -69,7 +67,7 @@ pub(crate) enum PreparedContent {
 /// the queries it contains.
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedModule {
-    pub(crate) info: Rc<ModuleInfo>,
+    pub(crate) info: ModuleInfo,
     pub(crate) queries: IndexMap<String, PreparedQuery>,
     pub(crate) params: IndexMap<String, PreparedParams>,
     pub(crate) rows: IndexMap<String, PreparedRow>,
@@ -87,7 +85,7 @@ impl PreparedModule {
         registrar: &TypeRegistrar,
         name: Parsed<String>,
         fields: Vec<PreparedField>,
-    ) -> Result<(usize, Vec<usize>), ErrorVariant> {
+    ) -> Result<(usize, Vec<usize>), Error> {
         assert!(!fields.is_empty());
         match self.rows.entry(name.value.clone()) {
             Entry::Occupied(o) => {
@@ -121,7 +119,7 @@ impl PreparedModule {
         }
     }
 
-    fn add_param(&mut self, name: Parsed<String>, query_idx: usize) -> Result<usize, ErrorVariant> {
+    fn add_param(&mut self, name: Parsed<String>, query_idx: usize) -> Result<usize, Error> {
         let fields = &self.queries.get_index(query_idx).unwrap().1.params;
         assert!(!fields.is_empty());
         match self.params.entry(name.value.clone()) {
@@ -178,7 +176,7 @@ impl PreparedModule {
 /// Prepares all modules
 pub(crate) fn prepare(
     client: &mut Client,
-    modules: Vec<ValidatedModule>,
+    modules: Vec<validation::Module>,
 ) -> Result<Preparation, Error> {
     let mut registrar = TypeRegistrar::default();
     let mut tmp = Preparation {
@@ -272,23 +270,24 @@ fn prepare_type(
 /// Prepares all queries in this module
 fn prepare_module(
     client: &mut Client,
-    validated_module: ValidatedModule,
+    module: validation::Module,
     registrar: &mut TypeRegistrar,
 ) -> Result<PreparedModule, Error> {
     let mut tmp_prepared_module = PreparedModule {
-        info: validated_module.info,
+        info: module.info.clone(),
         queries: IndexMap::new(),
         params: IndexMap::new(),
         rows: IndexMap::new(),
     };
 
-    for query in validated_module.queries {
+    for query in module.queries {
         prepare_query(
             client,
             &mut tmp_prepared_module,
             registrar,
-            &validated_module.types,
+            &module.types,
             query,
+            &module.info,
         )?;
     }
 
@@ -301,18 +300,20 @@ fn prepare_query(
     module: &mut PreparedModule,
     registrar: &mut TypeRegistrar,
     types: &[TypeAnnotation],
-    ValidatedQuery {
+    validation::Query {
         name,
         params,
         bind_params,
         row,
         sql_str,
-    }: ValidatedQuery,
+        sql_start,
+    }: validation::Query,
+    module_info: &ModuleInfo,
 ) -> Result<(), Error> {
     // Prepare the statement
     let stmt = client
         .prepare(&sql_str)
-        .map_err(|e| Error::new(e, &name, module.info.clone()))?;
+        .map_err(|e| Error::new_db_err(e, module_info, sql_start, &name))?;
 
     let (nullable_params_fields, params_name) =
         params.name_and_fields(types, &name, Some("Params"));
@@ -327,8 +328,7 @@ fn prepare_query(
         for nullable_col in &nullable_params_fields {
             // If none of the row's columns match the nullable column
             validation::nullable_param_name(&module.info, nullable_col, &params)
-                .map_err(ErrorVariant::from)
-                .map_err(|e| Error::new(e, &name, module.info.clone()))?;
+                .map_err(Error::from)?;
         }
 
         let mut param_fields = Vec::new();
@@ -340,8 +340,7 @@ fn prepare_query(
             param_fields.push(PreparedField {
                 name: col_name.value.clone(),
                 ty: registrar
-                    .register(&col_ty)
-                    .map_err(|e| Error::new(e, &name, module.info.clone()))?
+                    .register(&col_name.value, &col_ty, &name, module_info)?
                     .clone(),
                 is_nullable: nullity.map(|it| it.nullable).unwrap_or(false),
                 is_inner_nullable: nullity.map(|it| it.inner_nullable).unwrap_or(false),
@@ -353,20 +352,11 @@ fn prepare_query(
     let row_fields = {
         let stmt_cols = stmt.columns();
         // Check for duplicate names
-        if let Some(duplicate_col) = has_duplicate(stmt_cols.iter(), |col| col.name()) {
-            return Err(Error::new(
-                ErrorVariant::DuplicateSqlColName {
-                    name: duplicate_col.name().to_owned(),
-                },
-                &name,
-                module.info.clone(),
-            ));
-        };
+        validation::duplicate_sql_col_name(&module.info, &name, stmt_cols).map_err(Error::from)?;
         for nullable_col in &nullable_row_fields {
             // If none of the row's columns match the nullable column
             validation::nullable_column_name(&module.info, nullable_col, stmt_cols)
-                .map_err(ErrorVariant::from)
-                .map_err(|e| Error::new(e, &name, module.info.clone()))?;
+                .map_err(Error::from)?;
         }
 
         let mut row_fields = Vec::new();
@@ -376,8 +366,7 @@ fn prepare_query(
                 .find(|x| x.name.value == col_name);
             // Register type
             let ty = registrar
-                .register(col_ty)
-                .map_err(|e| Error::new(e, &name, module.info.clone()))?
+                .register(&col_name, col_ty, &name, module_info)?
                 .clone();
             row_fields.push(PreparedField {
                 name: normalize_rust_name(&col_name),
@@ -391,98 +380,72 @@ fn prepare_query(
 
     let params_empty = params_fields.is_empty();
     let row_idx = if !row_fields.is_empty() {
-        Some(
-            module
-                .add_row(registrar, row_name, row_fields)
-                .map_err(|e| Error {
-                    err: e,
-                    query_name: name.clone(),
-                    module_info: module.info.clone(),
-                })?,
-        )
+        Some(module.add_row(registrar, row_name, row_fields)?)
     } else {
         None
     };
     let query_idx = module.add_query(name.value.clone(), params_fields, row_idx, sql_str);
     if !params_empty {
-        module
-            .add_param(params_name, query_idx)
-            .map_err(|e| Error {
-                err: e,
-                query_name: name.clone(),
-                module_info: module.info.clone(),
-            })?;
+        module.add_param(params_name, query_idx)?;
     };
 
     Ok(())
 }
 
 pub(crate) mod error {
-    use std::fmt::Display;
-    use std::rc::Rc;
-
     use crate::parser::Parsed;
     use crate::read_queries::ModuleInfo;
-    use crate::type_registrar::error::Error as PostgresTypeError;
-    use crate::utils::compute_line;
     use crate::validation::error::Error as ValidationError;
+    use crate::{type_registrar::error::Error as PostgresTypeError, utils::db_err};
+    use miette::{Diagnostic, NamedSource, SourceSpan};
     use thiserror::Error as ThisError;
 
-    #[derive(Debug, ThisError)]
-    #[error("{0}")]
-    pub(crate) enum ErrorVariant {
-        Db(#[from] postgres::Error),
-        PostgresType(#[from] PostgresTypeError),
-        Validation(#[from] ValidationError),
-        #[error("Two or more columns have the same name: `{name}`. Consider disambiguing the column names with `AS` clauses.")]
-        DuplicateSqlColName {
-            name: String,
+    #[derive(Debug, ThisError, Diagnostic)]
+    pub enum Error {
+        #[error("Couldn't prepare query: {msg}")]
+        #[diagnostic(code(cornucopia::prepare_queries))]
+        Db {
+            msg: String,
+            #[help]
+            help: Option<String>,
+            #[source_code]
+            src: NamedSource,
+            #[label("error occurs near this location")]
+            err_span: Option<SourceSpan>,
         },
-    }
-
-    #[derive(Debug)]
-    pub struct Error {
-        pub(crate) query_name: Parsed<String>,
-        pub(crate) err: ErrorVariant,
-        pub(crate) module_info: Rc<ModuleInfo>,
+        #[error(transparent)]
+        #[diagnostic(transparent)]
+        PostgresType(#[from] PostgresTypeError),
+        #[error(transparent)]
+        #[diagnostic(transparent)]
+        Validation(#[from] ValidationError),
     }
 
     impl Error {
-        pub(crate) fn new<E: Into<ErrorVariant>>(
-            err: E,
+        pub(crate) fn new_db_err(
+            err: postgres::Error,
+            module_info: &ModuleInfo,
+            query_start: usize,
             query_name: &Parsed<String>,
-            info: Rc<ModuleInfo>,
         ) -> Self {
-            Self {
-                err: err.into(),
-                query_name: query_name.clone(),
-                module_info: info,
+            let msg = format!("{:#}", err);
+            if let Some((position, msg, help)) = db_err(err) {
+                Self::Db {
+                    msg,
+                    help,
+                    src: module_info.into(),
+                    err_span: Some(
+                        (position as usize + query_start..position as usize + query_start).into(),
+                    ),
+                }
+            } else {
+                Self::Db {
+                    msg,
+                    help: None,
+                    src: module_info.into(),
+                    err_span: Some(query_name.span().into()),
+                }
             }
         }
     }
-
-    impl Display for Error {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            // Retrieve line index and content
-            let (_, line, _) = compute_line(&self.module_info.content, self.query_name.start);
-            match &self.err {
-                ErrorVariant::Db(e) => write!(
-                    f,
-                    "Error while preparing query \"{}\" [file: \"{}\", line: {}] ({})",
-                    self.query_name.value,
-                    self.module_info.path,
-                    line,
-                    e.as_db_error().unwrap().message()
-                ),
-                ErrorVariant::Validation(e) => e.fmt(f),
-                _ => write!(
-                    f,
-                    "Error while preparing query \"{}\" [file: \"{}\", line: {}]:\n{}",
-                    self.query_name.value, self.module_info.path, line, self.err
-                ),
-            }
-        }
-    }
-
-    impl std::error::Error for Error {}
 }
