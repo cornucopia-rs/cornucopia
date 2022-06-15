@@ -174,11 +174,11 @@ fn bench(c: &mut Criterion) {
     {
         let mut group = c.benchmark_group("bench_insert");
         for size in INSERT_SIZE {
-            group.bench_with_input(BenchmarkId::new("cornucopia", size), size, |b, i| {
+            group.bench_with_input(BenchmarkId::new("postgres", size), size, |b, i| {
                 clear(client);
                 postgres_benches::bench_insert(b, client, *i);
             });
-            group.bench_with_input(BenchmarkId::new("postgres", size), size, |b, i| {
+            group.bench_with_input(BenchmarkId::new("cornucopia", size), size, |b, i| {
                 clear(client);
                 cornucopia_benches::bench_insert(b, client, *i);
             });
