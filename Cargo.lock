@@ -71,8 +71,11 @@ dependencies = [
  "cornucopia_client",
  "criterion",
  "diesel",
+ "futures",
  "postgres",
  "postgres-types",
+ "tokio",
+ "tokio-postgres",
 ]
 
 [[package]]

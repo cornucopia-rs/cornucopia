@@ -139,18 +139,6 @@ pub fn bench_trivial_query(b: &mut Bencher, conn: &mut PgConnection) {
     b.iter(|| users::table.load::<User>(conn).unwrap())
 }
 
-pub fn bench_trivial_query_boxed(b: &mut Bencher, conn: &mut PgConnection) {
-    b.iter(|| users::table.into_boxed().load::<User>(conn).unwrap())
-}
-
-pub fn bench_trivial_query_raw(b: &mut Bencher, conn: &mut PgConnection) {
-    b.iter(|| {
-        diesel::sql_query("SELECT id, name, hair_color FROM users")
-            .load::<User>(conn)
-            .unwrap()
-    })
-}
-
 pub fn bench_medium_complex_query(b: &mut Bencher, conn: &mut PgConnection) {
     b.iter(|| {
         use self::users::dsl::*;
@@ -158,28 +146,6 @@ pub fn bench_medium_complex_query(b: &mut Bencher, conn: &mut PgConnection) {
             .left_outer_join(posts::table)
             .filter(hair_color.eq("black"));
         target.load::<(User, Option<Post>)>(conn).unwrap()
-    })
-}
-
-pub fn bench_medium_complex_query_boxed(b: &mut Bencher, conn: &mut PgConnection) {
-    b.iter(|| {
-        use self::users::dsl::*;
-        let target = users
-            .left_outer_join(posts::table)
-            .filter(hair_color.eq("black"))
-            .into_boxed();
-        target.load::<(User, Option<Post>)>(conn).unwrap()
-    })
-}
-
-pub fn bench_medium_complex_query_queryable_by_name(b: &mut Bencher, conn: &mut PgConnection) {
-    b.iter(|| {
-        diesel::sql_query(
-            "SELECT u.id, u.name, u.hair_color, p.id, p.user_id, p.title, p.body \
-             FROM users as u LEFT JOIN posts as p on u.id = p.user_id",
-        )
-        .load::<(User, Option<Post>)>(conn)
-        .unwrap()
     })
 }
 

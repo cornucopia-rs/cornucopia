@@ -3,7 +3,8 @@ use std::fmt::Write;
 use cornucopia::conn::cornucopia_conn;
 use criterion::{BenchmarkId, Criterion};
 use diesel::{Connection, PgConnection};
-use postgres::{fallible_iterator::FallibleIterator, Client};
+use postgres::{fallible_iterator::FallibleIterator, Client, NoTls};
+use tokio::runtime::Runtime;
 
 const QUERY_SIZE: &[usize] = &[1, 100, 10_000];
 const INSERT_SIZE: &[usize] = &[1, 100, 1000];
@@ -11,6 +12,7 @@ const INSERT_SIZE: &[usize] = &[1, 100, 1000];
 mod cornucopia_benches;
 mod diesel_benches;
 mod postgres_benches;
+mod tokio_postgres_benches;
 
 fn clear(client: &mut Client) {
     client
@@ -127,6 +129,17 @@ fn bench(c: &mut Criterion) {
     cornucopia::container::cleanup(false).ok();
     cornucopia::container::setup(false).unwrap();
     let client = &mut cornucopia_conn().unwrap();
+    let rt: &'static Runtime = Box::leak(Box::new(Runtime::new().unwrap()));
+    let async_client = &mut rt.block_on(async {
+        let (client, conn) = tokio_postgres::connect(
+            "postgresql://postgres:postgres@127.0.0.1:5432/postgres",
+            NoTls,
+        )
+        .await
+        .unwrap();
+        rt.spawn(conn);
+        client
+    });
     let conn =
         &mut PgConnection::establish("postgresql://postgres:postgres@127.0.0.1:5432/postgres")
             .unwrap();
@@ -138,20 +151,17 @@ fn bench(c: &mut Criterion) {
             group.bench_function(BenchmarkId::new("diesel", size), |b| {
                 diesel_benches::bench_trivial_query(b, conn)
             });
-            group.bench_function(BenchmarkId::new("diesel_boxed", size), |b| {
-                diesel_benches::bench_trivial_query_boxed(b, conn)
+            group.bench_function(BenchmarkId::new("postgres", size), |b| {
+                postgres_benches::bench_trivial_query(b, client);
             });
-            group.bench_function(BenchmarkId::new("diesel_raw", size), |b| {
-                diesel_benches::bench_trivial_query_raw(b, conn)
-            });
-            group.bench_function(BenchmarkId::new("postgres_by_id", size), |b| {
-                postgres_benches::bench_trivial_query_by_id(b, client);
-            });
-            group.bench_function(BenchmarkId::new("postgres_by_name", size), |b| {
-                postgres_benches::bench_trivial_query_by_name(b, client);
+            group.bench_function(BenchmarkId::new("tokio_postgres", size), |b| {
+                tokio_postgres_benches::bench_trivial_query(b, async_client);
             });
             group.bench_function(BenchmarkId::new("cornucopia", size), |b| {
-                cornucopia_benches::bench_trivial_query(b, client);
+                cornucopia_benches::sync::bench_trivial_query(b, client);
+            });
+            group.bench_function(BenchmarkId::new("cornucopia_async", size), |b| {
+                cornucopia_benches::bench_trivial_query(b, async_client);
             });
         }
         group.finish();
@@ -165,20 +175,17 @@ fn bench(c: &mut Criterion) {
             group.bench_function(BenchmarkId::new("diesel", size), |b| {
                 diesel_benches::bench_medium_complex_query(b, conn)
             });
-            group.bench_function(BenchmarkId::new("diesel_boxed", size), |b| {
-                diesel_benches::bench_medium_complex_query_boxed(b, conn)
+            group.bench_function(BenchmarkId::new("postgres", size), |b| {
+                postgres_benches::bench_medium_complex_query(b, client);
             });
-            group.bench_function(BenchmarkId::new("diesel_queryable_by_name", size), |b| {
-                diesel_benches::bench_medium_complex_query_queryable_by_name(b, conn)
-            });
-            group.bench_function(BenchmarkId::new("postgres_by_id", size), |b| {
-                postgres_benches::bench_medium_complex_query_by_id(b, client);
-            });
-            group.bench_function(BenchmarkId::new("postgres_by_name", size), |b| {
-                postgres_benches::bench_medium_complex_query_by_name(b, client);
+            group.bench_function(BenchmarkId::new("tokio_postgres", size), |b| {
+                tokio_postgres_benches::bench_medium_complex_query(b, async_client);
             });
             group.bench_function(BenchmarkId::new("cornucopia", size), |b| {
-                cornucopia_benches::bench_medium_complex_query(b, client);
+                cornucopia_benches::sync::bench_medium_complex_query(b, client);
+            });
+            group.bench_function(BenchmarkId::new("cornucopia_async", size), |b| {
+                cornucopia_benches::bench_medium_complex_query(b, async_client);
             });
         }
         group.finish();
@@ -192,8 +199,14 @@ fn bench(c: &mut Criterion) {
         group.bench_function("postgres", |b| {
             postgres_benches::loading_associations_sequentially(b, client)
         });
+        group.bench_function("tokio_postgres", |b| {
+            tokio_postgres_benches::loading_associations_sequentially(b, async_client);
+        });
         group.bench_function("cornucopia", |b| {
-            cornucopia_benches::loading_associations_sequentially(b, client)
+            cornucopia_benches::sync::loading_associations_sequentially(b, client)
+        });
+        group.bench_function("cornucopia_async", |b| {
+            cornucopia_benches::loading_associations_sequentially(b, async_client)
         });
         group.finish();
     }
@@ -208,9 +221,16 @@ fn bench(c: &mut Criterion) {
                 clear(client);
                 postgres_benches::bench_insert(b, client, *i);
             });
+            group.bench_with_input(BenchmarkId::new("tokio_postgres", size), size, |b, i| {
+                tokio_postgres_benches::bench_insert(b, async_client, *i);
+            });
             group.bench_with_input(BenchmarkId::new("cornucopia", size), size, |b, i| {
                 clear(client);
-                cornucopia_benches::bench_insert(b, client, *i);
+                cornucopia_benches::sync::bench_insert(b, client, *i);
+            });
+            group.bench_with_input(BenchmarkId::new("cornucopia_async", size), size, |b, i| {
+                clear(client);
+                cornucopia_benches::bench_insert(b, async_client, *i);
             });
         }
         group.finish();

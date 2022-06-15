@@ -26,7 +26,7 @@ pub struct Comment {
     pub text: String,
 }
 
-pub fn bench_trivial_query_by_id(b: &mut Bencher, client: &mut Client) {
+pub fn bench_trivial_query(b: &mut Bencher, client: &mut Client) {
     let query = client
         .prepare("SELECT id, name, hair_color FROM users")
         .unwrap();
@@ -47,28 +47,7 @@ pub fn bench_trivial_query_by_id(b: &mut Bencher, client: &mut Client) {
     })
 }
 
-pub fn bench_trivial_query_by_name(b: &mut Bencher, client: &mut Client) {
-    let query = client
-        .prepare("SELECT id, name, hair_color FROM users")
-        .unwrap();
-
-    b.iter(|| {
-        client
-            .query_raw(&query, NO_PARAMS)
-            .unwrap()
-            .map(|row| {
-                Ok(User {
-                    id: row.get("id"),
-                    name: row.get("name"),
-                    hair_color: row.get("hair_color"),
-                })
-            })
-            .collect::<Vec<_>>()
-            .unwrap()
-    })
-}
-
-pub fn bench_medium_complex_query_by_id(b: &mut Bencher, client: &mut Client) {
+pub fn bench_medium_complex_query(b: &mut Bencher, client: &mut Client) {
     let query = client
         .prepare(
             "SELECT u.id, u.name, u.hair_color, p.id, p.user_id, p.title, p.body \
@@ -92,41 +71,6 @@ pub fn bench_medium_complex_query_by_id(b: &mut Bencher, client: &mut Client) {
                         user_id: row.get(4),
                         title: row.get(5),
                         body: row.get(6),
-                    })
-                } else {
-                    None
-                };
-                Ok((user, post))
-            })
-            .collect::<Vec<_>>()
-            .unwrap()
-    })
-}
-
-pub fn bench_medium_complex_query_by_name(b: &mut Bencher, client: &mut Client) {
-    let query = client
-        .prepare(
-            "SELECT u.id as myuser_id, u.name, u.hair_color, p.id as post_id, p.user_id, p.title, p.body \
-             FROM users as u LEFT JOIN posts as p on u.id = p.user_id",
-        )
-        .unwrap();
-
-    b.iter(|| {
-        client
-            .query_raw(&query, NO_PARAMS)
-            .unwrap()
-            .map(|row| {
-                let user = User {
-                    id: row.get("myuser_id"),
-                    name: row.get("name"),
-                    hair_color: row.get("hair_color"),
-                };
-                let post = if let Some(id) = row.get("post_id") {
-                    Some(Post {
-                        id,
-                        user_id: row.get("user_id"),
-                        title: row.get("title"),
-                        body: row.get("body"),
                     })
                 } else {
                     None
