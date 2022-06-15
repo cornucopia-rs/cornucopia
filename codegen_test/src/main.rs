@@ -42,9 +42,7 @@ use crate::cornucopia_sync::{
     },
 };
 
-#[rustfmt::skip]
 mod cornucopia_async;
-#[rustfmt::skip]
 mod cornucopia_sync;
 
 pub fn main() {

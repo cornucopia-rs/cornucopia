@@ -8,7 +8,6 @@ use cornucopia::queries::module_1::example_query;
 // Since we generated the cornucopia file inside our project, you can simply
 // import the modules as you usually would, but you could also use something
 // like `include_str` if you wanted to.
-#[rustfmt::skip]
 mod cornucopia;
 
 // Add more migrations and queries, rebuild the crate,
