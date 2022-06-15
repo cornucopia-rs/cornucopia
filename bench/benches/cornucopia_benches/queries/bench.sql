@@ -4,6 +4,8 @@
 
 --! users: User
 SELECT * FROM users;
+--! insert_user (hair_color?)
+INSERT INTO users (name, hair_color) VALUES (:name, :hair_color);
 
 --! posts: Post
 SELECT * FROM posts;

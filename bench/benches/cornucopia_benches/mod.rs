@@ -45,8 +45,8 @@ pub fn bench_insert(b: &mut Bencher, client: &mut Client, size: usize) {
         for x in 0..size {
             stmt.bind(
                 &mut tx,
-                &Some("hair_color"),
                 &format!("User {}", x).as_str(),
+                &Some("hair_color"),
             )
             .unwrap();
         }
