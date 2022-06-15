@@ -76,22 +76,23 @@ fn struct_tosql(
     is_borrow: bool,
     is_params: bool,
 ) {
-    let post = if is_borrow {
+    let (post, lifetime) = if is_borrow {
         if is_params {
-            "Borrowed<'a>"
+            ("Borrowed", "<'a>")
         } else {
-            "Params<'a>"
+            ("Params", "<'a>")
         }
     } else {
-        ""
+        ("", "")
     };
     let nb_fields = fields.len();
+    let field_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
     let write_fields = join_ln(fields.iter(), |w, f| {
         let name = &f.name;
         gen!(
             w,
             "\"{name}\" => postgres_types::ToSql::to_sql({},field.type_(), out),",
-            f.ty.to_sql(name)
+            f.ty.sql_wrapped(name)
         )
     });
     let accept_fields = join_ln(fields.iter(), |w, f| {
@@ -105,12 +106,15 @@ fn struct_tosql(
 
     gen!(
         w,
-        r#"impl<'a> postgres_types::ToSql for {struct_name}{post} {{
+        r#"impl<'a> postgres_types::ToSql for {struct_name}{post}{lifetime} {{
             fn to_sql(
                 &self,
                 ty: &postgres_types::Type,
                 out: &mut postgres_types::private::BytesMut,
             ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>,> {{
+                let {struct_name}{post} {{
+                    {field_names}
+                }} = self;
                 let fields = match *ty.kind() {{
                     postgres_types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
@@ -475,7 +479,7 @@ fn gen_query_fn(
         let param_list = join_comma(params, |w, p| {
             gen!(w, "{} : &'a {}", p.name, p.brw_struct(true))
         });
-        let param_names = join_comma(params, |w, p| gen!(w, "{}", p.ty.to_param(&p.name)));
+        let param_names = join_comma(params, |w, p| gen!(w, "{}", p.ty.sql_wrapped(&p.name)));
         gen!(w,
             "pub {fn_async} fn bind<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, {param_list}) -> Result<u64, {backend}::Error> {{
                 let stmt = self.0.prepare(client){fn_await}?;
