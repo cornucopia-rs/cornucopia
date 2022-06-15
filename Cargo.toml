@@ -11,7 +11,13 @@ categories = ["database"]
 keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 
 [workspace]
-members = ["examples/*", "cornucopia_client", "integration", "codegen_test"]
+members = [
+    "examples/*",
+    "cornucopia_client",
+    "integration",
+    "codegen_test",
+    "bench",
+]
 
 [dependencies]
 postgres = { version = "0.19.3", features = [
