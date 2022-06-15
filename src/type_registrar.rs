@@ -1,11 +1,11 @@
 use std::rc::Rc;
 
-use error::{Error, UnsupportedPostgresTypeError};
+use error::Error;
 use heck::ToUpperCamelCase;
 use indexmap::{map::Entry, IndexMap};
 use postgres_types::{Kind, Type};
 
-use crate::utils::SchemaKey;
+use crate::{parser::Parsed, read_queries::ModuleInfo, utils::SchemaKey};
 
 /// A struct containing a postgres type and its Rust-equivalent.
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -205,7 +205,13 @@ pub(crate) struct TypeRegistrar {
 }
 
 impl TypeRegistrar {
-    pub(crate) fn register(&mut self, ty: &Type) -> Result<&Rc<CornucopiaType>, Error> {
+    pub(crate) fn register(
+        &mut self,
+        name: &str,
+        ty: &Type,
+        query_name: &Parsed<String>,
+        module_info: &ModuleInfo,
+    ) -> Result<&Rc<CornucopiaType>, Error> {
         if let Some(idx) = self.types.get_index_of(&SchemaKey::from(ty)) {
             return Ok(&self.types[idx]);
         }
@@ -231,20 +237,24 @@ impl TypeRegistrar {
         Ok(match ty.kind() {
             Kind::Enum(_) => self.insert(ty, || custom(ty, true, true)),
             Kind::Array(inner_ty) => {
-                let inner = self.register(inner_ty)?.clone();
+                let inner = self
+                    .register(name, inner_ty, query_name, module_info)?
+                    .clone();
                 self.insert(ty, || CornucopiaType::Array {
                     inner: inner.clone(),
                 })
             }
             Kind::Domain(inner_ty) => {
-                let inner = self.register(inner_ty)?.clone();
+                let inner = self
+                    .register(name, inner_ty, query_name, module_info)?
+                    .clone();
                 self.insert(ty, || domain(ty, inner.clone()))
             }
             Kind::Composite(composite_fields) => {
                 let mut is_copy = true;
                 let mut is_params = true;
                 for field in composite_fields {
-                    let field_ty = self.register(field.type_())?;
+                    let field_ty = self.register(name, field.type_(), query_name, module_info)?;
                     is_copy &= field_ty.is_copy();
                     is_params &= field_ty.is_params();
                 }
@@ -270,11 +280,12 @@ impl TypeRegistrar {
                     Type::INET => ("std::net::IpAddr", true),
                     Type::MACADDR => ("eui48::MacAddress", true),
                     _ => {
-                        return Err(Error::UnsupportedPostgresType(
-                            UnsupportedPostgresTypeError {
-                                name: ty.name().to_owned(),
-                            },
-                        ))
+                        return Err(Error::UnsupportedPostgresType {
+                            src: module_info.to_owned().into(),
+                            query: query_name.span().into(),
+                            col_name: name.to_string(),
+                            col_ty: ty.to_string(),
+                        })
                     }
                 };
                 self.insert(ty, || CornucopiaType::Simple {
@@ -284,11 +295,12 @@ impl TypeRegistrar {
                 })
             }
             _ => {
-                return Err(Error::UnsupportedPostgresType(
-                    UnsupportedPostgresTypeError {
-                        name: ty.name().to_owned(),
-                    },
-                ))
+                return Err(Error::UnsupportedPostgresType {
+                    src: module_info.to_owned().into(),
+                    query: query_name.span().into(),
+                    col_name: name.to_string(),
+                    col_ty: ty.to_string(),
+                })
             }
         })
     }
@@ -325,17 +337,20 @@ impl std::ops::Index<&Type> for TypeRegistrar {
 }
 
 pub(crate) mod error {
+    use miette::{Diagnostic, NamedSource, SourceSpan};
     use thiserror::Error as ThisError;
-    #[derive(Debug, ThisError)]
-    #[error("Unsupported type `{name}`")]
-    pub(crate) struct UnsupportedPostgresTypeError {
-        pub(crate) name: String,
-    }
 
-    #[derive(Debug, ThisError)]
-    #[error("{0}")]
-    pub(crate) enum Error {
+    #[derive(Debug, ThisError, Diagnostic)]
+    #[error("Couldn't register SQL type")]
+    pub enum Error {
         Db(#[from] postgres::Error),
-        UnsupportedPostgresType(#[from] UnsupportedPostgresTypeError),
+        UnsupportedPostgresType {
+            #[source_code]
+            src: NamedSource,
+            #[label("This query contains a column with an unsupported type (name: {col_name}, type: {col_ty})")]
+            query: SourceSpan,
+            col_name: String,
+            col_ty: String,
+        },
     }
 }

@@ -1,33 +1,38 @@
-use crate::container::error::Error as ContainerError;
-use crate::parser::error::Error as ParserError;
-use crate::prepare_queries::error::Error as PrepareQueriesError;
-use crate::read_queries::error::Error as ReadQueriesError;
-use crate::run_migrations::error::Error as MigrationError;
-use crate::validation::error::Error as ValidationError;
-
+use miette::Diagnostic;
 use thiserror::Error as ThisError;
-#[derive(Debug, ThisError)]
-#[error("{0}")]
+
+#[derive(Debug, ThisError, Diagnostic)]
+#[error(transparent)]
+#[diagnostic(transparent)]
 pub enum Error {
-    ReadQueries(#[from] ReadQueriesError),
-    ParseQueries(#[from] ParserError),
-    ValidateQueries(#[from] ValidationError),
-    Container(#[from] ContainerError),
-    PrepareQueries(#[from] PrepareQueriesError),
+    Connection(#[from] crate::conn::error::Error),
+    ReadQueries(#[from] crate::read_queries::error::Error),
+    ParseQueries(#[from] crate::parser::error::Error),
+    ValidateQueries(#[from] crate::validation::error::Error),
+    Container(#[from] crate::container::error::Error),
+    PrepareQueries(#[from] crate::prepare_queries::error::Error),
     NewMigration(#[from] NewMigrationError),
-    Migration(#[from] MigrationError),
-    Db(#[from] postgres::Error),
-    WriteCodeGenFile(#[from] WriteCodeGenFileError),
+    RunMigration(#[from] crate::run_migrations::error::Error),
+    ReadMigration(#[from] crate::read_migrations::error::Error),
+    WriteCodeGenFile(#[from] WriteOutputError),
 }
 
-#[derive(Debug, ThisError)]
+impl Error {
+    pub fn report(self) -> String {
+        format!("{:?}", miette::Report::from(self))
+    }
+}
+
+#[derive(Debug, ThisError, Diagnostic)]
+#[diagnostic(code(cornucopia::write_output))]
 #[error("Could not write your queries to destination file `{file_path}`: ({err})")]
-pub struct WriteCodeGenFileError {
+pub struct WriteOutputError {
     pub(crate) file_path: String,
     pub(crate) err: std::io::Error,
 }
 
-#[derive(Debug, ThisError)]
+#[derive(Debug, ThisError, Diagnostic)]
+#[diagnostic(code(cornucopia::new_migration))]
 #[error("Could not create new migration `{file_path}`: ({err})")]
 pub struct NewMigrationError {
     pub(crate) file_path: String,
