@@ -51,45 +51,24 @@ impl CornucopiaType {
         }
     }
 
-    pub(crate) fn to_param(&self, name: &str) -> String {
+    pub(crate) fn sql_wrapped(&self, name: &str) -> String {
         match self {
             CornucopiaType::Domain { inner, .. } => {
                 format!(
                     "&cornucopia_client::private::Domain({})",
-                    inner.to_param(name)
+                    inner.sql_wrapped(name)
                 )
             }
             CornucopiaType::Array { inner } => match inner.as_ref() {
                 CornucopiaType::Domain { inner, .. } => {
                     format!(
                         "&cornucopia_client::private::DomainArray({})",
-                        inner.to_param(name)
+                        inner.sql_wrapped(name)
                     )
                 }
                 _ => name.to_string(),
             },
             _ => name.to_string(),
-        }
-    }
-
-    pub(crate) fn to_sql(&self, name: &str) -> String {
-        match self {
-            CornucopiaType::Domain { inner, .. } => {
-                format!(
-                    "&cornucopia_client::private::Domain({})",
-                    inner.to_sql(name)
-                )
-            }
-            CornucopiaType::Array { inner } => match inner.as_ref() {
-                CornucopiaType::Domain { inner, .. } => {
-                    format!(
-                        "&cornucopia_client::private::DomainArray({})",
-                        inner.to_sql(name)
-                    )
-                }
-                _ => format!("&self.{name}"),
-            },
-            _ => format!("&self.{name}"),
         }
     }
 
