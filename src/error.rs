@@ -1,4 +1,4 @@
-use miette::{Diagnostic, GraphicalReportHandler};
+use miette::{Diagnostic, GraphicalReportHandler, GraphicalTheme};
 use thiserror::Error as ThisError;
 
 #[derive(Debug, ThisError, Diagnostic)]
@@ -21,6 +21,7 @@ impl Error {
     pub fn report(self) -> String {
         let mut buff = String::new();
         GraphicalReportHandler::new()
+            .with_theme(GraphicalTheme::unicode_nocolor())
             .render_report(&mut buff, &self)
             .unwrap();
         buff
