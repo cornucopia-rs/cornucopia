@@ -3,7 +3,9 @@ use std::{fmt::Display, ops::Range};
 use chumsky::prelude::*;
 use error::Error;
 use heck::ToUpperCamelCase;
-use miette::NamedSource;
+use miette::SourceSpan;
+
+use crate::read_queries::ModuleInfo;
 
 /// Th    if is data structure holds a value and the context in which it was parsed.
 /// This context is used for error reporting.
@@ -55,8 +57,8 @@ impl<T> Parsed<T> {
         }
     }
 
-    pub(crate) fn span(&self) -> Range<usize> {
-        self.start..self.end
+    pub(crate) fn span(&self) -> SourceSpan {
+        (self.start..self.end).into()
     }
 }
 
@@ -357,7 +359,7 @@ impl FromIterator<Statement> for Module {
     }
 }
 
-pub(crate) fn parse_query_module(path: &str, input: &str) -> Result<Module, Error> {
+pub(crate) fn parse_query_module(module_info: &ModuleInfo) -> Result<Module, Error> {
     TypeAnnotation::parser()
         .map(Statement::Type)
         .or(Query::parser().map(Statement::Query))
@@ -366,9 +368,9 @@ pub(crate) fn parse_query_module(path: &str, input: &str) -> Result<Module, Erro
         .allow_trailing()
         .then_ignore(end())
         .collect()
-        .parse(input)
+        .parse(module_info.content.as_str())
         .map_err(|e| Error {
-            src: NamedSource::new(path, input.to_string()),
+            src: module_info.into(),
             err_span: e[0].span().into(),
             help: e[0].to_string().replace('\n', "\\n"),
         })

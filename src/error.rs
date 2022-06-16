@@ -17,12 +17,6 @@ pub enum Error {
     WriteCodeGenFile(#[from] WriteOutputError),
 }
 
-impl Error {
-    pub fn report(self) -> String {
-        format!("{:?}", miette::Report::from(self))
-    }
-}
-
 #[derive(Debug, ThisError, Diagnostic)]
 #[diagnostic(code(cornucopia::write_output))]
 #[error("Could not write your queries to destination file `{file_path}`: ({err})")]

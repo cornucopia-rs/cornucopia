@@ -1,5 +1,6 @@
-use error::Error;
 use postgres::{Client, Config, NoTls};
+
+use self::error::Error;
 
 /// Creates a non-TLS connection from a URL.
 pub(crate) fn from_url(url: &str) -> Result<Client, Error> {

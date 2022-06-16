@@ -1,11 +1,12 @@
 use std::rc::Rc;
 
-use error::Error;
 use heck::ToUpperCamelCase;
 use indexmap::{map::Entry, IndexMap};
 use postgres_types::{Kind, Type};
 
 use crate::{parser::Parsed, read_queries::ModuleInfo, utils::SchemaKey};
+
+use self::error::Error;
 
 /// A struct containing a postgres type and its Rust-equivalent.
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -282,7 +283,7 @@ impl TypeRegistrar {
                     _ => {
                         return Err(Error::UnsupportedPostgresType {
                             src: module_info.to_owned().into(),
-                            query: query_name.span().into(),
+                            query: query_name.span(),
                             col_name: name.to_string(),
                             col_ty: ty.to_string(),
                         })
@@ -297,7 +298,7 @@ impl TypeRegistrar {
             _ => {
                 return Err(Error::UnsupportedPostgresType {
                     src: module_info.to_owned().into(),
-                    query: query_name.span().into(),
+                    query: query_name.span(),
                     col_name: name.to_string(),
                     col_ty: ty.to_string(),
                 })

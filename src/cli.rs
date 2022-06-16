@@ -1,8 +1,9 @@
+use clap::{Parser, Subcommand};
+
 use crate::{
     conn, container, error::Error, generate_live, generate_managed, new_migration,
     read_migrations::read_migrations, run_migrations, CodegenSettings,
 };
-use clap::{Parser, Subcommand};
 
 /// Command line interface to interact with Cornucopia SQL.
 #[derive(Parser, Debug)]

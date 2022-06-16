@@ -1,3 +1,9 @@
+use std::rc::Rc;
+
+use indexmap::{map::Entry, IndexMap};
+use postgres::Client;
+use postgres_types::{Kind, Type};
+
 use crate::{
     parser::{Parsed, TypeAnnotation},
     read_queries::ModuleInfo,
@@ -5,12 +11,8 @@ use crate::{
     type_registrar::TypeRegistrar,
     validation,
 };
-use error::Error;
 
-use indexmap::{map::Entry, IndexMap};
-use postgres::Client;
-use postgres_types::{Kind, Type};
-use std::rc::Rc;
+use self::error::Error;
 
 /// This data structure is used by Cornucopia to generate
 /// all constructs related to this particular query.
@@ -393,12 +395,14 @@ fn prepare_query(
 }
 
 pub(crate) mod error {
-    use crate::parser::Parsed;
-    use crate::read_queries::ModuleInfo;
-    use crate::validation::error::Error as ValidationError;
-    use crate::{type_registrar::error::Error as PostgresTypeError, utils::db_err};
     use miette::{Diagnostic, NamedSource, SourceSpan};
     use thiserror::Error as ThisError;
+
+    use crate::{
+        parser::Parsed, read_queries::ModuleInfo,
+        type_registrar::error::Error as PostgresTypeError, utils::db_err,
+        validation::error::Error as ValidationError,
+    };
 
     #[derive(Debug, ThisError, Diagnostic)]
     pub enum Error {
@@ -443,7 +447,7 @@ pub(crate) mod error {
                     msg,
                     help: None,
                     src: module_info.into(),
-                    err_span: Some(query_name.span().into()),
+                    err_span: Some(query_name.span()),
                 }
             }
         }

@@ -1,5 +1,6 @@
-use error::Error;
 use miette::NamedSource;
+
+use self::error::Error;
 
 #[derive(Debug, Clone)]
 pub(crate) struct ModuleInfo {
