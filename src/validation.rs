@@ -222,7 +222,7 @@ pub mod error {
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError, Diagnostic)]
-    #[error("Could not validate queries")]
+    #[error("Couldn't validate queries.")]
     pub enum Error {
         #[diagnostic(
             code(cornucopia::validation::duplicate_sql_col_name),
@@ -238,7 +238,7 @@ pub mod error {
         DuplicateNullableCol {
             #[source_code]
             src: NamedSource,
-            #[label("this identifier is already in use")]
+            #[label("this nullable column name is already in use")]
             dup_pos: SourceSpan,
             #[label("first used here")]
             pos: SourceSpan,

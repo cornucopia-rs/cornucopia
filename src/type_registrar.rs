@@ -341,13 +341,13 @@ pub(crate) mod error {
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError, Diagnostic)]
-    #[error("Couldn't register SQL type")]
+    #[error("Couldn't register SQL type.")]
     pub enum Error {
         Db(#[from] postgres::Error),
         UnsupportedPostgresType {
             #[source_code]
             src: NamedSource,
-            #[label("This query contains a column with an unsupported type (name: {col_name}, type: {col_ty})")]
+            #[label("this query contains an unsupported type (name: {col_name}, type: {col_ty})")]
             query: SourceSpan,
             col_name: String,
             col_ty: String,
