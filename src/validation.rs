@@ -1,8 +1,9 @@
-use crate::prepare_queries::PreparedField;
-use crate::read_queries::ModuleInfo;
-use crate::utils::has_duplicate;
-
-use crate::parser::{self, NullableIdent, Parsed, QueryDataStruct, TypeAnnotation};
+use crate::{
+    parser::{self, NullableIdent, Parsed, QueryDataStruct, TypeAnnotation},
+    prepare_queries::PreparedField,
+    read_queries::ModuleInfo,
+    utils::has_duplicate,
+};
 
 #[derive(Debug)]
 pub(crate) struct Module {
@@ -22,7 +23,6 @@ pub(crate) struct Query {
 }
 
 use error::Error;
-use miette::NamedSource;
 use postgres::Column;
 use postgres_types::Type;
 
@@ -37,7 +37,7 @@ pub(crate) fn duplicate_nullable_ident(
             .find(|(j, ident2)| *j != i && ident1.name == ident2.name)
         {
             return Err(Error::DuplicateNullableCol {
-                src: NamedSource::new(info.path.as_str(), info.content.to_string()),
+                src: info.into(),
                 dup_pos: (ident2.name.start..ident2.name.end).into(),
                 pos: (ident1.name.start..ident1.name.end).into(),
             });
@@ -55,7 +55,7 @@ pub(crate) fn duplicate_sql_col_name(
     if has_duplicate(cols, |col| col.name()).is_some() {
         Err(Error::DuplicateSqlColName {
             src: info.to_owned().into(),
-            pos: query_name.span().into(),
+            pos: query_name.span(),
         })
     } else {
         Ok(())
@@ -73,7 +73,7 @@ pub(crate) fn query_name_already_used(
             .find(|(j, q)| *j != i && q.annotation.name == query.annotation.name)
         {
             return Err(Error::DuplicateQueryName {
-                src: NamedSource::new(info.path.as_str(), info.content.to_string()),
+                src: info.into(),
                 pos1: (query.annotation.name.start..query.annotation.name.end).into(),
                 pos2: (q.annotation.name.start..q.annotation.name.end).into(),
             });
@@ -98,7 +98,7 @@ pub(crate) fn nullable_column_name(
         Ok(())
     } else {
         Err(Error::InvalidNullableColumnName {
-            src: NamedSource::new(info.path.as_str(), info.content.to_string()),
+            src: info.into(),
             pos: (nullable_col.name.start..nullable_col.name.end).into(),
         })
     }
@@ -117,7 +117,7 @@ pub(crate) fn nullable_param_name(
         Ok(())
     } else {
         Err(Error::InvalidNullableColumnName {
-            src: NamedSource::new(info.path.as_str(), info.content.to_string()),
+            src: info.into(),
             pos: (nullable_col.name.start..nullable_col.name.end).into(),
         })
     }
@@ -136,7 +136,7 @@ pub(crate) fn named_struct_field(
             if prev_field.name == field.name {
                 if prev_field.ty != field.ty {
                     return Err(Error::IncompatibleNamedStructs {
-                        src: NamedSource::new(info.path.as_str(), info.content.to_string()),
+                        src: info.into(),
                         label2: format!(
                             "column `{}` is defined with type `{}` here",
                             field.name,
@@ -153,7 +153,7 @@ pub(crate) fn named_struct_field(
         }
         if !found {
             return Err(Error::IncompatibleNamedStructs {
-                src: NamedSource::new(info.path.as_str(), info.content.to_string()),
+                src: info.into(),
                 label1: format!("column `{}` defined here", &field.name),
                 pos2: (prev_name.start..prev_name.end).into(),
                 label2: format!("column `{}` not found", &field.name),
@@ -171,7 +171,7 @@ pub(crate) fn named_struct_field(
         }
         if !found {
             return Err(Error::IncompatibleNamedStructs {
-                src: NamedSource::new(info.path.as_str(), info.content.to_string()),
+                src: info.into(),
                 label1: format!("column `{}` defined here", &prev_field.name),
                 pos1: (prev_name.start..prev_name.end).into(),
                 label2: format!("column `{}` not found", &prev_field.name),

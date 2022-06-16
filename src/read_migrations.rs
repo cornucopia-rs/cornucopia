@@ -1,7 +1,8 @@
 use std::path::Path;
 
-use error::Error;
 use miette::NamedSource;
+
+use self::error::Error;
 
 #[derive(Debug, Clone)]
 pub struct Migration {

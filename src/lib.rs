@@ -13,15 +13,17 @@ mod validation;
 pub mod conn;
 pub mod container;
 
+use std::path::Path;
+
+use postgres::Client;
+use time::OffsetDateTime;
+
 use codegen::generate as generate_internal;
 use error::{NewMigrationError, WriteOutputError};
 use parser::parse_query_module;
-use postgres::Client;
 use prepare_queries::prepare;
 use read_queries::read_query_modules;
 use run_migrations::run_migrations as run_migrations_internal;
-use std::path::Path;
-use time::OffsetDateTime;
 use validation::validate_module;
 
 pub use cli::run;
@@ -72,7 +74,7 @@ pub fn generate_live(
     let mut validated_modules = Vec::new();
     for info in modules_info {
         // Parse
-        let parsed_module = parse_query_module(&info.path, &info.content)?;
+        let parsed_module = parse_query_module(&info)?;
         // Validate
         validated_modules.push(validate_module(info, parsed_module)?);
     }
@@ -103,7 +105,7 @@ pub fn generate_managed(
     let mut validated_modules = Vec::new();
     for info in modules_info {
         // Parse
-        let parsed_module = parse_query_module(&info.path, &info.content)?;
+        let parsed_module = parse_query_module(&info)?;
         // Validate
         validated_modules.push(validate_module(info, parsed_module)?);
     }

@@ -1,6 +1,8 @@
-use crate::read_migrations::Migration;
-use error::Error;
 use postgres::Client;
+
+use crate::read_migrations::Migration;
+
+use self::error::Error;
 
 /// Runs all migrations in the specified directory. Only `.sql` files are considered.
 ///
@@ -65,7 +67,6 @@ fn install_migration(
 }
 
 pub(crate) mod error {
-
     use miette::{Diagnostic, NamedSource, SourceSpan};
     use thiserror::Error as ThisError;
 
