@@ -11,13 +11,30 @@ CREATE TABLE author (
 );
 '''
 error = '''
-Error while validating queries [path: "queries/module_1.sql"]:
- --> 1:21
-  | 
-  | --! new_author(id?, id?)
-  |                     ^---
-  | 
-  = Column name is already used.'''
+ValidateQueries(
+    DuplicateNullableCol {
+        src: NamedSource {
+            name: "queries/module_1.sql",
+            source: "<redacted>",
+        ,
+        dup_pos: SourceSpan {
+            offset: SourceOffset(
+                20,
+            ),
+            length: SourceOffset(
+                2,
+            ),
+        },
+        pos: SourceSpan {
+            offset: SourceOffset(
+                15,
+            ),
+            length: SourceOffset(
+                2,
+            ),
+        },
+    },
+)'''
 
 [[test]]
 name = 'ColumnAlreadyNullable'
@@ -32,13 +49,30 @@ CREATE TABLE author (
 );
 '''
 error = '''
-Error while validating queries [path: "queries/module_1.sql"]:
- --> 1:30
-  | 
-  | --! new_author: (id?, name?, id?)
-  |                              ^---
-  | 
-  = Column name is already used.'''
+ValidateQueries(
+    DuplicateNullableCol {
+        src: NamedSource {
+            name: "queries/module_1.sql",
+            source: "<redacted>",
+        ,
+        dup_pos: SourceSpan {
+            offset: SourceOffset(
+                29,
+            ),
+            length: SourceOffset(
+                2,
+            ),
+        },
+        pos: SourceSpan {
+            offset: SourceOffset(
+                17,
+            ),
+            length: SourceOffset(
+                2,
+            ),
+        },
+    },
+)'''
 
 [[test]]
 name = 'InvalidNullableColumnName'
@@ -53,13 +87,24 @@ CREATE TABLE author (
 );
 '''
 error = '''
-Error while validating queries [path: "queries/module_1.sql"]:
- --> 1:18
-  | 
-  | --! new_author: (name?)
-  |                  ^---
-  | 
-  = No column named `name` found for this query.'''
+PrepareQueries(
+    Validation(
+        InvalidNullableColumnName {
+            src: NamedSource {
+                name: "queries/module_1.sql",
+                source: "<redacted>",
+            ,
+            pos: SourceSpan {
+                offset: SourceOffset(
+                    17,
+                ),
+                length: SourceOffset(
+                    4,
+                ),
+            },
+        },
+    ),
+)'''
 
 [[test]]
 name = 'QueryAlreadyExists'
@@ -77,19 +122,30 @@ CREATE TABLE author (
 );
 '''
 error = '''
-Error while validating queries [path: "queries/module_1.sql"]:
- --> 4:5
-  | 
-  | --! new_author
-  |     ^---
-  | 
-  = This query's name is already used
- --> 1:5
-  | 
-  | --! new_author
-  |     ^---
-  | 
-  = First defined here.'''
+ValidateQueries(
+    DuplicateQueryName {
+        src: NamedSource {
+            name: "queries/module_1.sql",
+            source: "<redacted>",
+        ,
+        pos2: SourceSpan {
+            offset: SourceOffset(
+                43,
+            ),
+            length: SourceOffset(
+                10,
+            ),
+        },
+        pos1: SourceSpan {
+            offset: SourceOffset(
+                4,
+            ),
+            length: SourceOffset(
+                10,
+            ),
+        },
+    },
+)'''
 
 [[test]]
 name = 'NamedStructInvalidFields'
@@ -107,21 +163,31 @@ CREATE TABLE author (
 );
 '''
 error = '''
-Error while validating queries [path: "queries/module_1.sql"]:
- --> 4:17
-  | 
-  | --! author_ids: Row
-  |                 ^---
-  | 
-  = This named data structure has been defined elsewhere, but the fields don't match.
- --> 1:19
-  | 
-  | --! author_names: Row
-  |                   ^---
-  | 
-  = First defined here
-
-Expected:
-  - name: text
-Got:
-  - id: int4'''
+PrepareQueries(
+    Validation(
+        IncompatibleNamedStructs {
+            src: NamedSource {
+                name: "queries/module_1.sql",
+                source: "<redacted>",
+            ,
+            label1: "column `name` defined here",
+            pos1: SourceSpan {
+                offset: SourceOffset(
+                    18,
+                ),
+                length: SourceOffset(
+                    3,
+                ),
+            },
+            label2: "column `name` not found",
+            pos2: SourceSpan {
+                offset: SourceOffset(
+                    64,
+                ),
+                length: SourceOffset(
+                    3,
+                ),
+            },
+        },
+    ),
+)'''

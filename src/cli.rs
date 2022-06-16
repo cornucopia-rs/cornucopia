@@ -1,8 +1,9 @@
-use crate::{
-    conn, container, error::Error, generate_live, generate_managed, new_migration, run_migrations,
-    CodegenSettings,
-};
 use clap::{Parser, Subcommand};
+
+use crate::{
+    conn, container, error::Error, generate_live, generate_managed, new_migration,
+    read_migrations::read_migrations, run_migrations, CodegenSettings,
+};
 
 /// Command line interface to interact with Cornucopia SQL.
 #[derive(Parser, Debug)]
@@ -81,7 +82,8 @@ pub fn run() -> Result<(), Error> {
             MigrationsAction::New { name } => new_migration(&migrations_path, &name),
             MigrationsAction::Run { url } => {
                 let mut client = conn::from_url(&url)?;
-                run_migrations(&mut client, &migrations_path)
+                let migrations = read_migrations(&migrations_path)?;
+                run_migrations(&mut client, migrations)
             }
         },
         Action::Generate {

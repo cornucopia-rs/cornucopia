@@ -11,8 +11,24 @@ CREATE TABLE item (
 );
 '''
 error = '''
-Error while preparing query "items" [file: "queries/module_1.sql", line: 1]:
-Two or more columns have the same name: `name`. Consider disambiguing the column names with `AS` clauses.'''
+PrepareQueries(
+    Validation(
+        DuplicateSqlColName {
+            src: NamedSource {
+                name: "queries/module_1.sql",
+                source: "<redacted>",
+            ,
+            pos: SourceSpan {
+                offset: SourceOffset(
+                    4,
+                ),
+                length: SourceOffset(
+                    5,
+                ),
+            },
+        },
+    ),
+)'''
 
 [[test]]
 name = 'InconsistentTypes'
@@ -26,4 +42,24 @@ CREATE TABLE author (
   name TEXT
 );
 '''
-error = 'Error while preparing query "insert_author" [file: "queries/module_1.sql", line: 1] (inconsistent types deduced for parameter $1)'
+error = '''
+PrepareQueries(
+    Db {
+        msg: "inconsistent types deduced for parameter $1",
+        help: None,
+        src: NamedSource {
+            name: "queries/module_1.sql",
+            source: "<redacted>",
+        ,
+        err_span: Some(
+            SourceSpan {
+                offset: SourceOffset(
+                    61,
+                ),
+                length: SourceOffset(
+                    0,
+                ),
+            },
+        ),
+    },
+)'''

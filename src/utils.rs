@@ -4,6 +4,7 @@ use std::{
 };
 
 use indexmap::Equivalent;
+use postgres::error::ErrorPosition;
 use postgres_types::Type;
 
 /// Allows us to query a map using type schema as key without having to own the key strings
@@ -96,20 +97,19 @@ where
         .map(|(t, _)| t)
 }
 
-/// Retrieve line index and content
-// TODO not very strong
-pub fn compute_line(content: &str, pos: usize) -> (usize, usize, &str) {
-    let mut col = pos + 1;
-    let mut line = 1;
-    let mut line_str = "";
-    for l in content.split('\n') {
-        if col > l.len() {
-            line += 1;
-            col -= l.len() + 1;
+/// Extracts useful info from a `postgres`-generated error.
+pub(crate) fn db_err(err: postgres::Error) -> Option<(u32, String, Option<String>)> {
+    if let Some(db_err) = err.as_db_error() {
+        if let Some(ErrorPosition::Original(position)) = db_err.position() {
+            Some((
+                *position,
+                db_err.message().to_string(),
+                db_err.hint().map(ToString::to_string),
+            ))
         } else {
-            line_str = l.trim_end();
-            break;
+            None
         }
+    } else {
+        None
     }
-    (col, line, line_str)
 }

@@ -125,7 +125,8 @@ fn run_errors_test(
 
             // Run codegen
             let result: Result<(), cornucopia::Error> = (|| {
-                cornucopia::run_migrations(client, "migrations")?;
+                let migrations = cornucopia::read_migrations("migrations")?;
+                cornucopia::run_migrations(client, migrations)?;
                 cornucopia::generate_live(
                     client,
                     "queries",
@@ -138,7 +139,7 @@ fn run_errors_test(
                 Ok(())
             })();
 
-            let err = result.err().map(|e| e.to_string()).unwrap_or_default();
+            let err = result.err().map(|e| format!("{e:#?}")).unwrap_or_default();
             if err.trim() != test.error.trim() {
                 successful = false;
                 println!(
@@ -178,7 +179,8 @@ fn run_codegen_test(client: &mut postgres::Client) -> Result<bool, Box<dyn std::
     reset_db(client)?;
 
     // Run codegen
-    cornucopia::run_migrations(client, "migrations")?;
+    let migrations = cornucopia::read_migrations("migrations")?;
+    cornucopia::run_migrations(client, migrations)?;
     cornucopia::generate_live(
         client,
         "queries",
@@ -234,7 +236,8 @@ fn run_examples_test(client: &mut postgres::Client) -> Result<bool, Box<dyn std:
         reset_db(client)?;
 
         // Run codegen
-        cornucopia::run_migrations(client, "migrations")?;
+        let migrations = cornucopia::read_migrations("migrations")?;
+        cornucopia::run_migrations(client, migrations)?;
         cornucopia::generate_live(
             client,
             "queries",
