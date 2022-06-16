@@ -4,7 +4,7 @@ migration = '''
 CREATE TABLE syntax {};
 '''
 error = '''
-err: cornucopia::run_migrations
+cornucopia::run_migrations
 
   × Couldn't run migration: syntax error at or near "{".
    ╭─[migrations/1653210840_first.sql:1:1]
@@ -18,7 +18,7 @@ name = 'InvalidMigrationFilename'
 migration = ''
 migration_name = 'first.sql'
 error = '''
-err: cornucopia::read_migrations::invalid_migration_filename
+cornucopia::read_migrations::invalid_migration_filename
 
   × [migrations/first.sql] `first` is not a valid migration name.
   help: Migrations must be named with this pattern '<timestamp>_<name>' where <timestamp> is a unix timestamp and <name> is a valid identifier'''
@@ -28,6 +28,6 @@ name = 'InvalidTimestamp'
 migration = ''
 migration_name = 'hello_first.sql'
 error = '''
-err: cornucopia::read_migrations::invalid_timestamp
+cornucopia::read_migrations::invalid_timestamp
 
   × [migrations/hello_first.sql] timestamp "hello" is not a valid unix timestamp'''

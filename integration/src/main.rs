@@ -171,10 +171,10 @@ fn run_errors_test(
                     "{} {}\n{}\n{}\n{}\n{}",
                     test.name,
                     "ERR".red(),
+                    expected_msg,
+                    test.error,
                     got_msg,
                     err,
-                    expected_msg,
-                    test.error
                 );
             } else {
                 println!("{} {}", test.name, "OK".green());

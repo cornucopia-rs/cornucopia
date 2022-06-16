@@ -5,7 +5,7 @@ use postgres::Client;
 use postgres_types::{Kind, Type};
 
 use crate::{
-    parser::{Parsed, TypeAnnotation},
+    parser::{Span, TypeAnnotation},
     read_queries::ModuleInfo,
     type_registrar::CornucopiaType,
     type_registrar::TypeRegistrar,
@@ -36,7 +36,7 @@ pub struct PreparedField {
 /// A params struct
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedParams {
-    pub(crate) name: Parsed<String>,
+    pub(crate) name: Span<String>,
     pub(crate) fields: Vec<PreparedField>,
     pub(crate) is_copy: bool,
     pub(crate) queries: Vec<usize>,
@@ -45,7 +45,7 @@ pub(crate) struct PreparedParams {
 /// A returned row struct
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedRow {
-    pub(crate) name: Parsed<String>,
+    pub(crate) name: Span<String>,
     pub(crate) fields: Vec<PreparedField>,
     pub(crate) is_copy: bool,
 }
@@ -85,7 +85,7 @@ impl PreparedModule {
     fn add_row(
         &mut self,
         registrar: &TypeRegistrar,
-        name: Parsed<String>,
+        name: Span<String>,
         fields: Vec<PreparedField>,
     ) -> Result<(usize, Vec<usize>), Error> {
         assert!(!fields.is_empty());
@@ -121,7 +121,7 @@ impl PreparedModule {
         }
     }
 
-    fn add_param(&mut self, name: Parsed<String>, query_idx: usize) -> Result<usize, Error> {
+    fn add_param(&mut self, name: Span<String>, query_idx: usize) -> Result<usize, Error> {
         let fields = &self.queries.get_index(query_idx).unwrap().1.params;
         assert!(!fields.is_empty());
         match self.params.entry(name.value.clone()) {
@@ -324,7 +324,7 @@ fn prepare_query(
             .iter()
             .zip(stmt_params)
             .map(|(a, b)| (a.to_owned(), b.to_owned()))
-            .collect::<Vec<(Parsed<String>, Type)>>();
+            .collect::<Vec<(Span<String>, Type)>>();
         for nullable_col in &nullable_params_fields {
             // If none of the row's columns match the nullable column
             validation::nullable_param_name(&module.info, nullable_col, &params)
@@ -397,9 +397,8 @@ pub(crate) mod error {
     use thiserror::Error as ThisError;
 
     use crate::{
-        parser::Parsed, read_queries::ModuleInfo,
-        type_registrar::error::Error as PostgresTypeError, utils::db_err,
-        validation::error::Error as ValidationError,
+        parser::Span, read_queries::ModuleInfo, type_registrar::error::Error as PostgresTypeError,
+        utils::db_err, validation::error::Error as ValidationError,
     };
 
     #[derive(Debug, ThisError, Diagnostic)]
@@ -428,7 +427,7 @@ pub(crate) mod error {
             err: postgres::Error,
             module_info: &ModuleInfo,
             query_start: usize,
-            query_name: &Parsed<String>,
+            query_name: &Span<String>,
         ) -> Self {
             let msg = format!("{:#}", err);
             if let Some((position, msg, help)) = db_err(err) {
@@ -445,7 +444,7 @@ pub(crate) mod error {
                     msg,
                     help: None,
                     src: module_info.into(),
-                    err_span: Some(query_name.span()),
+                    err_span: Some(query_name.span),
                 }
             }
         }

@@ -4,7 +4,7 @@ use heck::ToUpperCamelCase;
 use indexmap::{map::Entry, IndexMap};
 use postgres_types::{Kind, Type};
 
-use crate::{parser::Parsed, read_queries::ModuleInfo, utils::SchemaKey};
+use crate::{parser::Span, read_queries::ModuleInfo, utils::SchemaKey};
 
 use self::error::Error;
 
@@ -210,7 +210,7 @@ impl TypeRegistrar {
         &mut self,
         name: &str,
         ty: &Type,
-        query_name: &Parsed<String>,
+        query_name: &Span<String>,
         module_info: &ModuleInfo,
     ) -> Result<&Rc<CornucopiaType>, Error> {
         if let Some(idx) = self.types.get_index_of(&SchemaKey::from(ty)) {
@@ -283,7 +283,7 @@ impl TypeRegistrar {
                     _ => {
                         return Err(Error::UnsupportedPostgresType {
                             src: module_info.to_owned().into(),
-                            query: query_name.span(),
+                            query: query_name.span,
                             col_name: name.to_string(),
                             col_ty: ty.to_string(),
                         })
@@ -298,7 +298,7 @@ impl TypeRegistrar {
             _ => {
                 return Err(Error::UnsupportedPostgresType {
                     src: module_info.to_owned().into(),
-                    query: query_name.span(),
+                    query: query_name.span,
                     col_name: name.to_string(),
                     col_ty: ty.to_string(),
                 })

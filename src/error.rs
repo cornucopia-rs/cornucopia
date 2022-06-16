@@ -1,4 +1,4 @@
-use miette::Diagnostic;
+use miette::{Diagnostic, GraphicalReportHandler};
 use thiserror::Error as ThisError;
 
 #[derive(Debug, ThisError, Diagnostic)]
@@ -19,7 +19,11 @@ pub enum Error {
 
 impl Error {
     pub fn report(self) -> String {
-        format!("err: {:?}", miette::Report::new(self))
+        let mut buff = String::new();
+        GraphicalReportHandler::new()
+            .render_report(&mut buff, &self)
+            .unwrap();
+        buff
     }
 }
 

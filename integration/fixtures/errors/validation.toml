@@ -11,16 +11,15 @@ CREATE TABLE author (
 );
 '''
 error = '''
-err: cornucopia::validation::duplicate_nullable_col
-
-  × Couldn't validate queries.
+× the field `id` is declared null multiple time
    ╭─[queries/module_1.sql:1:1]
  1 │ --! new_author(id?, id?)
    ·                ─┬   ─┬
-   ·                 │    ╰── this nullable column name is already in use
-   ·                 ╰── first used here
+   ·                 │    ╰── redeclared here
+   ·                 ╰── previous nullity declaration
  2 │ INSERT INTO Author (id, name) VALUES (:id, :id);
-   ╰────'''
+   ╰────
+  help: remove one of the two declaration'''
 
 [[test]]
 name = 'ColumnAlreadyNullable'
@@ -35,22 +34,21 @@ CREATE TABLE author (
 );
 '''
 error = '''
-err: cornucopia::validation::duplicate_nullable_col
-
-  × Couldn't validate queries.
+× the field `id` is declared null multiple time
    ╭─[queries/module_1.sql:1:1]
  1 │ --! new_author: (id?, name?, id?)
    ·                  ─┬          ─┬
-   ·                   │           ╰── this nullable column name is already in use
-   ·                   ╰── first used here
+   ·                   │           ╰── redeclared here
+   ·                   ╰── previous nullity declaration
  2 │ SELECT id, name FROM Author;
-   ╰────'''
+   ╰────
+  help: remove one of the two declaration'''
 
 [[test]]
-name = 'InvalidNullableColumnName'
+name = 'UnknownColumnName'
 query = '''
---! new_author: (name?)
-SELECT id FROM Author;
+--! new_author: (age?)
+SELECT id, name FROM Author;
 '''
 migration = '''
 CREATE TABLE author (
@@ -59,15 +57,36 @@ CREATE TABLE author (
 );
 '''
 error = '''
-err: cornucopia::validation::invalid_nullable_col
-
-  × Couldn't validate queries.
+× unknown field
    ╭─[queries/module_1.sql:1:1]
- 1 │ --! new_author: (name?)
-   ·                  ──┬─
-   ·                    ╰── no column with this name found
- 2 │ SELECT id FROM Author;
-   ╰────'''
+ 1 │ --! new_author: (age?)
+   ·                  ─┬─
+   ·                   ╰── no field with this name was found
+ 2 │ SELECT id, name FROM Author;
+   ╰────
+  help: use one of those names: id, name'''
+
+[[test]]
+name = 'UnknownParamsName'
+query = '''
+--! new_author (age?)
+INSERT INTO Author (id, name) VALUES (:id, :name);
+'''
+migration = '''
+CREATE TABLE author (
+  id SERIAL,
+  name TEXT
+);
+'''
+error = '''
+× unknown field
+   ╭─[queries/module_1.sql:1:1]
+ 1 │ --! new_author (age?)
+   ·                 ─┬─
+   ·                  ╰── no field with this name was found
+ 2 │ INSERT INTO Author (id, name) VALUES (:id, :name);
+   ╰────
+  help: use one of those names: id, name'''
 
 [[test]]
 name = 'QueryAlreadyExists'
@@ -85,23 +104,22 @@ CREATE TABLE author (
 );
 '''
 error = '''
-err: cornucopia::validation::duplicate_query_name
-
-  × Couldn't validate queries.
+× the query `new_author` is defined multiple time
    ╭─[queries/module_1.sql:1:1]
  1 │ --! new_author
    ·     ─────┬────
-   ·          ╰── first defined here
+   ·          ╰── previous definition of the query here
  2 │ SELECT id FROM Author;
  3 │ 
  4 │ --! new_author
    ·     ─────┬────
-   ·          ╰── this query name is already in use
+   ·          ╰── redefined here
  5 │ SELECT id FROM Author;
-   ╰────'''
+   ╰────
+  help: use a different name for one of those queries'''
 
 [[test]]
-name = 'NamedStructInvalidFields'
+name = 'NamedTypeMissingColumn'
 query = '''
 --! author_names: Row
 SELECT name FROM Author;
@@ -116,17 +134,76 @@ CREATE TABLE author (
 );
 '''
 error = '''
-err: cornucopia::validation::incompatible_named_structs
-
-  × Couldn't validate queries.
+× named type `Row` as conflicting usage
    ╭─[queries/module_1.sql:1:1]
  1 │ --! author_names: Row
    ·                   ─┬─
-   ·                    ╰── column `name` defined here
+   ·                    ╰── column `name` expected here
  2 │ SELECT name FROM Author;
  3 │ 
  4 │ --! author_ids: Row
    ·                 ─┬─
    ·                  ╰── column `name` not found
  5 │ SELECT id FROM Author;
-   ╰────'''
+   ╰────
+  help: use a different named type for each query'''
+
+[[test]]
+name = 'NamedTypeMissingColumn2'
+query = '''
+--! author_names: Row
+SELECT name FROM Author;
+
+--! author: Row
+SELECT name, id FROM Author;
+'''
+migration = '''
+CREATE TABLE author (
+  id SERIAL,
+  name TEXT
+);
+'''
+error = '''
+× named type `Row` as conflicting usage
+   ╭─[queries/module_1.sql:1:1]
+ 1 │ --! author_names: Row
+   ·                   ─┬─
+   ·                    ╰── column `id` not found
+ 2 │ SELECT name FROM Author;
+ 3 │ 
+ 4 │ --! author: Row
+   ·             ─┬─
+   ·              ╰── column `id` expected here
+ 5 │ SELECT name, id FROM Author;
+   ╰────
+  help: use a different named type for each query'''
+
+[[test]]
+name = 'NamedTypeWrongColumnType'
+query = '''
+--! author_names: Row
+SELECT name FROM Author;
+
+--! author_ids: Row
+SELECT id as name FROM Author;
+'''
+migration = '''
+CREATE TABLE author (
+  id SERIAL,
+  name TEXT
+);
+'''
+error = '''
+× named type `Row` as conflicting usage
+   ╭─[queries/module_1.sql:1:1]
+ 1 │ --! author_names: Row
+   ·                   ─┬─
+   ·                    ╰── column `name` is expected to have type `text` here
+ 2 │ SELECT name FROM Author;
+ 3 │ 
+ 4 │ --! author_ids: Row
+   ·                 ─┬─
+   ·                  ╰── but here it has type `int4`
+ 5 │ SELECT id as name FROM Author;
+   ╰────
+  help: use a different named type for each query'''
