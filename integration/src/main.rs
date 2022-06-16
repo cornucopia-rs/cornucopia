@@ -139,7 +139,7 @@ fn run_errors_test(
                 Ok(())
             })();
 
-            let err = result.err().map(|e| e.report()).unwrap_or_default();
+            let err = result.err().map(|e| format!("{e:#?}")).unwrap_or_default();
             if err.trim() != test.error.trim() {
                 successful = false;
                 println!(
