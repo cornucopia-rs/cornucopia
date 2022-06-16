@@ -10,17 +10,31 @@ CREATE TABLE author (
   name TEXT
 );
 '''
-error = """
-\u001B[38;2;255;30;30mcornucopia::validation::duplicate_nullable_col\u001B[0m
-
-  \u001B[38;2;255;30;30m×\u001B[0m Could not validate queries
-   ╭─[\u001B[38;2;92;157;255;1;4mqueries/module_1.sql\u001B[0m:1:1]
- \u001B[2m1\u001B[0m │ --! new_author(id?, id?)
-   · \u001B[38;2;246;87;248m               ─┬\u001B[0m\u001B[38;2;30;201;212m   ─┬\u001B[0m
-   ·                 \u001B[38;2;246;87;248m│\u001B[0m    \u001B[38;2;30;201;212m╰── \u001B[38;2;30;201;212mthis identifier is already in use\u001B[0m\u001B[0m
-   ·                 \u001B[38;2;246;87;248m╰── \u001B[38;2;246;87;248mfirst used here\u001B[0m\u001B[0m
- \u001B[2m2\u001B[0m │ INSERT INTO Author (id, name) VALUES (:id, :id);
-   ╰────"""
+error = '''
+ValidateQueries(
+    DuplicateNullableCol {
+        src: NamedSource {
+            name: "queries/module_1.sql",
+            source: "<redacted>",
+        ,
+        dup_pos: SourceSpan {
+            offset: SourceOffset(
+                20,
+            ),
+            length: SourceOffset(
+                2,
+            ),
+        },
+        pos: SourceSpan {
+            offset: SourceOffset(
+                15,
+            ),
+            length: SourceOffset(
+                2,
+            ),
+        },
+    },
+)'''
 
 [[test]]
 name = 'ColumnAlreadyNullable'
@@ -34,17 +48,31 @@ CREATE TABLE author (
   name TEXT
 );
 '''
-error = """
-\u001B[38;2;255;30;30mcornucopia::validation::duplicate_nullable_col\u001B[0m
-
-  \u001B[38;2;255;30;30m×\u001B[0m Could not validate queries
-   ╭─[\u001B[38;2;92;157;255;1;4mqueries/module_1.sql\u001B[0m:1:1]
- \u001B[2m1\u001B[0m │ --! new_author: (id?, name?, id?)
-   · \u001B[38;2;246;87;248m                 ─┬\u001B[0m\u001B[38;2;30;201;212m          ─┬\u001B[0m
-   ·                   \u001B[38;2;246;87;248m│\u001B[0m           \u001B[38;2;30;201;212m╰── \u001B[38;2;30;201;212mthis identifier is already in use\u001B[0m\u001B[0m
-   ·                   \u001B[38;2;246;87;248m╰── \u001B[38;2;246;87;248mfirst used here\u001B[0m\u001B[0m
- \u001B[2m2\u001B[0m │ SELECT id, name FROM Author;
-   ╰────"""
+error = '''
+ValidateQueries(
+    DuplicateNullableCol {
+        src: NamedSource {
+            name: "queries/module_1.sql",
+            source: "<redacted>",
+        ,
+        dup_pos: SourceSpan {
+            offset: SourceOffset(
+                29,
+            ),
+            length: SourceOffset(
+                2,
+            ),
+        },
+        pos: SourceSpan {
+            offset: SourceOffset(
+                17,
+            ),
+            length: SourceOffset(
+                2,
+            ),
+        },
+    },
+)'''
 
 [[test]]
 name = 'InvalidNullableColumnName'
@@ -58,16 +86,25 @@ CREATE TABLE author (
   name TEXT
 );
 '''
-error = """
-\u001B[38;2;255;30;30mcornucopia::validation::invalid_nullable_col\u001B[0m
-
-  \u001B[38;2;255;30;30m×\u001B[0m Could not validate queries
-   ╭─[\u001B[38;2;92;157;255;1;4mqueries/module_1.sql\u001B[0m:1:1]
- \u001B[2m1\u001B[0m │ --! new_author: (name?)
-   · \u001B[38;2;246;87;248m                 ──┬─\u001B[0m
-   ·                    \u001B[38;2;246;87;248m╰── \u001B[38;2;246;87;248mno column with this name found\u001B[0m\u001B[0m
- \u001B[2m2\u001B[0m │ SELECT id FROM Author;
-   ╰────"""
+error = '''
+PrepareQueries(
+    Validation(
+        InvalidNullableColumnName {
+            src: NamedSource {
+                name: "queries/module_1.sql",
+                source: "<redacted>",
+            ,
+            pos: SourceSpan {
+                offset: SourceOffset(
+                    17,
+                ),
+                length: SourceOffset(
+                    4,
+                ),
+            },
+        },
+    ),
+)'''
 
 [[test]]
 name = 'QueryAlreadyExists'
@@ -84,21 +121,31 @@ CREATE TABLE author (
   name TEXT
 );
 '''
-error = """
-\u001B[38;2;255;30;30mcornucopia::validation::duplicate_query_name\u001B[0m
-
-  \u001B[38;2;255;30;30m×\u001B[0m Could not validate queries
-   ╭─[\u001B[38;2;92;157;255;1;4mqueries/module_1.sql\u001B[0m:1:1]
- \u001B[2m1\u001B[0m │ --! new_author
-   · \u001B[38;2;246;87;248m    ─────┬────\u001B[0m
-   ·          \u001B[38;2;246;87;248m╰── \u001B[38;2;246;87;248mfirst defined here\u001B[0m\u001B[0m
- \u001B[2m2\u001B[0m │ SELECT id FROM Author;
- \u001B[2m3\u001B[0m │ 
- \u001B[2m4\u001B[0m │ --! new_author
-   · \u001B[38;2;30;201;212m    ─────┬────\u001B[0m
-   ·          \u001B[38;2;30;201;212m╰── \u001B[38;2;30;201;212mthis query name is already in use\u001B[0m\u001B[0m
- \u001B[2m5\u001B[0m │ SELECT id FROM Author;
-   ╰────"""
+error = '''
+ValidateQueries(
+    DuplicateQueryName {
+        src: NamedSource {
+            name: "queries/module_1.sql",
+            source: "<redacted>",
+        ,
+        pos2: SourceSpan {
+            offset: SourceOffset(
+                43,
+            ),
+            length: SourceOffset(
+                10,
+            ),
+        },
+        pos1: SourceSpan {
+            offset: SourceOffset(
+                4,
+            ),
+            length: SourceOffset(
+                10,
+            ),
+        },
+    },
+)'''
 
 [[test]]
 name = 'NamedStructInvalidFields'
@@ -115,18 +162,32 @@ CREATE TABLE author (
   name TEXT
 );
 '''
-error = """
-\u001B[38;2;255;30;30mcornucopia::validation::incompatible_named_structs\u001B[0m
-
-  \u001B[38;2;255;30;30m×\u001B[0m Could not validate queries
-   ╭─[\u001B[38;2;92;157;255;1;4mqueries/module_1.sql\u001B[0m:1:1]
- \u001B[2m1\u001B[0m │ --! author_names: Row
-   · \u001B[38;2;246;87;248m                  ─┬─\u001B[0m
-   ·                    \u001B[38;2;246;87;248m╰── \u001B[38;2;246;87;248mcolumn `name` defined here\u001B[0m\u001B[0m
- \u001B[2m2\u001B[0m │ SELECT name FROM Author;
- \u001B[2m3\u001B[0m │ 
- \u001B[2m4\u001B[0m │ --! author_ids: Row
-   · \u001B[38;2;30;201;212m                ─┬─\u001B[0m
-   ·                  \u001B[38;2;30;201;212m╰── \u001B[38;2;30;201;212mcolumn `name` not found\u001B[0m\u001B[0m
- \u001B[2m5\u001B[0m │ SELECT id FROM Author;
-   ╰────"""
+error = '''
+PrepareQueries(
+    Validation(
+        IncompatibleNamedStructs {
+            src: NamedSource {
+                name: "queries/module_1.sql",
+                source: "<redacted>",
+            ,
+            label1: "column `name` defined here",
+            pos1: SourceSpan {
+                offset: SourceOffset(
+                    18,
+                ),
+                length: SourceOffset(
+                    3,
+                ),
+            },
+            label2: "column `name` not found",
+            pos2: SourceSpan {
+                offset: SourceOffset(
+                    64,
+                ),
+                length: SourceOffset(
+                    3,
+                ),
+            },
+        },
+    ),
+)'''

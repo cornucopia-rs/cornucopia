@@ -10,17 +10,25 @@ CREATE TABLE item (
   price INTEGER
 );
 '''
-error = """
-\u001B[38;2;255;30;30mcornucopia::validation::duplicate_sql_col_name\u001B[0m
-
-  \u001B[38;2;255;30;30m×\u001B[0m Could not validate queries
-   ╭─[\u001B[38;2;92;157;255;1;4mqueries/module_1.sql\u001B[0m:1:1]
- \u001B[2m1\u001B[0m │ --! items
-   · \u001B[38;2;246;87;248m    ──┬──\u001B[0m
-   ·       \u001B[38;2;246;87;248m╰── \u001B[38;2;246;87;248mquery returns one or more columns with the same name\u001B[0m\u001B[0m
- \u001B[2m2\u001B[0m │ SELECT name, price AS name FROM item;
-   ╰────
-\u001B[38;2;106;159;181m  help: \u001B[0mconsider disambiguing the column names in your SQL using an `AS` clause."""
+error = '''
+PrepareQueries(
+    Validation(
+        DuplicateSqlColName {
+            src: NamedSource {
+                name: "queries/module_1.sql",
+                source: "<redacted>",
+            ,
+            pos: SourceSpan {
+                offset: SourceOffset(
+                    4,
+                ),
+                length: SourceOffset(
+                    5,
+                ),
+            },
+        },
+    ),
+)'''
 
 [[test]]
 name = 'InconsistentTypes'
@@ -34,13 +42,24 @@ CREATE TABLE author (
   name TEXT
 );
 '''
-error = """
-\u001B[38;2;255;30;30mcornucopia::prepare_queries\u001B[0m
-
-  \u001B[38;2;255;30;30m×\u001B[0m Couldn't prepare query: inconsistent types deduced for parameter $1
-   ╭─[\u001B[38;2;92;157;255;1;4mqueries/module_1.sql\u001B[0m:1:1]
- \u001B[2m1\u001B[0m │ --! insert_author
- \u001B[2m2\u001B[0m │ INSERT INTO Author (id, name) VALUES (:name, :name);
-   · \u001B[38;2;246;87;248m                                           ▲\u001B[0m
-   ·                                            \u001B[38;2;246;87;248m╰── \u001B[38;2;246;87;248merror occurs near this location\u001B[0m\u001B[0m
-   ╰────"""
+error = '''
+PrepareQueries(
+    Db {
+        msg: "inconsistent types deduced for parameter $1",
+        help: None,
+        src: NamedSource {
+            name: "queries/module_1.sql",
+            source: "<redacted>",
+        ,
+        err_span: Some(
+            SourceSpan {
+                offset: SourceOffset(
+                    61,
+                ),
+                length: SourceOffset(
+                    0,
+                ),
+            },
+        ),
+    },
+)'''

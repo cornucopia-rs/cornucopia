@@ -3,31 +3,48 @@ name = 'Syntax'
 migration = '''
 CREATE TABLE syntax {};
 '''
-error = """
-\u001B[38;2;255;30;30mcornucopia::run_migrations\u001B[0m
-
-  \u001B[38;2;255;30;30m×\u001B[0m Couldn't run migration: syntax error at or near \"{\".
-   ╭─[\u001B[38;2;92;157;255;1;4mmigrations/1653210840_first.sql\u001B[0m:1:1]
- \u001B[2m1\u001B[0m │ CREATE TABLE syntax {};
-   · \u001B[38;2;246;87;248m                     ▲\u001B[0m
-   ·                      \u001B[38;2;246;87;248m╰── \u001B[38;2;246;87;248merror occurs near this location\u001B[0m\u001B[0m
-   ╰────"""
+error = '''
+RunMigration(
+    Error {
+        msg: "syntax error at or near \"{\"",
+        help: None,
+        src: NamedSource {
+            name: "migrations/1653210840_first.sql",
+            source: "<redacted>",
+        ,
+        err_span: Some(
+            SourceSpan {
+                offset: SourceOffset(
+                    21,
+                ),
+                length: SourceOffset(
+                    0,
+                ),
+            },
+        ),
+    },
+)'''
 
 [[test]]
 name = 'InvalidMigrationFilename'
 migration = ''
 migration_name = 'first.sql'
-error = """
-\u001B[38;2;255;30;30mcornucopia::read_migrations::invalid_migration_filename\u001B[0m
-
-  \u001B[38;2;255;30;30m×\u001B[0m [migrations/first.sql] `first` is not a valid migration name.
-\u001B[38;2;106;159;181m  help: \u001B[0mMigrations must be named with this pattern '<timestamp>_<name>' where <timestamp> is a unix timestamp and <name> is a valid identifier"""
+error = '''
+ReadMigration(
+    InvalidMigrationFilename {
+        path: "migrations/first.sql",
+        name: "first",
+    },
+)'''
 
 [[test]]
 name = 'InvalidTimestamp'
 migration = ''
 migration_name = 'hello_first.sql'
-error = """
-\u001B[38;2;255;30;30mcornucopia::read_migrations::invalid_timestamp\u001B[0m
-
-  \u001B[38;2;255;30;30m×\u001B[0m [migrations/hello_first.sql] timestamp \"hello\" is not a valid unix timestamp"""
+error = '''
+ReadMigration(
+    InvalidTimestamp {
+        path: "migrations/hello_first.sql",
+        timestamp: "hello",
+    },
+)'''
