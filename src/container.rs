@@ -4,7 +4,7 @@ use std::process::{Command, Stdio};
 /// Starts Cornucopia's database container and wait until it reports healthy.
 pub fn setup(podman: bool) -> Result<(), Error> {
     spawn_container(podman)?;
-    healthcheck(podman, 120, 1000)?;
+    healthcheck(podman, 120, 50)?;
     Ok(())
 }
 
@@ -36,7 +36,7 @@ fn spawn_container(podman: bool) -> Result<(), Error> {
     if success {
         Ok(())
     } else {
-        Err(Error::from("couldn't spawn container"))
+        Err(Error::from("Couldn't spawn container."))
     }
 }
 
@@ -50,9 +50,9 @@ fn is_postgres_healthy(podman: bool) -> Result<bool, Error> {
         .stderr(Stdio::null())
         .stdout(Stdio::null())
         .spawn()
-        .map_err(|_| Error::from("couldn't check container health"))?
+        .map_err(|_| Error::from("Couldn't check container health."))?
         .wait()
-        .map_err(|_| Error::from("couldn't check contaienr health"))?
+        .map_err(|_| Error::from("Couldn't check contaienr health."))?
         .success())
 }
 
@@ -90,7 +90,7 @@ fn stop_container(podman: bool) -> Result<(), Error> {
     if success {
         Ok(())
     } else {
-        Err(Error::from("couldn't stop container"))
+        Err(Error::from("Couldn't stop container."))
     }
 }
 
@@ -109,7 +109,7 @@ fn remove_container(podman: bool) -> Result<(), Error> {
     if success {
         Ok(())
     } else {
-        Err(Error::from("couldn't remove container"))
+        Err(Error::from("Couldn't remove container."))
     }
 }
 pub(crate) mod error {
@@ -119,7 +119,7 @@ pub(crate) mod error {
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError, Diagnostic)]
-    #[error("{msg}.")]
+    #[error("{msg}")]
     #[diagnostic(
         code(cornucopia::container),
         help("if you are using `docker`, please ensure that the daemon is up-and-running. You must also ensure that no container named `cornucopia_postgres` already exists.")
