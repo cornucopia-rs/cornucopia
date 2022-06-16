@@ -11,30 +11,16 @@ CREATE TABLE author (
 );
 '''
 error = '''
-ValidateQueries(
-    DuplicateNullableCol {
-        src: NamedSource {
-            name: "queries/module_1.sql",
-            source: "<redacted>",
-        ,
-        dup_pos: SourceSpan {
-            offset: SourceOffset(
-                20,
-            ),
-            length: SourceOffset(
-                2,
-            ),
-        },
-        pos: SourceSpan {
-            offset: SourceOffset(
-                15,
-            ),
-            length: SourceOffset(
-                2,
-            ),
-        },
-    },
-)'''
+err: cornucopia::validation::duplicate_nullable_col
+
+  × Couldn't validate queries.
+   ╭─[queries/module_1.sql:1:1]
+ 1 │ --! new_author(id?, id?)
+   ·                ─┬   ─┬
+   ·                 │    ╰── this nullable column name is already in use
+   ·                 ╰── first used here
+ 2 │ INSERT INTO Author (id, name) VALUES (:id, :id);
+   ╰────'''
 
 [[test]]
 name = 'ColumnAlreadyNullable'
@@ -49,30 +35,16 @@ CREATE TABLE author (
 );
 '''
 error = '''
-ValidateQueries(
-    DuplicateNullableCol {
-        src: NamedSource {
-            name: "queries/module_1.sql",
-            source: "<redacted>",
-        ,
-        dup_pos: SourceSpan {
-            offset: SourceOffset(
-                29,
-            ),
-            length: SourceOffset(
-                2,
-            ),
-        },
-        pos: SourceSpan {
-            offset: SourceOffset(
-                17,
-            ),
-            length: SourceOffset(
-                2,
-            ),
-        },
-    },
-)'''
+err: cornucopia::validation::duplicate_nullable_col
+
+  × Couldn't validate queries.
+   ╭─[queries/module_1.sql:1:1]
+ 1 │ --! new_author: (id?, name?, id?)
+   ·                  ─┬          ─┬
+   ·                   │           ╰── this nullable column name is already in use
+   ·                   ╰── first used here
+ 2 │ SELECT id, name FROM Author;
+   ╰────'''
 
 [[test]]
 name = 'InvalidNullableColumnName'
@@ -87,24 +59,15 @@ CREATE TABLE author (
 );
 '''
 error = '''
-PrepareQueries(
-    Validation(
-        InvalidNullableColumnName {
-            src: NamedSource {
-                name: "queries/module_1.sql",
-                source: "<redacted>",
-            ,
-            pos: SourceSpan {
-                offset: SourceOffset(
-                    17,
-                ),
-                length: SourceOffset(
-                    4,
-                ),
-            },
-        },
-    ),
-)'''
+err: cornucopia::validation::invalid_nullable_col
+
+  × Couldn't validate queries.
+   ╭─[queries/module_1.sql:1:1]
+ 1 │ --! new_author: (name?)
+   ·                  ──┬─
+   ·                    ╰── no column with this name found
+ 2 │ SELECT id FROM Author;
+   ╰────'''
 
 [[test]]
 name = 'QueryAlreadyExists'
@@ -122,30 +85,20 @@ CREATE TABLE author (
 );
 '''
 error = '''
-ValidateQueries(
-    DuplicateQueryName {
-        src: NamedSource {
-            name: "queries/module_1.sql",
-            source: "<redacted>",
-        ,
-        pos2: SourceSpan {
-            offset: SourceOffset(
-                43,
-            ),
-            length: SourceOffset(
-                10,
-            ),
-        },
-        pos1: SourceSpan {
-            offset: SourceOffset(
-                4,
-            ),
-            length: SourceOffset(
-                10,
-            ),
-        },
-    },
-)'''
+err: cornucopia::validation::duplicate_query_name
+
+  × Couldn't validate queries.
+   ╭─[queries/module_1.sql:1:1]
+ 1 │ --! new_author
+   ·     ─────┬────
+   ·          ╰── first defined here
+ 2 │ SELECT id FROM Author;
+ 3 │ 
+ 4 │ --! new_author
+   ·     ─────┬────
+   ·          ╰── this query name is already in use
+ 5 │ SELECT id FROM Author;
+   ╰────'''
 
 [[test]]
 name = 'NamedStructInvalidFields'
@@ -163,31 +116,17 @@ CREATE TABLE author (
 );
 '''
 error = '''
-PrepareQueries(
-    Validation(
-        IncompatibleNamedStructs {
-            src: NamedSource {
-                name: "queries/module_1.sql",
-                source: "<redacted>",
-            ,
-            label1: "column `name` defined here",
-            pos1: SourceSpan {
-                offset: SourceOffset(
-                    18,
-                ),
-                length: SourceOffset(
-                    3,
-                ),
-            },
-            label2: "column `name` not found",
-            pos2: SourceSpan {
-                offset: SourceOffset(
-                    64,
-                ),
-                length: SourceOffset(
-                    3,
-                ),
-            },
-        },
-    ),
-)'''
+err: cornucopia::validation::incompatible_named_structs
+
+  × Couldn't validate queries.
+   ╭─[queries/module_1.sql:1:1]
+ 1 │ --! author_names: Row
+   ·                   ─┬─
+   ·                    ╰── column `name` defined here
+ 2 │ SELECT name FROM Author;
+ 3 │ 
+ 4 │ --! author_ids: Row
+   ·                 ─┬─
+   ·                  ╰── column `name` not found
+ 5 │ SELECT id FROM Author;
+   ╰────'''

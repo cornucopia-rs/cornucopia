@@ -11,24 +11,16 @@ CREATE TABLE item (
 );
 '''
 error = '''
-PrepareQueries(
-    Validation(
-        DuplicateSqlColName {
-            src: NamedSource {
-                name: "queries/module_1.sql",
-                source: "<redacted>",
-            ,
-            pos: SourceSpan {
-                offset: SourceOffset(
-                    4,
-                ),
-                length: SourceOffset(
-                    5,
-                ),
-            },
-        },
-    ),
-)'''
+err: cornucopia::validation::duplicate_sql_col_name
+
+  × Couldn't validate queries.
+   ╭─[queries/module_1.sql:1:1]
+ 1 │ --! items
+   ·     ──┬──
+   ·       ╰── query returns one or more columns with the same name
+ 2 │ SELECT name, price AS name FROM item;
+   ╰────
+  help: consider disambiguing the column names in your SQL using an `AS` clause.'''
 
 [[test]]
 name = 'InconsistentTypes'
@@ -43,23 +35,12 @@ CREATE TABLE author (
 );
 '''
 error = '''
-PrepareQueries(
-    Db {
-        msg: "inconsistent types deduced for parameter $1",
-        help: None,
-        src: NamedSource {
-            name: "queries/module_1.sql",
-            source: "<redacted>",
-        ,
-        err_span: Some(
-            SourceSpan {
-                offset: SourceOffset(
-                    61,
-                ),
-                length: SourceOffset(
-                    0,
-                ),
-            },
-        ),
-    },
-)'''
+err: cornucopia::prepare_queries
+
+  × Couldn't prepare query: inconsistent types deduced for parameter $1
+   ╭─[queries/module_1.sql:1:1]
+ 1 │ --! insert_author
+ 2 │ INSERT INTO Author (id, name) VALUES (:name, :name);
+   ·                                            ▲
+   ·                                            ╰── error occurs near this location
+   ╰────'''

@@ -102,6 +102,7 @@ fn run_errors_test(
     client: &mut postgres::Client,
     apply: bool,
 ) -> Result<bool, Box<dyn std::error::Error>> {
+    std::env::set_var("NO_COLOR", "");
     let mut successful = true;
 
     let got_msg = if apply {
@@ -163,7 +164,7 @@ fn run_errors_test(
                 Ok(())
             })();
 
-            let err = result.err().map(|e| format!("{e:#?}")).unwrap_or_default();
+            let err = result.err().map(|e| e.report()).unwrap_or_default();
             if err.trim() != test.error.trim() {
                 successful = false;
                 println!(
