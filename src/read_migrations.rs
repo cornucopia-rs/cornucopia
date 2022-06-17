@@ -108,13 +108,12 @@ pub(crate) mod error {
     #[derive(Debug, ThisError, Diagnostic)]
     pub enum Error {
         #[error("[{path}] {err:#}")]
-        #[diagnostic(code(cornucopia::read_migrations::io))]
         Io { path: String, err: std::io::Error },
         #[error("[{path}] `{name}` is not a valid migration name.")]
-        #[diagnostic(code(cornucopia::read_migrations::invalid_migration_filename),help("Migrations must be named with this pattern '<timestamp>_<name>' where <timestamp> is a unix timestamp and <name> is a valid identifier"))]
+        #[diagnostic(help("Migrations must be named with this pattern '<timestamp>_<name>' where <timestamp> is a unix timestamp and <name> is a valid identifier"))]
         InvalidMigrationFilename { path: String, name: String },
         #[error("[{path}] timestamp \"{timestamp}\" is not a valid unix timestamp")]
-        #[diagnostic(code(cornucopia::read_migrations::invalid_timestamp))]
+        #[diagnostic(help("Migrations must be named with this pattern '<timestamp>_<name>' where <timestamp> is a unix timestamp and <name> is a valid identifier"))]
         InvalidTimestamp { path: String, timestamp: String },
     }
 }

@@ -22,7 +22,6 @@ pub(crate) mod error {
     use miette::Diagnostic;
 
     #[derive(Debug, thiserror::Error, Diagnostic)]
-    #[diagnostic(code(cornucopia::connection))]
     #[error("Couldn't establish a connection with the database.")]
     pub struct Error(#[from] pub postgres::Error);
 }

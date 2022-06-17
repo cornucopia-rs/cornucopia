@@ -404,7 +404,6 @@ pub(crate) mod error {
     #[derive(Debug, ThisError, Diagnostic)]
     pub enum Error {
         #[error("Couldn't prepare query: {msg}")]
-        #[diagnostic(code(cornucopia::prepare_queries))]
         Db {
             msg: String,
             #[help]

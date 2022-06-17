@@ -29,7 +29,6 @@ impl Error {
 }
 
 #[derive(Debug, ThisError, Diagnostic)]
-#[diagnostic(code(cornucopia::write_output))]
 #[error("Could not write your queries to destination file `{file_path}`: ({err})")]
 pub struct WriteOutputError {
     pub(crate) file_path: String,
@@ -37,7 +36,6 @@ pub struct WriteOutputError {
 }
 
 #[derive(Debug, ThisError, Diagnostic)]
-#[diagnostic(code(cornucopia::new_migration))]
 #[error("Could not create new migration `{file_path}`: ({err})")]
 pub struct NewMigrationError {
     pub(crate) file_path: String,

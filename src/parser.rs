@@ -365,7 +365,6 @@ pub(crate) mod error {
 
     #[derive(Debug, ThisError, Diagnostic)]
     #[error("Couldn't parse queries")]
-    #[diagnostic(code(cornucopia::parser))]
     pub struct Error {
         #[source_code]
         pub src: NamedSource,
