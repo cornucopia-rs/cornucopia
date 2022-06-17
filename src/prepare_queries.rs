@@ -306,14 +306,14 @@ fn prepare_query(
         bind_params,
         row,
         sql_str,
-        sql_start,
+        sql_span,
     }: validation::Query,
     module_info: &ModuleInfo,
 ) -> Result<(), Error> {
     // Prepare the statement
     let stmt = client
         .prepare(&sql_str)
-        .map_err(|e| Error::new_db_err(e, module_info, sql_start, &name))?;
+        .map_err(|e| Error::new_db_err(e, module_info, &sql_span, &name))?;
 
     let (nullable_params_fields, params_name) =
         params.name_and_fields(types, &name, Some("Params"));
@@ -325,7 +325,7 @@ fn prepare_query(
             .zip(stmt_params)
             .map(|(a, b)| (a.to_owned(), b.to_owned()))
             .collect::<Vec<(Span<String>, Type)>>();
-        for nullable_col in &nullable_params_fields {
+        for nullable_col in nullable_params_fields {
             // If none of the row's columns match the nullable column
             validation::nullable_param_name(&module.info, nullable_col, &params)
                 .map_err(Error::from)?;
@@ -351,9 +351,11 @@ fn prepare_query(
 
     let row_fields = {
         let stmt_cols = stmt.columns();
+        // Check for row declaration on execute
+        validation::row_on_execute(&module.info, &name, &sql_span, &row, stmt_cols)?;
         // Check for duplicate names
         validation::duplicate_sql_col_name(&module.info, &name, stmt_cols).map_err(Error::from)?;
-        for nullable_col in &nullable_row_fields {
+        for nullable_col in nullable_row_fields {
             // If none of the row's columns match the nullable column
             validation::nullable_column_name(&module.info, nullable_col, stmt_cols)
                 .map_err(Error::from)?;
@@ -425,7 +427,7 @@ pub(crate) mod error {
         pub(crate) fn new_db_err(
             err: postgres::Error,
             module_info: &ModuleInfo,
-            query_start: usize,
+            query_span: &SourceSpan,
             query_name: &Span<String>,
         ) -> Self {
             let msg = format!("{:#}", err);
@@ -434,9 +436,7 @@ pub(crate) mod error {
                     msg,
                     help,
                     src: module_info.into(),
-                    err_span: Some(
-                        (position as usize + query_start..position as usize + query_start).into(),
-                    ),
+                    err_span: Some((query_span.offset() + position as usize - 1).into()),
                 }
             } else {
                 Self::Db {

@@ -25,6 +25,6 @@ error = '''
    ╭─[queries/test.sql:1:1]
  1 │ --! insert_author
  2 │ INSERT INTO Author (id, name) VALUES (:name, :name);
-   ·                                            ▲
-   ·                                            ╰── error occurs near this location
+   ·                                           ▲
+   ·                                           ╰── error occurs near this location
    ╰────'''

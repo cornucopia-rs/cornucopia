@@ -18,11 +18,12 @@ pub(crate) struct Query {
     pub(crate) params: QueryDataStruct,
     pub(crate) bind_params: Vec<Span<String>>,
     pub(crate) row: QueryDataStruct,
-    pub(crate) sql_start: usize,
+    pub(crate) sql_span: SourceSpan,
     pub(crate) sql_str: String,
 }
 
 use error::Error;
+use miette::SourceSpan;
 use postgres::Column;
 use postgres_types::Type;
 
@@ -156,6 +157,37 @@ pub(crate) fn nullable_param_name(
     }
 }
 
+pub(crate) fn row_on_execute(
+    info: &ModuleInfo,
+    name: &Span<String>,
+    query: &SourceSpan,
+    row: &QueryDataStruct,
+    columns: &[Column],
+) -> Result<(), Error> {
+    let row = match row {
+        QueryDataStruct::Implicit { idents } => match (
+            idents.first().map(|it| it.name.span),
+            idents.last().map(|it| it.name.span),
+        ) {
+            (Some(first), Some(last)) => Some((first.offset()..last.offset() + last.len()).into()),
+            _ => None,
+        },
+        QueryDataStruct::Named(name) => Some(name.span),
+    };
+    if let Some(row) = row {
+        if columns.is_empty() {
+            return Err(Error::RowOnExecute {
+                src: info.into(),
+                name: name.value.clone(),
+                row,
+                query: *query,
+            });
+        }
+    }
+
+    Ok(())
+}
+
 pub(crate) fn named_struct_field(
     info: &ModuleInfo,
     name: &Span<String>,
@@ -228,7 +260,7 @@ pub(crate) fn validate_module(info: ModuleInfo, module: parser::Module) -> Resul
             bind_params: query.sql.bind_params,
             row: query.annotation.row,
             sql_str: query.sql.sql_str,
-            sql_start: query.sql.start,
+            sql_span: query.sql.span,
         };
 
         validated_queries.push(validated_query);
@@ -302,6 +334,17 @@ pub mod error {
             second_label: String,
             #[label("{second_label}")]
             second: SourceSpan,
+        },
+        #[error("the query `{name}` declare a row but return nothing")]
+        #[diagnostic(help("remove row declaration"))]
+        RowOnExecute {
+            #[source_code]
+            src: NamedSource,
+            name: String,
+            #[label("row declared here")]
+            row: SourceSpan,
+            #[label("but query return nothing")]
+            query: SourceSpan,
         },
     }
 }

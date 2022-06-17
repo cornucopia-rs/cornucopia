@@ -177,3 +177,39 @@ error = '''
  5 │ SELECT id as name FROM Author;
    ╰────
   help: use a different named type for each query'''
+
+[[test]]
+name = 'ImplicitExecuteRow'
+query = '''
+--! delete: (name?)
+DELETE FROM author;
+'''
+error = '''
+× the query `delete` declare a row but return nothing
+   ╭─[queries/test.sql:1:1]
+ 1 │ --! delete: (name?)
+   ·              ──┬─
+   ·                ╰── row declared here
+ 2 │ DELETE FROM author;
+   · ─────────┬─────────
+   ·          ╰── but query return nothing
+   ╰────
+  help: remove row declaration'''
+
+[[test]]
+name = 'NamedExecuteRow'
+query = '''
+--! delete: Row
+DELETE FROM author;
+'''
+error = '''
+× the query `delete` declare a row but return nothing
+   ╭─[queries/test.sql:1:1]
+ 1 │ --! delete: Row
+   ·             ─┬─
+   ·              ╰── row declared here
+ 2 │ DELETE FROM author;
+   · ─────────┬─────────
+   ·          ╰── but query return nothing
+   ╰────
+  help: remove row declaration'''

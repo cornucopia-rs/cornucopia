@@ -133,7 +133,7 @@ impl TypeAnnotation {
 
 #[derive(Debug)]
 pub(crate) struct QuerySql {
-    pub(crate) start: usize,
+    pub(crate) span: SourceSpan,
     pub(crate) sql_str: String,
     pub(crate) bind_params: Vec<Span<String>>,
 }
@@ -216,7 +216,7 @@ impl QuerySql {
                 Self {
                     sql_str,
                     bind_params: dedup_params,
-                    start: span.start,
+                    span: span.into(),
                 }
             })
     }
@@ -245,12 +245,12 @@ pub(crate) enum QueryDataStruct {
 }
 
 impl QueryDataStruct {
-    pub(crate) fn name_and_fields(
-        self,
-        registered_structs: &[TypeAnnotation],
+    pub(crate) fn name_and_fields<'a>(
+        &'a self,
+        registered_structs: &'a [TypeAnnotation],
         query_name: &Span<String>,
         name_suffix: Option<&str>,
-    ) -> (Vec<NullableIdent>, Span<String>) {
+    ) -> (&'a [NullableIdent], Span<String>) {
         match self {
             QueryDataStruct::Implicit { idents } => (
                 idents,
@@ -265,9 +265,9 @@ impl QueryDataStruct {
             QueryDataStruct::Named(name) => (
                 registered_structs
                     .iter()
-                    .find_map(|it| (it.name == name).then(|| it.fields.clone()))
-                    .unwrap_or_default(),
-                name,
+                    .find_map(|it| (it.name == *name).then(|| it.fields.as_slice()))
+                    .unwrap_or(&[]),
+                name.clone(),
             ),
         }
     }
