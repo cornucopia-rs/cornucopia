@@ -86,7 +86,25 @@ error = '''
    ·          ╰── redefined here
  5 │ SELECT id FROM Author;
    ╰────
-  help: use a different name for one of those queries'''
+  help: use a different name for one of those'''
+
+[[test]]
+name = 'TypeAlreadyExists'
+query = '''
+--: Row
+--: Row(name?)
+'''
+error = '''
+× the type `Row` is defined multiple time
+   ╭─[queries/test.sql:1:1]
+ 1 │ --: Row
+   ·     ─┬─
+   ·      ╰── previous definition of the type here
+ 2 │ --: Row(name?)
+   ·     ─┬─
+   ·      ╰── redefined here
+   ╰────
+  help: use a different name for one of those'''
 
 [[test]]
 name = 'NamedTypeMissingColumn'

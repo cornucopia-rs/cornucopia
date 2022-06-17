@@ -68,22 +68,42 @@ pub(crate) fn query_name_already_used(
     info: &ModuleInfo,
     queries: &[parser::Query],
 ) -> Result<(), Error> {
-    for (i, query) in queries.iter().enumerate() {
-        if let Some((_, q)) = queries
+    for (i, first) in queries.iter().enumerate() {
+        if let Some(second) = queries[i + 1..]
             .iter()
-            .enumerate()
-            .find(|(j, q)| *j != i && q.annotation.name == query.annotation.name)
+            .find(|second| second.annotation.name == first.annotation.name)
         {
-            return Err(Error::DuplicateQueryName {
+            return Err(Error::DuplicateName {
                 src: info.into(),
-                name: query.annotation.name.value.clone(),
-                first: query.annotation.name.span,
-                second: q.annotation.name.span,
+                ty: "query",
+                name: first.annotation.name.value.clone(),
+                first: first.annotation.name.span,
+                second: second.annotation.name.span,
             });
         }
     }
 
-    has_duplicate(queries.iter(), |q| &q.annotation.name);
+    Ok(())
+}
+
+pub(crate) fn named_type_already_used(
+    info: &ModuleInfo,
+    types: &[TypeAnnotation],
+) -> Result<(), Error> {
+    for (i, first) in types.iter().enumerate() {
+        if let Some(second) = types[i + 1..]
+            .iter()
+            .find(|second| second.name == first.name)
+        {
+            return Err(Error::DuplicateName {
+                src: info.into(),
+                ty: "type",
+                name: first.name.value.clone(),
+                first: first.name.span,
+                second: second.name.span,
+            });
+        }
+    }
 
     Ok(())
 }
@@ -189,6 +209,7 @@ pub(crate) fn named_struct_field(
 
 pub(crate) fn validate_module(info: ModuleInfo, module: parser::Module) -> Result<Module, Error> {
     query_name_already_used(&info, &module.queries)?;
+    named_type_already_used(&info, &module.types)?;
     for ty in module.types.iter() {
         duplicate_nullable_ident(&info, &ty.fields)?;
     }
@@ -248,13 +269,14 @@ pub mod error {
             #[label("redeclared here")]
             second: SourceSpan,
         },
-        #[error("the query `{name}` is defined multiple time")]
-        #[diagnostic(help("use a different name for one of those queries"))]
-        DuplicateQueryName {
+        #[error("the {ty} `{name}` is defined multiple time")]
+        #[diagnostic(help("use a different name for one of those"))]
+        DuplicateName {
             #[source_code]
             src: NamedSource,
             name: String,
-            #[label("previous definition of the query here")]
+            ty: &'static str,
+            #[label("previous definition of the {ty} here")]
             first: SourceSpan,
             #[label("redefined here")]
             second: SourceSpan,
