@@ -30,13 +30,18 @@
     <img src="https://deps.rs/repo/github/cornucopia-rs/cornucopia/status.svg?style=flat-square"
     alt="Crates.io version" />
   </a>
+ 
+  <br/>
 
   <!-- License -->
   <a href="https://github.com/cornucopia-rs/cornucopia#License">
     <img src="https://img.shields.io/badge/License-APACHE--2.0%2FMIT-blue?style=flat-square" alt="License">
   </a>
 
-
+  <!-- Chat -->
+  <a href = "https://discord.gg/nYwUmQDHBZ">
+    <img src="https://img.shields.io/discord/987088069280825401?label=chat&logo=discord&style=flat-square" alt="Chat">
+  </a>
 </div>
 
 <div align="center">
