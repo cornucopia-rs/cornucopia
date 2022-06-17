@@ -1,22 +1,16 @@
 [[test]]
 name = 'ColumnNameAlreadyTaken'
 query = '''
---! items
-SELECT name, price AS name FROM item;
-'''
-migration = '''
-CREATE TABLE item (
-  name TEXT,
-  price INTEGER
-);
+--! authors
+SELECT id, name AS id FROM author;
 '''
 error = '''
-× column `name` appear multiple time
-   ╭─[queries/module_1.sql:1:1]
- 1 │ --! items
-   ·     ──┬──
-   ·       ╰── query returns one or more columns with the same name
- 2 │ SELECT name, price AS name FROM item;
+× column `id` appear multiple time
+   ╭─[queries/test.sql:1:1]
+ 1 │ --! authors
+   ·     ───┬───
+   ·        ╰── query returns one or more columns with the same name
+ 2 │ SELECT id, name AS id FROM author;
    ╰────
   help: disambiguate column names in your SQL using an `AS` clause'''
 
@@ -26,17 +20,9 @@ query = '''
 --! insert_author
 INSERT INTO Author (id, name) VALUES (:name, :name);
 '''
-migration = '''
-CREATE TABLE author (
-  id SERIAL,
-  name TEXT
-);
-'''
 error = '''
-cornucopia::prepare_queries
-
-  × Couldn't prepare query: inconsistent types deduced for parameter $1
-   ╭─[queries/module_1.sql:1:1]
+× Couldn't prepare query: inconsistent types deduced for parameter $1
+   ╭─[queries/test.sql:1:1]
  1 │ --! insert_author
  2 │ INSERT INTO Author (id, name) VALUES (:name, :name);
    ·                                            ▲

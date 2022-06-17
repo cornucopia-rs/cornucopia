@@ -4,15 +4,9 @@ query = '''
 --! new_author(id?, id?)
 INSERT INTO Author (id, name) VALUES (:id, :id);
 '''
-migration = '''
-CREATE TABLE author (
-  id SERIAL,
-  name TEXT
-);
-'''
 error = '''
 × the field `id` is declared null multiple time
-   ╭─[queries/module_1.sql:1:1]
+   ╭─[queries/test.sql:1:1]
  1 │ --! new_author(id?, id?)
    ·                ─┬   ─┬
    ·                 │    ╰── redeclared here
@@ -27,15 +21,9 @@ query = '''
 --! new_author: (id?, name?, id?)
 SELECT id, name FROM Author;
 '''
-migration = '''
-CREATE TABLE author (
-  id SERIAL,
-  name TEXT
-);
-'''
 error = '''
 × the field `id` is declared null multiple time
-   ╭─[queries/module_1.sql:1:1]
+   ╭─[queries/test.sql:1:1]
  1 │ --! new_author: (id?, name?, id?)
    ·                  ─┬          ─┬
    ·                   │           ╰── redeclared here
@@ -50,15 +38,9 @@ query = '''
 --! new_author: (age?)
 SELECT id, name FROM Author;
 '''
-migration = '''
-CREATE TABLE author (
-  id SERIAL,
-  name TEXT
-);
-'''
 error = '''
 × unknown field
-   ╭─[queries/module_1.sql:1:1]
+   ╭─[queries/test.sql:1:1]
  1 │ --! new_author: (age?)
    ·                  ─┬─
    ·                   ╰── no field with this name was found
@@ -72,15 +54,9 @@ query = '''
 --! new_author (age?)
 INSERT INTO Author (id, name) VALUES (:id, :name);
 '''
-migration = '''
-CREATE TABLE author (
-  id SERIAL,
-  name TEXT
-);
-'''
 error = '''
 × unknown field
-   ╭─[queries/module_1.sql:1:1]
+   ╭─[queries/test.sql:1:1]
  1 │ --! new_author (age?)
    ·                 ─┬─
    ·                  ╰── no field with this name was found
@@ -97,15 +73,9 @@ SELECT id FROM Author;
 --! new_author
 SELECT id FROM Author;
 '''
-migration = '''
-CREATE TABLE author (
-  id SERIAL,
-  name TEXT
-);
-'''
 error = '''
 × the query `new_author` is defined multiple time
-   ╭─[queries/module_1.sql:1:1]
+   ╭─[queries/test.sql:1:1]
  1 │ --! new_author
    ·     ─────┬────
    ·          ╰── previous definition of the query here
@@ -127,15 +97,9 @@ SELECT name FROM Author;
 --! author_ids: Row
 SELECT id FROM Author;
 '''
-migration = '''
-CREATE TABLE author (
-  id SERIAL,
-  name TEXT
-);
-'''
 error = '''
 × named type `Row` as conflicting usage
-   ╭─[queries/module_1.sql:1:1]
+   ╭─[queries/test.sql:1:1]
  1 │ --! author_names: Row
    ·                   ─┬─
    ·                    ╰── column `name` expected here
@@ -157,15 +121,9 @@ SELECT name FROM Author;
 --! author: Row
 SELECT name, id FROM Author;
 '''
-migration = '''
-CREATE TABLE author (
-  id SERIAL,
-  name TEXT
-);
-'''
 error = '''
 × named type `Row` as conflicting usage
-   ╭─[queries/module_1.sql:1:1]
+   ╭─[queries/test.sql:1:1]
  1 │ --! author_names: Row
    ·                   ─┬─
    ·                    ╰── column `id` not found
@@ -187,15 +145,9 @@ SELECT name FROM Author;
 --! author_ids: Row
 SELECT id as name FROM Author;
 '''
-migration = '''
-CREATE TABLE author (
-  id SERIAL,
-  name TEXT
-);
-'''
 error = '''
 × named type `Row` as conflicting usage
-   ╭─[queries/module_1.sql:1:1]
+   ╭─[queries/test.sql:1:1]
  1 │ --! author_names: Row
    ·                   ─┬─
    ·                    ╰── column `name` is expected to have type `text` here

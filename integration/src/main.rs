@@ -71,6 +71,7 @@ fn main() -> ExitCode {
     }
 }
 
+/// Print error to stderr
 fn display<T, E: Display>(result: Result<T, E>) -> Result<T, E> {
     if let Err(err) = &result {
         eprintln!("{}", err);
@@ -92,12 +93,15 @@ fn test(args: Args) -> bool {
     successful.unwrap()
 }
 
-// Reset the current database
+/// Reset the current database
 fn reset_db(client: &mut postgres::Client) -> Result<(), postgres::Error> {
     client.batch_execute("DROP SCHEMA public CASCADE;CREATE SCHEMA public;")
 }
 
-// Run errors test, return true if all test are successful
+// Common migration to all error tests
+const MIGRATION_BASE: &str = "CREATE TABLE author (id SERIAL, name TEXT);";
+
+/// Run errors test, return true if all test are successful
 fn run_errors_test(
     client: &mut postgres::Client,
     apply: bool,
@@ -135,17 +139,17 @@ fn run_errors_test(
 
             // Generate migrations files
             std::fs::create_dir("migrations")?;
-            if let Some(migration) = test.migration {
-                let name = test.migration_name.unwrap_or("1653210840_first.sql");
-                std::fs::write(&format!("migrations/{name}"), migration)?;
-            }
+            std::fs::write("migrations/1653210840_base.sql", MIGRATION_BASE)?;
+            let name = test.migration_name.unwrap_or("1653210840_test.sql");
+            std::fs::write(
+                &format!("migrations/{name}"),
+                test.migration.unwrap_or_default(),
+            )?;
 
             // generate queries files
             std::fs::create_dir("queries")?;
-            if let Some(query) = test.query {
-                let name = test.query_name.unwrap_or("module_1.sql");
-                std::fs::write(&format!("queries/{name}"), query)?;
-            }
+            let name = test.query_name.unwrap_or("test.sql");
+            std::fs::write(&format!("queries/{name}"), test.query.unwrap_or_default())?;
 
             // Run codegen
             let result: Result<(), cornucopia::Error> = (|| {
