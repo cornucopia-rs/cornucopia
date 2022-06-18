@@ -5,8 +5,7 @@ use cornucopia::CodegenSettings;
 // we could also generate it elsewhere and embed the generated
 // file with a `include_str` statement in your project.
 fn main() -> Result<(), std::io::Error> {
-    
-    //! To enable the automatic builds, remove the starting underscore 
+    //! To enable the automatic builds, remove the starting underscore
     //! from the variable names and uncomment the snippet below
     let _queries_path = "queries";
     let _migrations_path = "migrations";
