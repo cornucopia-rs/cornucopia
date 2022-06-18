@@ -192,7 +192,7 @@ fn run_errors_test(
 
 // Run codegen test, return true if all test are successful
 fn run_codegen_test(
-    mut client: &mut postgres::Client,
+    client: &mut postgres::Client,
     apply: bool,
 ) -> Result<bool, Box<dyn std::error::Error>> {
     let mut successful = true;
@@ -221,7 +221,7 @@ fn run_codegen_test(
             std::env::set_current_dir(format!("../{}", codegen_test.base_path))?;
             let queries_path = codegen_test.queries.unwrap_or("queries");
             let migrations_path = codegen_test.migrations.unwrap_or("migrations");
-            let migrations = cornucopia::read_migrations(&migrations_path)?;
+            let migrations = cornucopia::read_migrations(migrations_path)?;
             let destination = codegen_test.destination.unwrap_or("src/cornucopia.rs");
             let is_async = !codegen_test.sync.unwrap_or(false);
             let derive_ser = codegen_test.derive_ser.unwrap_or(false);
@@ -236,9 +236,9 @@ fn run_codegen_test(
             if apply {
                 // Generate
                 cornucopia::generate_live(
-                    &mut client,
-                    &queries_path,
-                    Some(&destination),
+                    client,
+                    queries_path,
+                    Some(destination),
                     CodegenSettings {
                         is_async,
                         derive_ser,
@@ -254,8 +254,8 @@ fn run_codegen_test(
                 let old_codegen = std::fs::read_to_string(&destination).unwrap_or_default();
                 // Generate new file
                 let new_codegen = cornucopia::generate_live(
-                    &mut client,
-                    &queries_path,
+                    client,
+                    queries_path,
                     None,
                     CodegenSettings {
                         is_async,
@@ -301,7 +301,7 @@ fn run_codegen_test(
                 }
 
                 // Reset DB
-                reset_db(&mut client)?
+                reset_db(client)?
             }
 
             // Move back to original directory
@@ -323,7 +323,7 @@ fn run_codegen_test(
             } else {
                 println!("(run) {}", "OK".green());
             }
-            reset_db(&mut client)?;
+            reset_db(client)?;
             std::env::set_current_dir(&original_pwd)?;
         }
     }
