@@ -1,5 +1,3 @@
-use std::iter;
-
 use miette::NamedSource;
 
 use self::error::Error;
