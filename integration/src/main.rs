@@ -14,8 +14,11 @@ use owo_colors::OwoColorize;
 #[clap(version)]
 struct Args {
     /// Format test descriptors and update error msg
-    #[clap(short, long)]
-    apply: bool,
+    #[clap(long)]
+    apply_errors: bool,
+    /// Update the project's generated code
+    #[clap(long)]
+    apply_codegen: bool,
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -61,7 +64,7 @@ struct Run<'a> {
 
 fn main() -> ExitCode {
     let args = Args::parse();
-    if test(args.apply) {
+    if test(args) {
         ExitCode::SUCCESS
     } else {
         ExitCode::FAILURE
@@ -76,14 +79,14 @@ fn display<T, E: Display>(result: Result<T, E>) -> Result<T, E> {
 }
 
 // Run test, return true if all test are successful
-fn test(apply: bool) -> bool {
+fn test(args: Args) -> bool {
     // Start by removing previous container if it was left open
     container::cleanup(false).ok();
     container::setup(false).unwrap();
     let successful = std::panic::catch_unwind(|| {
         let mut client = cornucopia::conn::cornucopia_conn().unwrap();
-        display(run_errors_test(&mut client, apply)).unwrap()
-            && display(run_codegen_test(&mut client, apply)).unwrap()
+        display(run_errors_test(&mut client, args.apply_errors)).unwrap()
+            && display(run_codegen_test(&mut client, args.apply_codegen)).unwrap()
     });
     container::cleanup(false).unwrap();
     successful.unwrap()
