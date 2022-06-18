@@ -340,6 +340,9 @@ mod test {
 
     #[test]
     fn run() {
-        assert!(test(false))
+        assert!(test(crate::Args {
+            apply_errors: false,
+            apply_codegen: false
+        }))
     }
 }
