@@ -143,7 +143,8 @@ fn bench(c: &mut Criterion) {
     let conn =
         &mut PgConnection::establish("postgresql://postgres:postgres@127.0.0.1:5432/postgres")
             .unwrap();
-    cornucopia::run_migrations(client, "benches/cornucopia_benches/migrations").unwrap();
+    let migrations = cornucopia::read_migrations("benches/cornucopia_benches/migrations").unwrap();
+    cornucopia::run_migrations(client, migrations).unwrap();
     {
         let mut group = c.benchmark_group("bench_trivial_query");
         for size in QUERY_SIZE {
