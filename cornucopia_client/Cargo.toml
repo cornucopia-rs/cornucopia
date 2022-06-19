@@ -15,7 +15,6 @@ default = ["deadpool"]
 async = ["dep:tokio", "dep:tokio-postgres", "dep:async-trait"]
 deadpool = ["async", "dep:deadpool-postgres"]
 
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -23,9 +22,7 @@ tokio = { version = "1.18.2", optional = true }
 tokio-postgres = { version = "0.7.6", optional = true }
 postgres = "0.19.3"
 async-trait = { version = "0.1.53", optional = true }
-
 deadpool-postgres = { version = "0.10.2", optional = true }
-
 fallible-iterator = "0.2"
 postgres-protocol = "0.6.4"
 postgres-types = { version = "0.2.3" }

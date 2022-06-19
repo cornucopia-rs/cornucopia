@@ -11,5 +11,5 @@ toml = "0.5.9"
 owo-colors = "3.4.0"
 serde = { version = "1.0.137", features = ["derive"] }
 clap = { version = "3.1.18", features = ["derive"] }
-cornucopia = { path = "../" }
+cornucopia = { path = "../cornucopia" }
 postgres = "0.19.3"
