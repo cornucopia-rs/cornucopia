@@ -10,66 +10,59 @@ use crate::read_queries::ModuleInfo;
 /// Th    if is data structure holds a value and the context in which it was parsed.
 /// This context is used for error reporting.
 #[derive(Debug, Clone)]
-pub struct Parsed<T> {
-    pub(crate) start: usize,
-    pub(crate) end: usize,
+pub struct Span<T> {
+    pub(crate) span: SourceSpan,
     pub(crate) value: T,
 }
 
-impl<T: std::hash::Hash> std::hash::Hash for Parsed<T> {
+impl<T: std::hash::Hash> std::hash::Hash for Span<T> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.value.hash(state);
     }
 }
 
-impl<T: PartialEq> PartialEq<Self> for Parsed<T> {
+impl<T: PartialEq> PartialEq<Self> for Span<T> {
     fn eq(&self, other: &Self) -> bool {
         self.value == other.value
     }
 }
 
-impl<T: Display> Display for Parsed<T> {
+impl<T: Display> Display for Span<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.value.fmt(f)
     }
 }
 
-impl<T: Eq> Eq for Parsed<T> {}
+impl<T: Eq> Eq for Span<T> {}
 
-impl<T: PartialOrd + PartialEq> PartialOrd<Self> for Parsed<T> {
+impl<T: PartialOrd + PartialEq> PartialOrd<Self> for Span<T> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         self.value.partial_cmp(&other.value)
     }
 }
 
-impl<T: Ord> Ord for Parsed<T> {
+impl<T: Ord> Ord for Span<T> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.value.cmp(&other.value)
     }
 }
 
-impl<T> Parsed<T> {
-    pub(crate) fn map<U>(&self, f: impl Fn(&T) -> U) -> Parsed<U> {
-        Parsed {
+impl<T> Span<T> {
+    pub(crate) fn map<U>(&self, f: impl Fn(&T) -> U) -> Span<U> {
+        Span {
             value: f(&self.value),
-            start: self.start,
-            end: self.end,
+            span: self.span,
         }
-    }
-
-    pub(crate) fn span(&self) -> SourceSpan {
-        (self.start..self.end).into()
     }
 }
 
-fn ident() -> impl Parser<char, Parsed<String>, Error = Simple<char>> {
+fn ident() -> impl Parser<char, Span<String>, Error = Simple<char>> {
     filter(|c: &char| c.is_ascii_alphabetic())
         .chain(filter(|c: &char| c.is_ascii_alphanumeric() || *c == '_').repeated())
         .collect()
-        .map_with_span(|value: String, span: Range<usize>| Parsed {
-            start: span.start(),
-            end: span.end(),
+        .map_with_span(|value: String, span: Range<usize>| Span {
             value,
+            span: span.into(),
         })
 }
 
@@ -97,7 +90,7 @@ fn blank() -> impl Parser<char, (), Error = Simple<char>> {
 
 #[derive(Debug, Clone)]
 pub struct NullableIdent {
-    pub name: Parsed<String>,
+    pub name: Span<String>,
     pub nullable: bool,
     pub inner_nullable: bool,
 }
@@ -120,7 +113,7 @@ fn parse_nullable_ident() -> impl Parser<char, Vec<NullableIdent>, Error = Simpl
 
 #[derive(Debug, Clone)]
 pub struct TypeAnnotation {
-    pub name: Parsed<String>,
+    pub name: Span<String>,
     pub fields: Vec<NullableIdent>,
 }
 
@@ -140,9 +133,9 @@ impl TypeAnnotation {
 
 #[derive(Debug)]
 pub(crate) struct QuerySql {
-    pub(crate) start: usize,
+    pub(crate) span: SourceSpan,
     pub(crate) sql_str: String,
-    pub(crate) bind_params: Vec<Parsed<String>>,
+    pub(crate) bind_params: Vec<Span<String>>,
 }
 
 impl QuerySql {
@@ -189,7 +182,7 @@ impl QuerySql {
     }
 
     /// Parse all bind from an SQL query
-    fn parse_bind() -> impl Parser<char, Vec<Parsed<String>>, Error = Simple<char>> {
+    fn parse_bind() -> impl Parser<char, Vec<Span<String>>, Error = Simple<char>> {
         just(':')
             .ignore_then(ident())
             .separated_by(Self::sql_escaping())
@@ -203,17 +196,7 @@ impl QuerySql {
             .then_ignore(just(';'))
             .collect::<String>()
             .map_with_span(|mut sql_str, span: Range<usize>| {
-                let sql_start = span.start;
-                let bind_params: Vec<_> = Self::parse_bind()
-                    .parse(sql_str.clone())
-                    .unwrap()
-                    .into_iter()
-                    .map(|mut it| {
-                        it.start += sql_start;
-                        it.end += sql_start;
-                        it
-                    })
-                    .collect();
+                let bind_params: Vec<_> = Self::parse_bind().parse(sql_str.clone()).unwrap();
                 // Remove duplicate
                 let dedup_params: Vec<_> = bind_params
                     .iter()
@@ -225,15 +208,15 @@ impl QuerySql {
 
                 for bind_param in bind_params.iter().rev() {
                     let index = dedup_params.iter().position(|bp| bp == bind_param).unwrap();
-                    let start = bind_param.start - sql_start - 1;
-                    let end = bind_param.end - sql_start - 1;
+                    let start = bind_param.span.offset() - 1;
+                    let end = start + bind_param.span.len();
                     sql_str.replace_range(start..=end, &format!("${}", index + 1))
                 }
 
                 Self {
                     sql_str,
                     bind_params: dedup_params,
-                    start: span.start,
+                    span: span.into(),
                 }
             })
     }
@@ -258,16 +241,16 @@ impl Query {
 #[derive(Debug)]
 pub(crate) enum QueryDataStruct {
     Implicit { idents: Vec<NullableIdent> },
-    Named(Parsed<String>),
+    Named(Span<String>),
 }
 
 impl QueryDataStruct {
-    pub(crate) fn name_and_fields(
-        self,
-        registered_structs: &[TypeAnnotation],
-        query_name: &Parsed<String>,
+    pub(crate) fn name_and_fields<'a>(
+        &'a self,
+        registered_structs: &'a [TypeAnnotation],
+        query_name: &Span<String>,
         name_suffix: Option<&str>,
-    ) -> (Vec<NullableIdent>, Parsed<String>) {
+    ) -> (&'a [NullableIdent], Span<String>) {
         match self {
             QueryDataStruct::Implicit { idents } => (
                 idents,
@@ -282,9 +265,9 @@ impl QueryDataStruct {
             QueryDataStruct::Named(name) => (
                 registered_structs
                     .iter()
-                    .find_map(|it| (it.name == name).then(|| it.fields.clone()))
-                    .unwrap_or_default(),
-                name,
+                    .find_map(|it| (it.name == *name).then(|| it.fields.as_slice()))
+                    .unwrap_or(&[]),
+                name.clone(),
             ),
         }
     }
@@ -306,7 +289,7 @@ impl QueryDataStruct {
 
 #[derive(Debug)]
 pub(crate) struct QueryAnnotation {
-    pub(crate) name: Parsed<String>,
+    pub(crate) name: Span<String>,
     pub(crate) param: QueryDataStruct,
     pub(crate) row: QueryDataStruct,
 }
@@ -382,7 +365,6 @@ pub(crate) mod error {
 
     #[derive(Debug, ThisError, Diagnostic)]
     #[error("Couldn't parse queries")]
-    #[diagnostic(code(cornucopia::parser))]
     pub struct Error {
         #[source_code]
         pub src: NamedSource,

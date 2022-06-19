@@ -74,7 +74,6 @@ pub(crate) mod error {
 
     #[derive(Debug, ThisError, Diagnostic)]
     #[error("Couldn't run migration: {msg}.")]
-    #[diagnostic(code(cornucopia::run_migrations))]
     pub struct Error {
         pub msg: String,
         #[help]

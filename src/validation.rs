@@ -1,5 +1,5 @@
 use crate::{
-    parser::{self, NullableIdent, Parsed, QueryDataStruct, TypeAnnotation},
+    parser::{self, NullableIdent, QueryDataStruct, Span, TypeAnnotation},
     prepare_queries::PreparedField,
     read_queries::ModuleInfo,
     utils::has_duplicate,
@@ -14,15 +14,16 @@ pub(crate) struct Module {
 
 #[derive(Debug)]
 pub(crate) struct Query {
-    pub(crate) name: Parsed<String>,
+    pub(crate) name: Span<String>,
     pub(crate) params: QueryDataStruct,
-    pub(crate) bind_params: Vec<Parsed<String>>,
+    pub(crate) bind_params: Vec<Span<String>>,
     pub(crate) row: QueryDataStruct,
-    pub(crate) sql_start: usize,
+    pub(crate) sql_span: SourceSpan,
     pub(crate) sql_str: String,
 }
 
 use error::Error;
+use miette::SourceSpan;
 use postgres::Column;
 use postgres_types::Type;
 
@@ -36,10 +37,11 @@ pub(crate) fn duplicate_nullable_ident(
             .enumerate()
             .find(|(j, ident2)| *j != i && ident1.name == ident2.name)
         {
-            return Err(Error::DuplicateNullableCol {
+            return Err(Error::DuplicateFieldNullity {
                 src: info.into(),
-                dup_pos: (ident2.name.start..ident2.name.end).into(),
-                pos: (ident1.name.start..ident1.name.end).into(),
+                name: ident1.name.value.clone(),
+                first: ident1.name.span,
+                second: ident2.name.span,
             });
         }
     }
@@ -49,13 +51,14 @@ pub(crate) fn duplicate_nullable_ident(
 
 pub(crate) fn duplicate_sql_col_name(
     info: &ModuleInfo,
-    query_name: &Parsed<String>,
+    query_name: &Span<String>,
     cols: &[Column],
 ) -> Result<(), Error> {
-    if has_duplicate(cols, |col| col.name()).is_some() {
+    if let Some(col) = has_duplicate(cols, |col| col.name()) {
         Err(Error::DuplicateSqlColName {
             src: info.to_owned().into(),
-            pos: query_name.span(),
+            name: col.name().to_string(),
+            pos: query_name.span,
         })
     } else {
         Ok(())
@@ -66,21 +69,42 @@ pub(crate) fn query_name_already_used(
     info: &ModuleInfo,
     queries: &[parser::Query],
 ) -> Result<(), Error> {
-    for (i, query) in queries.iter().enumerate() {
-        if let Some((_, q)) = queries
+    for (i, first) in queries.iter().enumerate() {
+        if let Some(second) = queries[i + 1..]
             .iter()
-            .enumerate()
-            .find(|(j, q)| *j != i && q.annotation.name == query.annotation.name)
+            .find(|second| second.annotation.name == first.annotation.name)
         {
-            return Err(Error::DuplicateQueryName {
+            return Err(Error::DuplicateName {
                 src: info.into(),
-                pos1: (query.annotation.name.start..query.annotation.name.end).into(),
-                pos2: (q.annotation.name.start..q.annotation.name.end).into(),
+                ty: "query",
+                name: first.annotation.name.value.clone(),
+                first: first.annotation.name.span,
+                second: second.annotation.name.span,
             });
         }
     }
 
-    has_duplicate(queries.iter(), |q| &q.annotation.name);
+    Ok(())
+}
+
+pub(crate) fn named_type_already_used(
+    info: &ModuleInfo,
+    types: &[TypeAnnotation],
+) -> Result<(), Error> {
+    for (i, first) in types.iter().enumerate() {
+        if let Some(second) = types[i + 1..]
+            .iter()
+            .find(|second| second.name == first.name)
+        {
+            return Err(Error::DuplicateName {
+                src: info.into(),
+                ty: "type",
+                name: first.name.value.clone(),
+                first: first.name.span,
+                second: second.name.span,
+            });
+        }
+    }
 
     Ok(())
 }
@@ -97,9 +121,14 @@ pub(crate) fn nullable_column_name(
     {
         Ok(())
     } else {
-        Err(Error::InvalidNullableColumnName {
+        Err(Error::UnknownFieldName {
             src: info.into(),
-            pos: (nullable_col.name.start..nullable_col.name.end).into(),
+            pos: nullable_col.name.span,
+            known: stmt_cols
+                .iter()
+                .map(|it| it.name().to_string())
+                .collect::<Vec<_>>()
+                .join(", "),
         })
     }
 }
@@ -107,7 +136,7 @@ pub(crate) fn nullable_column_name(
 pub(crate) fn nullable_param_name(
     info: &ModuleInfo,
     nullable_col: &NullableIdent,
-    params: &[(Parsed<String>, Type)],
+    params: &[(Span<String>, Type)],
 ) -> Result<(), Error> {
     // If none of the row's columns match the nullable column
     if params
@@ -116,66 +145,42 @@ pub(crate) fn nullable_param_name(
     {
         Ok(())
     } else {
-        Err(Error::InvalidNullableColumnName {
+        Err(Error::UnknownFieldName {
             src: info.into(),
-            pos: (nullable_col.name.start..nullable_col.name.end).into(),
+            pos: nullable_col.name.span,
+            known: params
+                .iter()
+                .map(|it| it.0.value.to_string())
+                .collect::<Vec<_>>()
+                .join(", "),
         })
     }
 }
 
-pub(crate) fn named_struct_field(
+pub(crate) fn row_on_execute(
     info: &ModuleInfo,
-    name: &Parsed<String>,
-    fields: &[PreparedField],
-    prev_name: &Parsed<String>,
-    prev_fields: &[PreparedField],
+    name: &Span<String>,
+    query: &SourceSpan,
+    row: &QueryDataStruct,
+    columns: &[Column],
 ) -> Result<(), Error> {
-    for field in fields {
-        let mut found = false;
-        for prev_field in prev_fields {
-            if prev_field.name == field.name {
-                if prev_field.ty != field.ty {
-                    return Err(Error::IncompatibleNamedStructs {
-                        src: info.into(),
-                        label2: format!(
-                            "column `{}` is defined with type `{}` here",
-                            field.name,
-                            field.ty.pg_ty()
-                        ),
-                        pos1: (prev_name.start..prev_name.end).into(),
-                        label1: format!("but here it has type `{}`", prev_field.ty.pg_ty()),
-                        pos2: (name.start..name.end).into(),
-                    });
-                } else {
-                    found = true;
-                }
-            }
-        }
-        if !found {
-            return Err(Error::IncompatibleNamedStructs {
+    let row = match row {
+        QueryDataStruct::Implicit { idents } => match (
+            idents.first().map(|it| it.name.span),
+            idents.last().map(|it| it.name.span),
+        ) {
+            (Some(first), Some(last)) => Some((first.offset()..last.offset() + last.len()).into()),
+            _ => None,
+        },
+        QueryDataStruct::Named(name) => Some(name.span),
+    };
+    if let Some(row) = row {
+        if columns.is_empty() {
+            return Err(Error::RowOnExecute {
                 src: info.into(),
-                label1: format!("column `{}` defined here", &field.name),
-                pos2: (prev_name.start..prev_name.end).into(),
-                label2: format!("column `{}` not found", &field.name),
-                pos1: (name.start..name.end).into(),
-            });
-        }
-    }
-
-    for prev_field in prev_fields {
-        let mut found = false;
-        for field in fields {
-            if prev_field.name == field.name {
-                found = true;
-            }
-        }
-        if !found {
-            return Err(Error::IncompatibleNamedStructs {
-                src: info.into(),
-                label1: format!("column `{}` defined here", &prev_field.name),
-                pos1: (prev_name.start..prev_name.end).into(),
-                label2: format!("column `{}` not found", &prev_field.name),
-                pos2: (name.start..name.end).into(),
+                name: name.value.clone(),
+                row,
+                query: *query,
             });
         }
     }
@@ -183,8 +188,60 @@ pub(crate) fn named_struct_field(
     Ok(())
 }
 
+pub(crate) fn named_struct_field(
+    info: &ModuleInfo,
+    name: &Span<String>,
+    fields: &[PreparedField],
+    prev_name: &Span<String>,
+    prev_fields: &[PreparedField],
+) -> Result<(), Error> {
+    if let Some((field, prev_field)) = fields.iter().find_map(|f| {
+        prev_fields
+            .iter()
+            .find_map(|prev_f| (f.name == prev_f.name && f.ty != prev_f.ty).then(|| (f, prev_f)))
+    }) {
+        return Err(Error::IncompatibleNamedType {
+            src: info.into(),
+            name: name.value.clone(),
+            first_label: format!(
+                "column `{}` is expected to have type `{}` here",
+                field.name,
+                field.ty.pg_ty()
+            ),
+            second: prev_name.span,
+            second_label: format!("but here it has type `{}`", prev_field.ty.pg_ty()),
+            first: name.span,
+        });
+    }
+
+    if let Some(field) = fields.iter().find(|f| !prev_fields.contains(f)) {
+        return Err(Error::IncompatibleNamedType {
+            src: info.into(),
+            name: name.value.clone(),
+            second_label: format!("column `{}` expected here", &field.name),
+            second: name.span,
+            first_label: format!("column `{}` not found", &field.name),
+            first: prev_name.span,
+        });
+    }
+
+    if let Some(prev_field) = prev_fields.iter().find(|f| !fields.contains(f)) {
+        return Err(Error::IncompatibleNamedType {
+            src: info.into(),
+            name: name.value.clone(),
+            second_label: format!("column `{}` expected here", &prev_field.name),
+            second: prev_name.span,
+            first_label: format!("column `{}` not found", &prev_field.name),
+            first: name.span,
+        });
+    }
+
+    Ok(())
+}
+
 pub(crate) fn validate_module(info: ModuleInfo, module: parser::Module) -> Result<Module, Error> {
     query_name_already_used(&info, &module.queries)?;
+    named_type_already_used(&info, &module.types)?;
     for ty in module.types.iter() {
         duplicate_nullable_ident(&info, &ty.fields)?;
     }
@@ -203,7 +260,7 @@ pub(crate) fn validate_module(info: ModuleInfo, module: parser::Module) -> Resul
             bind_params: query.sql.bind_params,
             row: query.annotation.row,
             sql_str: query.sql.sql_str,
-            sql_start: query.sql.start,
+            sql_span: query.sql.span,
         };
 
         validated_queries.push(validated_query);
@@ -224,51 +281,70 @@ pub mod error {
     #[derive(Debug, ThisError, Diagnostic)]
     #[error("Couldn't validate queries.")]
     pub enum Error {
-        #[diagnostic(
-            code(cornucopia::validation::duplicate_sql_col_name),
-            help("consider disambiguing the column names in your SQL using an `AS` clause.")
-        )]
+        #[error("column `{name}` appear multiple time")]
+        #[diagnostic(help("disambiguate column names in your SQL using an `AS` clause"))]
         DuplicateSqlColName {
             #[source_code]
             src: NamedSource,
+            name: String,
             #[label("query returns one or more columns with the same name")]
             pos: SourceSpan,
         },
-        #[diagnostic(code(cornucopia::validation::duplicate_nullable_col))]
-        DuplicateNullableCol {
+        #[error("the field `{name}` is declared null multiple time")]
+        #[diagnostic(help("remove one of the two declaration"))]
+        DuplicateFieldNullity {
             #[source_code]
             src: NamedSource,
-            #[label("this nullable column name is already in use")]
-            dup_pos: SourceSpan,
-            #[label("first used here")]
+            name: String,
+            #[label("previous nullity declaration")]
+            first: SourceSpan,
+            #[label("redeclared here")]
+            second: SourceSpan,
+        },
+        #[error("the {ty} `{name}` is defined multiple time")]
+        #[diagnostic(help("use a different name for one of those"))]
+        DuplicateName {
+            #[source_code]
+            src: NamedSource,
+            name: String,
+            ty: &'static str,
+            #[label("previous definition of the {ty} here")]
+            first: SourceSpan,
+            #[label("redefined here")]
+            second: SourceSpan,
+        },
+        #[error("unknown field")]
+        #[diagnostic(help("use one of those names: {known}"))]
+        UnknownFieldName {
+            #[source_code]
+            src: NamedSource,
+            #[label("no field with this name was found")]
             pos: SourceSpan,
+            known: String,
         },
-        #[diagnostic(code(cornucopia::validation::duplicate_query_name))]
-        DuplicateQueryName {
+        #[error("named type `{name}` as conflicting usage")]
+        #[diagnostic(help("use a different named type for each query"))]
+        IncompatibleNamedType {
             #[source_code]
             src: NamedSource,
-            #[label("this query name is already in use")]
-            pos2: SourceSpan,
-            #[label("first defined here")]
-            pos1: SourceSpan,
+            name: String,
+            first_label: String,
+            #[label("{first_label}")]
+            first: SourceSpan,
+            second_label: String,
+            #[label("{second_label}")]
+            second: SourceSpan,
         },
-        #[diagnostic(code(cornucopia::validation::invalid_nullable_col))]
-        InvalidNullableColumnName {
+        #[error("the query `{name}` declare a row but return nothing")]
+        #[diagnostic(help("remove row declaration"))]
+        RowOnExecute {
             #[source_code]
             src: NamedSource,
-            #[label("no column with this name found")]
-            pos: SourceSpan,
-        },
-        #[diagnostic(code(cornucopia::validation::incompatible_named_structs))]
-        IncompatibleNamedStructs {
-            #[source_code]
-            src: NamedSource,
-            label1: String,
-            #[label("{label1}")]
-            pos1: SourceSpan,
-            label2: String,
-            #[label("{label2}")]
-            pos2: SourceSpan,
+            name: String,
+            #[label("row declared here")]
+            row: SourceSpan,
+            #[label("but query return nothing")]
+            query: SourceSpan,
         },
     }
 }

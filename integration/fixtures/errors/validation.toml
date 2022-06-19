@@ -4,37 +4,16 @@ query = '''
 --! new_author(id?, id?)
 INSERT INTO Author (id, name) VALUES (:id, :id);
 '''
-migration = '''
-CREATE TABLE author (
-  id SERIAL,
-  name TEXT
-);
-'''
 error = '''
-ValidateQueries(
-    DuplicateNullableCol {
-        src: NamedSource {
-            name: "queries/module_1.sql",
-            source: "<redacted>",
-        ,
-        dup_pos: SourceSpan {
-            offset: SourceOffset(
-                20,
-            ),
-            length: SourceOffset(
-                2,
-            ),
-        },
-        pos: SourceSpan {
-            offset: SourceOffset(
-                15,
-            ),
-            length: SourceOffset(
-                2,
-            ),
-        },
-    },
-)'''
+× the field `id` is declared null multiple time
+   ╭─[queries/test.sql:1:1]
+ 1 │ --! new_author(id?, id?)
+   ·                ─┬   ─┬
+   ·                 │    ╰── redeclared here
+   ·                 ╰── previous nullity declaration
+ 2 │ INSERT INTO Author (id, name) VALUES (:id, :id);
+   ╰────
+  help: remove one of the two declaration'''
 
 [[test]]
 name = 'ColumnAlreadyNullable'
@@ -42,69 +21,48 @@ query = '''
 --! new_author: (id?, name?, id?)
 SELECT id, name FROM Author;
 '''
-migration = '''
-CREATE TABLE author (
-  id SERIAL,
-  name TEXT
-);
-'''
 error = '''
-ValidateQueries(
-    DuplicateNullableCol {
-        src: NamedSource {
-            name: "queries/module_1.sql",
-            source: "<redacted>",
-        ,
-        dup_pos: SourceSpan {
-            offset: SourceOffset(
-                29,
-            ),
-            length: SourceOffset(
-                2,
-            ),
-        },
-        pos: SourceSpan {
-            offset: SourceOffset(
-                17,
-            ),
-            length: SourceOffset(
-                2,
-            ),
-        },
-    },
-)'''
+× the field `id` is declared null multiple time
+   ╭─[queries/test.sql:1:1]
+ 1 │ --! new_author: (id?, name?, id?)
+   ·                  ─┬          ─┬
+   ·                   │           ╰── redeclared here
+   ·                   ╰── previous nullity declaration
+ 2 │ SELECT id, name FROM Author;
+   ╰────
+  help: remove one of the two declaration'''
 
 [[test]]
-name = 'InvalidNullableColumnName'
+name = 'UnknownColumnName'
 query = '''
---! new_author: (name?)
-SELECT id FROM Author;
-'''
-migration = '''
-CREATE TABLE author (
-  id SERIAL,
-  name TEXT
-);
+--! new_author: (age?)
+SELECT id, name FROM Author;
 '''
 error = '''
-PrepareQueries(
-    Validation(
-        InvalidNullableColumnName {
-            src: NamedSource {
-                name: "queries/module_1.sql",
-                source: "<redacted>",
-            ,
-            pos: SourceSpan {
-                offset: SourceOffset(
-                    17,
-                ),
-                length: SourceOffset(
-                    4,
-                ),
-            },
-        },
-    ),
-)'''
+× unknown field
+   ╭─[queries/test.sql:1:1]
+ 1 │ --! new_author: (age?)
+   ·                  ─┬─
+   ·                   ╰── no field with this name was found
+ 2 │ SELECT id, name FROM Author;
+   ╰────
+  help: use one of those names: id, name'''
+
+[[test]]
+name = 'UnknownParamsName'
+query = '''
+--! new_author (age?)
+INSERT INTO Author (id, name) VALUES (:id, :name);
+'''
+error = '''
+× unknown field
+   ╭─[queries/test.sql:1:1]
+ 1 │ --! new_author (age?)
+   ·                 ─┬─
+   ·                  ╰── no field with this name was found
+ 2 │ INSERT INTO Author (id, name) VALUES (:id, :name);
+   ╰────
+  help: use one of those names: id, name'''
 
 [[test]]
 name = 'QueryAlreadyExists'
@@ -115,40 +73,41 @@ SELECT id FROM Author;
 --! new_author
 SELECT id FROM Author;
 '''
-migration = '''
-CREATE TABLE author (
-  id SERIAL,
-  name TEXT
-);
-'''
 error = '''
-ValidateQueries(
-    DuplicateQueryName {
-        src: NamedSource {
-            name: "queries/module_1.sql",
-            source: "<redacted>",
-        ,
-        pos2: SourceSpan {
-            offset: SourceOffset(
-                43,
-            ),
-            length: SourceOffset(
-                10,
-            ),
-        },
-        pos1: SourceSpan {
-            offset: SourceOffset(
-                4,
-            ),
-            length: SourceOffset(
-                10,
-            ),
-        },
-    },
-)'''
+× the query `new_author` is defined multiple time
+   ╭─[queries/test.sql:1:1]
+ 1 │ --! new_author
+   ·     ─────┬────
+   ·          ╰── previous definition of the query here
+ 2 │ SELECT id FROM Author;
+ 3 │ 
+ 4 │ --! new_author
+   ·     ─────┬────
+   ·          ╰── redefined here
+ 5 │ SELECT id FROM Author;
+   ╰────
+  help: use a different name for one of those'''
 
 [[test]]
-name = 'NamedStructInvalidFields'
+name = 'TypeAlreadyExists'
+query = '''
+--: Row
+--: Row(name?)
+'''
+error = '''
+× the type `Row` is defined multiple time
+   ╭─[queries/test.sql:1:1]
+ 1 │ --: Row
+   ·     ─┬─
+   ·      ╰── previous definition of the type here
+ 2 │ --: Row(name?)
+   ·     ─┬─
+   ·      ╰── redefined here
+   ╰────
+  help: use a different name for one of those'''
+
+[[test]]
+name = 'NamedTypeMissingColumn'
 query = '''
 --! author_names: Row
 SELECT name FROM Author;
@@ -156,38 +115,101 @@ SELECT name FROM Author;
 --! author_ids: Row
 SELECT id FROM Author;
 '''
-migration = '''
-CREATE TABLE author (
-  id SERIAL,
-  name TEXT
-);
+error = '''
+× named type `Row` as conflicting usage
+   ╭─[queries/test.sql:1:1]
+ 1 │ --! author_names: Row
+   ·                   ─┬─
+   ·                    ╰── column `name` expected here
+ 2 │ SELECT name FROM Author;
+ 3 │ 
+ 4 │ --! author_ids: Row
+   ·                 ─┬─
+   ·                  ╰── column `name` not found
+ 5 │ SELECT id FROM Author;
+   ╰────
+  help: use a different named type for each query'''
+
+[[test]]
+name = 'NamedTypeMissingColumn2'
+query = '''
+--! author_names: Row
+SELECT name FROM Author;
+
+--! author: Row
+SELECT name, id FROM Author;
 '''
 error = '''
-PrepareQueries(
-    Validation(
-        IncompatibleNamedStructs {
-            src: NamedSource {
-                name: "queries/module_1.sql",
-                source: "<redacted>",
-            ,
-            label1: "column `name` defined here",
-            pos1: SourceSpan {
-                offset: SourceOffset(
-                    18,
-                ),
-                length: SourceOffset(
-                    3,
-                ),
-            },
-            label2: "column `name` not found",
-            pos2: SourceSpan {
-                offset: SourceOffset(
-                    64,
-                ),
-                length: SourceOffset(
-                    3,
-                ),
-            },
-        },
-    ),
-)'''
+× named type `Row` as conflicting usage
+   ╭─[queries/test.sql:1:1]
+ 1 │ --! author_names: Row
+   ·                   ─┬─
+   ·                    ╰── column `id` not found
+ 2 │ SELECT name FROM Author;
+ 3 │ 
+ 4 │ --! author: Row
+   ·             ─┬─
+   ·              ╰── column `id` expected here
+ 5 │ SELECT name, id FROM Author;
+   ╰────
+  help: use a different named type for each query'''
+
+[[test]]
+name = 'NamedTypeWrongColumnType'
+query = '''
+--! author_names: Row
+SELECT name FROM Author;
+
+--! author_ids: Row
+SELECT id as name FROM Author;
+'''
+error = '''
+× named type `Row` as conflicting usage
+   ╭─[queries/test.sql:1:1]
+ 1 │ --! author_names: Row
+   ·                   ─┬─
+   ·                    ╰── column `name` is expected to have type `text` here
+ 2 │ SELECT name FROM Author;
+ 3 │ 
+ 4 │ --! author_ids: Row
+   ·                 ─┬─
+   ·                  ╰── but here it has type `int4`
+ 5 │ SELECT id as name FROM Author;
+   ╰────
+  help: use a different named type for each query'''
+
+[[test]]
+name = 'ImplicitExecuteRow'
+query = '''
+--! delete: (name?)
+DELETE FROM author;
+'''
+error = '''
+× the query `delete` declare a row but return nothing
+   ╭─[queries/test.sql:1:1]
+ 1 │ --! delete: (name?)
+   ·              ──┬─
+   ·                ╰── row declared here
+ 2 │ DELETE FROM author;
+   · ─────────┬─────────
+   ·          ╰── but query return nothing
+   ╰────
+  help: remove row declaration'''
+
+[[test]]
+name = 'NamedExecuteRow'
+query = '''
+--! delete: Row
+DELETE FROM author;
+'''
+error = '''
+× the query `delete` declare a row but return nothing
+   ╭─[queries/test.sql:1:1]
+ 1 │ --! delete: Row
+   ·             ─┬─
+   ·              ╰── row declared here
+ 2 │ DELETE FROM author;
+   · ─────────┬─────────
+   ·          ╰── but query return nothing
+   ╰────
+  help: remove row declaration'''

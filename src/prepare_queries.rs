@@ -5,7 +5,7 @@ use postgres::Client;
 use postgres_types::{Kind, Type};
 
 use crate::{
-    parser::{Parsed, TypeAnnotation},
+    parser::{Span, TypeAnnotation},
     read_queries::ModuleInfo,
     type_registrar::CornucopiaType,
     type_registrar::TypeRegistrar,
@@ -36,7 +36,7 @@ pub struct PreparedField {
 /// A params struct
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedParams {
-    pub(crate) name: Parsed<String>,
+    pub(crate) name: Span<String>,
     pub(crate) fields: Vec<PreparedField>,
     pub(crate) is_copy: bool,
     pub(crate) queries: Vec<usize>,
@@ -45,7 +45,7 @@ pub(crate) struct PreparedParams {
 /// A returned row struct
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedRow {
-    pub(crate) name: Parsed<String>,
+    pub(crate) name: Span<String>,
     pub(crate) fields: Vec<PreparedField>,
     pub(crate) is_copy: bool,
 }
@@ -85,7 +85,7 @@ impl PreparedModule {
     fn add_row(
         &mut self,
         registrar: &TypeRegistrar,
-        name: Parsed<String>,
+        name: Span<String>,
         fields: Vec<PreparedField>,
     ) -> Result<(usize, Vec<usize>), Error> {
         assert!(!fields.is_empty());
@@ -121,7 +121,7 @@ impl PreparedModule {
         }
     }
 
-    fn add_param(&mut self, name: Parsed<String>, query_idx: usize) -> Result<usize, Error> {
+    fn add_param(&mut self, name: Span<String>, query_idx: usize) -> Result<usize, Error> {
         let fields = &self.queries.get_index(query_idx).unwrap().1.params;
         assert!(!fields.is_empty());
         match self.params.entry(name.value.clone()) {
@@ -306,14 +306,14 @@ fn prepare_query(
         bind_params,
         row,
         sql_str,
-        sql_start,
+        sql_span,
     }: validation::Query,
     module_info: &ModuleInfo,
 ) -> Result<(), Error> {
     // Prepare the statement
     let stmt = client
         .prepare(&sql_str)
-        .map_err(|e| Error::new_db_err(e, module_info, sql_start, &name))?;
+        .map_err(|e| Error::new_db_err(e, module_info, &sql_span, &name))?;
 
     let (nullable_params_fields, params_name) =
         params.name_and_fields(types, &name, Some("Params"));
@@ -324,8 +324,8 @@ fn prepare_query(
             .iter()
             .zip(stmt_params)
             .map(|(a, b)| (a.to_owned(), b.to_owned()))
-            .collect::<Vec<(Parsed<String>, Type)>>();
-        for nullable_col in &nullable_params_fields {
+            .collect::<Vec<(Span<String>, Type)>>();
+        for nullable_col in nullable_params_fields {
             // If none of the row's columns match the nullable column
             validation::nullable_param_name(&module.info, nullable_col, &params)
                 .map_err(Error::from)?;
@@ -351,9 +351,11 @@ fn prepare_query(
 
     let row_fields = {
         let stmt_cols = stmt.columns();
+        // Check for row declaration on execute
+        validation::row_on_execute(&module.info, &name, &sql_span, &row, stmt_cols)?;
         // Check for duplicate names
         validation::duplicate_sql_col_name(&module.info, &name, stmt_cols).map_err(Error::from)?;
-        for nullable_col in &nullable_row_fields {
+        for nullable_col in nullable_row_fields {
             // If none of the row's columns match the nullable column
             validation::nullable_column_name(&module.info, nullable_col, stmt_cols)
                 .map_err(Error::from)?;
@@ -397,15 +399,13 @@ pub(crate) mod error {
     use thiserror::Error as ThisError;
 
     use crate::{
-        parser::Parsed, read_queries::ModuleInfo,
-        type_registrar::error::Error as PostgresTypeError, utils::db_err,
-        validation::error::Error as ValidationError,
+        parser::Span, read_queries::ModuleInfo, type_registrar::error::Error as PostgresTypeError,
+        utils::db_err, validation::error::Error as ValidationError,
     };
 
     #[derive(Debug, ThisError, Diagnostic)]
     pub enum Error {
         #[error("Couldn't prepare query: {msg}")]
-        #[diagnostic(code(cornucopia::prepare_queries))]
         Db {
             msg: String,
             #[help]
@@ -427,8 +427,8 @@ pub(crate) mod error {
         pub(crate) fn new_db_err(
             err: postgres::Error,
             module_info: &ModuleInfo,
-            query_start: usize,
-            query_name: &Parsed<String>,
+            query_span: &SourceSpan,
+            query_name: &Span<String>,
         ) -> Self {
             let msg = format!("{:#}", err);
             if let Some((position, msg, help)) = db_err(err) {
@@ -436,16 +436,14 @@ pub(crate) mod error {
                     msg,
                     help,
                     src: module_info.into(),
-                    err_span: Some(
-                        (position as usize + query_start..position as usize + query_start).into(),
-                    ),
+                    err_span: Some((query_span.offset() + position as usize - 1).into()),
                 }
             } else {
                 Self::Db {
                     msg,
                     help: None,
                     src: module_info.into(),
-                    err_span: Some(query_name.span()),
+                    err_span: Some(query_name.span),
                 }
             }
         }

@@ -122,7 +122,6 @@ pub(crate) mod error {
     #[derive(Debug, ThisError, Diagnostic)]
     #[error("{msg}")]
     #[diagnostic(
-        code(cornucopia::container),
         help("if you are using `docker`, please ensure that the daemon is up-and-running. You must also ensure that no container named `cornucopia_postgres` already exists.")
     )]
     pub struct Error {
