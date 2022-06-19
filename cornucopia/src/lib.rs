@@ -13,10 +13,12 @@ mod validation;
 pub mod conn;
 pub mod container;
 
-use std::path::Path;
+use std::{
+    path::Path,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use postgres::Client;
-use time::OffsetDateTime;
 
 use codegen::generate as generate_internal;
 use error::{NewMigrationError, WriteOutputError};
@@ -40,7 +42,10 @@ pub fn run_migrations(client: &mut Client, migrations: Vec<Migration>) -> Result
 /// where `timestamp is the unix time when the migration was created.`
 pub fn new_migration(migrations_path: &str, name: &str) -> Result<(), Error> {
     // Create a timestamp of the current time.
-    let unix_ts = OffsetDateTime::now_utc().unix_timestamp();
+    let unix_ts = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
     // Format the target file name
     let file_path = Path::new(&migrations_path).join(format!("{}_{}.sql", unix_ts, name));
     // Write file with header

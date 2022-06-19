@@ -308,7 +308,6 @@ dependencies = [
  "postgres",
  "postgres-types",
  "thiserror",
- "time",
 ]
 
 [[package]]
