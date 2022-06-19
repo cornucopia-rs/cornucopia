@@ -1,15 +1,16 @@
-use super::prepare_queries::PreparedModule;
+use std::fmt::Write;
+
+use heck::ToUpperCamelCase;
+use indexmap::IndexMap;
+
 use crate::{
     prepare_queries::{
-        Preparation, PreparedContent, PreparedField, PreparedParams, PreparedQuery, PreparedRow,
-        PreparedType,
+        Preparation, PreparedContent, PreparedField, PreparedModule, PreparedParams, PreparedQuery,
+        PreparedRow, PreparedType,
     },
     utils::{join_comma, join_ln},
     CodegenSettings,
 };
-use heck::ToUpperCamelCase;
-use indexmap::IndexMap;
-use std::fmt::Write;
 
 // write! without errors
 // Maybe something fancier later

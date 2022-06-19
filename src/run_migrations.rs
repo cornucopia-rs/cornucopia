@@ -1,29 +1,24 @@
-use crate::read_migrations::read_migrations;
-use error::Error;
 use postgres::Client;
+
+use crate::read_migrations::Migration;
+
+use self::error::Error;
 
 /// Runs all migrations in the specified directory. Only `.sql` files are considered.
 ///
 /// # Errors
 /// Returns an error if a migration can't be read or installed.
-pub(crate) fn run_migrations(client: &mut Client, dir_path: &str) -> Result<(), Error> {
+pub(crate) fn run_migrations(client: &mut Client, migrations: Vec<Migration>) -> Result<(), Error> {
     // Create the table holding Cornucopia migrations
-    create_migration_table(client).map_err(|err| Error::new(err.into(), None, dir_path))?;
+    create_migration_table(client).map_err(Error::new_db)?;
 
     // Install each migration that is not already installed.
-    for migration in
-        read_migrations(dir_path).map_err(|err| Error::new(err.into(), None, dir_path))?
-    {
+    for migration in migrations {
         let migration_not_installed = !is_installed(client, &migration.timestamp, &migration.name)
-            .map_err(|err| Error::new(err.into(), None, &migration.path))?;
+            .map_err(|err| Error::new_migration(err, migration.clone()))?;
         if migration_not_installed {
-            install_migration(
-                client,
-                &migration.timestamp,
-                &migration.name,
-                &migration.sql,
-            )
-            .map_err(|err| Error::new(err.into(), Some(&migration.sql), &migration.path))?;
+            install_migration(client, &migration)
+                .map_err(|err| Error::new_migration(err, migration))?;
         }
     }
     Ok(())
@@ -56,9 +51,12 @@ fn is_installed(client: &mut Client, timestamp: &i64, name: &str) -> Result<bool
 
 fn install_migration(
     client: &mut Client,
-    timestamp: &i64,
-    name: &str,
-    sql: &str,
+    Migration {
+        timestamp,
+        name,
+        sql,
+        ..
+    }: &Migration,
 ) -> Result<(), postgres::Error> {
     client.batch_execute(sql)?;
     client.execute(
@@ -69,75 +67,51 @@ fn install_migration(
 }
 
 pub(crate) mod error {
-    use std::{error::Error as ErrorTrait, fmt::Display};
-
-    use super::super::read_migrations::error::Error as MigrationError;
-    use postgres::error::ErrorPosition;
+    use miette::{Diagnostic, NamedSource, SourceSpan};
     use thiserror::Error as ThisError;
 
-    #[derive(Debug, ThisError)]
-    #[error("{0}")]
-    pub enum ErrorVariant {
-        ReadMigration(#[from] MigrationError),
-        Db(#[from] postgres::Error),
-    }
+    use crate::{read_migrations::Migration, utils::db_err};
 
-    #[derive(Debug)]
+    #[derive(Debug, ThisError, Diagnostic)]
+    #[error("Couldn't run migration: {msg}.")]
+    #[diagnostic(code(cornucopia::run_migrations))]
     pub struct Error {
-        path: String,
-        line: Option<usize>,
-        err: ErrorVariant,
+        pub msg: String,
+        #[help]
+        pub help: Option<String>,
+        #[source_code]
+        pub src: NamedSource,
+        #[label("error occurs near this location")]
+        pub err_span: Option<SourceSpan>,
     }
 
     impl Error {
-        pub fn new(err: ErrorVariant, sql: Option<&str>, path: &str) -> Self {
-            let path = path.to_string();
-            let mut line = None;
-            if let Some(sql) = sql {
-                if let ErrorVariant::Db(e) = &err {
-                    if let Some(db_err) = e.as_db_error() {
-                        if let Some(ErrorPosition::Original(position)) = db_err.position() {
-                            // Count new lines up to the position where to error occured.
-                            line = Some(
-                                sql[..*position as usize]
-                                    .chars()
-                                    .filter(|&c| c == '\n')
-                                    .count()
-                                    + 1,
-                            );
-                        }
-                    }
-                };
-            }
-
-            Error { err, path, line }
-        }
-    }
-
-    impl Display for Error {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            match &self.err {
-                ErrorVariant::ReadMigration(_) => {
-                    write!(f, "{}", self.err)
+        pub(crate) fn new_migration(err: postgres::Error, migration: Migration) -> Self {
+            let msg = format!("{:#}", err);
+            if let Some((position, msg, help)) = db_err(err) {
+                Self {
+                    msg,
+                    help,
+                    src: migration.into(),
+                    err_span: Some((position as usize..position as usize).into()),
                 }
-                ErrorVariant::Db(_) => match self.line {
-                    Some(line) => write!(
-                        f,
-                        "Error while running migration [\"{}\", line: {}] ({})",
-                        self.path,
-                        line,
-                        self.err.source().unwrap().source().unwrap()
-                    ),
-                    None => write!(
-                        f,
-                        "Error while running migration [\"{}\"] ({})",
-                        self.path,
-                        self.err.source().unwrap().source().unwrap()
-                    ),
-                },
+            } else {
+                Self {
+                    msg,
+                    help: None,
+                    src: migration.into(),
+                    err_span: None,
+                }
+            }
+        }
+
+        pub(crate) fn new_db(err: postgres::Error) -> Self {
+            Self {
+                msg: format!("{:#}", err),
+                help: None,
+                src: NamedSource::new("", ""),
+                err_span: None,
             }
         }
     }
-
-    impl std::error::Error for Error {}
 }

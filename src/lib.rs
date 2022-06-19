@@ -10,29 +10,29 @@ mod type_registrar;
 mod utils;
 mod validation;
 
-pub use cli::run;
-pub use error::Error;
-
 pub mod conn;
 pub mod container;
 
-use codegen::generate as generate_internal;
-use error::{NewMigrationError, WriteCodeGenFileError};
-use parser::parse_query_module;
+use std::path::Path;
+
 use postgres::Client;
+use time::OffsetDateTime;
+
+use codegen::generate as generate_internal;
+use error::{NewMigrationError, WriteOutputError};
+use parser::parse_query_module;
 use prepare_queries::prepare;
 use read_queries::read_query_modules;
 use run_migrations::run_migrations as run_migrations_internal;
-use std::{path::Path, rc::Rc};
-use time::OffsetDateTime;
 use validation::validate_module;
 
+pub use cli::run;
+pub use error::Error;
+pub use read_migrations::{read_migrations, Migration};
+
 /// Runs the migrations at `migrations_path`.
-pub fn run_migrations(client: &mut Client, migrations_path: &str) -> Result<(), Error> {
-    Ok(crate::run_migrations::run_migrations(
-        client,
-        migrations_path,
-    )?)
+pub fn run_migrations(client: &mut Client, migrations: Vec<Migration>) -> Result<(), Error> {
+    Ok(crate::run_migrations::run_migrations(client, migrations)?)
 }
 
 /// Creates a new migration file at the specified `migrations_path`.
@@ -72,10 +72,9 @@ pub fn generate_live(
     let modules_info = read_query_modules(queries_path)?;
 
     let mut validated_modules = Vec::new();
-    for module_info in modules_info {
-        let info = Rc::new(module_info);
+    for info in modules_info {
         // Parse
-        let parsed_module = parse_query_module(&info.path, &info.content)?;
+        let parsed_module = parse_query_module(&info)?;
         // Validate
         validated_modules.push(validate_module(info, parsed_module)?);
     }
@@ -105,15 +104,15 @@ pub fn generate_managed(
     let modules_info = read_query_modules(queries_path)?;
     let mut validated_modules = Vec::new();
     for info in modules_info {
-        let info = Rc::new(info);
         // Parse
-        let parsed_module = parse_query_module(&info.path, &info.content)?;
+        let parsed_module = parse_query_module(&info)?;
         // Validate
         validated_modules.push(validate_module(info, parsed_module)?);
     }
     container::setup(podman)?;
     let mut client = conn::cornucopia_conn()?;
-    run_migrations_internal(&mut client, migrations_path)?;
+    let migrations = read_migrations(migrations_path)?;
+    run_migrations_internal(&mut client, migrations)?;
     let prepared_modules = prepare(&mut client, validated_modules)?;
     let generated_code = generate_internal(prepared_modules, settings);
     container::cleanup(podman)?;
@@ -127,7 +126,7 @@ pub fn generate_managed(
 
 fn write_generated_code(destination: &str, generated_code: &str) -> Result<(), Error> {
     Ok(
-        std::fs::write(destination, generated_code).map_err(|err| WriteCodeGenFileError {
+        std::fs::write(destination, generated_code).map_err(|err| WriteOutputError {
             err,
             file_path: String::from(destination),
         })?,

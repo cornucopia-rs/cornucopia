@@ -1,0 +1,65 @@
+[[test]]
+name = 'ColumnNameAlreadyTaken'
+query = '''
+--! items
+SELECT name, price AS name FROM item;
+'''
+migration = '''
+CREATE TABLE item (
+  name TEXT,
+  price INTEGER
+);
+'''
+error = '''
+PrepareQueries(
+    Validation(
+        DuplicateSqlColName {
+            src: NamedSource {
+                name: "queries/module_1.sql",
+                source: "<redacted>",
+            ,
+            pos: SourceSpan {
+                offset: SourceOffset(
+                    4,
+                ),
+                length: SourceOffset(
+                    5,
+                ),
+            },
+        },
+    ),
+)'''
+
+[[test]]
+name = 'InconsistentTypes'
+query = '''
+--! insert_author
+INSERT INTO Author (id, name) VALUES (:name, :name);
+'''
+migration = '''
+CREATE TABLE author (
+  id SERIAL,
+  name TEXT
+);
+'''
+error = '''
+PrepareQueries(
+    Db {
+        msg: "inconsistent types deduced for parameter $1",
+        help: None,
+        src: NamedSource {
+            name: "queries/module_1.sql",
+            source: "<redacted>",
+        ,
+        err_span: Some(
+            SourceSpan {
+                offset: SourceOffset(
+                    61,
+                ),
+                length: SourceOffset(
+                    0,
+                ),
+            },
+        ),
+    },
+)'''

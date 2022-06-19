@@ -1,0 +1,15 @@
+[[codegen]]
+name = "Auto build"
+base_path = "examples/auto_build"
+run = true
+
+[[codegen]]
+name = "Basic sync"
+base_path = "examples/basic_sync"
+sync = true
+run = true
+
+[[codegen]]
+name = "Basic async"
+base_path = "examples/basic_async"
+run = true

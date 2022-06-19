@@ -3,6 +3,9 @@ use std::{fmt::Display, ops::Range};
 use chumsky::prelude::*;
 use error::Error;
 use heck::ToUpperCamelCase;
+use miette::SourceSpan;
+
+use crate::read_queries::ModuleInfo;
 
 /// Th    if is data structure holds a value and the context in which it was parsed.
 /// This context is used for error reporting.
@@ -52,6 +55,10 @@ impl<T> Parsed<T> {
             start: self.start,
             end: self.end,
         }
+    }
+
+    pub(crate) fn span(&self) -> SourceSpan {
+        (self.start..self.end).into()
     }
 }
 
@@ -133,6 +140,7 @@ impl TypeAnnotation {
 
 #[derive(Debug)]
 pub(crate) struct QuerySql {
+    pub(crate) start: usize,
     pub(crate) sql_str: String,
     pub(crate) bind_params: Vec<Parsed<String>>,
 }
@@ -225,6 +233,7 @@ impl QuerySql {
                 Self {
                     sql_str,
                     bind_params: dedup_params,
+                    start: span.start,
                 }
             })
     }
@@ -331,12 +340,12 @@ enum Statement {
 }
 
 #[derive(Debug)]
-pub(crate) struct ParsedModule {
+pub(crate) struct Module {
     pub(crate) types: Vec<TypeAnnotation>,
     pub(crate) queries: Vec<Query>,
 }
 
-impl FromIterator<Statement> for ParsedModule {
+impl FromIterator<Statement> for Module {
     fn from_iter<T: IntoIterator<Item = Statement>>(iter: T) -> Self {
         let mut types = Vec::new();
         let mut queries = Vec::new();
@@ -346,12 +355,11 @@ impl FromIterator<Statement> for ParsedModule {
                 Statement::Query(it) => queries.push(it),
             }
         }
-        ParsedModule { types, queries }
+        Module { types, queries }
     }
 }
 
-/// Parse queries in in the input string using the grammar file (`grammar.pest`).
-pub(crate) fn parse_query_module(path: &str, input: &str) -> Result<ParsedModule, Error> {
+pub(crate) fn parse_query_module(module_info: &ModuleInfo) -> Result<Module, Error> {
     TypeAnnotation::parser()
         .map(Statement::Type)
         .or(Query::parser().map(Statement::Query))
@@ -360,21 +368,29 @@ pub(crate) fn parse_query_module(path: &str, input: &str) -> Result<ParsedModule
         .allow_trailing()
         .then_ignore(end())
         .collect()
-        .parse(input)
+        .parse(module_info.content.as_str())
         .map_err(|e| Error {
-            path: path.to_string(),
-            err: e,
+            src: module_info.into(),
+            err_span: e[0].span().into(),
+            help: e[0].to_string().replace('\n', "\\n"),
         })
 }
 
 pub(crate) mod error {
-
+    use miette::{Diagnostic, NamedSource, SourceSpan};
     use thiserror::Error as ThisError;
 
-    #[derive(Debug, ThisError)]
-    #[error("Error while parsing queries [path: \"{path}\"]:\n{err:?}.")]
+    #[derive(Debug, ThisError, Diagnostic)]
+    #[error("Couldn't parse queries")]
+    #[diagnostic(code(cornucopia::parser))]
     pub struct Error {
-        pub path: String,
-        pub err: Vec<chumsky::error::Simple<char>>,
+        #[source_code]
+        pub src: NamedSource,
+
+        #[help]
+        pub help: String,
+
+        #[label("unexpected token")]
+        pub err_span: SourceSpan,
     }
 }

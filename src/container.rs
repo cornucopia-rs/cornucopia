@@ -1,12 +1,11 @@
-use error::Error;
 use std::process::{Command, Stdio};
 
-use self::error::{RemoveContainerError, RunContainerError, StopContainerError};
+use self::error::Error;
 
 /// Starts Cornucopia's database container and wait until it reports healthy.
 pub fn setup(podman: bool) -> Result<(), Error> {
     spawn_container(podman)?;
-    healthcheck(podman, 120, 1000)?;
+    healthcheck(podman, 120, 50)?;
     Ok(())
 }
 
@@ -18,7 +17,7 @@ pub fn cleanup(podman: bool) -> Result<(), Error> {
 }
 
 /// Starts Cornucopia's database container.
-fn spawn_container(podman: bool) -> Result<(), RunContainerError> {
+fn spawn_container(podman: bool) -> Result<(), Error> {
     let command = if podman { "podman" } else { "docker" };
     let success = Command::new(&command)
         .arg("run")
@@ -38,7 +37,7 @@ fn spawn_container(podman: bool) -> Result<(), RunContainerError> {
     if success {
         Ok(())
     } else {
-        Err(RunContainerError::Status)
+        Err(Error::from("Couldn't spawn container."))
     }
 }
 
@@ -52,23 +51,24 @@ fn is_postgres_healthy(podman: bool) -> Result<bool, Error> {
         .stderr(Stdio::null())
         .stdout(Stdio::null())
         .spawn()
-        .map_err(Error::HealthCheck)?
+        .map_err(|_| Error::from("Couldn't check container health."))?
         .wait()
-        .map_err(Error::HealthCheck)?
+        .map_err(|_| Error::from("Couldn't check contaienr health."))?
         .success())
 }
 
 /// This function controls how the healthcheck retries are handled.
 fn healthcheck(podman: bool, max_retries: u64, ms_per_retry: u64) -> Result<(), Error> {
+    let slow_threshold = 10 + max_retries / 10;
     let mut nb_retries = 0;
     while !is_postgres_healthy(podman)? {
         if nb_retries >= max_retries {
-            return Err(Error::MaxNbRetries);
+            return Err(Error::from("reached max number of connection retries"));
         };
         std::thread::sleep(std::time::Duration::from_millis(ms_per_retry));
         nb_retries += 1;
 
-        if nb_retries % 10 == 0 {
+        if nb_retries % slow_threshold == 0 {
             println!("Container startup slower than expected ({nb_retries} retries out of {max_retries})")
         }
     }
@@ -78,7 +78,7 @@ fn healthcheck(podman: bool, max_retries: u64, ms_per_retry: u64) -> Result<(), 
 }
 
 /// Stops Cornucopia's container.
-fn stop_container(podman: bool) -> Result<(), StopContainerError> {
+fn stop_container(podman: bool) -> Result<(), Error> {
     let command = if podman { "podman" } else { "docker" };
     let success = Command::new(&command)
         .arg("stop")
@@ -91,12 +91,12 @@ fn stop_container(podman: bool) -> Result<(), StopContainerError> {
     if success {
         Ok(())
     } else {
-        Err(StopContainerError::Status)
+        Err(Error::from("Couldn't stop container."))
     }
 }
 
 /// Removes Cornucopia's container and its volume.
-fn remove_container(podman: bool) -> Result<(), RemoveContainerError> {
+fn remove_container(podman: bool) -> Result<(), Error> {
     let command = if podman { "podman" } else { "docker" };
     let success = Command::new(&command)
         .arg("rm")
@@ -110,47 +110,36 @@ fn remove_container(podman: bool) -> Result<(), RemoveContainerError> {
     if success {
         Ok(())
     } else {
-        Err(RemoveContainerError::Status)
+        Err(Error::from("Couldn't remove container."))
     }
 }
 pub(crate) mod error {
+    use std::fmt::Debug;
+
+    use miette::Diagnostic;
     use thiserror::Error as ThisError;
 
-    #[derive(Debug, ThisError)]
-    pub enum Error {
-        #[error("Couldn't start database container ({0}). If you are using `docker`, please check that the daemon is up-and-running.")]
-        RunContainer(#[from] RunContainerError),
-        #[error("Encountered error while probing database container health. If you are using `docker`, please check that the daemon is up-and-running.")]
-        HealthCheck(std::io::Error),
-        #[error("Couldn't stop database container ({0}). If you are using `docker`, please check that the daemon is up-and-running.")]
-        StopContainer(#[from] StopContainerError),
-        #[error("Couldn't clean up database container ({0}). If you are using `docker`, please check that the daemon is up-and-running.")]
-        RemoveContainer(#[from] RemoveContainerError),
-        #[error("Max number of retries reached while waiting for database container to start. If you are using `docker`, please check that the daemon is up-and-running.")]
-        MaxNbRetries,
+    #[derive(Debug, ThisError, Diagnostic)]
+    #[error("{msg}")]
+    #[diagnostic(
+        code(cornucopia::container),
+        help("if you are using `docker`, please ensure that the daemon is up-and-running. You must also ensure that no container named `cornucopia_postgres` already exists.")
+    )]
+    pub struct Error {
+        pub msg: String,
     }
 
-    #[derive(Debug, ThisError)]
-    pub enum RunContainerError {
-        #[error("{0}")]
-        Io(#[from] std::io::Error),
-        #[error("command returned with an error status")]
-        Status,
+    impl From<std::io::Error> for Error {
+        fn from(e: std::io::Error) -> Self {
+            Self {
+                msg: format!("{e:#}"),
+            }
+        }
     }
 
-    #[derive(Debug, ThisError)]
-    pub enum StopContainerError {
-        #[error("{0}")]
-        Io(#[from] std::io::Error),
-        #[error("command returned with an error status")]
-        Status,
-    }
-
-    #[derive(Debug, ThisError)]
-    pub enum RemoveContainerError {
-        #[error("{0}")]
-        Io(#[from] std::io::Error),
-        #[error("command returned with an error status")]
-        Status,
+    impl From<&str> for Error {
+        fn from(s: &str) -> Self {
+            Self { msg: s.into() }
+        }
     }
 }

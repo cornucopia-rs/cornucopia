@@ -1,10 +1,24 @@
-use error::Error;
+use miette::NamedSource;
+
+use self::error::Error;
 
 #[derive(Debug, Clone)]
 pub(crate) struct ModuleInfo {
     pub(crate) path: String,
     pub(crate) name: String,
     pub(crate) content: String,
+}
+
+impl From<ModuleInfo> for NamedSource {
+    fn from(m: ModuleInfo) -> Self {
+        Self::new(m.path, m.content)
+    }
+}
+
+impl From<&ModuleInfo> for NamedSource {
+    fn from(m: &ModuleInfo) -> Self {
+        Self::new(&m.path, m.content.to_owned())
+    }
 }
 
 /// Reads queries in the directory. Only .sql files are considered.
@@ -51,14 +65,17 @@ pub(crate) fn read_query_modules(dir_path: &str) -> Result<Vec<ModuleInfo>, Erro
             continue;
         }
     }
+    // Sort module for consistent codegen
+    modules_info.sort_by(|a, b| a.name.cmp(&b.name));
     Ok(modules_info)
 }
 
 pub(crate) mod error {
+    use miette::Diagnostic;
     use thiserror::Error as ThisError;
 
-    #[derive(Debug, ThisError)]
-    #[error("Error while reading queries [path: \"{path}\"]: {err}.")]
+    #[derive(Debug, ThisError, Diagnostic)]
+    #[error("[{path}] : {err:#}")]
     pub struct Error {
         pub(crate) err: std::io::Error,
         pub(crate) path: String,

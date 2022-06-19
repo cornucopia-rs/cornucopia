@@ -1,0 +1,193 @@
+[[test]]
+name = 'DuplicateCol'
+query = '''
+--! new_author(id?, id?)
+INSERT INTO Author (id, name) VALUES (:id, :id);
+'''
+migration = '''
+CREATE TABLE author (
+  id SERIAL,
+  name TEXT
+);
+'''
+error = '''
+ValidateQueries(
+    DuplicateNullableCol {
+        src: NamedSource {
+            name: "queries/module_1.sql",
+            source: "<redacted>",
+        ,
+        dup_pos: SourceSpan {
+            offset: SourceOffset(
+                20,
+            ),
+            length: SourceOffset(
+                2,
+            ),
+        },
+        pos: SourceSpan {
+            offset: SourceOffset(
+                15,
+            ),
+            length: SourceOffset(
+                2,
+            ),
+        },
+    },
+)'''
+
+[[test]]
+name = 'ColumnAlreadyNullable'
+query = '''
+--! new_author: (id?, name?, id?)
+SELECT id, name FROM Author;
+'''
+migration = '''
+CREATE TABLE author (
+  id SERIAL,
+  name TEXT
+);
+'''
+error = '''
+ValidateQueries(
+    DuplicateNullableCol {
+        src: NamedSource {
+            name: "queries/module_1.sql",
+            source: "<redacted>",
+        ,
+        dup_pos: SourceSpan {
+            offset: SourceOffset(
+                29,
+            ),
+            length: SourceOffset(
+                2,
+            ),
+        },
+        pos: SourceSpan {
+            offset: SourceOffset(
+                17,
+            ),
+            length: SourceOffset(
+                2,
+            ),
+        },
+    },
+)'''
+
+[[test]]
+name = 'InvalidNullableColumnName'
+query = '''
+--! new_author: (name?)
+SELECT id FROM Author;
+'''
+migration = '''
+CREATE TABLE author (
+  id SERIAL,
+  name TEXT
+);
+'''
+error = '''
+PrepareQueries(
+    Validation(
+        InvalidNullableColumnName {
+            src: NamedSource {
+                name: "queries/module_1.sql",
+                source: "<redacted>",
+            ,
+            pos: SourceSpan {
+                offset: SourceOffset(
+                    17,
+                ),
+                length: SourceOffset(
+                    4,
+                ),
+            },
+        },
+    ),
+)'''
+
+[[test]]
+name = 'QueryAlreadyExists'
+query = '''
+--! new_author
+SELECT id FROM Author;
+
+--! new_author
+SELECT id FROM Author;
+'''
+migration = '''
+CREATE TABLE author (
+  id SERIAL,
+  name TEXT
+);
+'''
+error = '''
+ValidateQueries(
+    DuplicateQueryName {
+        src: NamedSource {
+            name: "queries/module_1.sql",
+            source: "<redacted>",
+        ,
+        pos2: SourceSpan {
+            offset: SourceOffset(
+                43,
+            ),
+            length: SourceOffset(
+                10,
+            ),
+        },
+        pos1: SourceSpan {
+            offset: SourceOffset(
+                4,
+            ),
+            length: SourceOffset(
+                10,
+            ),
+        },
+    },
+)'''
+
+[[test]]
+name = 'NamedStructInvalidFields'
+query = '''
+--! author_names: Row
+SELECT name FROM Author;
+
+--! author_ids: Row
+SELECT id FROM Author;
+'''
+migration = '''
+CREATE TABLE author (
+  id SERIAL,
+  name TEXT
+);
+'''
+error = '''
+PrepareQueries(
+    Validation(
+        IncompatibleNamedStructs {
+            src: NamedSource {
+                name: "queries/module_1.sql",
+                source: "<redacted>",
+            ,
+            label1: "column `name` defined here",
+            pos1: SourceSpan {
+                offset: SourceOffset(
+                    18,
+                ),
+                length: SourceOffset(
+                    3,
+                ),
+            },
+            label2: "column `name` not found",
+            pos2: SourceSpan {
+                offset: SourceOffset(
+                    64,
+                ),
+                length: SourceOffset(
+                    3,
+                ),
+            },
+        },
+    ),
+)'''

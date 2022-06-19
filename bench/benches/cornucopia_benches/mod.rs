@@ -4,11 +4,11 @@ use criterion::Bencher;
 use futures::executor::block_on;
 use tokio_postgres::Client;
 
-use self::generated::queries::bench::{
+use self::generated_async::queries::bench::{
     comments_by_post_id, insert_user, post_by_user_ids, select_complex, users, Comment, Post, User,
 };
 
-mod generated;
+mod generated_async;
 mod generated_sync;
 
 pub fn bench_trivial_query(b: &mut Bencher, client: &Client) {

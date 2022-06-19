@@ -1,0 +1,15 @@
+[[codegen]]
+name = "Sync"
+base_path = "codegen_test"
+destination = "src/cornucopia_sync.rs"
+derive_ser = true
+sync = true
+
+[[codegen]]
+name = "Async"
+base_path = "codegen_test"
+destination = "src/cornucopia_async.rs"
+derive_ser = true
+
+[run]
+path = "codegen_test"
