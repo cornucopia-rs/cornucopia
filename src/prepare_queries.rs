@@ -195,9 +195,7 @@ pub(crate) fn prepare(
         tmp.modules
             .push(prepare_module(client, module, &mut registrar)?);
     }
-    // Sort module for consistent codegen
-    tmp.modules
-        .sort_unstable_by(|a, b| a.info.name.cmp(&b.info.name));
+
     // Prepare types grouped by schema
     for ((schema, name), ty) in &registrar.types {
         if let Some(ty) = prepare_type(&registrar, name, ty, &declared) {

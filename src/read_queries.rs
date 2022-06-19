@@ -65,6 +65,8 @@ pub(crate) fn read_query_modules(dir_path: &str) -> Result<Vec<ModuleInfo>, Erro
             continue;
         }
     }
+    // Sort module for consistent codegen
+    modules_info.sort_by(|a, b| a.name.cmp(&b.name));
     Ok(modules_info)
 }
 

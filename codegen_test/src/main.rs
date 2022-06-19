@@ -1,23 +1,16 @@
-use std::net::{IpAddr, Ipv4Addr};
+mod cornucopia_async;
+mod cornucopia_sync;
 
-use cornucopia_sync::{
-    queries::{
-        copy::{insert_clone, insert_copy, select_copy, InsertCloneParams, InsertCopyParams},
-        nullity::{Nullity, NullityParams},
-        params::insert_book,
-    },
-    types::public::{
-        CloneCompositeBorrowed, CopyComposite, NullityComposite, NullityCompositeParams,
-    },
-};
 use eui48::MacAddress;
 use postgres::{Client, Config, NoTls};
 use serde_json::Value;
+use std::net::{IpAddr, Ipv4Addr};
 use time::{OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;
 
 use crate::cornucopia_sync::{
     queries::{
+        copy::{insert_clone, insert_copy, select_copy, InsertCloneParams, InsertCopyParams},
         domain::{
             insert_nightmare_domain, select_nightmare_domain, select_nightmare_domain_null,
             InsertNightmareDomainParams, SelectNightmareDomain, SelectNightmareDomainNull,
@@ -27,6 +20,8 @@ use crate::cornucopia_sync::{
             new_named_visible, Named, NamedComplex, NamedComplexParams, NamedParams,
         },
         nullity::{new_nullity, nullity},
+        nullity::{Nullity, NullityParams},
+        params::insert_book,
         params::{params_use_twice, select_book, SelectBook},
         stress::{
             insert_everything, insert_everything_array, insert_nightmare, select_everything,
@@ -36,16 +31,12 @@ use crate::cornucopia_sync::{
         },
     },
     types::public::{
-        CustomComposite, CustomCompositeBorrowed, DomainComposite, DomainCompositeParams,
-        NamedComposite, NamedCompositeBorrowed, NightmareComposite, NightmareCompositeParams,
+        CloneCompositeBorrowed, CopyComposite, CustomComposite, CustomCompositeBorrowed,
+        DomainComposite, DomainCompositeParams, NamedComposite, NamedCompositeBorrowed,
+        NightmareComposite, NightmareCompositeParams, NullityComposite, NullityCompositeParams,
         SpongebobCharacter,
     },
 };
-
-#[rustfmt::skip]
-mod cornucopia_async;
-#[rustfmt::skip]
-mod cornucopia_sync;
 
 pub fn main() {
     let client = &mut Config::new()

@@ -1,6 +1,5 @@
 // Take a look at the generated `cornucopia.rs` file if you want to
 // see what it looks like under the hood.
-#[rustfmt::skip]
 mod cornucopia;
 
 use deadpool_postgres::{Config, Runtime};
