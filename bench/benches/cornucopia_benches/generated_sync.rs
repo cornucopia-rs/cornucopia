@@ -407,7 +407,7 @@ pub mod queries {
                         name: row.get(1),
                         hair_color: row.get(2),
                     },
-                    mapper: |it| User::from(it),
+                    mapper: |it| <User>::from(it),
                 }
             }
         }
@@ -459,7 +459,7 @@ pub mod queries {
                         title: row.get(2),
                         body: row.get(3),
                     },
-                    mapper: |it| Post::from(it),
+                    mapper: |it| <Post>::from(it),
                 }
             }
         }
@@ -485,7 +485,7 @@ pub mod queries {
                         title: row.get(2),
                         body: row.get(3),
                     },
-                    mapper: |it| Post::from(it),
+                    mapper: |it| <Post>::from(it),
                 }
             }
             pub fn params<'a, C: GenericClient>(
@@ -514,7 +514,7 @@ pub mod queries {
                         post_id: row.get(1),
                         text: row.get(2),
                     },
-                    mapper: |it| Comment::from(it),
+                    mapper: |it| <Comment>::from(it),
                 }
             }
         }
@@ -539,7 +539,7 @@ pub mod queries {
                         post_id: row.get(1),
                         text: row.get(2),
                     },
-                    mapper: |it| Comment::from(it),
+                    mapper: |it| <Comment>::from(it),
                 }
             }
             pub fn params<'a, C: GenericClient>(
@@ -577,7 +577,7 @@ pub mod queries {
                         title: row.get(5),
                         body: row.get(6),
                     },
-                    mapper: |it| SelectComplex::from(it),
+                    mapper: |it| <SelectComplex>::from(it),
                 }
             }
         }
