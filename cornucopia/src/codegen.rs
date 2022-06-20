@@ -260,8 +260,8 @@ fn gen_params_struct(
         let (ret_type, pre, post) = if let Some((idx, _)) = row {
             let prepared_row = &module.rows.get_index(*idx).unwrap().1;
             let name = prepared_row.name.value.clone();
-            let query_row_struct = if prepared_row.fields.len() == 1 {
-                prepared_row.fields[0].own_struct()
+            let query_row_struct = if let [field] = prepared_row.fields.as_slice() {
+                field.own_struct()
             } else {
                 name
             };
@@ -303,7 +303,7 @@ fn gen_row_structs(
         fields,
         is_copy,
     } = row;
-    {
+    if fields.len() > 1 {
         // Generate row struct
         let struct_fields = join_comma(fields, |w, col| {
             gen!(w, "pub {} : {}", col.name, col.own_struct())
@@ -371,12 +371,8 @@ fn gen_row_structs(
             )
         };
 
-        let row_struct = if fields.len() == 1 {
-            if *is_copy {
-                fields[0].own_struct()
-            } else {
-                fields[0].brw_struct(false, false)
-            }
+        let row_struct = if let [field] = fields.as_slice() {
+            field.brw_struct(false, false)
         } else {
             format!("{name}{borrowed_str}")
         };
@@ -484,14 +480,11 @@ fn gen_query_fn(
         });
         let param_names = join_comma(params, |w, p| gen!(w, "{}", p.name));
         let nb_params = params.len();
-        let (row_struct_name, extractor, mapper) = if fields.len() == 1 {
-            let field = &fields[0];
+        let (row_struct_name, extractor, mapper) = if let [field] = fields.as_slice() {
             (
                 field.own_struct(),
                 String::from("row.get(0)"),
-                field
-                    .ty
-                    .owning_call("it", field.is_nullable, field.is_inner_nullable),
+                field.owning_call(Some("it")),
             )
         } else {
             (
