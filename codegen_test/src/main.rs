@@ -17,7 +17,7 @@ use crate::cornucopia_sync::{
         },
         named::{
             named, named_by_id, named_complex, new_named_complex, new_named_hidden,
-            new_named_visible, Named, NamedComplex, NamedComplexParams, NamedParams,
+            new_named_visible, Named, NamedComplexParams, NamedParams,
         },
         nullity::{new_nullity, nullity},
         nullity::{Nullity, NullityParams},
@@ -121,8 +121,7 @@ pub fn test_named(client: &mut Client) {
             },
         )
         .one()
-        .unwrap()
-        .id;
+        .unwrap();
     let visible_id = new_named_visible()
         .params(
             client,
@@ -132,13 +131,11 @@ pub fn test_named(client: &mut Client) {
             },
         )
         .one()
-        .unwrap()
-        .id;
+        .unwrap();
     let last_id = new_named_visible()
         .bind(client, &"can't by me", &None)
         .one()
-        .unwrap()
-        .id;
+        .unwrap();
     assert_eq!(
         named().bind(client).vec().unwrap(),
         &[
@@ -199,12 +196,10 @@ pub fn test_named(client: &mut Client) {
 
     assert_eq!(
         named_complex().bind(client).one().unwrap(),
-        NamedComplex {
-            named: NamedComposite {
-                wow: Some("Hello world".into()),
-                such_cool: None,
-            },
-        }
+        NamedComposite {
+            wow: Some("Hello world".into()),
+            such_cool: None,
+        },
     );
 }
 
@@ -446,16 +441,14 @@ pub fn test_stress(client: &mut Client) {
     assert_eq!(expected, actual);
 
     // Complex mix of enum, domain and composite types
-    let expected = SelectNightmare {
-        composite: NightmareComposite {
-            custom: vec![CustomComposite {
-                wow: "Bob".to_string(),
-                such_cool: 42,
-                nice: SpongebobCharacter::Squidward,
-            }],
-            spongebob: vec![SpongebobCharacter::Bob, SpongebobCharacter::Patrick],
-            domain: "Hello".to_string(),
-        },
+    let expected = NightmareComposite {
+        custom: vec![CustomComposite {
+            wow: "Bob".to_string(),
+            such_cool: 42,
+            nice: SpongebobCharacter::Squidward,
+        }],
+        spongebob: vec![SpongebobCharacter::Bob, SpongebobCharacter::Patrick],
+        domain: "Hello".to_string(),
     };
     let params = InsertNightmareParams {
         composite: NightmareCompositeParams {
