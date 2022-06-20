@@ -27,7 +27,6 @@ use crate::cornucopia_sync::{
             insert_everything, insert_everything_array, insert_nightmare, select_everything,
             select_everything_array, select_nightmare, InsertEverythingArrayParams,
             InsertEverythingParams, InsertNightmareParams, SelectEverything, SelectEverythingArray,
-            SelectNightmare,
         },
     },
     types::public::{
