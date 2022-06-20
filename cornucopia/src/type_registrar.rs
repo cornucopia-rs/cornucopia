@@ -86,9 +86,9 @@ impl CornucopiaType {
                         inner.accept_to_sql()
                     )
                 }
-                _ => self.brw_struct(true, false),
+                _ => self.brw_struct(true, false, true),
             },
-            _ => self.brw_struct(true, false),
+            _ => self.brw_struct(true, false, true),
         }
     }
 
@@ -149,8 +149,13 @@ impl CornucopiaType {
 
     /// String representing a borrowed rust equivalent of this type. Notably, if
     /// a Rust equivalent is a String or a Vec<T>, it will return a &str and a &[T] respectively.
-    pub(crate) fn brw_struct(&self, for_params: bool, is_inner_nullable: bool) -> String {
-        let lifetime = "'a";
+    pub(crate) fn brw_struct(
+        &self,
+        for_params: bool,
+        is_inner_nullable: bool,
+        has_lifetime: bool,
+    ) -> String {
+        let lifetime = if has_lifetime { "'a" } else { "" };
         match self {
             CornucopiaType::Simple {
                 pg_ty, rust_name, ..
@@ -167,7 +172,7 @@ impl CornucopiaType {
                 _ => rust_name.to_string(),
             },
             CornucopiaType::Array { inner, .. } => {
-                let inner = inner.brw_struct(for_params, false);
+                let inner = inner.brw_struct(for_params, false, has_lifetime);
                 let inner = if is_inner_nullable {
                     format!("Option<{inner}>")
                 } else {
@@ -177,10 +182,13 @@ impl CornucopiaType {
                 if for_params {
                     format!("&{lifetime} [{inner}]")
                 } else {
+                    let lifetime = if has_lifetime { lifetime } else { "'_" };
                     format!("cornucopia_client::ArrayIterator<{lifetime}, {inner}>")
                 }
             }
-            CornucopiaType::Domain { inner, .. } => inner.brw_struct(for_params, false),
+            CornucopiaType::Domain { inner, .. } => {
+                inner.brw_struct(for_params, false, has_lifetime)
+            }
             CornucopiaType::Custom {
                 struct_path,
                 is_params,

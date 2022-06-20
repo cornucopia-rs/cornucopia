@@ -30,8 +30,10 @@ impl PreparedField {
         }
     }
 
-    pub fn brw_struct(&self, for_params: bool) -> String {
-        let it = self.ty.brw_struct(for_params, self.is_inner_nullable);
+    pub fn brw_struct(&self, for_params: bool, has_lifetime: bool) -> String {
+        let it = self
+            .ty
+            .brw_struct(for_params, self.is_inner_nullable, has_lifetime);
         if self.is_nullable {
             format!("Option<{}>", it)
         } else {
@@ -39,13 +41,16 @@ impl PreparedField {
         }
     }
 
-    pub fn owning_call(&self) -> String {
-        self.ty
-            .owning_call(&self.name, self.is_nullable, self.is_inner_nullable)
+    pub fn owning_call(&self, name: Option<&str>) -> String {
+        self.ty.owning_call(
+            name.unwrap_or(&self.name),
+            self.is_nullable,
+            self.is_inner_nullable,
+        )
     }
 
     pub fn owning_assign(&self) -> String {
-        let call = self.owning_call();
+        let call = self.owning_call(None);
         if call != self.name {
             format!("{}: {}", self.name, call)
         } else {
@@ -225,7 +230,7 @@ fn gen_params_struct(
         ..
     } = params;
     let struct_fields = join_comma(fields, |w, p| {
-        gen!(w, "pub {} : {}", p.name, p.brw_struct(true))
+        gen!(w, "pub {} : {}", p.name, p.brw_struct(true, true))
     });
     let (copy, lifetime) = if *is_copy {
         ("Clone,Copy,", "")
@@ -253,9 +258,20 @@ fn gen_params_struct(
 
         let param_values = join_comma(params, |w, p| gen!(w, "&self.{}", p.name));
         let (ret_type, pre, post) = if let Some((idx, _)) = row {
+            let prepared_row = &module.rows.get_index(*idx).unwrap().1;
+            let name = prepared_row.name.value.clone();
+            let query_row_struct = if prepared_row.fields.len() == 1 {
+                prepared_row.fields[0].own_struct()
+            } else {
+                name
+            };
             let name = &module.rows.get_index(*idx).unwrap().1.name;
             let nb_params = params.len();
-            (format!("{name}Query<'a, C, {name}, {nb_params}>"), "", "")
+            (
+                format!("{name}Query<'a, C, {query_row_struct}, {nb_params}>"),
+                "",
+                "",
+            )
         } else if row.is_none() && is_async {
             (format!(
                     "std::pin::Pin<Box<dyn futures::Future<Output = Result<u64, {backend}::Error>> + 'a>>"
@@ -301,7 +317,7 @@ fn gen_row_structs(
 
         if !is_copy {
             let struct_fields = join_comma(fields, |w, col| {
-                gen!(w, "pub {} : {}", col.name, col.brw_struct(false))
+                gen!(w, "pub {} : {}", col.name, col.brw_struct(false, true))
             });
             let fields_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
             let fields_owning = join_comma(fields, |w, f| gen!(w, "{}", f.owning_assign()));
@@ -355,16 +371,26 @@ fn gen_row_structs(
             )
         };
 
+        let row_struct = if fields.len() == 1 {
+            if *is_copy {
+                fields[0].own_struct()
+            } else {
+                fields[0].brw_struct(false, false)
+            }
+        } else {
+            format!("{name}{borrowed_str}")
+        };
+
         gen!(w,"
             pub struct {name}Query<'a, C: GenericClient, T, const N: usize> {{
                 client: &'a {client_mut} C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
                 stmt: &'a mut cornucopia_client::{mod_name}::Stmt,
-                extractor: fn(&{backend}::Row) -> {name}{borrowed_str},
-                mapper: fn({name}{borrowed_str}) -> T,
+                extractor: fn(&{backend}::Row) -> {row_struct},
+                mapper: fn({row_struct}) -> T,
             }}
             impl<'a, C, T:'a, const N: usize> {name}Query<'a, C, T, N> where C: GenericClient {{
-                pub fn map<R>(self, mapper: fn({name}{borrowed_str}) -> R) -> {name}Query<'a,C,R,N> {{
+                pub fn map<R>(self, mapper: fn({row_struct}) -> R) -> {name}Query<'a,C,R,N> {{
                     {name}Query {{
                         client: self.client,
                         params: self.params,
@@ -451,26 +477,42 @@ fn gen_query_fn(
         let borrowed_str = if *is_copy { "" } else { "Borrowed" };
         // Query fn
         let param_list = join_comma(params, |w, p| {
-            gen!(w, "{} : &'a {}", p.name, p.brw_struct(true))
+            gen!(w, "{} : &'a {}", p.name, p.brw_struct(true, true))
         });
         let get_fields = join_comma(fields.iter().enumerate(), |w, (i, f)| {
             gen!(w, "{}: row.get({})", f.name, index[i])
         });
         let param_names = join_comma(params, |w, p| gen!(w, "{}", p.name));
         let nb_params = params.len();
+        let (row_struct_name, extractor, mapper) = if fields.len() == 1 {
+            let field = &fields[0];
+            (
+                field.own_struct(),
+                String::from("row.get(0)"),
+                field
+                    .ty
+                    .owning_call("it", field.is_nullable, field.is_inner_nullable),
+            )
+        } else {
+            (
+                row_name.value.clone(),
+                format!("{row_name}{borrowed_str} {{{get_fields}}}"),
+                format!("<{row_name}>::from(it)"),
+            )
+        };
         gen!(w,
-            "pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, {param_list}) -> {row_name}Query<'a,C, {row_name}, {nb_params}> {{
+            "pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, {param_list}) -> {row_name}Query<'a,C, {row_struct_name}, {nb_params}> {{
                 {row_name}Query {{
                     client,
                     params: [{param_names}],
                     stmt: &mut self.0,
-                    extractor: |row| {{ {row_name}{borrowed_str} {{{get_fields}}} }},
-                    mapper: |it| {row_name}::from(it),
+                    extractor: |row| {{ {extractor} }},
+                    mapper: |it| {{ {mapper} }},
                 }}
             }}",
         );
         if !params.is_empty() {
-            gen!(w,"pub fn params<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, params: &'a impl cornucopia_client::{mod_name}::Params<'a, Self, {row_name}Query<'a,C, {row_name}, {nb_params}>, C>) -> {row_name}Query<'a,C, {row_name}, {nb_params}> {{
+            gen!(w,"pub fn params<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, params: &'a impl cornucopia_client::{mod_name}::Params<'a, Self, {row_name}Query<'a,C, {row_struct_name}, {nb_params}>, C>) -> {row_name}Query<'a,C, {row_struct_name}, {nb_params}> {{
                     params.bind(client, self)
                 }}"
             );
@@ -478,7 +520,7 @@ fn gen_query_fn(
     } else {
         // Execute fn
         let param_list = join_comma(params, |w, p| {
-            gen!(w, "{} : &'a {}", p.name, p.brw_struct(true))
+            gen!(w, "{} : &'a {}", p.name, p.brw_struct(true, true))
         });
         let param_names = join_comma(params, |w, p| gen!(w, "{}", p.ty.sql_wrapped(&p.name)));
         gen!(w,
@@ -544,7 +586,7 @@ fn gen_custom_type(
                 struct_tosql(w, struct_name, fields, name, false, *is_params);
             } else {
                 let brw_fields = join_comma(fields, |w, f| {
-                    gen!(w, "pub {} : {}", f.name, f.brw_struct(false))
+                    gen!(w, "pub {} : {}", f.name, f.brw_struct(false, true))
                 });
                 let field_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
                 let fields_owning = join_comma(fields, |w, f| gen!(w, "{}", f.owning_assign()));
@@ -563,7 +605,7 @@ fn gen_custom_type(
                 composite_fromsql(w, struct_name, fields, name, schema);
                 if !is_params {
                     let fields = join_comma(fields, |w, f| {
-                        gen!(w, "pub {} : {}", f.name, f.brw_struct(true))
+                        gen!(w, "pub {} : {}", f.name, f.brw_struct(true, true))
                     });
                     let derive = if *is_copy { ",Copy,Clone" } else { "" };
                     gen!(
@@ -612,11 +654,11 @@ pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> S
         let queries_string = join_ln(module.queries.values(), |w, query| {
             gen_query_fn(w, &module, query, settings)
         });
-        let params_string = join_ln(module.params.values(), |w, it| {
-            gen_params_struct(w, &module, it, settings)
+        let params_string = join_ln(module.params.values(), |w, params| {
+            gen_params_struct(w, &module, params, settings)
         });
-        let rows_string = join_ln(module.rows.values(), |w, query| {
-            gen_row_structs(w, query, settings)
+        let rows_string = join_ln(module.rows.values(), |w, row| {
+            gen_row_structs(w, row, settings)
         });
         gen!(
             w,
