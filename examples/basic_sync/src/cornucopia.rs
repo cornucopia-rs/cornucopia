@@ -133,22 +133,6 @@ pub mod types {
 pub mod queries {
     pub mod module_1 {
         use postgres::{fallible_iterator::FallibleIterator, GenericClient};
-        #[derive(Debug)]
-        pub struct InsertBookParams<'a> {
-            pub title: &'a str,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::sync::Params<'a, InsertBookStmt, Result<u64, postgres::Error>, C>
-            for InsertBookParams<'a>
-        {
-            fn bind(
-                &'a self,
-                client: &'a mut C,
-                stmt: &'a mut InsertBookStmt,
-            ) -> Result<u64, postgres::Error> {
-                stmt.bind(client, &self.title)
-            }
-        }
         pub fn insert_book() -> InsertBookStmt {
             InsertBookStmt(cornucopia_client::sync::Stmt::new(
                 "INSERT INTO Book (title)
@@ -165,88 +149,11 @@ pub mod queries {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[title])
             }
-            pub fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-                params: &'a impl cornucopia_client::sync::Params<
-                    'a,
-                    Self,
-                    Result<u64, postgres::Error>,
-                    C,
-                >,
-            ) -> Result<u64, postgres::Error> {
-                params.bind(client, self)
-            }
         }
     }
     pub mod module_2 {
         use postgres::{fallible_iterator::FallibleIterator, GenericClient};
-        #[derive(Clone, Copy, Debug)]
-        pub struct AuthorNameByIdParams {
-            pub id: i32,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::sync::Params<
-                'a,
-                AuthorNameByIdStmt,
-                AuthorNameByIdQuery<'a, C, String, 1>,
-                C,
-            > for AuthorNameByIdParams
-        {
-            fn bind(
-                &'a self,
-                client: &'a mut C,
-                stmt: &'a mut AuthorNameByIdStmt,
-            ) -> AuthorNameByIdQuery<'a, C, String, 1> {
-                stmt.bind(client, &self.id)
-            }
-        }
-        #[derive(Debug)]
-        pub struct AuthorNameStartingWithParams<'a> {
-            pub start_str: &'a str,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::sync::Params<
-                'a,
-                AuthorNameStartingWithStmt,
-                AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith, 1>,
-                C,
-            > for AuthorNameStartingWithParams<'a>
-        {
-            fn bind(
-                &'a self,
-                client: &'a mut C,
-                stmt: &'a mut AuthorNameStartingWithStmt,
-            ) -> AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith, 1> {
-                stmt.bind(client, &self.start_str)
-            }
-        }
-        #[derive(Clone, Copy, Debug)]
-        pub struct SelectWhereCustomTypeParams {
-            pub spongebob_character: super::super::types::public::SpongebobCharacter,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::sync::Params<
-                'a,
-                SelectWhereCustomTypeStmt,
-                SelectWhereCustomTypeQuery<
-                    'a,
-                    C,
-                    super::super::types::public::SpongebobCharacter,
-                    1,
-                >,
-                C,
-            > for SelectWhereCustomTypeParams
-        {
-            fn bind(
-                &'a self,
-                client: &'a mut C,
-                stmt: &'a mut SelectWhereCustomTypeStmt,
-            ) -> SelectWhereCustomTypeQuery<'a, C, super::super::types::public::SpongebobCharacter, 1>
-            {
-                stmt.bind(client, &self.spongebob_character)
-            }
-        }
+
         #[derive(Debug, Clone, PartialEq)]
         pub struct Authors {
             pub id: i32,
@@ -319,20 +226,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct Books {
-            pub title: String,
-        }
-        pub struct BooksBorrowed<'a> {
-            pub title: &'a str,
-        }
-        impl<'a> From<BooksBorrowed<'a>> for Books {
-            fn from(BooksBorrowed { title }: BooksBorrowed<'a>) -> Self {
-                Self {
-                    title: title.into(),
-                }
-            }
-        }
+
         pub struct BooksQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -385,20 +279,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct BooksOptRetParam {
-            pub title: Option<String>,
-        }
-        pub struct BooksOptRetParamBorrowed<'a> {
-            pub title: Option<&'a str>,
-        }
-        impl<'a> From<BooksOptRetParamBorrowed<'a>> for BooksOptRetParam {
-            fn from(BooksOptRetParamBorrowed { title }: BooksOptRetParamBorrowed<'a>) -> Self {
-                Self {
-                    title: title.map(|v| v.into()),
-                }
-            }
-        }
+
         pub struct BooksOptRetParamQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -454,18 +335,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct AuthorNameById {
-            pub name: String,
-        }
-        pub struct AuthorNameByIdBorrowed<'a> {
-            pub name: &'a str,
-        }
-        impl<'a> From<AuthorNameByIdBorrowed<'a>> for AuthorNameById {
-            fn from(AuthorNameByIdBorrowed { name }: AuthorNameByIdBorrowed<'a>) -> Self {
-                Self { name: name.into() }
-            }
-        }
+
         pub struct AuthorNameByIdQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -603,18 +473,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct ReturnCustomType {
-            pub col1: super::super::types::public::CustomComposite,
-        }
-        pub struct ReturnCustomTypeBorrowed<'a> {
-            pub col1: super::super::types::public::CustomCompositeBorrowed<'a>,
-        }
-        impl<'a> From<ReturnCustomTypeBorrowed<'a>> for ReturnCustomType {
-            fn from(ReturnCustomTypeBorrowed { col1 }: ReturnCustomTypeBorrowed<'a>) -> Self {
-                Self { col1: col1.into() }
-            }
-        }
+
         pub struct ReturnCustomTypeQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -670,10 +529,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(Debug, Clone, PartialEq, Copy)]
-        pub struct SelectWhereCustomType {
-            pub col2: super::super::types::public::SpongebobCharacter,
-        }
+
         pub struct SelectWhereCustomTypeQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -729,22 +585,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct SelectTranslations {
-            pub translations: Vec<String>,
-        }
-        pub struct SelectTranslationsBorrowed<'a> {
-            pub translations: cornucopia_client::ArrayIterator<'a, &'a str>,
-        }
-        impl<'a> From<SelectTranslationsBorrowed<'a>> for SelectTranslations {
-            fn from(
-                SelectTranslationsBorrowed { translations }: SelectTranslationsBorrowed<'a>,
-            ) -> Self {
-                Self {
-                    translations: translations.map(|v| v.into()).collect(),
-                }
-            }
-        }
+
         pub struct SelectTranslationsQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -898,18 +739,6 @@ WHERE
                     mapper: |it| it.into(),
                 }
             }
-            pub fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-                params: &'a impl cornucopia_client::sync::Params<
-                    'a,
-                    Self,
-                    AuthorNameByIdQuery<'a, C, String, 1>,
-                    C,
-                >,
-            ) -> AuthorNameByIdQuery<'a, C, String, 1> {
-                params.bind(client, self)
-            }
         }
         pub fn author_name_starting_with() -> AuthorNameStartingWithStmt {
             AuthorNameStartingWithStmt(cornucopia_client::sync::Stmt::new(
@@ -945,18 +774,6 @@ WHERE
                     },
                     mapper: |it| <AuthorNameStartingWith>::from(it),
                 }
-            }
-            pub fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-                params: &'a impl cornucopia_client::sync::Params<
-                    'a,
-                    Self,
-                    AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith, 1>,
-                    C,
-                >,
-            ) -> AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith, 1> {
-                params.bind(client, self)
             }
         }
         pub fn return_custom_type() -> ReturnCustomTypeStmt {
@@ -1007,24 +824,6 @@ WHERE (col1).persona = $1",
                     extractor: |row| row.get(0),
                     mapper: |it| it,
                 }
-            }
-            pub fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-                params: &'a impl cornucopia_client::sync::Params<
-                    'a,
-                    Self,
-                    SelectWhereCustomTypeQuery<
-                        'a,
-                        C,
-                        super::super::types::public::SpongebobCharacter,
-                        1,
-                    >,
-                    C,
-                >,
-            ) -> SelectWhereCustomTypeQuery<'a, C, super::super::types::public::SpongebobCharacter, 1>
-            {
-                params.bind(client, self)
             }
         }
         pub fn select_translations() -> SelectTranslationsStmt {

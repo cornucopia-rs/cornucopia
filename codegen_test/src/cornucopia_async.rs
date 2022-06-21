@@ -844,68 +844,7 @@ pub mod queries {
         use cornucopia_client::async_::GenericClient;
         use futures;
         use futures::{StreamExt, TryStreamExt};
-        #[derive(Debug)]
-        pub struct InsertCloneParams<'a> {
-            pub composite: super::super::types::public::CloneCompositeBorrowed<'a>,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::async_::Params<
-                'a,
-                InsertCloneStmt,
-                std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-                >,
-                C,
-            > for InsertCloneParams<'a>
-        {
-            fn bind(
-                &'a self,
-                client: &'a C,
-                stmt: &'a mut InsertCloneStmt,
-            ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-            > {
-                Box::pin(stmt.bind(client, &self.composite))
-            }
-        }
-        #[derive(Clone, Copy, Debug)]
-        pub struct InsertCopyParams {
-            pub composite: super::super::types::public::CopyComposite,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::async_::Params<
-                'a,
-                InsertCopyStmt,
-                std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-                >,
-                C,
-            > for InsertCopyParams
-        {
-            fn bind(
-                &'a self,
-                client: &'a C,
-                stmt: &'a mut InsertCopyStmt,
-            ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-            > {
-                Box::pin(stmt.bind(client, &self.composite))
-            }
-        }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
-        pub struct SelectClone {
-            pub composite: super::super::types::public::CloneComposite,
-        }
-        pub struct SelectCloneBorrowed<'a> {
-            pub composite: super::super::types::public::CloneCompositeBorrowed<'a>,
-        }
-        impl<'a> From<SelectCloneBorrowed<'a>> for SelectClone {
-            fn from(SelectCloneBorrowed { composite }: SelectCloneBorrowed<'a>) -> Self {
-                Self {
-                    composite: composite.into(),
-                }
-            }
-        }
+
         pub struct SelectCloneQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -966,10 +905,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
-        pub struct SelectCopy {
-            pub composite: super::super::types::public::CopyComposite,
-        }
+
         pub struct SelectCopyQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -1044,20 +980,6 @@ pub mod queries {
                 let stmt = self.0.prepare(client).await?;
                 client.execute(stmt, &[composite]).await
             }
-            pub async fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a C,
-                params: &'a impl cornucopia_client::async_::Params<
-                    'a,
-                    Self,
-                    std::pin::Pin<
-                        Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>>,
-                    >,
-                    C,
-                >,
-            ) -> Result<u64, tokio_postgres::Error> {
-                params.bind(client, self).await
-            }
         }
         pub fn select_clone() -> SelectCloneStmt {
             SelectCloneStmt(cornucopia_client::async_::Stmt::new("SELECT * FROM clone"))
@@ -1092,20 +1014,6 @@ pub mod queries {
             ) -> Result<u64, tokio_postgres::Error> {
                 let stmt = self.0.prepare(client).await?;
                 client.execute(stmt, &[composite]).await
-            }
-            pub async fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a C,
-                params: &'a impl cornucopia_client::async_::Params<
-                    'a,
-                    Self,
-                    std::pin::Pin<
-                        Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>>,
-                    >,
-                    C,
-                >,
-            ) -> Result<u64, tokio_postgres::Error> {
-                params.bind(client, self).await
             }
         }
         pub fn select_copy() -> SelectCopyStmt {
@@ -1465,45 +1373,30 @@ pub mod queries {
             pub price: Option<f64>,
         }
         impl<'a, C: GenericClient>
-            cornucopia_client::async_::Params<'a, NewNamedVisibleStmt, IdQuery<'a, C, i32, 2>, C>
+            cornucopia_client::async_::Params<'a, NewNamedVisibleStmt, IdQuery<'a, C, Id, 2>, C>
             for NamedParams<'a>
         {
             fn bind(
                 &'a self,
                 client: &'a C,
                 stmt: &'a mut NewNamedVisibleStmt,
-            ) -> IdQuery<'a, C, i32, 2> {
+            ) -> IdQuery<'a, C, Id, 2> {
                 stmt.bind(client, &self.name, &self.price)
             }
         }
         impl<'a, C: GenericClient>
-            cornucopia_client::async_::Params<'a, NewNamedHiddenStmt, IdQuery<'a, C, i32, 2>, C>
+            cornucopia_client::async_::Params<'a, NewNamedHiddenStmt, IdQuery<'a, C, Id, 2>, C>
             for NamedParams<'a>
         {
             fn bind(
                 &'a self,
                 client: &'a C,
                 stmt: &'a mut NewNamedHiddenStmt,
-            ) -> IdQuery<'a, C, i32, 2> {
+            ) -> IdQuery<'a, C, Id, 2> {
                 stmt.bind(client, &self.price, &self.name)
             }
         }
-        #[derive(Clone, Copy, Debug)]
-        pub struct NamedByIdParams {
-            pub id: i32,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::async_::Params<'a, NamedByIdStmt, NamedQuery<'a, C, Named, 1>, C>
-            for NamedByIdParams
-        {
-            fn bind(
-                &'a self,
-                client: &'a C,
-                stmt: &'a mut NamedByIdStmt,
-            ) -> NamedQuery<'a, C, Named, 1> {
-                stmt.bind(client, &self.id)
-            }
-        }
+
         #[derive(Debug)]
         pub struct NamedComplexParams<'a> {
             pub named: super::super::types::public::NamedCompositeBorrowed<'a>,
@@ -1536,14 +1429,14 @@ pub mod queries {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::async_::Stmt,
-            extractor: fn(&tokio_postgres::Row) -> i32,
-            mapper: fn(i32) -> T,
+            extractor: fn(&tokio_postgres::Row) -> Id,
+            mapper: fn(Id) -> T,
         }
         impl<'a, C, T: 'a, const N: usize> IdQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
-            pub fn map<R>(self, mapper: fn(i32) -> R) -> IdQuery<'a, C, R, N> {
+            pub fn map<R>(self, mapper: fn(Id) -> R) -> IdQuery<'a, C, R, N> {
                 IdQuery {
                     client: self.client,
                     params: self.params,
@@ -1674,20 +1567,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
-        pub struct NamedComplex {
-            pub named: super::super::types::public::NamedComposite,
-        }
-        pub struct NamedComplexBorrowed<'a> {
-            pub named: super::super::types::public::NamedCompositeBorrowed<'a>,
-        }
-        impl<'a> From<NamedComplexBorrowed<'a>> for NamedComplex {
-            fn from(NamedComplexBorrowed { named }: NamedComplexBorrowed<'a>) -> Self {
-                Self {
-                    named: named.into(),
-                }
-            }
-        }
+
         pub struct NamedComplexQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -1760,20 +1640,20 @@ pub mod queries {
                 client: &'a C,
                 name: &'a &'a str,
                 price: &'a Option<f64>,
-            ) -> IdQuery<'a, C, i32, 2> {
+            ) -> IdQuery<'a, C, Id, 2> {
                 IdQuery {
                     client,
                     params: [name, price],
                     stmt: &mut self.0,
-                    extractor: |row| row.get(0),
-                    mapper: |it| it,
+                    extractor: |row| Id { id: row.get(0) },
+                    mapper: |it| <Id>::from(it),
                 }
             }
             pub fn params<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                params: &'a impl cornucopia_client::async_::Params<'a, Self, IdQuery<'a, C, i32, 2>, C>,
-            ) -> IdQuery<'a, C, i32, 2> {
+                params: &'a impl cornucopia_client::async_::Params<'a, Self, IdQuery<'a, C, Id, 2>, C>,
+            ) -> IdQuery<'a, C, Id, 2> {
                 params.bind(client, self)
             }
         }
@@ -1789,20 +1669,20 @@ pub mod queries {
                 client: &'a C,
                 price: &'a Option<f64>,
                 name: &'a &'a str,
-            ) -> IdQuery<'a, C, i32, 2> {
+            ) -> IdQuery<'a, C, Id, 2> {
                 IdQuery {
                     client,
                     params: [price, name],
                     stmt: &mut self.0,
-                    extractor: |row| row.get(0),
-                    mapper: |it| it,
+                    extractor: |row| Id { id: row.get(0) },
+                    mapper: |it| <Id>::from(it),
                 }
             }
             pub fn params<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                params: &'a impl cornucopia_client::async_::Params<'a, Self, IdQuery<'a, C, i32, 2>, C>,
-            ) -> IdQuery<'a, C, i32, 2> {
+                params: &'a impl cornucopia_client::async_::Params<'a, Self, IdQuery<'a, C, Id, 2>, C>,
+            ) -> IdQuery<'a, C, Id, 2> {
                 params.bind(client, self)
             }
         }
@@ -1853,18 +1733,6 @@ pub mod queries {
                     },
                     mapper: |it| <Named>::from(it),
                 }
-            }
-            pub fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a C,
-                params: &'a impl cornucopia_client::async_::Params<
-                    'a,
-                    Self,
-                    NamedQuery<'a, C, Named, 1>,
-                    C,
-                >,
-            ) -> NamedQuery<'a, C, Named, 1> {
-                params.bind(client, self)
             }
         }
         pub fn new_named_complex() -> NewNamedComplexStmt {
@@ -2117,30 +1985,7 @@ pub mod queries {
                 Box::pin(stmt.bind(client, &self.author, &self.name))
             }
         }
-        #[derive(Debug)]
-        pub struct ParamsUseTwiceParams<'a> {
-            pub name: &'a str,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::async_::Params<
-                'a,
-                ParamsUseTwiceStmt,
-                std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-                >,
-                C,
-            > for ParamsUseTwiceParams<'a>
-        {
-            fn bind(
-                &'a self,
-                client: &'a C,
-                stmt: &'a mut ParamsUseTwiceStmt,
-            ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-            > {
-                Box::pin(stmt.bind(client, &self.name))
-            }
-        }
+
         #[derive(Clone, Copy, Debug)]
         pub struct ParamsOrderParams {
             pub c: i32,
@@ -2308,20 +2153,6 @@ pub mod queries {
             ) -> Result<u64, tokio_postgres::Error> {
                 let stmt = self.0.prepare(client).await?;
                 client.execute(stmt, &[name]).await
-            }
-            pub async fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a C,
-                params: &'a impl cornucopia_client::async_::Params<
-                    'a,
-                    Self,
-                    std::pin::Pin<
-                        Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>>,
-                    >,
-                    C,
-                >,
-            ) -> Result<u64, tokio_postgres::Error> {
-                params.bind(client, self).await
             }
         }
         pub fn params_order() -> ParamsOrderStmt {
@@ -2528,30 +2359,6 @@ pub mod queries {
                     &self.inet_,
                     &self.macaddr_,
                 ))
-            }
-        }
-        #[derive(Debug)]
-        pub struct InsertNightmareParams<'a> {
-            pub composite: super::super::types::public::NightmareCompositeParams<'a>,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::async_::Params<
-                'a,
-                InsertNightmareStmt,
-                std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-                >,
-                C,
-            > for InsertNightmareParams<'a>
-        {
-            fn bind(
-                &'a self,
-                client: &'a C,
-                stmt: &'a mut InsertNightmareStmt,
-            ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-            > {
-                Box::pin(stmt.bind(client, &self.composite))
             }
         }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
@@ -3358,20 +3165,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
-        pub struct SelectNightmare {
-            pub composite: super::super::types::public::NightmareComposite,
-        }
-        pub struct SelectNightmareBorrowed<'a> {
-            pub composite: super::super::types::public::NightmareCompositeBorrowed<'a>,
-        }
-        impl<'a> From<SelectNightmareBorrowed<'a>> for SelectNightmare {
-            fn from(SelectNightmareBorrowed { composite }: SelectNightmareBorrowed<'a>) -> Self {
-                Self {
-                    composite: composite.into(),
-                }
-            }
-        }
+
         pub struct SelectNightmareQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -3860,20 +3654,6 @@ pub mod queries {
                 let stmt = self.0.prepare(client).await?;
                 client.execute(stmt, &[composite]).await
             }
-            pub async fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a C,
-                params: &'a impl cornucopia_client::async_::Params<
-                    'a,
-                    Self,
-                    std::pin::Pin<
-                        Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>>,
-                    >,
-                    C,
-                >,
-            ) -> Result<u64, tokio_postgres::Error> {
-                params.bind(client, self).await
-            }
         }
     }
     pub mod syntax {
@@ -3928,259 +3708,30 @@ pub mod queries {
             pub price: f64,
         }
         impl<'a, C: GenericClient>
-            cornucopia_client::async_::Params<'a, NamedCompactStmt, RowQuery<'a, C, i32, 2>, C>
+            cornucopia_client::async_::Params<'a, NamedCompactStmt, RowQuery<'a, C, Row, 2>, C>
             for Params<'a>
         {
             fn bind(
                 &'a self,
                 client: &'a C,
                 stmt: &'a mut NamedCompactStmt,
-            ) -> RowQuery<'a, C, i32, 2> {
+            ) -> RowQuery<'a, C, Row, 2> {
                 stmt.bind(client, &self.name, &self.price)
             }
         }
         impl<'a, C: GenericClient>
-            cornucopia_client::async_::Params<'a, NamedSpacedStmt, RowQuery<'a, C, i32, 2>, C>
+            cornucopia_client::async_::Params<'a, NamedSpacedStmt, RowQuery<'a, C, Row, 2>, C>
             for Params<'a>
         {
             fn bind(
                 &'a self,
                 client: &'a C,
                 stmt: &'a mut NamedSpacedStmt,
-            ) -> RowQuery<'a, C, i32, 2> {
+            ) -> RowQuery<'a, C, Row, 2> {
                 stmt.bind(client, &self.name, &self.price)
             }
         }
-        #[derive(Clone, Copy, Debug)]
-        pub struct TrickySqlParams {
-            pub price: f64,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::async_::Params<
-                'a,
-                TrickySqlStmt,
-                std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-                >,
-                C,
-            > for TrickySqlParams
-        {
-            fn bind(
-                &'a self,
-                client: &'a C,
-                stmt: &'a mut TrickySqlStmt,
-            ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-            > {
-                Box::pin(stmt.bind(client, &self.price))
-            }
-        }
-        #[derive(Clone, Copy, Debug)]
-        pub struct TrickySql1Params {
-            pub price: f64,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::async_::Params<
-                'a,
-                TrickySql1Stmt,
-                std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-                >,
-                C,
-            > for TrickySql1Params
-        {
-            fn bind(
-                &'a self,
-                client: &'a C,
-                stmt: &'a mut TrickySql1Stmt,
-            ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-            > {
-                Box::pin(stmt.bind(client, &self.price))
-            }
-        }
-        #[derive(Clone, Copy, Debug)]
-        pub struct TrickySql2Params {
-            pub price: f64,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::async_::Params<
-                'a,
-                TrickySql2Stmt,
-                std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-                >,
-                C,
-            > for TrickySql2Params
-        {
-            fn bind(
-                &'a self,
-                client: &'a C,
-                stmt: &'a mut TrickySql2Stmt,
-            ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-            > {
-                Box::pin(stmt.bind(client, &self.price))
-            }
-        }
-        #[derive(Clone, Copy, Debug)]
-        pub struct TrickySql3Params {
-            pub price: f64,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::async_::Params<
-                'a,
-                TrickySql3Stmt,
-                std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-                >,
-                C,
-            > for TrickySql3Params
-        {
-            fn bind(
-                &'a self,
-                client: &'a C,
-                stmt: &'a mut TrickySql3Stmt,
-            ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-            > {
-                Box::pin(stmt.bind(client, &self.price))
-            }
-        }
-        #[derive(Clone, Copy, Debug)]
-        pub struct TrickySql4Params {
-            pub price: f64,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::async_::Params<
-                'a,
-                TrickySql4Stmt,
-                std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-                >,
-                C,
-            > for TrickySql4Params
-        {
-            fn bind(
-                &'a self,
-                client: &'a C,
-                stmt: &'a mut TrickySql4Stmt,
-            ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-            > {
-                Box::pin(stmt.bind(client, &self.price))
-            }
-        }
-        #[derive(Clone, Copy, Debug)]
-        pub struct TrickySql6Params {
-            pub price: f64,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::async_::Params<
-                'a,
-                TrickySql6Stmt,
-                std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-                >,
-                C,
-            > for TrickySql6Params
-        {
-            fn bind(
-                &'a self,
-                client: &'a C,
-                stmt: &'a mut TrickySql6Stmt,
-            ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-            > {
-                Box::pin(stmt.bind(client, &self.price))
-            }
-        }
-        #[derive(Clone, Copy, Debug)]
-        pub struct TrickySql7Params {
-            pub price: f64,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::async_::Params<
-                'a,
-                TrickySql7Stmt,
-                std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-                >,
-                C,
-            > for TrickySql7Params
-        {
-            fn bind(
-                &'a self,
-                client: &'a C,
-                stmt: &'a mut TrickySql7Stmt,
-            ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-            > {
-                Box::pin(stmt.bind(client, &self.price))
-            }
-        }
-        #[derive(Clone, Copy, Debug)]
-        pub struct TrickySql8Params {
-            pub price: f64,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::async_::Params<
-                'a,
-                TrickySql8Stmt,
-                std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-                >,
-                C,
-            > for TrickySql8Params
-        {
-            fn bind(
-                &'a self,
-                client: &'a C,
-                stmt: &'a mut TrickySql8Stmt,
-            ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-            > {
-                Box::pin(stmt.bind(client, &self.price))
-            }
-        }
-        #[derive(Clone, Copy, Debug)]
-        pub struct TrickySql9Params {
-            pub price: f64,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::async_::Params<
-                'a,
-                TrickySql9Stmt,
-                std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-                >,
-                C,
-            > for TrickySql9Params
-        {
-            fn bind(
-                &'a self,
-                client: &'a C,
-                stmt: &'a mut TrickySql9Stmt,
-            ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-            > {
-                Box::pin(stmt.bind(client, &self.price))
-            }
-        }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
-        pub struct SelectCompact {
-            pub composite: super::super::types::public::CloneComposite,
-        }
-        pub struct SelectCompactBorrowed<'a> {
-            pub composite: super::super::types::public::CloneCompositeBorrowed<'a>,
-        }
-        impl<'a> From<SelectCompactBorrowed<'a>> for SelectCompact {
-            fn from(SelectCompactBorrowed { composite }: SelectCompactBorrowed<'a>) -> Self {
-                Self {
-                    composite: composite.into(),
-                }
-            }
-        }
+
         pub struct SelectCompactQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -4241,20 +3792,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
-        pub struct SelectSpaced {
-            pub composite: super::super::types::public::CloneComposite,
-        }
-        pub struct SelectSpacedBorrowed<'a> {
-            pub composite: super::super::types::public::CloneCompositeBorrowed<'a>,
-        }
-        impl<'a> From<SelectSpacedBorrowed<'a>> for SelectSpaced {
-            fn from(SelectSpacedBorrowed { composite }: SelectSpacedBorrowed<'a>) -> Self {
-                Self {
-                    composite: composite.into(),
-                }
-            }
-        }
+
         pub struct SelectSpacedQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -4315,10 +3853,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
-        pub struct ImplicitCompact {
-            pub id: Option<i32>,
-        }
+
         pub struct ImplicitCompactQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -4375,10 +3910,7 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
-        pub struct ImplicitSpaced {
-            pub id: Option<i32>,
-        }
+
         pub struct ImplicitSpacedQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -4443,14 +3975,14 @@ pub mod queries {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::async_::Stmt,
-            extractor: fn(&tokio_postgres::Row) -> i32,
-            mapper: fn(i32) -> T,
+            extractor: fn(&tokio_postgres::Row) -> Row,
+            mapper: fn(Row) -> T,
         }
         impl<'a, C, T: 'a, const N: usize> RowQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
-            pub fn map<R>(self, mapper: fn(i32) -> R) -> RowQuery<'a, C, R, N> {
+            pub fn map<R>(self, mapper: fn(Row) -> R) -> RowQuery<'a, C, R, N> {
                 RowQuery {
                     client: self.client,
                     params: self.params,
@@ -4688,20 +4220,20 @@ pub mod queries {
                 client: &'a C,
                 name: &'a &'a str,
                 price: &'a f64,
-            ) -> RowQuery<'a, C, i32, 2> {
+            ) -> RowQuery<'a, C, Row, 2> {
                 RowQuery {
                     client,
                     params: [name, price],
                     stmt: &mut self.0,
-                    extractor: |row| row.get(0),
-                    mapper: |it| it,
+                    extractor: |row| Row { id: row.get(0) },
+                    mapper: |it| <Row>::from(it),
                 }
             }
             pub fn params<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                params: &'a impl cornucopia_client::async_::Params<'a, Self, RowQuery<'a, C, i32, 2>, C>,
-            ) -> RowQuery<'a, C, i32, 2> {
+                params: &'a impl cornucopia_client::async_::Params<'a, Self, RowQuery<'a, C, Row, 2>, C>,
+            ) -> RowQuery<'a, C, Row, 2> {
                 params.bind(client, self)
             }
         }
@@ -4717,20 +4249,20 @@ pub mod queries {
                 client: &'a C,
                 name: &'a &'a str,
                 price: &'a f64,
-            ) -> RowQuery<'a, C, i32, 2> {
+            ) -> RowQuery<'a, C, Row, 2> {
                 RowQuery {
                     client,
                     params: [name, price],
                     stmt: &mut self.0,
-                    extractor: |row| row.get(0),
-                    mapper: |it| it,
+                    extractor: |row| Row { id: row.get(0) },
+                    mapper: |it| <Row>::from(it),
                 }
             }
             pub fn params<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                params: &'a impl cornucopia_client::async_::Params<'a, Self, RowQuery<'a, C, i32, 2>, C>,
-            ) -> RowQuery<'a, C, i32, 2> {
+                params: &'a impl cornucopia_client::async_::Params<'a, Self, RowQuery<'a, C, Row, 2>, C>,
+            ) -> RowQuery<'a, C, Row, 2> {
                 params.bind(client, self)
             }
         }
@@ -4749,20 +4281,6 @@ pub mod queries {
                 let stmt = self.0.prepare(client).await?;
                 client.execute(stmt, &[price]).await
             }
-            pub async fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a C,
-                params: &'a impl cornucopia_client::async_::Params<
-                    'a,
-                    Self,
-                    std::pin::Pin<
-                        Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>>,
-                    >,
-                    C,
-                >,
-            ) -> Result<u64, tokio_postgres::Error> {
-                params.bind(client, self).await
-            }
         }
         pub fn tricky_sql1() -> TrickySql1Stmt {
             TrickySql1Stmt(cornucopia_client::async_::Stmt::new(
@@ -4779,20 +4297,6 @@ pub mod queries {
                 let stmt = self.0.prepare(client).await?;
                 client.execute(stmt, &[price]).await
             }
-            pub async fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a C,
-                params: &'a impl cornucopia_client::async_::Params<
-                    'a,
-                    Self,
-                    std::pin::Pin<
-                        Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>>,
-                    >,
-                    C,
-                >,
-            ) -> Result<u64, tokio_postgres::Error> {
-                params.bind(client, self).await
-            }
         }
         pub fn tricky_sql2() -> TrickySql2Stmt {
             TrickySql2Stmt(cornucopia_client::async_::Stmt::new("INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a '':bind_param''', $1)"))
@@ -4806,20 +4310,6 @@ pub mod queries {
             ) -> Result<u64, tokio_postgres::Error> {
                 let stmt = self.0.prepare(client).await?;
                 client.execute(stmt, &[price]).await
-            }
-            pub async fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a C,
-                params: &'a impl cornucopia_client::async_::Params<
-                    'a,
-                    Self,
-                    std::pin::Pin<
-                        Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>>,
-                    >,
-                    C,
-                >,
-            ) -> Result<u64, tokio_postgres::Error> {
-                params.bind(client, self).await
             }
         }
         pub fn tricky_sql3() -> TrickySql3Stmt {
@@ -4835,20 +4325,6 @@ pub mod queries {
                 let stmt = self.0.prepare(client).await?;
                 client.execute(stmt, &[price]).await
             }
-            pub async fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a C,
-                params: &'a impl cornucopia_client::async_::Params<
-                    'a,
-                    Self,
-                    std::pin::Pin<
-                        Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>>,
-                    >,
-                    C,
-                >,
-            ) -> Result<u64, tokio_postgres::Error> {
-                params.bind(client, self).await
-            }
         }
         pub fn tricky_sql4() -> TrickySql4Stmt {
             TrickySql4Stmt(cornucopia_client::async_::Stmt::new("INSERT INTO syntax (\"trick:y\", price) VALUES ($tag$this is not a :bind_param$tag$, $1)"))
@@ -4862,20 +4338,6 @@ pub mod queries {
             ) -> Result<u64, tokio_postgres::Error> {
                 let stmt = self.0.prepare(client).await?;
                 client.execute(stmt, &[price]).await
-            }
-            pub async fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a C,
-                params: &'a impl cornucopia_client::async_::Params<
-                    'a,
-                    Self,
-                    std::pin::Pin<
-                        Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>>,
-                    >,
-                    C,
-                >,
-            ) -> Result<u64, tokio_postgres::Error> {
-                params.bind(client, self).await
             }
         }
         pub fn tricky_sql6() -> TrickySql6Stmt {
@@ -4891,20 +4353,6 @@ pub mod queries {
                 let stmt = self.0.prepare(client).await?;
                 client.execute(stmt, &[price]).await
             }
-            pub async fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a C,
-                params: &'a impl cornucopia_client::async_::Params<
-                    'a,
-                    Self,
-                    std::pin::Pin<
-                        Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>>,
-                    >,
-                    C,
-                >,
-            ) -> Result<u64, tokio_postgres::Error> {
-                params.bind(client, self).await
-            }
         }
         pub fn tricky_sql7() -> TrickySql7Stmt {
             TrickySql7Stmt(cornucopia_client::async_::Stmt::new("INSERT INTO syntax (\"trick:y\", price) VALUES (E'this is not a \':bind_param\'', $1)"))
@@ -4918,20 +4366,6 @@ pub mod queries {
             ) -> Result<u64, tokio_postgres::Error> {
                 let stmt = self.0.prepare(client).await?;
                 client.execute(stmt, &[price]).await
-            }
-            pub async fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a C,
-                params: &'a impl cornucopia_client::async_::Params<
-                    'a,
-                    Self,
-                    std::pin::Pin<
-                        Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>>,
-                    >,
-                    C,
-                >,
-            ) -> Result<u64, tokio_postgres::Error> {
-                params.bind(client, self).await
             }
         }
         pub fn tricky_sql8() -> TrickySql8Stmt {
@@ -4947,20 +4381,6 @@ pub mod queries {
                 let stmt = self.0.prepare(client).await?;
                 client.execute(stmt, &[price]).await
             }
-            pub async fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a C,
-                params: &'a impl cornucopia_client::async_::Params<
-                    'a,
-                    Self,
-                    std::pin::Pin<
-                        Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>>,
-                    >,
-                    C,
-                >,
-            ) -> Result<u64, tokio_postgres::Error> {
-                params.bind(client, self).await
-            }
         }
         pub fn tricky_sql9() -> TrickySql9Stmt {
             TrickySql9Stmt(cornucopia_client::async_::Stmt::new("INSERT INTO syntax (\"trick:y\", price) VALUES (E'this is \'not\' a \':bind_param\'', $1)"))
@@ -4974,20 +4394,6 @@ pub mod queries {
             ) -> Result<u64, tokio_postgres::Error> {
                 let stmt = self.0.prepare(client).await?;
                 client.execute(stmt, &[price]).await
-            }
-            pub async fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a C,
-                params: &'a impl cornucopia_client::async_::Params<
-                    'a,
-                    Self,
-                    std::pin::Pin<
-                        Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>>,
-                    >,
-                    C,
-                >,
-            ) -> Result<u64, tokio_postgres::Error> {
-                params.bind(client, self).await
             }
         }
         pub fn syntax() -> SyntaxStmt {

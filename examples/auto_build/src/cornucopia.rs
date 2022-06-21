@@ -9,18 +9,6 @@ pub mod queries {
         use cornucopia_client::async_::GenericClient;
         use futures;
         use futures::{StreamExt, TryStreamExt};
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct ExampleQuery {
-            pub col1: String,
-        }
-        pub struct ExampleQueryBorrowed<'a> {
-            pub col1: &'a str,
-        }
-        impl<'a> From<ExampleQueryBorrowed<'a>> for ExampleQuery {
-            fn from(ExampleQueryBorrowed { col1 }: ExampleQueryBorrowed<'a>) -> Self {
-                Self { col1: col1.into() }
-            }
-        }
         pub struct ExampleQueryQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
