@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use crate::cornucopia_sync::{
     queries::{
-        copy::{insert_clone, insert_copy, select_copy, InsertCloneParams, InsertCopyParams},
+        copy::{insert_clone, insert_copy, select_copy},
         domain::{
             insert_nightmare_domain, select_nightmare_domain, select_nightmare_domain_null,
             InsertNightmareDomainParams, SelectNightmareDomain, SelectNightmareDomainNull,
@@ -26,7 +26,7 @@ use crate::cornucopia_sync::{
         stress::{
             insert_everything, insert_everything_array, insert_nightmare, select_everything,
             select_everything_array, select_nightmare, InsertEverythingArrayParams,
-            InsertEverythingParams, InsertNightmareParams, SelectEverything, SelectEverythingArray,
+            InsertEverythingParams, SelectEverything, SelectEverythingArray,
         },
     },
     types::public::{
@@ -120,7 +120,8 @@ pub fn test_named(client: &mut Client) {
             },
         )
         .one()
-        .unwrap();
+        .unwrap()
+        .id;
     let visible_id = new_named_visible()
         .params(
             client,
@@ -130,11 +131,13 @@ pub fn test_named(client: &mut Client) {
             },
         )
         .one()
-        .unwrap();
+        .unwrap()
+        .id;
     let last_id = new_named_visible()
         .bind(client, &"can't by me", &None)
         .one()
-        .unwrap();
+        .unwrap()
+        .id;
     assert_eq!(
         named().bind(client).vec().unwrap(),
         &[
@@ -205,26 +208,22 @@ pub fn test_named(client: &mut Client) {
 // Test we correctly implement borrowed version and copy derive
 pub fn test_copy(client: &mut Client) {
     // Test copy
-    let copy_params = InsertCopyParams {
-        composite: CopyComposite {
-            first: 42,
-            second: 4.2,
-        },
+    let copy_params = CopyComposite {
+        first: 42,
+        second: 4.2,
     };
     moving(copy_params); // Ignore if copied
-    insert_copy().params(client, &copy_params).unwrap();
+    insert_copy().bind(client, &copy_params).unwrap();
     let copy_row = select_copy().bind(client).one().unwrap();
     moving(copy_row); // Ignore if copied
     moving(copy_row);
 
     // Test clone
-    let clone_params = InsertCloneParams {
-        composite: CloneCompositeBorrowed {
-            first: 42,
-            second: "Hello world",
-        },
+    let clone_params = CloneCompositeBorrowed {
+        first: 42,
+        second: "Hello world",
     };
-    insert_clone().params(client, &clone_params).unwrap();
+    insert_clone().bind(client, &clone_params).unwrap();
     select_copy().bind(client).one().unwrap();
 }
 
@@ -449,19 +448,17 @@ pub fn test_stress(client: &mut Client) {
         spongebob: vec![SpongebobCharacter::Bob, SpongebobCharacter::Patrick],
         domain: "Hello".to_string(),
     };
-    let params = InsertNightmareParams {
-        composite: NightmareCompositeParams {
-            custom: &[CustomCompositeBorrowed {
-                wow: "Bob",
-                such_cool: 42,
-                nice: SpongebobCharacter::Squidward,
-            }],
-            spongebob: &[SpongebobCharacter::Bob, SpongebobCharacter::Patrick],
-            domain: "Hello",
-        },
+    let params = NightmareCompositeParams {
+        custom: &[CustomCompositeBorrowed {
+            wow: "Bob",
+            such_cool: 42,
+            nice: SpongebobCharacter::Squidward,
+        }],
+        spongebob: &[SpongebobCharacter::Bob, SpongebobCharacter::Patrick],
+        domain: "Hello",
     };
 
-    assert_eq!(1, insert_nightmare().params(client, &params).unwrap());
+    assert_eq!(1, insert_nightmare().bind(client, &params).unwrap());
     let actual = select_nightmare().bind(client).one().unwrap();
     assert_eq!(expected, actual);
 }
