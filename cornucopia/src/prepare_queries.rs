@@ -413,11 +413,7 @@ fn prepare_query(
         sql_str,
     );
     if !params_empty {
-        module.add_param(
-            params_name,
-            query_idx,
-            params_is_implicit,
-        )?;
+        module.add_param(params_name, query_idx, params_is_implicit)?;
     };
 
     Ok(())
