@@ -5,7 +5,7 @@ use postgres::Client;
 use postgres_types::{Kind, Type};
 
 use crate::{
-    parser::{Span, TypeAnnotation},
+    parser::{QueryDataStruct, Span, TypeAnnotation},
     read_queries::ModuleInfo,
     type_registrar::CornucopiaType,
     type_registrar::TypeRegistrar,
@@ -20,6 +20,7 @@ use self::error::Error;
 pub(crate) struct PreparedQuery {
     pub(crate) name: String,
     pub(crate) params: Vec<PreparedField>,
+    pub(crate) params_is_implicit: bool,
     pub(crate) row: Option<(usize, Vec<usize>)>, // None if execute
     pub(crate) sql: String,
 }
@@ -39,6 +40,7 @@ pub(crate) struct PreparedParams {
     pub(crate) name: Span<String>,
     pub(crate) fields: Vec<PreparedField>,
     pub(crate) is_copy: bool,
+    pub(crate) is_implicit: bool,
     pub(crate) queries: Vec<usize>,
 }
 
@@ -48,6 +50,7 @@ pub(crate) struct PreparedRow {
     pub(crate) name: Span<String>,
     pub(crate) fields: Vec<PreparedField>,
     pub(crate) is_copy: bool,
+    pub(crate) is_implicit: bool,
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -87,6 +90,7 @@ impl PreparedModule {
         registrar: &TypeRegistrar,
         name: Span<String>,
         fields: Vec<PreparedField>,
+        is_implicit: bool,
     ) -> Result<(usize, Vec<usize>), Error> {
         assert!(!fields.is_empty());
         match self.rows.entry(name.value.clone()) {
@@ -115,13 +119,19 @@ impl PreparedModule {
                     name: name.clone(),
                     fields: fields.clone(),
                     is_copy,
+                    is_implicit,
                 });
-                self.add_row(registrar, name, fields)
+                self.add_row(registrar, name, fields, is_implicit)
             }
         }
     }
 
-    fn add_param(&mut self, name: Span<String>, query_idx: usize) -> Result<usize, Error> {
+    fn add_param(
+        &mut self,
+        name: Span<String>,
+        query_idx: usize,
+        is_implicit: bool,
+    ) -> Result<usize, Error> {
         let fields = &self.queries.get_index(query_idx).unwrap().1.params;
         assert!(!fields.is_empty());
         match self.params.entry(name.value.clone()) {
@@ -148,8 +158,9 @@ impl PreparedModule {
                     fields: fields.to_vec(),
                     is_copy,
                     queries: vec![],
+                    is_implicit,
                 });
-                self.add_param(name, query_idx)
+                self.add_param(name, query_idx, is_implicit)
             }
         }
     }
@@ -158,6 +169,7 @@ impl PreparedModule {
         &mut self,
         name: String,
         params: Vec<PreparedField>,
+        params_is_implicit: bool,
         row_idx: Option<(usize, Vec<usize>)>,
         sql: String,
     ) -> usize {
@@ -169,6 +181,7 @@ impl PreparedModule {
                     params,
                     row: row_idx,
                     sql,
+                    params_is_implicit,
                 },
             )
             .0
@@ -382,13 +395,29 @@ fn prepare_query(
 
     let params_empty = params_fields.is_empty();
     let row_idx = if !row_fields.is_empty() {
-        Some(module.add_row(registrar, row_name, row_fields)?)
+        Some(module.add_row(
+            registrar,
+            row_name,
+            row_fields,
+            matches!(row, QueryDataStruct::Implicit { .. }),
+        )?)
     } else {
         None
     };
-    let query_idx = module.add_query(name.value.clone(), params_fields, row_idx, sql_str);
+    let params_is_implicit = matches!(params, QueryDataStruct::Implicit { .. });
+    let query_idx = module.add_query(
+        name.value.clone(),
+        params_fields,
+        params_is_implicit,
+        row_idx,
+        sql_str,
+    );
     if !params_empty {
-        module.add_param(params_name, query_idx)?;
+        module.add_param(
+            params_name,
+            query_idx,
+            params_is_implicit,
+        )?;
     };
 
     Ok(())
