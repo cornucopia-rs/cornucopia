@@ -89,7 +89,7 @@ pub fn generate_live(
     let generated_code = generate_internal(prepared_modules, settings);
     // Write
     if let Some(d) = destination {
-        write_generated_code(d, &generated_code)?
+        write_generated_code(d, &generated_code)?;
     };
 
     Ok(generated_code)
@@ -123,7 +123,7 @@ pub fn generate_managed(
     container::cleanup(podman)?;
 
     if let Some(destination) = destination {
-        write_generated_code(destination, &generated_code)?
+        write_generated_code(destination, &generated_code)?;
     };
 
     Ok(generated_code)

@@ -69,7 +69,7 @@ fn healthcheck(podman: bool, max_retries: u64, ms_per_retry: u64) -> Result<(), 
         nb_retries += 1;
 
         if nb_retries % slow_threshold == 0 {
-            println!("Container startup slower than expected ({nb_retries} retries out of {max_retries})")
+            println!("Container startup slower than expected ({nb_retries} retries out of {max_retries})");
         }
     }
     // Just for extra safety...

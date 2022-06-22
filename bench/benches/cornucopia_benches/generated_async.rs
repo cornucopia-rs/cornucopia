@@ -1,5 +1,5 @@
 // This file was generated with `cornucopia`. Do not modify.
-#![allow(clippy::all)]
+#![allow(clippy::all, clippy::pedantic)]
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 #![allow(dead_code)]
@@ -34,42 +34,7 @@ pub mod queries {
                 Box::pin(stmt.bind(client, &self.name, &self.hair_color))
             }
         }
-        #[derive(Debug)]
-        pub struct PostByUserIdsParams<'a> {
-            pub ids: &'a [i32],
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::async_::Params<'a, PostByUserIdsStmt, PostQuery<'a, C, Post, 1>, C>
-            for PostByUserIdsParams<'a>
-        {
-            fn bind(
-                &'a self,
-                client: &'a C,
-                stmt: &'a mut PostByUserIdsStmt,
-            ) -> PostQuery<'a, C, Post, 1> {
-                stmt.bind(client, &self.ids)
-            }
-        }
-        #[derive(Debug)]
-        pub struct CommentsByPostIdParams<'a> {
-            pub ids: &'a [i32],
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::async_::Params<
-                'a,
-                CommentsByPostIdStmt,
-                CommentQuery<'a, C, Comment, 1>,
-                C,
-            > for CommentsByPostIdParams<'a>
-        {
-            fn bind(
-                &'a self,
-                client: &'a C,
-                stmt: &'a mut CommentsByPostIdStmt,
-            ) -> CommentQuery<'a, C, Comment, 1> {
-                stmt.bind(client, &self.ids)
-            }
-        }
+
         #[derive(Debug, Clone, PartialEq)]
         pub struct User {
             pub id: i32,
@@ -433,7 +398,7 @@ pub mod queries {
                         name: row.get(1),
                         hair_color: row.get(2),
                     },
-                    mapper: |it| User::from(it),
+                    mapper: |it| <User>::from(it),
                 }
             }
         }
@@ -487,7 +452,7 @@ pub mod queries {
                         title: row.get(2),
                         body: row.get(3),
                     },
-                    mapper: |it| Post::from(it),
+                    mapper: |it| <Post>::from(it),
                 }
             }
         }
@@ -513,20 +478,8 @@ pub mod queries {
                         title: row.get(2),
                         body: row.get(3),
                     },
-                    mapper: |it| Post::from(it),
+                    mapper: |it| <Post>::from(it),
                 }
-            }
-            pub fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a C,
-                params: &'a impl cornucopia_client::async_::Params<
-                    'a,
-                    Self,
-                    PostQuery<'a, C, Post, 1>,
-                    C,
-                >,
-            ) -> PostQuery<'a, C, Post, 1> {
-                params.bind(client, self)
             }
         }
         pub fn comments() -> CommentsStmt {
@@ -549,7 +502,7 @@ pub mod queries {
                         post_id: row.get(1),
                         text: row.get(2),
                     },
-                    mapper: |it| Comment::from(it),
+                    mapper: |it| <Comment>::from(it),
                 }
             }
         }
@@ -574,20 +527,8 @@ pub mod queries {
                         post_id: row.get(1),
                         text: row.get(2),
                     },
-                    mapper: |it| Comment::from(it),
+                    mapper: |it| <Comment>::from(it),
                 }
-            }
-            pub fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a C,
-                params: &'a impl cornucopia_client::async_::Params<
-                    'a,
-                    Self,
-                    CommentQuery<'a, C, Comment, 1>,
-                    C,
-                >,
-            ) -> CommentQuery<'a, C, Comment, 1> {
-                params.bind(client, self)
             }
         }
         pub fn select_complex() -> SelectComplexStmt {
@@ -612,7 +553,7 @@ pub mod queries {
                         title: row.get(5),
                         body: row.get(6),
                     },
-                    mapper: |it| SelectComplex::from(it),
+                    mapper: |it| <SelectComplex>::from(it),
                 }
             }
         }

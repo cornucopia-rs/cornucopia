@@ -4,6 +4,7 @@ use cornucopia::CodegenSettings;
 // In this example, we generate the module in our project, but
 // we could also generate it elsewhere and embed the generated
 // file with a `include_str` statement in your project.
+#[allow(clippy::unnecessary_wraps, clippy::no_effect_underscore_binding)]
 fn main() -> Result<(), std::io::Error> {
     //! To enable the automatic builds, remove the starting underscore
     //! from the variable names and uncomment the snippet below

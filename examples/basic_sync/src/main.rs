@@ -9,7 +9,6 @@ use crate::cornucopia::{
         module_1::insert_book,
         module_2::{
             author_name_by_id, author_name_starting_with, authors, books, select_where_custom_type,
-            AuthorNameStartingWithParams,
         },
     },
     types::public::SpongebobCharacter,
@@ -56,10 +55,7 @@ pub fn main() {
     println!(
         "{:?}",
         author_name_starting_with()
-            .params(
-                &mut client,
-                &AuthorNameStartingWithParams { start_str: "Jo" }
-            )
+            .bind(&mut client, &"Jo")
             .vec()
             .unwrap()
     );

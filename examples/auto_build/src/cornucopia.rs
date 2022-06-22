@@ -1,5 +1,5 @@
 // This file was generated with `cornucopia`. Do not modify.
-#![allow(clippy::all)]
+#![allow(clippy::all, clippy::pedantic)]
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 #![allow(dead_code)]
@@ -9,33 +9,18 @@ pub mod queries {
         use cornucopia_client::async_::GenericClient;
         use futures;
         use futures::{StreamExt, TryStreamExt};
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct ExampleQuery {
-            pub col1: String,
-        }
-        pub struct ExampleQueryBorrowed<'a> {
-            pub col1: &'a str,
-        }
-        impl<'a> From<ExampleQueryBorrowed<'a>> for ExampleQuery {
-            fn from(ExampleQueryBorrowed { col1 }: ExampleQueryBorrowed<'a>) -> Self {
-                Self { col1: col1.into() }
-            }
-        }
         pub struct ExampleQueryQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::async_::Stmt,
-            extractor: fn(&tokio_postgres::Row) -> ExampleQueryBorrowed,
-            mapper: fn(ExampleQueryBorrowed) -> T,
+            extractor: fn(&tokio_postgres::Row) -> &str,
+            mapper: fn(&str) -> T,
         }
         impl<'a, C, T: 'a, const N: usize> ExampleQueryQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
-            pub fn map<R>(
-                self,
-                mapper: fn(ExampleQueryBorrowed) -> R,
-            ) -> ExampleQueryQuery<'a, C, R, N> {
+            pub fn map<R>(self, mapper: fn(&str) -> R) -> ExampleQueryQuery<'a, C, R, N> {
                 ExampleQueryQuery {
                     client: self.client,
                     params: self.params,
@@ -93,13 +78,13 @@ FROM
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-            ) -> ExampleQueryQuery<'a, C, ExampleQuery, 0> {
+            ) -> ExampleQueryQuery<'a, C, String, 0> {
                 ExampleQueryQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
-                    extractor: |row| ExampleQueryBorrowed { col1: row.get(0) },
-                    mapper: |it| ExampleQuery::from(it),
+                    extractor: |row| row.get(0),
+                    mapper: |it| it.into(),
                 }
             }
         }

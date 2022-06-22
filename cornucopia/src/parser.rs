@@ -57,7 +57,7 @@ impl<T> Span<T> {
 }
 
 fn ident() -> impl Parser<char, Span<String>, Error = Simple<char>> {
-    filter(|c: &char| c.is_ascii_alphabetic())
+    filter(char::is_ascii_alphabetic)
         .chain(filter(|c: &char| c.is_ascii_alphanumeric() || *c == '_').repeated())
         .collect()
         .map_with_span(|value: String, span: Range<usize>| Span {
@@ -210,7 +210,7 @@ impl QuerySql {
                     let index = dedup_params.iter().position(|bp| bp == bind_param).unwrap();
                     let start = bind_param.span.offset() - 1;
                     let end = start + bind_param.span.len();
-                    sql_str.replace_range(start..=end, &format!("${}", index + 1))
+                    sql_str.replace_range(start..=end, &format!("${}", index + 1));
                 }
 
                 Self {

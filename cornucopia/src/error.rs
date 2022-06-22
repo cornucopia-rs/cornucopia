@@ -18,6 +18,7 @@ pub enum Error {
 }
 
 impl Error {
+    #[must_use]
     pub fn report(self) -> String {
         let mut buff = String::new();
         GraphicalReportHandler::new()

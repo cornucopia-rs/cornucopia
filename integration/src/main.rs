@@ -6,7 +6,7 @@ use std::{
 };
 
 use clap::Parser;
-use cornucopia::{container, CodegenSettings};
+use cornucopia::{container, CodegenSettings, Error};
 use owo_colors::OwoColorize;
 
 /// Start cornucopia test runner
@@ -80,14 +80,19 @@ fn display<T, E: Display>(result: Result<T, E>) -> Result<T, E> {
 }
 
 // Run test, return true if all test are successful
-fn test(args: Args) -> bool {
+fn test(
+    Args {
+        apply_errors,
+        apply_codegen,
+    }: Args,
+) -> bool {
     // Start by removing previous container if it was left open
     container::cleanup(false).ok();
     container::setup(false).unwrap();
     let successful = std::panic::catch_unwind(|| {
         let mut client = cornucopia::conn::cornucopia_conn().unwrap();
-        display(run_errors_test(&mut client, args.apply_errors)).unwrap()
-            && display(run_codegen_test(&mut client, args.apply_codegen)).unwrap()
+        display(run_errors_test(&mut client, apply_errors)).unwrap()
+            && display(run_codegen_test(&mut client, apply_codegen)).unwrap()
     });
     container::cleanup(false).unwrap();
     successful.unwrap()
@@ -167,8 +172,10 @@ fn run_errors_test(
                 Ok(())
             })();
 
-            let err = result.err().map(|e| e.report()).unwrap_or_default();
-            if err.trim() != test.error.trim() {
+            let err = result.err().map(Error::report).unwrap_or_default();
+            if err.trim() == test.error.trim() {
+                println!("{} {}", test.name, "OK".green());
+            } else {
                 successful = false;
                 println!(
                     "{} {}\n{}\n{}\n{}\n{}",
@@ -179,11 +186,9 @@ fn run_errors_test(
                     got_msg,
                     err,
                 );
-            } else {
-                println!("{} {}", test.name, "OK".green());
             }
             if apply {
-                test.error = Cow::Owned(err.trim().to_string())
+                test.error = Cow::Owned(err.trim().to_string());
             }
             std::env::set_current_dir(&original_pwd)?;
         }
@@ -235,7 +240,7 @@ fn run_codegen_test(
 
             // If we're doing a global run of this codegen, only run the migrations once
             if local_run {
-                cornucopia::run_migrations(client, migrations)?
+                cornucopia::run_migrations(client, migrations)?;
             };
 
             // If `--apply`, then the code will be regenerated.
@@ -286,7 +291,7 @@ fn run_codegen_test(
                 // If the newly generated file differs from
                 // the currently checked in one, return an error.
                 if old_codegen != formated_new_codegen {
-                    Err("\"{destination}\" is outdated")?
+                    Err("\"{destination}\" is outdated")?;
                 }
             }
             println!("(generate) {} {}", codegen_test.name, "OK".green());
@@ -294,7 +299,9 @@ fn run_codegen_test(
             // Run the generated code if it is a local run.
             if codegen_test.run.unwrap_or(false) && local_run {
                 let result = Command::new("cargo").arg("run").output()?;
-                if !result.status.success() {
+                if result.status.success() {
+                    println!("(run) {} {}", codegen_test.name, "OK".green());
+                } else {
                     successful = false;
                     println!(
                         " {}\n{}",
@@ -303,12 +310,10 @@ fn run_codegen_test(
                             .as_ref()
                             .bright_black()
                     );
-                } else {
-                    println!("(run) {} {}", codegen_test.name, "OK".green());
                 }
 
                 // Reset DB
-                reset_db(client)?
+                reset_db(client)?;
             }
 
             // Move back to original directory
@@ -318,7 +323,9 @@ fn run_codegen_test(
         if let Some(global_run) = &suite.run {
             std::env::set_current_dir(&format!("../{}", global_run.path))?;
             let result = Command::new("cargo").arg("run").output()?;
-            if !result.status.success() {
+            if result.status.success() {
+                println!("(run) {}", "OK".green());
+            } else {
                 successful = false;
                 println!(
                     " {}\n{}",
@@ -327,8 +334,6 @@ fn run_codegen_test(
                         .as_ref()
                         .bright_black()
                 );
-            } else {
-                println!("(run) {}", "OK".green());
             }
             reset_db(client)?;
             std::env::set_current_dir(&original_pwd)?;

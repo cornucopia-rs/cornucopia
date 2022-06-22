@@ -1,5 +1,5 @@
 // This file was generated with `cornucopia`. Do not modify.
-#![allow(clippy::all)]
+#![allow(clippy::all, clippy::pedantic)]
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 #![allow(dead_code)]
@@ -842,58 +842,13 @@ pub mod types {
 pub mod queries {
     pub mod copy {
         use postgres::{fallible_iterator::FallibleIterator, GenericClient};
-        #[derive(Debug)]
-        pub struct InsertCloneParams<'a> {
-            pub composite: super::super::types::public::CloneCompositeBorrowed<'a>,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::sync::Params<'a, InsertCloneStmt, Result<u64, postgres::Error>, C>
-            for InsertCloneParams<'a>
-        {
-            fn bind(
-                &'a self,
-                client: &'a mut C,
-                stmt: &'a mut InsertCloneStmt,
-            ) -> Result<u64, postgres::Error> {
-                stmt.bind(client, &self.composite)
-            }
-        }
-        #[derive(Clone, Copy, Debug)]
-        pub struct InsertCopyParams {
-            pub composite: super::super::types::public::CopyComposite,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::sync::Params<'a, InsertCopyStmt, Result<u64, postgres::Error>, C>
-            for InsertCopyParams
-        {
-            fn bind(
-                &'a self,
-                client: &'a mut C,
-                stmt: &'a mut InsertCopyStmt,
-            ) -> Result<u64, postgres::Error> {
-                stmt.bind(client, &self.composite)
-            }
-        }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
-        pub struct SelectClone {
-            pub composite: super::super::types::public::CloneComposite,
-        }
-        pub struct SelectCloneBorrowed<'a> {
-            pub composite: super::super::types::public::CloneCompositeBorrowed<'a>,
-        }
-        impl<'a> From<SelectCloneBorrowed<'a>> for SelectClone {
-            fn from(SelectCloneBorrowed { composite }: SelectCloneBorrowed<'a>) -> Self {
-                Self {
-                    composite: composite.into(),
-                }
-            }
-        }
+
         pub struct SelectCloneQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::sync::Stmt,
-            extractor: fn(&postgres::Row) -> SelectCloneBorrowed,
-            mapper: fn(SelectCloneBorrowed) -> T,
+            extractor: fn(&postgres::Row) -> super::super::types::public::CloneCompositeBorrowed,
+            mapper: fn(super::super::types::public::CloneCompositeBorrowed) -> T,
         }
         impl<'a, C, T: 'a, const N: usize> SelectCloneQuery<'a, C, T, N>
         where
@@ -901,7 +856,7 @@ pub mod queries {
         {
             pub fn map<R>(
                 self,
-                mapper: fn(SelectCloneBorrowed) -> R,
+                mapper: fn(super::super::types::public::CloneCompositeBorrowed) -> R,
             ) -> SelectCloneQuery<'a, C, R, N> {
                 SelectCloneQuery {
                     client: self.client,
@@ -943,22 +898,22 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
-        pub struct SelectCopy {
-            pub composite: super::super::types::public::CopyComposite,
-        }
+
         pub struct SelectCopyQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::sync::Stmt,
-            extractor: fn(&postgres::Row) -> SelectCopy,
-            mapper: fn(SelectCopy) -> T,
+            extractor: fn(&postgres::Row) -> super::super::types::public::CopyComposite,
+            mapper: fn(super::super::types::public::CopyComposite) -> T,
         }
         impl<'a, C, T: 'a, const N: usize> SelectCopyQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
-            pub fn map<R>(self, mapper: fn(SelectCopy) -> R) -> SelectCopyQuery<'a, C, R, N> {
+            pub fn map<R>(
+                self,
+                mapper: fn(super::super::types::public::CopyComposite) -> R,
+            ) -> SelectCopyQuery<'a, C, R, N> {
                 SelectCopyQuery {
                     client: self.client,
                     params: self.params,
@@ -1014,18 +969,6 @@ pub mod queries {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[composite])
             }
-            pub fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-                params: &'a impl cornucopia_client::sync::Params<
-                    'a,
-                    Self,
-                    Result<u64, postgres::Error>,
-                    C,
-                >,
-            ) -> Result<u64, postgres::Error> {
-                params.bind(client, self)
-            }
         }
         pub fn select_clone() -> SelectCloneStmt {
             SelectCloneStmt(cornucopia_client::sync::Stmt::new("SELECT * FROM clone"))
@@ -1035,15 +978,14 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-            ) -> SelectCloneQuery<'a, C, SelectClone, 0> {
+            ) -> SelectCloneQuery<'a, C, super::super::types::public::CloneComposite, 0>
+            {
                 SelectCloneQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
-                    extractor: |row| SelectCloneBorrowed {
-                        composite: row.get(0),
-                    },
-                    mapper: |it| SelectClone::from(it),
+                    extractor: |row| row.get(0),
+                    mapper: |it| it.into(),
                 }
             }
         }
@@ -1062,18 +1004,6 @@ pub mod queries {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[composite])
             }
-            pub fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-                params: &'a impl cornucopia_client::sync::Params<
-                    'a,
-                    Self,
-                    Result<u64, postgres::Error>,
-                    C,
-                >,
-            ) -> Result<u64, postgres::Error> {
-                params.bind(client, self)
-            }
         }
         pub fn select_copy() -> SelectCopyStmt {
             SelectCopyStmt(cornucopia_client::sync::Stmt::new("SELECT * FROM copy"))
@@ -1083,15 +1013,13 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-            ) -> SelectCopyQuery<'a, C, SelectCopy, 0> {
+            ) -> SelectCopyQuery<'a, C, super::super::types::public::CopyComposite, 0> {
                 SelectCopyQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
-                    extractor: |row| SelectCopy {
-                        composite: row.get(0),
-                    },
-                    mapper: |it| SelectCopy::from(it),
+                    extractor: |row| row.get(0),
+                    mapper: |it| it,
                 }
             }
         }
@@ -1334,7 +1262,7 @@ pub mod queries {
                         nb: row.get(2),
                         arr: row.get(3),
                     },
-                    mapper: |it| SelectNightmareDomain::from(it),
+                    mapper: |it| <SelectNightmareDomain>::from(it),
                 }
             }
         }
@@ -1401,7 +1329,7 @@ pub mod queries {
                         arr: row.get(3),
                         composite: row.get(4),
                     },
-                    mapper: |it| SelectNightmareDomainNull::from(it),
+                    mapper: |it| <SelectNightmareDomainNull>::from(it),
                 }
             }
         }
@@ -1437,22 +1365,7 @@ pub mod queries {
                 stmt.bind(client, &self.price, &self.name)
             }
         }
-        #[derive(Clone, Copy, Debug)]
-        pub struct NamedByIdParams {
-            pub id: i32,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::sync::Params<'a, NamedByIdStmt, NamedQuery<'a, C, Named, 1>, C>
-            for NamedByIdParams
-        {
-            fn bind(
-                &'a self,
-                client: &'a mut C,
-                stmt: &'a mut NamedByIdStmt,
-            ) -> NamedQuery<'a, C, Named, 1> {
-                stmt.bind(client, &self.id)
-            }
-        }
+
         #[derive(Debug)]
         pub struct NamedComplexParams<'a> {
             pub named: super::super::types::public::NamedCompositeBorrowed<'a>,
@@ -1611,26 +1524,13 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
-        pub struct NamedComplex {
-            pub named: super::super::types::public::NamedComposite,
-        }
-        pub struct NamedComplexBorrowed<'a> {
-            pub named: super::super::types::public::NamedCompositeBorrowed<'a>,
-        }
-        impl<'a> From<NamedComplexBorrowed<'a>> for NamedComplex {
-            fn from(NamedComplexBorrowed { named }: NamedComplexBorrowed<'a>) -> Self {
-                Self {
-                    named: named.into(),
-                }
-            }
-        }
+
         pub struct NamedComplexQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::sync::Stmt,
-            extractor: fn(&postgres::Row) -> NamedComplexBorrowed,
-            mapper: fn(NamedComplexBorrowed) -> T,
+            extractor: fn(&postgres::Row) -> super::super::types::public::NamedCompositeBorrowed,
+            mapper: fn(super::super::types::public::NamedCompositeBorrowed) -> T,
         }
         impl<'a, C, T: 'a, const N: usize> NamedComplexQuery<'a, C, T, N>
         where
@@ -1638,7 +1538,7 @@ pub mod queries {
         {
             pub fn map<R>(
                 self,
-                mapper: fn(NamedComplexBorrowed) -> R,
+                mapper: fn(super::super::types::public::NamedCompositeBorrowed) -> R,
             ) -> NamedComplexQuery<'a, C, R, N> {
                 NamedComplexQuery {
                     client: self.client,
@@ -1698,7 +1598,7 @@ pub mod queries {
                     params: [name, price],
                     stmt: &mut self.0,
                     extractor: |row| Id { id: row.get(0) },
-                    mapper: |it| Id::from(it),
+                    mapper: |it| <Id>::from(it),
                 }
             }
             pub fn params<'a, C: GenericClient>(
@@ -1727,7 +1627,7 @@ pub mod queries {
                     params: [price, name],
                     stmt: &mut self.0,
                     extractor: |row| Id { id: row.get(0) },
-                    mapper: |it| Id::from(it),
+                    mapper: |it| <Id>::from(it),
                 }
             }
             pub fn params<'a, C: GenericClient>(
@@ -1757,7 +1657,7 @@ pub mod queries {
                         price: row.get(2),
                         show: row.get(3),
                     },
-                    mapper: |it| Named::from(it),
+                    mapper: |it| <Named>::from(it),
                 }
             }
         }
@@ -1783,20 +1683,8 @@ pub mod queries {
                         price: row.get(2),
                         show: row.get(3),
                     },
-                    mapper: |it| Named::from(it),
+                    mapper: |it| <Named>::from(it),
                 }
-            }
-            pub fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-                params: &'a impl cornucopia_client::sync::Params<
-                    'a,
-                    Self,
-                    NamedQuery<'a, C, Named, 1>,
-                    C,
-                >,
-            ) -> NamedQuery<'a, C, Named, 1> {
-                params.bind(client, self)
             }
         }
         pub fn new_named_complex() -> NewNamedComplexStmt {
@@ -1837,13 +1725,14 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-            ) -> NamedComplexQuery<'a, C, NamedComplex, 0> {
+            ) -> NamedComplexQuery<'a, C, super::super::types::public::NamedComposite, 0>
+            {
                 NamedComplexQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
-                    extractor: |row| NamedComplexBorrowed { named: row.get(0) },
-                    mapper: |it| NamedComplex::from(it),
+                    extractor: |row| row.get(0),
+                    mapper: |it| it.into(),
                 }
             }
         }
@@ -1994,7 +1883,7 @@ pub mod queries {
                         name: row.get(1),
                         composite: row.get(2),
                     },
-                    mapper: |it| Nullity::from(it),
+                    mapper: |it| <Nullity>::from(it),
                 }
             }
         }
@@ -2018,22 +1907,7 @@ pub mod queries {
                 stmt.bind(client, &self.author, &self.name)
             }
         }
-        #[derive(Debug)]
-        pub struct ParamsUseTwiceParams<'a> {
-            pub name: &'a str,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::sync::Params<'a, ParamsUseTwiceStmt, Result<u64, postgres::Error>, C>
-            for ParamsUseTwiceParams<'a>
-        {
-            fn bind(
-                &'a self,
-                client: &'a mut C,
-                stmt: &'a mut ParamsUseTwiceStmt,
-            ) -> Result<u64, postgres::Error> {
-                stmt.bind(client, &self.name)
-            }
-        }
+
         #[derive(Clone, Copy, Debug)]
         pub struct ParamsOrderParams {
             pub c: i32,
@@ -2169,7 +2043,7 @@ pub mod queries {
                         name: row.get(0),
                         author: row.get(1),
                     },
-                    mapper: |it| SelectBook::from(it),
+                    mapper: |it| <SelectBook>::from(it),
                 }
             }
         }
@@ -2187,18 +2061,6 @@ pub mod queries {
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[name])
-            }
-            pub fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-                params: &'a impl cornucopia_client::sync::Params<
-                    'a,
-                    Self,
-                    Result<u64, postgres::Error>,
-                    C,
-                >,
-            ) -> Result<u64, postgres::Error> {
-                params.bind(client, self)
             }
         }
         pub fn params_order() -> ParamsOrderStmt {
@@ -2393,26 +2255,6 @@ pub mod queries {
                     &self.inet_,
                     &self.macaddr_,
                 )
-            }
-        }
-        #[derive(Debug)]
-        pub struct InsertNightmareParams<'a> {
-            pub composite: super::super::types::public::NightmareCompositeParams<'a>,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::sync::Params<
-                'a,
-                InsertNightmareStmt,
-                Result<u64, postgres::Error>,
-                C,
-            > for InsertNightmareParams<'a>
-        {
-            fn bind(
-                &'a self,
-                client: &'a mut C,
-                stmt: &'a mut InsertNightmareStmt,
-            ) -> Result<u64, postgres::Error> {
-                stmt.bind(client, &self.composite)
             }
         }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
@@ -3203,26 +3045,14 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
-        pub struct SelectNightmare {
-            pub composite: super::super::types::public::NightmareComposite,
-        }
-        pub struct SelectNightmareBorrowed<'a> {
-            pub composite: super::super::types::public::NightmareCompositeBorrowed<'a>,
-        }
-        impl<'a> From<SelectNightmareBorrowed<'a>> for SelectNightmare {
-            fn from(SelectNightmareBorrowed { composite }: SelectNightmareBorrowed<'a>) -> Self {
-                Self {
-                    composite: composite.into(),
-                }
-            }
-        }
+
         pub struct SelectNightmareQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::sync::Stmt,
-            extractor: fn(&postgres::Row) -> SelectNightmareBorrowed,
-            mapper: fn(SelectNightmareBorrowed) -> T,
+            extractor:
+                fn(&postgres::Row) -> super::super::types::public::NightmareCompositeBorrowed,
+            mapper: fn(super::super::types::public::NightmareCompositeBorrowed) -> T,
         }
         impl<'a, C, T: 'a, const N: usize> SelectNightmareQuery<'a, C, T, N>
         where
@@ -3230,7 +3060,7 @@ pub mod queries {
         {
             pub fn map<R>(
                 self,
-                mapper: fn(SelectNightmareBorrowed) -> R,
+                mapper: fn(super::super::types::public::NightmareCompositeBorrowed) -> R,
             ) -> SelectNightmareQuery<'a, C, R, N> {
                 SelectNightmareQuery {
                     client: self.client,
@@ -3322,7 +3152,7 @@ pub mod queries {
                         inet_: row.get(31),
                         macaddr_: row.get(32),
                     },
-                    mapper: |it| SelectEverything::from(it),
+                    mapper: |it| <SelectEverything>::from(it),
                 }
             }
         }
@@ -3376,7 +3206,7 @@ pub mod queries {
                         inet_: row.get(31),
                         macaddr_: row.get(32),
                     },
-                    mapper: |it| SelectEverythingNull::from(it),
+                    mapper: |it| <SelectEverythingNull>::from(it),
                 }
             }
         }
@@ -3520,7 +3350,7 @@ pub mod queries {
                         inet_: row.get(25),
                         macaddr_: row.get(26),
                     },
-                    mapper: |it| SelectEverythingArray::from(it),
+                    mapper: |it| <SelectEverythingArray>::from(it),
                 }
             }
         }
@@ -3568,7 +3398,7 @@ pub mod queries {
                         inet_: row.get(25),
                         macaddr_: row.get(26),
                     },
-                    mapper: |it| SelectEverythingArrayNull::from(it),
+                    mapper: |it| <SelectEverythingArrayNull>::from(it),
                 }
             }
         }
@@ -3666,15 +3496,14 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-            ) -> SelectNightmareQuery<'a, C, SelectNightmare, 0> {
+            ) -> SelectNightmareQuery<'a, C, super::super::types::public::NightmareComposite, 0>
+            {
                 SelectNightmareQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
-                    extractor: |row| SelectNightmareBorrowed {
-                        composite: row.get(0),
-                    },
-                    mapper: |it| SelectNightmare::from(it),
+                    extractor: |row| row.get(0),
+                    mapper: |it| it.into(),
                 }
             }
         }
@@ -3693,18 +3522,6 @@ pub mod queries {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[composite])
             }
-            pub fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-                params: &'a impl cornucopia_client::sync::Params<
-                    'a,
-                    Self,
-                    Result<u64, postgres::Error>,
-                    C,
-                >,
-            ) -> Result<u64, postgres::Error> {
-                params.bind(client, self)
-            }
         }
     }
     pub mod syntax {
@@ -3718,7 +3535,7 @@ pub mod queries {
             cornucopia_client::sync::Params<
                 'a,
                 ImplicitCompactStmt,
-                ImplicitCompactQuery<'a, C, ImplicitCompact, 2>,
+                ImplicitCompactQuery<'a, C, Option<i32>, 2>,
                 C,
             > for ImplicitCompactParams<'a>
         {
@@ -3726,7 +3543,7 @@ pub mod queries {
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut ImplicitCompactStmt,
-            ) -> ImplicitCompactQuery<'a, C, ImplicitCompact, 2> {
+            ) -> ImplicitCompactQuery<'a, C, Option<i32>, 2> {
                 stmt.bind(client, &self.name, &self.price)
             }
         }
@@ -3739,7 +3556,7 @@ pub mod queries {
             cornucopia_client::sync::Params<
                 'a,
                 ImplicitSpacedStmt,
-                ImplicitSpacedQuery<'a, C, ImplicitSpaced, 2>,
+                ImplicitSpacedQuery<'a, C, Option<i32>, 2>,
                 C,
             > for ImplicitSpacedParams<'a>
         {
@@ -3747,7 +3564,7 @@ pub mod queries {
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut ImplicitSpacedStmt,
-            ) -> ImplicitSpacedQuery<'a, C, ImplicitSpaced, 2> {
+            ) -> ImplicitSpacedQuery<'a, C, Option<i32>, 2> {
                 stmt.bind(client, &self.name, &self.price)
             }
         }
@@ -3780,170 +3597,13 @@ pub mod queries {
                 stmt.bind(client, &self.name, &self.price)
             }
         }
-        #[derive(Clone, Copy, Debug)]
-        pub struct TrickySqlParams {
-            pub price: f64,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::sync::Params<'a, TrickySqlStmt, Result<u64, postgres::Error>, C>
-            for TrickySqlParams
-        {
-            fn bind(
-                &'a self,
-                client: &'a mut C,
-                stmt: &'a mut TrickySqlStmt,
-            ) -> Result<u64, postgres::Error> {
-                stmt.bind(client, &self.price)
-            }
-        }
-        #[derive(Clone, Copy, Debug)]
-        pub struct TrickySql1Params {
-            pub price: f64,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::sync::Params<'a, TrickySql1Stmt, Result<u64, postgres::Error>, C>
-            for TrickySql1Params
-        {
-            fn bind(
-                &'a self,
-                client: &'a mut C,
-                stmt: &'a mut TrickySql1Stmt,
-            ) -> Result<u64, postgres::Error> {
-                stmt.bind(client, &self.price)
-            }
-        }
-        #[derive(Clone, Copy, Debug)]
-        pub struct TrickySql2Params {
-            pub price: f64,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::sync::Params<'a, TrickySql2Stmt, Result<u64, postgres::Error>, C>
-            for TrickySql2Params
-        {
-            fn bind(
-                &'a self,
-                client: &'a mut C,
-                stmt: &'a mut TrickySql2Stmt,
-            ) -> Result<u64, postgres::Error> {
-                stmt.bind(client, &self.price)
-            }
-        }
-        #[derive(Clone, Copy, Debug)]
-        pub struct TrickySql3Params {
-            pub price: f64,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::sync::Params<'a, TrickySql3Stmt, Result<u64, postgres::Error>, C>
-            for TrickySql3Params
-        {
-            fn bind(
-                &'a self,
-                client: &'a mut C,
-                stmt: &'a mut TrickySql3Stmt,
-            ) -> Result<u64, postgres::Error> {
-                stmt.bind(client, &self.price)
-            }
-        }
-        #[derive(Clone, Copy, Debug)]
-        pub struct TrickySql4Params {
-            pub price: f64,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::sync::Params<'a, TrickySql4Stmt, Result<u64, postgres::Error>, C>
-            for TrickySql4Params
-        {
-            fn bind(
-                &'a self,
-                client: &'a mut C,
-                stmt: &'a mut TrickySql4Stmt,
-            ) -> Result<u64, postgres::Error> {
-                stmt.bind(client, &self.price)
-            }
-        }
-        #[derive(Clone, Copy, Debug)]
-        pub struct TrickySql6Params {
-            pub price: f64,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::sync::Params<'a, TrickySql6Stmt, Result<u64, postgres::Error>, C>
-            for TrickySql6Params
-        {
-            fn bind(
-                &'a self,
-                client: &'a mut C,
-                stmt: &'a mut TrickySql6Stmt,
-            ) -> Result<u64, postgres::Error> {
-                stmt.bind(client, &self.price)
-            }
-        }
-        #[derive(Clone, Copy, Debug)]
-        pub struct TrickySql7Params {
-            pub price: f64,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::sync::Params<'a, TrickySql7Stmt, Result<u64, postgres::Error>, C>
-            for TrickySql7Params
-        {
-            fn bind(
-                &'a self,
-                client: &'a mut C,
-                stmt: &'a mut TrickySql7Stmt,
-            ) -> Result<u64, postgres::Error> {
-                stmt.bind(client, &self.price)
-            }
-        }
-        #[derive(Clone, Copy, Debug)]
-        pub struct TrickySql8Params {
-            pub price: f64,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::sync::Params<'a, TrickySql8Stmt, Result<u64, postgres::Error>, C>
-            for TrickySql8Params
-        {
-            fn bind(
-                &'a self,
-                client: &'a mut C,
-                stmt: &'a mut TrickySql8Stmt,
-            ) -> Result<u64, postgres::Error> {
-                stmt.bind(client, &self.price)
-            }
-        }
-        #[derive(Clone, Copy, Debug)]
-        pub struct TrickySql9Params {
-            pub price: f64,
-        }
-        impl<'a, C: GenericClient>
-            cornucopia_client::sync::Params<'a, TrickySql9Stmt, Result<u64, postgres::Error>, C>
-            for TrickySql9Params
-        {
-            fn bind(
-                &'a self,
-                client: &'a mut C,
-                stmt: &'a mut TrickySql9Stmt,
-            ) -> Result<u64, postgres::Error> {
-                stmt.bind(client, &self.price)
-            }
-        }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
-        pub struct SelectCompact {
-            pub composite: super::super::types::public::CloneComposite,
-        }
-        pub struct SelectCompactBorrowed<'a> {
-            pub composite: super::super::types::public::CloneCompositeBorrowed<'a>,
-        }
-        impl<'a> From<SelectCompactBorrowed<'a>> for SelectCompact {
-            fn from(SelectCompactBorrowed { composite }: SelectCompactBorrowed<'a>) -> Self {
-                Self {
-                    composite: composite.into(),
-                }
-            }
-        }
+
         pub struct SelectCompactQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::sync::Stmt,
-            extractor: fn(&postgres::Row) -> SelectCompactBorrowed,
-            mapper: fn(SelectCompactBorrowed) -> T,
+            extractor: fn(&postgres::Row) -> super::super::types::public::CloneCompositeBorrowed,
+            mapper: fn(super::super::types::public::CloneCompositeBorrowed) -> T,
         }
         impl<'a, C, T: 'a, const N: usize> SelectCompactQuery<'a, C, T, N>
         where
@@ -3951,7 +3611,7 @@ pub mod queries {
         {
             pub fn map<R>(
                 self,
-                mapper: fn(SelectCompactBorrowed) -> R,
+                mapper: fn(super::super::types::public::CloneCompositeBorrowed) -> R,
             ) -> SelectCompactQuery<'a, C, R, N> {
                 SelectCompactQuery {
                     client: self.client,
@@ -3993,26 +3653,13 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
-        pub struct SelectSpaced {
-            pub composite: super::super::types::public::CloneComposite,
-        }
-        pub struct SelectSpacedBorrowed<'a> {
-            pub composite: super::super::types::public::CloneCompositeBorrowed<'a>,
-        }
-        impl<'a> From<SelectSpacedBorrowed<'a>> for SelectSpaced {
-            fn from(SelectSpacedBorrowed { composite }: SelectSpacedBorrowed<'a>) -> Self {
-                Self {
-                    composite: composite.into(),
-                }
-            }
-        }
+
         pub struct SelectSpacedQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::sync::Stmt,
-            extractor: fn(&postgres::Row) -> SelectSpacedBorrowed,
-            mapper: fn(SelectSpacedBorrowed) -> T,
+            extractor: fn(&postgres::Row) -> super::super::types::public::CloneCompositeBorrowed,
+            mapper: fn(super::super::types::public::CloneCompositeBorrowed) -> T,
         }
         impl<'a, C, T: 'a, const N: usize> SelectSpacedQuery<'a, C, T, N>
         where
@@ -4020,7 +3667,7 @@ pub mod queries {
         {
             pub fn map<R>(
                 self,
-                mapper: fn(SelectSpacedBorrowed) -> R,
+                mapper: fn(super::super::types::public::CloneCompositeBorrowed) -> R,
             ) -> SelectSpacedQuery<'a, C, R, N> {
                 SelectSpacedQuery {
                     client: self.client,
@@ -4062,25 +3709,19 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
-        pub struct ImplicitCompact {
-            pub id: Option<i32>,
-        }
+
         pub struct ImplicitCompactQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::sync::Stmt,
-            extractor: fn(&postgres::Row) -> ImplicitCompact,
-            mapper: fn(ImplicitCompact) -> T,
+            extractor: fn(&postgres::Row) -> Option<i32>,
+            mapper: fn(Option<i32>) -> T,
         }
         impl<'a, C, T: 'a, const N: usize> ImplicitCompactQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
-            pub fn map<R>(
-                self,
-                mapper: fn(ImplicitCompact) -> R,
-            ) -> ImplicitCompactQuery<'a, C, R, N> {
+            pub fn map<R>(self, mapper: fn(Option<i32>) -> R) -> ImplicitCompactQuery<'a, C, R, N> {
                 ImplicitCompactQuery {
                     client: self.client,
                     params: self.params,
@@ -4121,25 +3762,19 @@ pub mod queries {
                 Ok(stream)
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
-        pub struct ImplicitSpaced {
-            pub id: Option<i32>,
-        }
+
         pub struct ImplicitSpacedQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::sync::Stmt,
-            extractor: fn(&postgres::Row) -> ImplicitSpaced,
-            mapper: fn(ImplicitSpaced) -> T,
+            extractor: fn(&postgres::Row) -> Option<i32>,
+            mapper: fn(Option<i32>) -> T,
         }
         impl<'a, C, T: 'a, const N: usize> ImplicitSpacedQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
-            pub fn map<R>(
-                self,
-                mapper: fn(ImplicitSpaced) -> R,
-            ) -> ImplicitSpacedQuery<'a, C, R, N> {
+            pub fn map<R>(self, mapper: fn(Option<i32>) -> R) -> ImplicitSpacedQuery<'a, C, R, N> {
                 ImplicitSpacedQuery {
                     client: self.client,
                     params: self.params,
@@ -4313,15 +3948,14 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-            ) -> SelectCompactQuery<'a, C, SelectCompact, 0> {
+            ) -> SelectCompactQuery<'a, C, super::super::types::public::CloneComposite, 0>
+            {
                 SelectCompactQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
-                    extractor: |row| SelectCompactBorrowed {
-                        composite: row.get(0),
-                    },
-                    mapper: |it| SelectCompact::from(it),
+                    extractor: |row| row.get(0),
+                    mapper: |it| it.into(),
                 }
             }
         }
@@ -4335,15 +3969,14 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-            ) -> SelectSpacedQuery<'a, C, SelectSpaced, 0> {
+            ) -> SelectSpacedQuery<'a, C, super::super::types::public::CloneComposite, 0>
+            {
                 SelectSpacedQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
-                    extractor: |row| SelectSpacedBorrowed {
-                        composite: row.get(0),
-                    },
-                    mapper: |it| SelectSpaced::from(it),
+                    extractor: |row| row.get(0),
+                    mapper: |it| it.into(),
                 }
             }
         }
@@ -4359,13 +3992,13 @@ pub mod queries {
                 client: &'a mut C,
                 name: &'a Option<&'a str>,
                 price: &'a Option<f64>,
-            ) -> ImplicitCompactQuery<'a, C, ImplicitCompact, 2> {
+            ) -> ImplicitCompactQuery<'a, C, Option<i32>, 2> {
                 ImplicitCompactQuery {
                     client,
                     params: [name, price],
                     stmt: &mut self.0,
-                    extractor: |row| ImplicitCompact { id: row.get(0) },
-                    mapper: |it| ImplicitCompact::from(it),
+                    extractor: |row| row.get(0),
+                    mapper: |it| it,
                 }
             }
             pub fn params<'a, C: GenericClient>(
@@ -4374,10 +4007,10 @@ pub mod queries {
                 params: &'a impl cornucopia_client::sync::Params<
                     'a,
                     Self,
-                    ImplicitCompactQuery<'a, C, ImplicitCompact, 2>,
+                    ImplicitCompactQuery<'a, C, Option<i32>, 2>,
                     C,
                 >,
-            ) -> ImplicitCompactQuery<'a, C, ImplicitCompact, 2> {
+            ) -> ImplicitCompactQuery<'a, C, Option<i32>, 2> {
                 params.bind(client, self)
             }
         }
@@ -4393,13 +4026,13 @@ pub mod queries {
                 client: &'a mut C,
                 name: &'a Option<&'a str>,
                 price: &'a Option<f64>,
-            ) -> ImplicitSpacedQuery<'a, C, ImplicitSpaced, 2> {
+            ) -> ImplicitSpacedQuery<'a, C, Option<i32>, 2> {
                 ImplicitSpacedQuery {
                     client,
                     params: [name, price],
                     stmt: &mut self.0,
-                    extractor: |row| ImplicitSpaced { id: row.get(0) },
-                    mapper: |it| ImplicitSpaced::from(it),
+                    extractor: |row| row.get(0),
+                    mapper: |it| it,
                 }
             }
             pub fn params<'a, C: GenericClient>(
@@ -4408,10 +4041,10 @@ pub mod queries {
                 params: &'a impl cornucopia_client::sync::Params<
                     'a,
                     Self,
-                    ImplicitSpacedQuery<'a, C, ImplicitSpaced, 2>,
+                    ImplicitSpacedQuery<'a, C, Option<i32>, 2>,
                     C,
                 >,
-            ) -> ImplicitSpacedQuery<'a, C, ImplicitSpaced, 2> {
+            ) -> ImplicitSpacedQuery<'a, C, Option<i32>, 2> {
                 params.bind(client, self)
             }
         }
@@ -4433,7 +4066,7 @@ pub mod queries {
                     params: [name, price],
                     stmt: &mut self.0,
                     extractor: |row| Row { id: row.get(0) },
-                    mapper: |it| Row::from(it),
+                    mapper: |it| <Row>::from(it),
                 }
             }
             pub fn params<'a, C: GenericClient>(
@@ -4462,7 +4095,7 @@ pub mod queries {
                     params: [name, price],
                     stmt: &mut self.0,
                     extractor: |row| Row { id: row.get(0) },
-                    mapper: |it| Row::from(it),
+                    mapper: |it| <Row>::from(it),
                 }
             }
             pub fn params<'a, C: GenericClient>(
@@ -4488,18 +4121,6 @@ pub mod queries {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[price])
             }
-            pub fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-                params: &'a impl cornucopia_client::sync::Params<
-                    'a,
-                    Self,
-                    Result<u64, postgres::Error>,
-                    C,
-                >,
-            ) -> Result<u64, postgres::Error> {
-                params.bind(client, self)
-            }
         }
         pub fn tricky_sql1() -> TrickySql1Stmt {
             TrickySql1Stmt(cornucopia_client::sync::Stmt::new(
@@ -4516,18 +4137,6 @@ pub mod queries {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[price])
             }
-            pub fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-                params: &'a impl cornucopia_client::sync::Params<
-                    'a,
-                    Self,
-                    Result<u64, postgres::Error>,
-                    C,
-                >,
-            ) -> Result<u64, postgres::Error> {
-                params.bind(client, self)
-            }
         }
         pub fn tricky_sql2() -> TrickySql2Stmt {
             TrickySql2Stmt(cornucopia_client::sync::Stmt::new("INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a '':bind_param''', $1)"))
@@ -4541,18 +4150,6 @@ pub mod queries {
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[price])
-            }
-            pub fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-                params: &'a impl cornucopia_client::sync::Params<
-                    'a,
-                    Self,
-                    Result<u64, postgres::Error>,
-                    C,
-                >,
-            ) -> Result<u64, postgres::Error> {
-                params.bind(client, self)
             }
         }
         pub fn tricky_sql3() -> TrickySql3Stmt {
@@ -4568,18 +4165,6 @@ pub mod queries {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[price])
             }
-            pub fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-                params: &'a impl cornucopia_client::sync::Params<
-                    'a,
-                    Self,
-                    Result<u64, postgres::Error>,
-                    C,
-                >,
-            ) -> Result<u64, postgres::Error> {
-                params.bind(client, self)
-            }
         }
         pub fn tricky_sql4() -> TrickySql4Stmt {
             TrickySql4Stmt(cornucopia_client::sync::Stmt::new("INSERT INTO syntax (\"trick:y\", price) VALUES ($tag$this is not a :bind_param$tag$, $1)"))
@@ -4593,18 +4178,6 @@ pub mod queries {
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[price])
-            }
-            pub fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-                params: &'a impl cornucopia_client::sync::Params<
-                    'a,
-                    Self,
-                    Result<u64, postgres::Error>,
-                    C,
-                >,
-            ) -> Result<u64, postgres::Error> {
-                params.bind(client, self)
             }
         }
         pub fn tricky_sql6() -> TrickySql6Stmt {
@@ -4620,18 +4193,6 @@ pub mod queries {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[price])
             }
-            pub fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-                params: &'a impl cornucopia_client::sync::Params<
-                    'a,
-                    Self,
-                    Result<u64, postgres::Error>,
-                    C,
-                >,
-            ) -> Result<u64, postgres::Error> {
-                params.bind(client, self)
-            }
         }
         pub fn tricky_sql7() -> TrickySql7Stmt {
             TrickySql7Stmt(cornucopia_client::sync::Stmt::new("INSERT INTO syntax (\"trick:y\", price) VALUES (E'this is not a \':bind_param\'', $1)"))
@@ -4645,18 +4206,6 @@ pub mod queries {
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[price])
-            }
-            pub fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-                params: &'a impl cornucopia_client::sync::Params<
-                    'a,
-                    Self,
-                    Result<u64, postgres::Error>,
-                    C,
-                >,
-            ) -> Result<u64, postgres::Error> {
-                params.bind(client, self)
             }
         }
         pub fn tricky_sql8() -> TrickySql8Stmt {
@@ -4672,18 +4221,6 @@ pub mod queries {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[price])
             }
-            pub fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-                params: &'a impl cornucopia_client::sync::Params<
-                    'a,
-                    Self,
-                    Result<u64, postgres::Error>,
-                    C,
-                >,
-            ) -> Result<u64, postgres::Error> {
-                params.bind(client, self)
-            }
         }
         pub fn tricky_sql9() -> TrickySql9Stmt {
             TrickySql9Stmt(cornucopia_client::sync::Stmt::new("INSERT INTO syntax (\"trick:y\", price) VALUES (E'this is \'not\' a \':bind_param\'', $1)"))
@@ -4697,18 +4234,6 @@ pub mod queries {
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[price])
-            }
-            pub fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-                params: &'a impl cornucopia_client::sync::Params<
-                    'a,
-                    Self,
-                    Result<u64, postgres::Error>,
-                    C,
-                >,
-            ) -> Result<u64, postgres::Error> {
-                params.bind(client, self)
             }
         }
         pub fn syntax() -> SyntaxStmt {
@@ -4728,7 +4253,7 @@ pub mod queries {
                         trick_y: row.get(0),
                         price: row.get(1),
                     },
-                    mapper: |it| Syntax::from(it),
+                    mapper: |it| <Syntax>::from(it),
                 }
             }
         }

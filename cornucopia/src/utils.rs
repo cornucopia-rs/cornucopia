@@ -40,7 +40,7 @@ pub struct Joiner<T, I: IntoIterator<Item = T>, F: Fn(&mut Formatter, T)> {
 impl<T, I: IntoIterator<Item = T>, F: Fn(&mut Formatter, T)> Display for Joiner<T, I, F> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut first = true;
-        for item in self.inner.borrow_mut().take().unwrap().into_iter() {
+        for item in self.inner.borrow_mut().take().unwrap() {
             if first {
                 first = false;
             } else {
@@ -98,13 +98,13 @@ where
 }
 
 /// Extracts useful info from a `postgres`-generated error.
-pub(crate) fn db_err(err: postgres::Error) -> Option<(u32, String, Option<String>)> {
+pub(crate) fn db_err(err: &postgres::Error) -> Option<(u32, String, Option<String>)> {
     if let Some(db_err) = err.as_db_error() {
         if let Some(ErrorPosition::Original(position)) = db_err.position() {
             Some((
                 *position,
                 db_err.message().to_string(),
-                db_err.hint().map(ToString::to_string),
+                db_err.hint().map(String::from),
             ))
         } else {
             None

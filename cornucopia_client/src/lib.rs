@@ -18,6 +18,7 @@ pub mod sync {
     }
 
     impl Stmt {
+        #[must_use]
         pub fn new(query: &'static str) -> Self {
             Self {
                 query,
