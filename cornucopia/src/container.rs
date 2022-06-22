@@ -25,7 +25,7 @@ fn spawn_container(podman: bool) -> Result<(), Error> {
         .arg("--name")
         .arg("cornucopia_postgres")
         .arg("-p")
-        .arg("5432:5432")
+        .arg("5435:5432")
         .arg("-e")
         .arg("POSTGRES_PASSWORD=postgres")
         .arg("postgres")

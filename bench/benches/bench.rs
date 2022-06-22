@@ -132,7 +132,7 @@ fn bench(c: &mut Criterion) {
     let rt: &'static Runtime = Box::leak(Box::new(Runtime::new().unwrap()));
     let async_client = &mut rt.block_on(async {
         let (client, conn) = tokio_postgres::connect(
-            "postgresql://postgres:postgres@127.0.0.1:5432/postgres",
+            "postgresql://postgres:postgres@127.0.0.1:5435/postgres",
             NoTls,
         )
         .await
@@ -141,7 +141,7 @@ fn bench(c: &mut Criterion) {
         client
     });
     let conn =
-        &mut PgConnection::establish("postgresql://postgres:postgres@127.0.0.1:5432/postgres")
+        &mut PgConnection::establish("postgresql://postgres:postgres@127.0.0.1:5435/postgres")
             .unwrap();
     let migrations = cornucopia::read_migrations("benches/cornucopia_benches/migrations").unwrap();
     cornucopia::run_migrations(client, migrations).unwrap();

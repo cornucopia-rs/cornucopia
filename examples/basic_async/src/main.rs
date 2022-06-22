@@ -23,7 +23,7 @@ pub async fn main() {
     cfg.user = Some(String::from("postgres"));
     cfg.password = Some(String::from("postgres"));
     cfg.host = Some(String::from("127.0.0.1"));
-    cfg.port = Some(5432);
+    cfg.port = Some(5435);
     cfg.dbname = Some(String::from("postgres"));
     let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
     let mut client = pool.get().await.unwrap();
