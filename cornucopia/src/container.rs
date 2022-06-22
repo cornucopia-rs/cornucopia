@@ -37,7 +37,10 @@ fn spawn_container(podman: bool) -> Result<(), Error> {
     if success {
         Ok(())
     } else {
-        Err(Error::from("Couldn't spawn container."))
+        Err(Error::new(
+            format!("`{command}` couldn't spawn container."),
+            podman,
+        ))
     }
 }
 
@@ -51,9 +54,19 @@ fn is_postgres_healthy(podman: bool) -> Result<bool, Error> {
         .stderr(Stdio::null())
         .stdout(Stdio::null())
         .spawn()
-        .map_err(|_| Error::from("Couldn't check container health."))?
+        .map_err(|_| {
+            Error::new(
+                format!("`{command}` couldn't check container health."),
+                podman,
+            )
+        })?
         .wait()
-        .map_err(|_| Error::from("Couldn't check contaienr health."))?
+        .map_err(|_| {
+            Error::new(
+                format!("`{command}` couldn't check contaienr health."),
+                podman,
+            )
+        })?
         .success())
 }
 
@@ -63,7 +76,10 @@ fn healthcheck(podman: bool, max_retries: u64, ms_per_retry: u64) -> Result<(), 
     let mut nb_retries = 0;
     while !is_postgres_healthy(podman)? {
         if nb_retries >= max_retries {
-            return Err(Error::from("reached max number of connection retries"));
+            return Err(Error::new(
+                format!("Cornucopia reached the max number of connection retries"),
+                podman,
+            ));
         };
         std::thread::sleep(std::time::Duration::from_millis(ms_per_retry));
         nb_retries += 1;
@@ -91,7 +107,10 @@ fn stop_container(podman: bool) -> Result<(), Error> {
     if success {
         Ok(())
     } else {
-        Err(Error::from("Couldn't stop container."))
+        Err(Error::new(
+            format!("`{command}` couldn't stop container."),
+            podman,
+        ))
     }
 }
 
@@ -110,7 +129,10 @@ fn remove_container(podman: bool) -> Result<(), Error> {
     if success {
         Ok(())
     } else {
-        Err(Error::from("Couldn't remove container."))
+        Err(Error::new(
+            format!("`{command}` couldn't remove container."),
+            podman,
+        ))
     }
 }
 pub(crate) mod error {
@@ -121,24 +143,32 @@ pub(crate) mod error {
 
     #[derive(Debug, ThisError, Diagnostic)]
     #[error("{msg}")]
-    #[diagnostic(
-        help("if you are using `docker`, please ensure that the daemon is up-and-running. You must also ensure that no container named `cornucopia_postgres` already exists.")
-    )]
     pub struct Error {
-        pub msg: String,
+        msg: String,
+        #[help]
+        pub help: Option<String>,
+    }
+
+    impl Error {
+        pub fn new(msg: String, podman: bool) -> Self {
+            let help = if podman {
+                "Make sure that port 5435 is usable and that no container named `cornucopia_postgres` already exists."
+            } else {
+                "First, check that the docker daemon is up-and-running. Then, make sure that port 5435 is usable and that no container named `cornucopia_postgres` already exists."
+            };
+            Error {
+                msg,
+                help: Some(String::from(help)),
+            }
+        }
     }
 
     impl From<std::io::Error> for Error {
         fn from(e: std::io::Error) -> Self {
             Self {
                 msg: format!("{e:#}"),
+                help: None,
             }
-        }
-    }
-
-    impl From<&str> for Error {
-        fn from(s: &str) -> Self {
-            Self { msg: s.into() }
         }
     }
 }
