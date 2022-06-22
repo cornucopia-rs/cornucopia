@@ -13,7 +13,7 @@ pub fn cornucopia_conn() -> Result<Client, Error> {
         .user("postgres")
         .password("postgres")
         .host("127.0.0.1")
-        .port(5432)
+        .port(5435)
         .dbname("postgres")
         .connect(NoTls)?)
 }
