@@ -78,8 +78,8 @@ pub mod queries {
                 Ok((self.mapper)((self.extractor)(&row)))
             }
 
-            pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
-                self.stream()?.collect()
+            pub fn all(self) -> Result<Vec<T>, postgres::Error> {
+                self.iter()?.collect()
             }
 
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
@@ -90,17 +90,17 @@ pub mod queries {
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
 
-            pub fn stream(
+            pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
             {
                 let stmt = self.stmt.prepare(self.client)?;
-                let stream = self
+                let it = self
                     .client
                     .query_raw(stmt, cornucopia_client::private::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
-                Ok(stream)
+                Ok(it)
             }
         }
         #[derive(Debug, Clone, PartialEq)]
@@ -160,8 +160,8 @@ pub mod queries {
                 Ok((self.mapper)((self.extractor)(&row)))
             }
 
-            pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
-                self.stream()?.collect()
+            pub fn all(self) -> Result<Vec<T>, postgres::Error> {
+                self.iter()?.collect()
             }
 
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
@@ -172,17 +172,17 @@ pub mod queries {
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
 
-            pub fn stream(
+            pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
             {
                 let stmt = self.stmt.prepare(self.client)?;
-                let stream = self
+                let it = self
                     .client
                     .query_raw(stmt, cornucopia_client::private::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
-                Ok(stream)
+                Ok(it)
             }
         }
         #[derive(Debug, Clone, PartialEq)]
@@ -232,8 +232,8 @@ pub mod queries {
                 Ok((self.mapper)((self.extractor)(&row)))
             }
 
-            pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
-                self.stream()?.collect()
+            pub fn all(self) -> Result<Vec<T>, postgres::Error> {
+                self.iter()?.collect()
             }
 
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
@@ -244,17 +244,17 @@ pub mod queries {
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
 
-            pub fn stream(
+            pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
             {
                 let stmt = self.stmt.prepare(self.client)?;
-                let stream = self
+                let it = self
                     .client
                     .query_raw(stmt, cornucopia_client::private::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
-                Ok(stream)
+                Ok(it)
             }
         }
         #[derive(Debug, Clone, PartialEq)]
@@ -329,8 +329,8 @@ pub mod queries {
                 Ok((self.mapper)((self.extractor)(&row)))
             }
 
-            pub fn vec(self) -> Result<Vec<T>, postgres::Error> {
-                self.stream()?.collect()
+            pub fn all(self) -> Result<Vec<T>, postgres::Error> {
+                self.iter()?.collect()
             }
 
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
@@ -341,17 +341,17 @@ pub mod queries {
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
 
-            pub fn stream(
+            pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
             {
                 let stmt = self.stmt.prepare(self.client)?;
-                let stream = self
+                let it = self
                     .client
                     .query_raw(stmt, cornucopia_client::private::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
-                Ok(stream)
+                Ok(it)
             }
         }
         pub fn users() -> UsersStmt {

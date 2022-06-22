@@ -29,7 +29,7 @@ pub async fn main() {
     let mut client = pool.get().await.unwrap();
 
     // Queries accept regular clients.
-    println!("{:?}", authors().bind(&client).vec().await.unwrap());
+    println!("{:?}", authors().bind(&client).all().await.unwrap());
 
     // Queries also accept transactions
     // Don't forget to `.commit()` when you're done!
@@ -41,7 +41,7 @@ pub async fn main() {
             .await
             .unwrap();
         // Use a map if needed
-        let books = books().bind(&transaction).vec().await.unwrap();
+        let books = books().bind(&transaction).all().await.unwrap();
         println!("{books:?}");
         transaction.commit().await.unwrap();
     }
@@ -58,7 +58,7 @@ pub async fn main() {
         "{:?}",
         author_name_starting_with()
             .bind(&client, &"Jo")
-            .vec()
+            .all()
             .await
             .unwrap()
     );
