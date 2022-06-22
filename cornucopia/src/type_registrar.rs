@@ -133,7 +133,7 @@ impl CornucopiaType {
 
     pub(crate) fn own_struct(&self, is_inner_nullable: bool) -> String {
         match self {
-            CornucopiaType::Simple { rust_name, .. } => rust_name.to_string(),
+            CornucopiaType::Simple { rust_name, .. } => (*rust_name).to_string(),
             CornucopiaType::Array { inner, .. } => {
                 let own_inner = inner.own_struct(false);
                 if is_inner_nullable {
@@ -169,7 +169,7 @@ impl CornucopiaType {
                         format!("postgres_types::Json<&{lifetime} serde_json::value::RawValue>")
                     }
                 }
-                _ => rust_name.to_string(),
+                _ => (*rust_name).to_string(),
             },
             CornucopiaType::Array { inner, .. } => {
                 let inner = inner.brw_struct(for_params, false, has_lifetime);
@@ -221,10 +221,6 @@ impl TypeRegistrar {
         query_name: &Span<String>,
         module_info: &ModuleInfo,
     ) -> Result<&Rc<CornucopiaType>, Error> {
-        if let Some(idx) = self.types.get_index_of(&SchemaKey::from(ty)) {
-            return Ok(&self.types[idx]);
-        }
-
         fn custom(ty: &Type, is_copy: bool, is_params: bool) -> CornucopiaType {
             let rust_ty_name = ty.name().to_upper_camel_case();
             CornucopiaType::Custom {
@@ -241,6 +237,10 @@ impl TypeRegistrar {
                 pg_ty: ty.clone(),
                 inner,
             }
+        }
+
+        if let Some(idx) = self.types.get_index_of(&SchemaKey::from(ty)) {
+            return Ok(&self.types[idx]);
         }
 
         Ok(match ty.kind() {
@@ -290,7 +290,7 @@ impl TypeRegistrar {
                     Type::MACADDR => ("eui48::MacAddress", true),
                     _ => {
                         return Err(Error::UnsupportedPostgresType {
-                            src: module_info.to_owned().into(),
+                            src: module_info.clone().into(),
                             query: query_name.span,
                             col_name: name.to_string(),
                             col_ty: ty.to_string(),
@@ -305,7 +305,7 @@ impl TypeRegistrar {
             }
             _ => {
                 return Err(Error::UnsupportedPostgresType {
-                    src: module_info.to_owned().into(),
+                    src: module_info.clone().into(),
                     query: query_name.span,
                     col_name: name.to_string(),
                     col_ty: ty.to_string(),

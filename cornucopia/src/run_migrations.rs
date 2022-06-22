@@ -10,15 +10,14 @@ use self::error::Error;
 /// Returns an error if a migration can't be read or installed.
 pub(crate) fn run_migrations(client: &mut Client, migrations: Vec<Migration>) -> Result<(), Error> {
     // Create the table holding Cornucopia migrations
-    create_migration_table(client).map_err(Error::new_db)?;
+    create_migration_table(client).unwrap();
 
     // Install each migration that is not already installed.
     for migration in migrations {
-        let migration_not_installed = !is_installed(client, &migration.timestamp, &migration.name)
-            .map_err(|err| Error::new_migration(err, migration.clone()))?;
+        let migration_not_installed = !is_installed(client, migration.timestamp, &migration.name)
+            .map_err(|err| Error::new(err, migration.clone()))?;
         if migration_not_installed {
-            install_migration(client, &migration)
-                .map_err(|err| Error::new_migration(err, migration))?;
+            install_migration(client, &migration).map_err(|err| Error::new(err, migration))?;
         }
     }
     Ok(())
@@ -37,7 +36,7 @@ fn create_migration_table(client: &mut Client) -> Result<(), postgres::Error> {
     Ok(())
 }
 
-fn is_installed(client: &mut Client, timestamp: &i64, name: &str) -> Result<bool, postgres::Error> {
+fn is_installed(client: &mut Client, timestamp: i64, name: &str) -> Result<bool, postgres::Error> {
     let is_installed: bool = client
         .query_one(
             "select EXISTS(
@@ -85,9 +84,9 @@ pub(crate) mod error {
     }
 
     impl Error {
-        pub(crate) fn new_migration(err: postgres::Error, migration: Migration) -> Self {
+        pub(crate) fn new(err: postgres::Error, migration: Migration) -> Self {
             let msg = format!("{:#}", err);
-            if let Some((position, msg, help)) = db_err(err) {
+            if let Some((position, msg, help)) = db_err(&err) {
                 Self {
                     msg,
                     help,
@@ -101,15 +100,6 @@ pub(crate) mod error {
                     src: migration.into(),
                     err_span: None,
                 }
-            }
-        }
-
-        pub(crate) fn new_db(err: postgres::Error) -> Self {
-            Self {
-                msg: format!("{:#}", err),
-                help: None,
-                src: NamedSource::new("", ""),
-                err_span: None,
             }
         }
     }

@@ -17,7 +17,7 @@ impl From<ModuleInfo> for NamedSource {
 
 impl From<&ModuleInfo> for NamedSource {
     fn from(m: &ModuleInfo) -> Self {
-        Self::new(&m.path, m.content.to_owned())
+        Self::new(&m.path, m.content.clone())
     }
 }
 
@@ -61,8 +61,6 @@ pub(crate) fn read_query_modules(dir_path: &str) -> Result<Vec<ModuleInfo>, Erro
                 name: module_name,
                 content: file_contents,
             });
-        } else {
-            continue;
         }
     }
     // Sort module for consistent codegen

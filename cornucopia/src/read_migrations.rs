@@ -54,9 +54,6 @@ pub fn read_migrations(dir_path: &str) -> Result<Vec<Migration>, Error> {
                 sql,
             };
             migrations.push(migration);
-        } else {
-            // If not a .sql file, ignore
-            continue;
         }
     }
     // Sort migrations by timestamp.
@@ -72,24 +69,18 @@ pub fn read_migrations(dir_path: &str) -> Result<Vec<Migration>, Error> {
 ///
 /// # Panics
 /// Panics if the path does not point to a file.
-fn parse_migration_filename(path_buf: &Path) -> Result<(i64, &str), Error> {
-    let filename = path_buf.file_stem();
-    let (timestamp_str, name) = filename
-        .unwrap() // ! We already checked we're dealing with a file
-        .to_str()
-        .ok_or_else(|| Error::InvalidMigrationFilename {
-            path: path_buf.to_string_lossy().to_string(),
-            name: filename
-                .map(|n| n.to_string_lossy().into_owned())
-                .unwrap_or_else(|| String::from("unknown")),
-        })?
-        .split_once('_')
-        .ok_or_else(|| Error::InvalidMigrationFilename {
-            path: path_buf.to_string_lossy().to_string(),
-            name: filename
-                .map(|n| n.to_string_lossy().into_owned())
-                .unwrap_or_else(|| String::from("unknown")),
-        })?;
+fn parse_migration_filename(path_buf: &Path) -> Result<(i64, String), Error> {
+    let filename = path_buf
+        .file_stem()
+        .map(|n| n.to_string_lossy().into_owned())
+        .expect("expected file");
+    let (timestamp_str, name) =
+        filename
+            .split_once('_')
+            .ok_or_else(|| Error::InvalidMigrationFilename {
+                path: path_buf.to_string_lossy().to_string(),
+                name: filename.clone(),
+            })?;
 
     let timestamp = timestamp_str
         .parse::<i64>()
@@ -98,7 +89,7 @@ fn parse_migration_filename(path_buf: &Path) -> Result<(i64, &str), Error> {
             path: path_buf.to_string_lossy().into_owned(),
         })?;
 
-    Ok((timestamp, name))
+    Ok((timestamp, name.to_string()))
 }
 
 pub(crate) mod error {

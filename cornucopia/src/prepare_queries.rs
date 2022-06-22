@@ -5,7 +5,7 @@ use postgres::Client;
 use postgres_types::{Kind, Type};
 
 use crate::{
-    parser::{QueryDataStruct, Span, TypeAnnotation},
+    parser::{NullableIdent, QueryDataStruct, Span, TypeAnnotation},
     read_queries::ModuleInfo,
     type_registrar::CornucopiaType,
     type_registrar::TypeRegistrar,
@@ -155,7 +155,7 @@ impl PreparedModule {
                 let is_copy = fields.iter().all(|f| f.ty.is_copy());
                 v.insert(PreparedParams {
                     name: name.clone(),
-                    fields: fields.to_vec(),
+                    fields: fields.clone(),
                     is_copy,
                     queries: vec![],
                     is_implicit,
@@ -247,10 +247,9 @@ fn prepare_type(
         let declared = types
             .iter()
             .find(|it| it.name.value == pg_ty.name())
-            .map(|it| it.fields.as_slice())
-            .unwrap_or(&[]);
+            .map_or(&[] as &[NullableIdent], |it| it.fields.as_slice());
         let content = match pg_ty.kind() {
-            Kind::Enum(variants) => PreparedContent::Enum(variants.to_vec()),
+            Kind::Enum(variants) => PreparedContent::Enum(variants.clone()),
             Kind::Domain(_) => return None,
             Kind::Composite(fields) => PreparedContent::Composite(
                 fields
@@ -260,8 +259,8 @@ fn prepare_type(
                         PreparedField {
                             name: field.name().to_string(),
                             ty: registrar.ref_of(field.type_()),
-                            is_nullable: nullity.map(|it| it.nullable).unwrap_or(false),
-                            is_inner_nullable: nullity.map(|it| it.inner_nullable).unwrap_or(false),
+                            is_nullable: nullity.map_or(false, |it| it.nullable),
+                            is_inner_nullable: nullity.map_or(false, |it| it.inner_nullable),
                         }
                     })
                     .collect(),
@@ -336,7 +335,7 @@ fn prepare_query(
         let params = bind_params
             .iter()
             .zip(stmt_params)
-            .map(|(a, b)| (a.to_owned(), b.to_owned()))
+            .map(|(a, b)| (a.clone(), b.clone()))
             .collect::<Vec<(Span<String>, Type)>>();
         for nullable_col in nullable_params_fields {
             // If none of the row's columns match the nullable column
@@ -355,8 +354,8 @@ fn prepare_query(
                 ty: registrar
                     .register(&col_name.value, &col_ty, &name, module_info)?
                     .clone(),
-                is_nullable: nullity.map(|it| it.nullable).unwrap_or(false),
-                is_inner_nullable: nullity.map(|it| it.inner_nullable).unwrap_or(false),
+                is_nullable: nullity.map_or(false, |it| it.nullable),
+                is_inner_nullable: nullity.map_or(false, |it| it.inner_nullable),
             });
         }
         param_fields
@@ -386,23 +385,23 @@ fn prepare_query(
             row_fields.push(PreparedField {
                 name: normalize_rust_name(&col_name),
                 ty,
-                is_nullable: nullity.map(|it| it.nullable).unwrap_or(false),
-                is_inner_nullable: nullity.map(|it| it.inner_nullable).unwrap_or(false),
+                is_nullable: nullity.map_or(false, |it| it.nullable),
+                is_inner_nullable: nullity.map_or(false, |it| it.inner_nullable),
             });
         }
         row_fields
     };
 
     let params_empty = params_fields.is_empty();
-    let row_idx = if !row_fields.is_empty() {
+    let row_idx = if row_fields.is_empty() {
+        None
+    } else {
         Some(module.add_row(
             registrar,
             row_name,
             row_fields,
             matches!(row, QueryDataStruct::Implicit { .. }),
         )?)
-    } else {
-        None
     };
     let params_is_implicit = matches!(params, QueryDataStruct::Implicit { .. });
     let query_idx = module.add_query(
@@ -456,7 +455,7 @@ pub(crate) mod error {
             query_name: &Span<String>,
         ) -> Self {
             let msg = format!("{:#}", err);
-            if let Some((position, msg, help)) = db_err(err) {
+            if let Some((position, msg, help)) = db_err(&err) {
                 Self::Db {
                     msg,
                     help,

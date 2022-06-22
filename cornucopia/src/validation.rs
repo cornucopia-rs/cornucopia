@@ -54,9 +54,9 @@ pub(crate) fn duplicate_sql_col_name(
     query_name: &Span<String>,
     cols: &[Column],
 ) -> Result<(), Error> {
-    if let Some(col) = has_duplicate(cols, |col| col.name()) {
+    if let Some(col) = has_duplicate(cols, Column::name) {
         Err(Error::DuplicateSqlColName {
-            src: info.to_owned().into(),
+            src: info.clone().into(),
             name: col.name().to_string(),
             pos: query_name.span,
         })
@@ -242,7 +242,7 @@ pub(crate) fn named_struct_field(
 pub(crate) fn validate_module(info: ModuleInfo, module: parser::Module) -> Result<Module, Error> {
     query_name_already_used(&info, &module.queries)?;
     named_type_already_used(&info, &module.types)?;
-    for ty in module.types.iter() {
+    for ty in &module.types {
         duplicate_nullable_ident(&info, &ty.fields)?;
     }
     let mut validated_queries = Vec::new();

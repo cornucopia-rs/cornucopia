@@ -51,10 +51,10 @@ impl PreparedField {
 
     pub fn owning_assign(&self) -> String {
         let call = self.owning_call(None);
-        if call != self.name {
-            format!("{}: {}", self.name, call)
-        } else {
+        if call == self.name {
             call
+        } else {
+            format!("{}: {}", self.name, call)
         }
     }
 }
@@ -99,7 +99,7 @@ fn struct_tosql(
             w,
             "\"{name}\" => postgres_types::ToSql::to_sql({},field.type_(), out),",
             f.ty.sql_wrapped(name)
-        )
+        );
     });
     let accept_fields = join_ln(fields.iter(), |w, f| {
         gen!(
@@ -107,7 +107,7 @@ fn struct_tosql(
             "\"{}\" => <{} as postgres_types::ToSql>::accepts(f.type_()),",
             f.name,
             f.ty.accept_to_sql()
-        )
+        );
     });
 
     gen!(
@@ -190,7 +190,7 @@ fn composite_fromsql(
             "let _oid = postgres_types::private::read_be_i32(&mut out)?;
             let {} = postgres_types::private::read_value(fields[{index}].type_(), &mut out)?;",
             f.name,
-        )
+        );
     });
 
     gen!(
@@ -213,7 +213,7 @@ fn composite_fromsql(
                 ty.name() == "{name}" && ty.schema() == "{schema}"
             }}
         }}"#
-    )
+    );
 }
 
 fn gen_params_struct(
@@ -231,7 +231,7 @@ fn gen_params_struct(
     } = params;
     if fields.len() > 1 || !is_implicit {
         let struct_fields = join_comma(fields, |w, p| {
-            gen!(w, "pub {} : {}", p.name, p.brw_struct(true, true))
+            gen!(w, "pub {} : {}", p.name, p.brw_struct(true, true));
         });
         let (copy, lifetime) = if *is_copy {
             ("Clone,Copy,", "")
@@ -288,7 +288,7 @@ fn gen_params_struct(
                         {pre}stmt.bind(client, {param_values}){post}
                     }}
                 }}"
-            )
+            );
         }
     }
 }
@@ -310,7 +310,7 @@ fn gen_row_structs(
     if fields.len() > 1 || !is_implicit {
         // Generate row struct
         let struct_fields = join_comma(fields, |w, col| {
-            gen!(w, "pub {} : {}", col.name, col.own_struct())
+            gen!(w, "pub {} : {}", col.name, col.own_struct());
         });
         let copy = if *is_copy { "Copy" } else { "" };
         let ser_str = if derive_ser { "serde::Serialize," } else { "" };
@@ -321,7 +321,7 @@ fn gen_row_structs(
 
         if !is_copy {
             let struct_fields = join_comma(fields, |w, col| {
-                gen!(w, "pub {} : {}", col.name, col.brw_struct(false, true))
+                gen!(w, "pub {} : {}", col.name, col.brw_struct(false, true));
             });
             let fields_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
             let fields_owning = join_comma(fields, |w, f| gen!(w, "{}", f.owning_assign()));
@@ -432,7 +432,7 @@ fn gen_row_structs(
                         {raw_post};
                     Ok(stream)
                 }}
-            }}")
+            }}");
     }
 }
 
@@ -479,10 +479,10 @@ fn gen_query_fn(
         let borrowed_str = if *is_copy { "" } else { "Borrowed" };
         // Query fn
         let param_list = join_comma(params, |w, p| {
-            gen!(w, "{} : &'a {}", p.name, p.brw_struct(true, true))
+            gen!(w, "{} : &'a {}", p.name, p.brw_struct(true, true));
         });
         let get_fields = join_comma(fields.iter().enumerate(), |w, (i, f)| {
-            gen!(w, "{}: row.get({})", f.name, index[i])
+            gen!(w, "{}: row.get({})", f.name, index[i]);
         });
         let param_names = join_comma(params, |w, p| gen!(w, "{}", p.name));
         let nb_params = params.len();
@@ -520,7 +520,7 @@ fn gen_query_fn(
     } else {
         // Execute fn
         let param_list = join_comma(params, |w, p| {
-            gen!(w, "{} : &'a {}", p.name, p.brw_struct(true, true))
+            gen!(w, "{} : &'a {}", p.name, p.brw_struct(true, true));
         });
         let param_names = join_comma(params, |w, p| gen!(w, "{}", p.ty.sql_wrapped(&p.name)));
         gen!(w,
@@ -569,11 +569,11 @@ fn gen_custom_type(
                         "#[derive({ser_str} Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, Copy, PartialEq, Eq)]
                         #[postgres(name = \"{name}\")]
                         pub enum {struct_name} {{ {variants_str} }}",
-                    )
+                    );
         }
         PreparedContent::Composite(fields) => {
             let fields_str = join_comma(fields, |w, f| {
-                gen!(w, "pub {} : {}", f.name, f.own_struct())
+                gen!(w, "pub {} : {}", f.name, f.own_struct());
             });
 
             gen!(
@@ -586,7 +586,7 @@ fn gen_custom_type(
                 struct_tosql(w, struct_name, fields, name, false, *is_params);
             } else {
                 let brw_fields = join_comma(fields, |w, f| {
-                    gen!(w, "pub {} : {}", f.name, f.brw_struct(false, true))
+                    gen!(w, "pub {} : {}", f.name, f.brw_struct(false, true));
                 });
                 let field_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
                 let fields_owning = join_comma(fields, |w, f| gen!(w, "{}", f.owning_assign()));
@@ -605,7 +605,7 @@ fn gen_custom_type(
                 composite_fromsql(w, struct_name, fields, name, schema);
                 if !is_params {
                     let fields = join_comma(fields, |w, f| {
-                        gen!(w, "pub {} : {}", f.name, f.brw_struct(true, true))
+                        gen!(w, "pub {} : {}", f.name, f.brw_struct(true, true));
                     });
                     let derive = if *is_copy { ",Copy,Clone" } else { "" };
                     gen!(
@@ -628,7 +628,7 @@ fn gen_type_modules(
     // Generate each module
     let modules_str = join_ln(prepared, |w, (schema, types)| {
         let tys_str = join_ln(types, |w, ty| gen_custom_type(w, schema, ty, settings));
-        gen!(w, "pub mod {schema} {{ {tys_str} }}")
+        gen!(w, "pub mod {schema} {{ {tys_str} }}");
     });
 
     gen!(w, "pub mod types {{ {modules_str} }}");
@@ -641,7 +641,7 @@ pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> S
         "use postgres::{{fallible_iterator::FallibleIterator,GenericClient}};"
     };
     let mut buff = "// This file was generated with `cornucopia`. Do not modify.
-    #![allow(clippy::all)]
+    #![allow(clippy::all, clippy::pedantic)]
     #![allow(unused_variables)]
     #![allow(unused_imports)]
     #![allow(dead_code)]
@@ -652,19 +652,19 @@ pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> S
     // Generate queries
     let query_modules = join_ln(preparation.modules, |w, module| {
         let queries_string = join_ln(module.queries.values(), |w, query| {
-            gen_query_fn(w, &module, query, settings)
+            gen_query_fn(w, &module, query, settings);
         });
         let params_string = join_ln(module.params.values(), |w, params| {
-            gen_params_struct(w, &module, params, settings)
+            gen_params_struct(w, &module, params, settings);
         });
         let rows_string = join_ln(module.rows.values(), |w, row| {
-            gen_row_structs(w, row, settings)
+            gen_row_structs(w, row, settings);
         });
         gen!(
             w,
             "pub mod {} {{ {import} {params_string} {rows_string} {queries_string} }}",
             module.info.name
-        )
+        );
     });
     gen!(&mut buff, "pub mod queries {{ {} }}", query_modules);
     buff

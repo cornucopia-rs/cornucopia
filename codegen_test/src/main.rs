@@ -395,12 +395,12 @@ pub fn test_stress(client: &mut Client) {
     let bytea = expected
         .bytea_
         .iter()
-        .map(|v| v.as_slice())
+        .map(Vec::as_slice)
         .collect::<Vec<_>>();
     let txt = &expected
         .text_
         .iter()
-        .map(|v| v.as_str())
+        .map(String::as_str)
         .collect::<Vec<_>>();
     let params = InsertEverythingArrayParams {
         bingint_: &expected.bingint_,
