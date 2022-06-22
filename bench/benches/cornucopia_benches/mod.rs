@@ -13,7 +13,7 @@ mod generated_sync;
 
 pub fn bench_trivial_query(b: &mut Bencher, client: &Client) {
     let mut stmt = users();
-    b.iter(|| block_on(async { stmt.bind(client).vec().await.unwrap() }))
+    b.iter(|| block_on(async { stmt.bind(client).all().await.unwrap() }))
 }
 
 pub fn bench_medium_complex_query(b: &mut Bencher, client: &Client) {
@@ -36,7 +36,7 @@ pub fn bench_medium_complex_query(b: &mut Bencher, client: &Client) {
                         }),
                     )
                 })
-                .vec()
+                .all()
                 .await
                 .unwrap()
         })
@@ -68,17 +68,17 @@ pub fn loading_associations_sequentially(b: &mut Bencher, client: &Client) {
     let mut comment_stmt = comments_by_post_id();
     b.iter(|| {
         block_on(async {
-            let users = user_stmt.bind(client).vec().await.unwrap();
+            let users = user_stmt.bind(client).all().await.unwrap();
             let users_ids: Vec<i32> = users.iter().map(|it| it.id).collect();
             let posts = post_stmt
                 .bind(client, &users_ids.as_slice())
-                .vec()
+                .all()
                 .await
                 .unwrap();
             let posts_ids: Vec<i32> = posts.iter().map(|it| it.id).collect();
             let comments = comment_stmt
                 .bind(client, &posts_ids.as_slice())
-                .vec()
+                .all()
                 .await
                 .unwrap();
 
@@ -124,7 +124,7 @@ pub mod sync {
     };
     pub fn bench_trivial_query(b: &mut Bencher, client: &mut Client) {
         let mut stmt = users();
-        b.iter(|| stmt.bind(client).vec().unwrap())
+        b.iter(|| stmt.bind(client).all().unwrap())
     }
 
     pub fn bench_medium_complex_query(b: &mut Bencher, client: &mut Client) {
@@ -146,7 +146,7 @@ pub mod sync {
                         }),
                     )
                 })
-                .vec()
+                .all()
                 .unwrap()
         })
     }
@@ -173,13 +173,13 @@ pub mod sync {
         let mut comment_stmt = comments_by_post_id();
 
         b.iter(|| {
-            let users = user_stmt.bind(client).vec().unwrap();
+            let users = user_stmt.bind(client).all().unwrap();
             let users_ids: Vec<i32> = users.iter().map(|it| it.id).collect();
-            let posts = post_stmt.bind(client, &users_ids.as_slice()).vec().unwrap();
+            let posts = post_stmt.bind(client, &users_ids.as_slice()).all().unwrap();
             let posts_ids: Vec<i32> = posts.iter().map(|it| it.id).collect();
             let comments = comment_stmt
                 .bind(client, &posts_ids.as_slice())
-                .vec()
+                .all()
                 .unwrap();
 
             let mut posts = posts

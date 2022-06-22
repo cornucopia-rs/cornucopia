@@ -25,5 +25,5 @@ async fn main() {
     cfg.dbname = Some(String::from("postgres"));
     let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
     let client = pool.get().await.unwrap();
-    example_query().bind(&client).vec().await.unwrap();
+    example_query().bind(&client).all().await.unwrap();
 }

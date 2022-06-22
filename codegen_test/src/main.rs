@@ -68,7 +68,7 @@ pub fn test_params(client: &mut Client) {
             .unwrap()
     );
     assert_eq!(
-        select_book().bind(client).vec().unwrap(),
+        select_book().bind(client).all().unwrap(),
         &[
             SelectBook {
                 author: None,
@@ -139,7 +139,7 @@ pub fn test_named(client: &mut Client) {
         .unwrap()
         .id;
     assert_eq!(
-        named().bind(client).vec().unwrap(),
+        named().bind(client).all().unwrap(),
         &[
             Named {
                 id: hidden_id,
@@ -180,7 +180,7 @@ pub fn test_named(client: &mut Client) {
         }
     );
     assert_eq!(
-        named().bind(client).map(|it| it.id).vec().unwrap(),
+        named().bind(client).map(|it| it.id).all().unwrap(),
         &[hidden_id, visible_id, last_id]
     );
 

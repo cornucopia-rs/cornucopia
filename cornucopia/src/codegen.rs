@@ -406,8 +406,8 @@ fn gen_row_structs(
                     Ok((self.mapper)((self.extractor)(&row)))
                 }}
             
-                pub {fn_async} fn vec(self) -> Result<Vec<T>, {backend}::Error> {{
-                    self.stream(){fn_await}?.{collect}
+                pub {fn_async} fn all(self) -> Result<Vec<T>, {backend}::Error> {{
+                    self.iter(){fn_await}?.{collect}
                 }}
             
                 pub {fn_async} fn opt(self) -> Result<Option<T>, {backend}::Error> {{
@@ -419,18 +419,18 @@ fn gen_row_structs(
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }}
             
-                pub {fn_async} fn stream(
+                pub {fn_async} fn iter(
                     self,
                 ) -> Result<impl {raw_type}<Item = Result<T, {backend}::Error>> + 'a, {backend}::Error> {{
                     let stmt = self.stmt.prepare(self.client){fn_await}?;
-                    let stream = self
+                    let it = self
                         .client
                         .query_raw(stmt, cornucopia_client::private::slice_iter(&self.params))
                         {fn_await}?
                         {raw_pre}
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         {raw_post};
-                    Ok(stream)
+                    Ok(it)
                 }}
             }}");
     }

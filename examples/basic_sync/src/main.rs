@@ -28,7 +28,7 @@ pub fn main() {
         .unwrap();
 
     // Queries accept regular clients.
-    println!("{:?}", authors().bind(&mut client).vec().unwrap());
+    println!("{:?}", authors().bind(&mut client).all().unwrap());
 
     // Queries also accept transactions
     // Don't forget to `.commit()` when you're done!
@@ -39,7 +39,7 @@ pub fn main() {
             .bind(&mut transaction, &"The Great Gatsby")
             .unwrap();
         // Use a map if needed
-        let books = books().bind(&mut transaction).vec().unwrap();
+        let books = books().bind(&mut transaction).all().unwrap();
         println!("{books:?}");
         transaction.commit().unwrap();
     }
@@ -56,7 +56,7 @@ pub fn main() {
         "{:?}",
         author_name_starting_with()
             .bind(&mut client, &"Jo")
-            .vec()
+            .all()
             .unwrap()
     );
 

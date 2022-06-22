@@ -36,8 +36,8 @@ pub mod queries {
                 Ok((self.mapper)((self.extractor)(&row)))
             }
 
-            pub async fn vec(self) -> Result<Vec<T>, tokio_postgres::Error> {
-                self.stream().await?.try_collect().await
+            pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.iter().await?.try_collect().await
             }
 
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
@@ -49,20 +49,20 @@ pub mod queries {
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
 
-            pub async fn stream(
+            pub async fn iter(
                 self,
             ) -> Result<
                 impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                 tokio_postgres::Error,
             > {
                 let stmt = self.stmt.prepare(self.client).await?;
-                let stream = self
+                let it = self
                     .client
                     .query_raw(stmt, cornucopia_client::private::slice_iter(&self.params))
                     .await?
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
-                Ok(stream)
+                Ok(it)
             }
         }
         pub fn example_query() -> ExampleQueryStmt {
