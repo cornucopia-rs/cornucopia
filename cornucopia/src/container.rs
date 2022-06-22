@@ -77,7 +77,7 @@ fn healthcheck(podman: bool, max_retries: u64, ms_per_retry: u64) -> Result<(), 
     while !is_postgres_healthy(podman)? {
         if nb_retries >= max_retries {
             return Err(Error::new(
-                format!("Cornucopia reached the max number of connection retries"),
+                String::from("Cornucopia reached the max number of connection retries"),
                 podman,
             ));
         };
