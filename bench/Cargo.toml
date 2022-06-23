@@ -17,8 +17,9 @@ cornucopia_client = { path = "../cornucopia_client" }
 diesel = { version = "2.0.0-rc.0", features = ["postgres"] }
 
 [[bench]]
-name = "bench"
+name = "usage"
 harness = false
+path = "usage/usage.rs"
 
 [[bench]]
 name = "codegen"
