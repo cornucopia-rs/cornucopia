@@ -73,9 +73,9 @@ pub(crate) enum PreparedContent {
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedModule {
     pub(crate) info: ModuleInfo,
-    pub(crate) queries: IndexMap<String, PreparedQuery>,
-    pub(crate) params: IndexMap<String, PreparedParams>,
-    pub(crate) rows: IndexMap<String, PreparedRow>,
+    pub(crate) queries: IndexMap<Span<String>, PreparedQuery>,
+    pub(crate) params: IndexMap<Span<String>, PreparedParams>,
+    pub(crate) rows: IndexMap<Span<String>, PreparedRow>,
 }
 
 #[derive(Debug, Clone)]
@@ -93,7 +93,7 @@ impl PreparedModule {
         is_implicit: bool,
     ) -> Result<(usize, Vec<usize>), Error> {
         assert!(!fields.is_empty());
-        match self.rows.entry(name.value.clone()) {
+        match self.rows.entry(name.clone()) {
             Entry::Occupied(o) => {
                 let prev = &o.get();
                 // If the row doesn't contain the same fields as a previously
@@ -134,7 +134,7 @@ impl PreparedModule {
     ) -> Result<usize, Error> {
         let fields = &self.queries.get_index(query_idx).unwrap().1.params;
         assert!(!fields.is_empty());
-        match self.params.entry(name.value.clone()) {
+        match self.params.entry(name.clone()) {
             Entry::Occupied(mut o) => {
                 let prev = o.get_mut();
                 // If the param doesn't contain the same fields as a previously
@@ -167,7 +167,7 @@ impl PreparedModule {
 
     fn add_query(
         &mut self,
-        name: String,
+        name: Span<String>,
         params: Vec<PreparedField>,
         params_is_implicit: bool,
         row_idx: Option<(usize, Vec<usize>)>,
@@ -177,7 +177,7 @@ impl PreparedModule {
             .insert_full(
                 name.clone(),
                 PreparedQuery {
-                    name,
+                    name: name.value,
                     params,
                     row: row_idx,
                     sql,
@@ -303,6 +303,8 @@ fn prepare_module(
         )?;
     }
 
+    validation::validate_preparation(&tmp_prepared_module)?;
+
     Ok(tmp_prepared_module)
 }
 
@@ -404,13 +406,7 @@ fn prepare_query(
         )?)
     };
     let params_is_implicit = matches!(params, QueryDataStruct::Implicit { .. });
-    let query_idx = module.add_query(
-        name.value.clone(),
-        params_fields,
-        params_is_implicit,
-        row_idx,
-        sql_str,
-    );
+    let query_idx = module.add_query(name, params_fields, params_is_implicit, row_idx, sql_str);
     if !params_empty {
         module.add_param(params_name, query_idx, params_is_implicit)?;
     };

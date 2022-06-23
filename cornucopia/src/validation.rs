@@ -1,6 +1,8 @@
+use std::collections::BTreeMap;
+
 use crate::{
     parser::{self, NullableIdent, QueryDataStruct, Span, TypeAnnotation},
-    prepare_queries::PreparedField,
+    prepare_queries::{PreparedField, PreparedModule},
     read_queries::ModuleInfo,
     utils::has_duplicate,
 };
@@ -23,6 +25,7 @@ pub(crate) struct Query {
 }
 
 use error::Error;
+use heck::ToUpperCamelCase;
 use miette::SourceSpan;
 use postgres::Column;
 use postgres_types::Type;
@@ -239,6 +242,56 @@ pub(crate) fn named_struct_field(
     Ok(())
 }
 
+pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Error> {
+    // Check generated name clash
+    let mut named_registrar = BTreeMap::new();
+
+    let mut check_name = |name: String, span: SourceSpan, ty: &'static str| {
+        if let Some(prev) = named_registrar.insert(name.clone(), (span, ty)) {
+            // Sort by span
+            let (first, second) = if prev.0.offset() < span.offset() {
+                (prev, (span, ty))
+            } else {
+                ((span, ty), prev)
+            };
+            Err(Error::DuplicateGenName {
+                src: (&module.info).into(),
+                name,
+                first: first.0,
+                first_ty: first.1,
+                second: second.0,
+                second_ty: second.1,
+            })
+        } else {
+            Ok(())
+        }
+    };
+
+    for (origin, query) in &module.queries {
+        check_name(
+            format!("{}Stmt", query.name.to_upper_camel_case()),
+            origin.span,
+            "statement",
+        )?;
+    }
+    for (origin, row) in &module.rows {
+        if row.fields.len() > 1 || !row.is_implicit {
+            check_name(row.name.value.clone(), origin.span, "row")?;
+
+            if !row.is_copy {
+                check_name(format!("{}Borrowed", row.name), origin.span, "borrowed row")?;
+            };
+        }
+        check_name(format!("{}Query", row.name), origin.span, "query")?;
+    }
+    for (origin, params) in &module.params {
+        if params.fields.len() > 1 || !params.is_implicit {
+            check_name(params.name.value.clone(), origin.span, "params")?;
+        }
+    }
+    Ok(())
+}
+
 pub(crate) fn validate_module(info: ModuleInfo, module: parser::Module) -> Result<Module, Error> {
     query_name_already_used(&info, &module.queries)?;
     named_type_already_used(&info, &module.types)?;
@@ -265,6 +318,7 @@ pub(crate) fn validate_module(info: ModuleInfo, module: parser::Module) -> Resul
 
         validated_queries.push(validated_query);
     }
+
     Ok(Module {
         info,
         types: module.types,
@@ -279,7 +333,6 @@ pub mod error {
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError, Diagnostic)]
-    #[error("Couldn't validate queries.")]
     pub enum Error {
         #[error("column `{name}` appear multiple time")]
         #[diagnostic(help("disambiguate column names in your SQL using an `AS` clause"))]
@@ -345,6 +398,19 @@ pub mod error {
             row: SourceSpan,
             #[label("but query return nothing")]
             query: SourceSpan,
+        },
+        #[error("`{name}` is used multiple time")]
+        #[diagnostic(help("use a different name for one of those"))]
+        DuplicateGenName {
+            #[source_code]
+            src: NamedSource,
+            name: String,
+            first_ty: &'static str,
+            #[label("previous definition as {first_ty} here")]
+            first: SourceSpan,
+            second_ty: &'static str,
+            #[label("redefined as {second_ty} here")]
+            second: SourceSpan,
         },
     }
 }
