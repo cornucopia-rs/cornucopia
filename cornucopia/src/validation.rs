@@ -255,10 +255,10 @@ pub(crate) fn named_struct_field(
 
 pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Error> {
     // Check generated name clash
-    let mut named_registrar = BTreeMap::new();
+    let mut name_registrar = BTreeMap::new();
 
     let mut check_name = |name: String, span: SourceSpan, ty: &'static str| {
-        if let Some(prev) = named_registrar.insert(name.clone(), (span, ty)) {
+        if let Some(prev) = name_registrar.insert(name.clone(), (span, ty)) {
             // Sort by span
             let (first, second) = if prev.0.offset() < span.offset() {
                 (prev, (span, ty))
@@ -399,7 +399,7 @@ pub mod error {
             #[label("but query return nothing")]
             query: SourceSpan,
         },
-        #[error("the query `{name}` declare a parameter but has no binding")]
+        #[error("the query `{name}` declares a parameter but has no binding")]
         #[diagnostic(help("remove parameter declaration"))]
         ParamsOnSimpleQuery {
             #[source_code]
