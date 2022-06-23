@@ -279,17 +279,17 @@ pub(crate) fn validate_module(
         queries,
     }: &Module,
 ) -> Result<(), Error> {
-    query_name_already_used(&info, queries)?;
-    named_type_already_used(&info, types)?;
+    query_name_already_used(info, queries)?;
+    named_type_already_used(info, types)?;
     for ty in types {
-        duplicate_nullable_ident(&info, &ty.fields)?;
+        duplicate_nullable_ident(info, &ty.fields)?;
     }
     for query in queries {
         if let QueryDataStruct::Implicit { idents } = &query.param {
-            duplicate_nullable_ident(&info, idents)?;
+            duplicate_nullable_ident(info, idents)?;
         };
         if let QueryDataStruct::Implicit { idents } = &query.row {
-            duplicate_nullable_ident(&info, idents)?;
+            duplicate_nullable_ident(info, idents)?;
         };
     }
     Ok(())
