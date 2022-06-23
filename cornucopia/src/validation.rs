@@ -202,7 +202,6 @@ pub(crate) fn param_on_simple_query(
     Ok(())
 }
 
-
 pub(crate) fn named_struct_field(
     info: &ModuleInfo,
     name: &Span<String>,
