@@ -337,6 +337,8 @@ fn prepare_query(
             .zip(stmt_params)
             .map(|(a, b)| (a.clone(), b.clone()))
             .collect::<Vec<(Span<String>, Type)>>();
+        // Check for param declaration on simple query
+        validation::param_on_simple_query(&module.info, &name, &sql_span, &param, &params)?;
         for nullable_col in nullable_params_fields {
             // If none of the row's columns match the nullable column
             validation::nullable_param_name(&module.info, nullable_col, &params)

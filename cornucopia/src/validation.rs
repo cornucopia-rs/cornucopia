@@ -57,7 +57,7 @@ pub(crate) fn query_name_already_used(info: &ModuleInfo, queries: &[Query]) -> R
             .iter()
             .find(|second| second.name == first.name)
         {
-            return Err(Error::DuplicateName {
+            return Err(Error::DuplicateType {
                 src: info.into(),
                 ty: "query",
                 name: first.name.value.clone(),
@@ -79,7 +79,7 @@ pub(crate) fn named_type_already_used(
             .iter()
             .find(|second| second.name == first.name)
         {
-            return Err(Error::DuplicateName {
+            return Err(Error::DuplicateType {
                 src: info.into(),
                 ty: "type",
                 name: first.name.value.clone(),
@@ -171,6 +171,38 @@ pub(crate) fn row_on_execute(
     Ok(())
 }
 
+pub(crate) fn param_on_simple_query(
+    info: &ModuleInfo,
+    name: &Span<String>,
+    query: &SourceSpan,
+    param: &QueryDataStruct,
+    fields: &[(Span<String>, Type)],
+) -> Result<(), Error> {
+    let param = match param {
+        QueryDataStruct::Implicit { idents } => match (
+            idents.first().map(|it| it.name.span),
+            idents.last().map(|it| it.name.span),
+        ) {
+            (Some(first), Some(last)) => Some((first.offset()..last.offset() + last.len()).into()),
+            _ => None,
+        },
+        QueryDataStruct::Named(name) => Some(name.span),
+    };
+    if let Some(param) = param {
+        if fields.is_empty() {
+            return Err(Error::ParamsOnSimpleQuery {
+                src: info.into(),
+                name: name.value.clone(),
+                param,
+                query: *query,
+            });
+        }
+    }
+
+    Ok(())
+}
+
+
 pub(crate) fn named_struct_field(
     info: &ModuleInfo,
     name: &Span<String>,
@@ -234,7 +266,7 @@ pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Error>
             } else {
                 ((span, ty), prev)
             };
-            Err(Error::DuplicateGenName {
+            Err(Error::DuplicateName {
                 src: (&module.info).into(),
                 name,
                 first: first.0,
@@ -325,7 +357,7 @@ pub mod error {
         },
         #[error("the {ty} `{name}` is defined multiple time")]
         #[diagnostic(help("use a different name for one of those"))]
-        DuplicateName {
+        DuplicateType {
             #[source_code]
             src: NamedSource,
             name: String,
@@ -368,9 +400,20 @@ pub mod error {
             #[label("but query return nothing")]
             query: SourceSpan,
         },
+        #[error("the query `{name}` declare a parameter but has no binding")]
+        #[diagnostic(help("remove parameter declaration"))]
+        ParamsOnSimpleQuery {
+            #[source_code]
+            src: NamedSource,
+            name: String,
+            #[label("parameter declared here")]
+            param: SourceSpan,
+            #[label("but query has no binding")]
+            query: SourceSpan,
+        },
         #[error("`{name}` is used multiple time")]
         #[diagnostic(help("use a different name for one of those"))]
-        DuplicateGenName {
+        DuplicateName {
             #[source_code]
             src: NamedSource,
             name: String,
