@@ -197,7 +197,7 @@ error = '''
   help: remove row declaration'''
 
 [[test]]
-name = 'NamedExecuteRow'
+name = 'RowOnExecute'
 query = '''
 --! delete: Row
 DELETE FROM author;
@@ -213,3 +213,53 @@ error = '''
    ·          ╰── but query return nothing
    ╰────
   help: remove row declaration'''
+
+[[test]]
+name = 'ParamOnSimpleQuery'
+query = '''
+--! delete Param
+DELETE FROM author;
+'''
+error = '''
+× the query `delete` declares a parameter but has no binding
+   ╭─[queries/test.sql:1:1]
+ 1 │ --! delete Param
+   ·            ──┬──
+   ·              ╰── parameter declared here
+ 2 │ DELETE FROM author;
+   · ─────────┬─────────
+   ·          ╰── but query has no binding
+   ╰────
+  help: remove parameter declaration'''
+
+[[test]]
+name = 'QueryReserved'
+query = '''
+--! unsized
+SELECT * FROM author;
+'''
+error = '''
+× `unsized` is a reserved rust keyword
+   ╭─[queries/test.sql:1:1]
+ 1 │ --! unsized
+   ·     ───┬───
+   ·        ╰── reserved rust keyword
+ 2 │ SELECT * FROM author;
+   ╰────
+  help: use a different name'''
+
+[[test]]
+name = 'TypeReserved'
+query = '''
+--! select: Self
+SELECT * FROM author;
+'''
+error = '''
+× `Self` is a reserved rust keyword
+   ╭─[queries/test.sql:1:1]
+ 1 │ --! select: Self
+   ·             ──┬─
+   ·               ╰── reserved rust keyword
+ 2 │ SELECT * FROM author;
+   ╰────
+  help: use a different name'''

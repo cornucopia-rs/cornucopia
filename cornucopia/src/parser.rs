@@ -132,13 +132,16 @@ impl TypeAnnotation {
 }
 
 #[derive(Debug)]
-pub(crate) struct QuerySql {
-    pub(crate) span: SourceSpan,
+pub(crate) struct Query {
+    pub(crate) name: Span<String>,
+    pub(crate) param: QueryDataStruct,
+    pub(crate) row: QueryDataStruct,
+    pub(crate) sql_span: SourceSpan,
     pub(crate) sql_str: String,
     pub(crate) bind_params: Vec<Span<String>>,
 }
 
-impl QuerySql {
+impl Query {
     /// Escape sql string and pattern that are not bind
     fn sql_escaping() -> impl Parser<char, (), Error = Simple<char>> {
         // https://www.postgresql.org/docs/current/sql-syntax-lexical.html
@@ -190,7 +193,9 @@ impl QuerySql {
             .allow_trailing()
     }
 
-    fn parser() -> impl Parser<char, Self, Error = Simple<char>> {
+    /// Parse sql query, normalizing named parameters
+    fn parse_sql_query(
+    ) -> impl Parser<char, (String, SourceSpan, Vec<Span<String>>), Error = Simple<char>> {
         none_of(";")
             .repeated()
             .then_ignore(just(';'))
@@ -213,28 +218,43 @@ impl QuerySql {
                     sql_str.replace_range(start..=end, &format!("${}", index + 1));
                 }
 
-                Self {
-                    sql_str,
-                    bind_params: dedup_params,
-                    span: span.into(),
-                }
+                (sql_str, span.into(), dedup_params)
             })
     }
-}
 
-#[derive(Debug)]
-pub(crate) struct Query {
-    pub(crate) annotation: QueryAnnotation,
-    pub(crate) sql: QuerySql,
-}
+    fn parse_query_annotation(
+    ) -> impl Parser<char, (Span<String>, QueryDataStruct, QueryDataStruct), Error = Simple<char>>
+    {
+        just("--!")
+            .ignore_then(space())
+            .ignore_then(ident())
+            .then_ignore(space())
+            .then(QueryDataStruct::parser())
+            .then_ignore(space())
+            .then(
+                just(':')
+                    .ignore_then(space())
+                    .ignore_then(QueryDataStruct::parser())
+                    .or_not(),
+            )
+            .map(|((name, param), row)| (name, param, row.unwrap_or_default()))
+    }
 
-impl Query {
     fn parser() -> impl Parser<char, Self, Error = Simple<char>> {
-        QueryAnnotation::parser()
+        Self::parse_query_annotation()
             .then_ignore(space())
             .then_ignore(ln())
-            .then(QuerySql::parser())
-            .map(|(annotation, sql)| Self { annotation, sql })
+            .then(Self::parse_sql_query())
+            .map(
+                |((name, param, row), (sql_str, sql_span, bind_params))| Self {
+                    name,
+                    param,
+                    row,
+                    sql_span,
+                    sql_str,
+                    bind_params,
+                },
+            )
     }
 }
 
@@ -317,35 +337,6 @@ impl QueryDataStruct {
 }
 
 #[derive(Debug)]
-pub(crate) struct QueryAnnotation {
-    pub(crate) name: Span<String>,
-    pub(crate) param: QueryDataStruct,
-    pub(crate) row: QueryDataStruct,
-}
-
-impl QueryAnnotation {
-    fn parser() -> impl Parser<char, Self, Error = Simple<char>> {
-        just("--!")
-            .ignore_then(space())
-            .ignore_then(ident())
-            .then_ignore(space())
-            .then(QueryDataStruct::parser())
-            .then_ignore(space())
-            .then(
-                just(':')
-                    .ignore_then(space())
-                    .ignore_then(QueryDataStruct::parser())
-                    .or_not(),
-            )
-            .map(|((name, param), row)| Self {
-                name,
-                param,
-                row: row.unwrap_or_default(),
-            })
-    }
-}
-
-#[derive(Debug)]
 enum Statement {
     Type(TypeAnnotation),
     Query(Query),
@@ -353,39 +344,42 @@ enum Statement {
 
 #[derive(Debug)]
 pub(crate) struct Module {
+    pub(crate) info: ModuleInfo,
     pub(crate) types: Vec<TypeAnnotation>,
     pub(crate) queries: Vec<Query>,
 }
 
-impl FromIterator<Statement> for Module {
-    fn from_iter<T: IntoIterator<Item = Statement>>(iter: T) -> Self {
-        let mut types = Vec::new();
-        let mut queries = Vec::new();
-        for item in iter {
-            match item {
-                Statement::Type(it) => types.push(it),
-                Statement::Query(it) => queries.push(it),
-            }
-        }
-        Module { types, queries }
-    }
-}
-
-pub(crate) fn parse_query_module(module_info: &ModuleInfo) -> Result<Module, Error> {
-    TypeAnnotation::parser()
+pub(crate) fn parse_query_module(info: ModuleInfo) -> Result<Module, Error> {
+    match TypeAnnotation::parser()
         .map(Statement::Type)
         .or(Query::parser().map(Statement::Query))
         .separated_by(blank())
         .allow_leading()
         .allow_trailing()
         .then_ignore(end())
-        .collect()
-        .parse(module_info.content.as_str())
-        .map_err(|e| Error {
-            src: module_info.into(),
+        .parse(info.content.as_str())
+    {
+        Ok(statements) => {
+            let mut types = Vec::new();
+            let mut queries = Vec::new();
+            for item in statements {
+                match item {
+                    Statement::Type(it) => types.push(it),
+                    Statement::Query(it) => queries.push(it),
+                }
+            }
+            Ok(Module {
+                info,
+                types,
+                queries,
+            })
+        }
+        Err(e) => Err(Error {
+            src: info.into(),
             err_span: e[0].span().into(),
             help: e[0].to_string().replace('\n', "\\n"),
-        })
+        }),
+    }
 }
 
 pub(crate) mod error {
