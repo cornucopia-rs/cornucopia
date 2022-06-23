@@ -5,7 +5,7 @@ use postgres::Client;
 use postgres_types::{Kind, Type};
 
 use crate::{
-    parser::{NullableIdent, QueryDataStruct, Span, TypeAnnotation},
+    parser::{Module, NullableIdent, Query, QueryDataStruct, Span, TypeAnnotation},
     read_queries::ModuleInfo,
     type_registrar::CornucopiaType,
     type_registrar::TypeRegistrar,
@@ -189,10 +189,7 @@ impl PreparedModule {
 }
 
 /// Prepares all modules
-pub(crate) fn prepare(
-    client: &mut Client,
-    modules: Vec<validation::Module>,
-) -> Result<Preparation, Error> {
+pub(crate) fn prepare(client: &mut Client, modules: Vec<Module>) -> Result<Preparation, Error> {
     let mut registrar = TypeRegistrar::default();
     let mut tmp = Preparation {
         modules: Vec::new(),
@@ -282,9 +279,11 @@ fn prepare_type(
 /// Prepares all queries in this module
 fn prepare_module(
     client: &mut Client,
-    module: validation::Module,
+    module: Module,
     registrar: &mut TypeRegistrar,
 ) -> Result<PreparedModule, Error> {
+    validation::validate_module(&module)?;
+
     let mut tmp_prepared_module = PreparedModule {
         info: module.info.clone(),
         queries: IndexMap::new(),
@@ -314,14 +313,14 @@ fn prepare_query(
     module: &mut PreparedModule,
     registrar: &mut TypeRegistrar,
     types: &[TypeAnnotation],
-    validation::Query {
+    Query {
         name,
-        params,
+        param,
         bind_params,
         row,
         sql_str,
         sql_span,
-    }: validation::Query,
+    }: Query,
     module_info: &ModuleInfo,
 ) -> Result<(), Error> {
     // Prepare the statement
@@ -329,8 +328,7 @@ fn prepare_query(
         .prepare(&sql_str)
         .map_err(|e| Error::new_db_err(e, module_info, &sql_span, &name))?;
 
-    let (nullable_params_fields, params_name) =
-        params.name_and_fields(types, &name, Some("Params"));
+    let (nullable_params_fields, params_name) = param.name_and_fields(types, &name, Some("Params"));
     let (nullable_row_fields, row_name) = row.name_and_fields(types, &name, None);
     let params_fields = {
         let stmt_params = stmt.params();
@@ -405,7 +403,7 @@ fn prepare_query(
             matches!(row, QueryDataStruct::Implicit { .. }),
         )?)
     };
-    let params_is_implicit = matches!(params, QueryDataStruct::Implicit { .. });
+    let params_is_implicit = matches!(param, QueryDataStruct::Implicit { .. });
     let query_idx = module.add_query(name, params_fields, params_is_implicit, row_idx, sql_str);
     if !params_empty {
         module.add_param(params_name, query_idx, params_is_implicit)?;

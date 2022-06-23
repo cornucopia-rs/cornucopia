@@ -26,7 +26,6 @@ use parser::parse_query_module;
 use prepare_queries::prepare;
 use read_queries::read_query_modules;
 use run_migrations::run_migrations as run_migrations_internal;
-use validation::validate_module;
 
 pub use cli::run;
 pub use error::Error;
@@ -74,18 +73,12 @@ pub fn generate_live(
     settings: CodegenSettings,
 ) -> Result<String, Error> {
     // Read
-    let modules_info = read_query_modules(queries_path)?;
-
-    let mut validated_modules = Vec::new();
-    for info in modules_info {
-        // Parse
-        let parsed_module = parse_query_module(&info)?;
-        // Validate
-        validated_modules.push(validate_module(info, parsed_module)?);
-    }
-
+    let modules = read_query_modules(queries_path)?
+        .into_iter()
+        .map(parse_query_module)
+        .collect::<Result<_, parser::error::Error>>()?;
     // Generate
-    let prepared_modules = prepare(client, validated_modules)?;
+    let prepared_modules = prepare(client, modules)?;
     let generated_code = generate_internal(prepared_modules, settings);
     // Write
     if let Some(d) = destination {
@@ -106,19 +99,16 @@ pub fn generate_managed(
     podman: bool,
     settings: CodegenSettings,
 ) -> Result<String, Error> {
-    let modules_info = read_query_modules(queries_path)?;
-    let mut validated_modules = Vec::new();
-    for info in modules_info {
-        // Parse
-        let parsed_module = parse_query_module(&info)?;
-        // Validate
-        validated_modules.push(validate_module(info, parsed_module)?);
-    }
+    // Read
+    let modules = read_query_modules(queries_path)?
+        .into_iter()
+        .map(parse_query_module)
+        .collect::<Result<_, parser::error::Error>>()?;
     container::setup(podman)?;
     let mut client = conn::cornucopia_conn()?;
     let migrations = read_migrations(migrations_path)?;
     run_migrations_internal(&mut client, migrations)?;
-    let prepared_modules = prepare(&mut client, validated_modules)?;
+    let prepared_modules = prepare(&mut client, modules)?;
     let generated_code = generate_internal(prepared_modules, settings);
     container::cleanup(podman)?;
 

@@ -1,28 +1,11 @@
 use std::collections::BTreeMap;
 
 use crate::{
-    parser::{self, NullableIdent, QueryDataStruct, Span, TypeAnnotation},
+    parser::{NullableIdent, Query, QueryDataStruct, Span, TypeAnnotation, Module},
     prepare_queries::{PreparedField, PreparedModule},
     read_queries::ModuleInfo,
     utils::has_duplicate,
 };
-
-#[derive(Debug)]
-pub(crate) struct Module {
-    pub(crate) info: ModuleInfo,
-    pub(crate) types: Vec<TypeAnnotation>,
-    pub(crate) queries: Vec<Query>,
-}
-
-#[derive(Debug)]
-pub(crate) struct Query {
-    pub(crate) name: Span<String>,
-    pub(crate) params: QueryDataStruct,
-    pub(crate) bind_params: Vec<Span<String>>,
-    pub(crate) row: QueryDataStruct,
-    pub(crate) sql_span: SourceSpan,
-    pub(crate) sql_str: String,
-}
 
 use error::Error;
 use heck::ToUpperCamelCase;
@@ -68,21 +51,18 @@ pub(crate) fn duplicate_sql_col_name(
     }
 }
 
-pub(crate) fn query_name_already_used(
-    info: &ModuleInfo,
-    queries: &[parser::Query],
-) -> Result<(), Error> {
+pub(crate) fn query_name_already_used(info: &ModuleInfo, queries: &[Query]) -> Result<(), Error> {
     for (i, first) in queries.iter().enumerate() {
         if let Some(second) = queries[i + 1..]
             .iter()
-            .find(|second| second.annotation.name == first.annotation.name)
+            .find(|second| second.name == first.name)
         {
             return Err(Error::DuplicateName {
                 src: info.into(),
                 ty: "query",
-                name: first.annotation.name.value.clone(),
-                first: first.annotation.name.span,
-                second: second.annotation.name.span,
+                name: first.name.value.clone(),
+                first: first.name.span,
+                second: second.name.span,
             });
         }
     }
@@ -292,38 +272,27 @@ pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Error>
     Ok(())
 }
 
-pub(crate) fn validate_module(info: ModuleInfo, module: parser::Module) -> Result<Module, Error> {
-    query_name_already_used(&info, &module.queries)?;
-    named_type_already_used(&info, &module.types)?;
-    for ty in &module.types {
+pub(crate) fn validate_module(
+    Module {
+        info,
+        types,
+        queries,
+    }: &Module,
+) -> Result<(), Error> {
+    query_name_already_used(&info, queries)?;
+    named_type_already_used(&info, types)?;
+    for ty in types {
         duplicate_nullable_ident(&info, &ty.fields)?;
     }
-    let mut validated_queries = Vec::new();
-    for query in module.queries {
-        if let QueryDataStruct::Implicit { idents } = &query.annotation.param {
+    for query in queries {
+        if let QueryDataStruct::Implicit { idents } = &query.param {
             duplicate_nullable_ident(&info, idents)?;
         };
-        if let QueryDataStruct::Implicit { idents } = &query.annotation.row {
+        if let QueryDataStruct::Implicit { idents } = &query.row {
             duplicate_nullable_ident(&info, idents)?;
         };
-
-        let validated_query = Query {
-            name: query.annotation.name,
-            params: query.annotation.param,
-            bind_params: query.sql.bind_params,
-            row: query.annotation.row,
-            sql_str: query.sql.sql_str,
-            sql_span: query.sql.span,
-        };
-
-        validated_queries.push(validated_query);
     }
-
-    Ok(Module {
-        info,
-        types: module.types,
-        queries: validated_queries,
-    })
+    Ok(())
 }
 
 pub mod error {
