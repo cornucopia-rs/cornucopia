@@ -3,7 +3,6 @@ name = 'ClashBorrowed'
 query = '''
 --! select
 SELECT * FROM author;
-
 --! select_borrowed
 SELECT * FROM author;
 '''
@@ -14,11 +13,10 @@ error = '''
    ·     ───┬──
    ·        ╰── previous definition as borrowed row here
  2 │ SELECT * FROM author;
- 3 │ 
- 4 │ --! select_borrowed
+ 3 │ --! select_borrowed
    ·     ───────┬───────
    ·            ╰── redefined as row here
- 5 │ SELECT * FROM author;
+ 4 │ SELECT * FROM author;
    ╰────
   help: use a different name for one of those'''
 
@@ -27,7 +25,6 @@ name = 'ClashParams'
 query = '''
 --! new_author
 INSERT INTO Author (id, name) VALUES (:id, :name);
-
 --! new_author_params
 SELECT * FROM author;
 '''
@@ -38,11 +35,10 @@ error = '''
    ·     ─────┬────
    ·          ╰── previous definition as params here
  2 │ INSERT INTO Author (id, name) VALUES (:id, :name);
- 3 │ 
- 4 │ --! new_author_params
+ 3 │ --! new_author_params
    ·     ────────┬────────
    ·             ╰── redefined as row here
- 5 │ SELECT * FROM author;
+ 4 │ SELECT * FROM author;
    ╰────
   help: use a different name for one of those'''
 
@@ -51,7 +47,6 @@ name = 'ClashQuery'
 query = '''
 --! select
 SELECT * FROM author;
-
 --! select_query
 SELECT * FROM author;
 '''
@@ -62,25 +57,24 @@ error = '''
    ·     ───┬──
    ·        ╰── previous definition as query here
  2 │ SELECT * FROM author;
- 3 │ 
- 4 │ --! select_query
+ 3 │ --! select_query
    ·     ──────┬─────
    ·           ╰── redefined as row here
- 5 │ SELECT * FROM author;
+ 4 │ SELECT * FROM author;
    ╰────
   help: use a different name for one of those'''
 
 [[test]]
 name = 'ClashTypeQuery'
 query = '''
---: AuthorParams
+--: AuthorParams()
 --! author: AuthorParams
 INSERT INTO Author (id, name) VALUES (:id, :name) RETURNING *;
 '''
 error = '''
 × `AuthorParams` is used multiple time
    ╭─[queries/test.sql:1:1]
- 1 │ --: AuthorParams
+ 1 │ --: AuthorParams()
  2 │ --! author: AuthorParams
    ·     ───┬──  ──────┬─────
    ·        │          ╰── redefined as row here
@@ -92,15 +86,15 @@ error = '''
 [[test]]
 name = 'ClashTypeReuse'
 query = '''
---! author Author: Author
+--! author Author(): Author()
 INSERT INTO Author (id, name) VALUES (:id, :name) RETURNING *;
 '''
 error = '''
 × `Author` is used multiple time
    ╭─[queries/test.sql:1:1]
- 1 │ --! author Author: Author
-   ·            ───┬──  ───┬──
-   ·               │       ╰── redefined as row here
+ 1 │ --! author Author(): Author()
+   ·            ───┬──    ───┬──
+   ·               │         ╰── redefined as row here
    ·               ╰── previous definition as params here
  2 │ INSERT INTO Author (id, name) VALUES (:id, :name) RETURNING *;
    ╰────

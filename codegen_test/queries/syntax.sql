@@ -1,5 +1,5 @@
 
---:CompactRow
+--:CompactRow()
      --:          SpaceRow     ()
 --:CompactField(a?,b?,c?)
 --: SpaceField      (  a?   ,  b?  ,  c?  )   
@@ -21,9 +21,9 @@ INSERT INTO named (name, price, show) VALUES (:name, :price, false) RETURNING id
 -- Multi line
 -- Comment
 
---!named_compact Params:Row
+--!named_compact Params():Row()
 INSERT INTO named (name, price, show) VALUES (:name, :price, false) RETURNING id;
-      --!       named_spaced            Params     :        Row  
+      --!       named_spaced            ParamsSpace  ()     :        RowSpace  () 
 INSERT INTO named (name, price, show) VALUES (:name, :price, false) RETURNING id;
 
 --! tricky_sql

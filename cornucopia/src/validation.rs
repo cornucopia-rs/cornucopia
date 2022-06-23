@@ -99,12 +99,30 @@ pub(crate) fn inline_conflict_declared(
     ty: &'static str,
 ) -> Result<(), Error> {
     if let Some(declared) = types.iter().find(|it| it.name == *name) {
-        return Err(Error::InlineConflictDeclared {
+        return Err(Error::DuplicateType {
             src: info.into(),
             ty,
             name: declared.name.value.clone(),
-            declared: declared.name.span,
-            inline: name.span,
+            first: declared.name.span,
+            second: name.span,
+        });
+    }
+
+    Ok(())
+}
+
+pub(crate) fn reference_unknown_type(
+    info: &ModuleInfo,
+    name: &Span<String>,
+    types: &[TypeAnnotation],
+    ty: &'static str,
+) -> Result<(), Error> {
+    if types.iter().all(|it| it.name != *name) {
+        return Err(Error::UnknownNamedType {
+            src: info.into(),
+            ty,
+            name: name.value.clone(),
+            pos: name.span,
         });
     }
 
@@ -233,7 +251,7 @@ pub(crate) fn named_struct_field(
             src: info.into(),
             name: name.value.clone(),
             first_label: format!(
-                "column `{}` is expected to have type `{}` here",
+                "column `{}` has type `{}` here",
                 field.name,
                 field.ty.pg_ty()
             ),
@@ -335,11 +353,15 @@ pub(crate) fn validate_module(
     }
     for query in queries {
         for (it, ty) in [(&query.param, "param"), (&query.row, "row")] {
-            if let Some(idents) = it.idents() {
+            if let Some(idents) = &it.idents {
                 duplicate_nullable_ident(info, idents)?;
             };
-            if let Some(inline_name) = it.inline_name() {
-                inline_conflict_declared(info, inline_name, types, ty)?;
+            if let Some(name) = &it.name {
+                if it.inlined() {
+                    inline_conflict_declared(info, name, types, ty)?;
+                } else {
+                    reference_unknown_type(info, name, types, ty)?;
+                }
             }
         }
     }
@@ -381,22 +403,20 @@ pub mod error {
             src: NamedSource,
             name: String,
             ty: &'static str,
-            #[label("previous definition of the {ty} here")]
+            #[label("previous definition here")]
             first: SourceSpan,
             #[label("redefined here")]
             second: SourceSpan,
         },
-        #[error("the inline {ty} `{name}` is already declared")]
-        #[diagnostic(help("use a different name for one of those"))]
-        InlineConflictDeclared {
+        #[error("reference to an unknown named {ty} `{name}`")]
+        #[diagnostic(help("declare an inline named type using `()`: {name}()"))]
+        UnknownNamedType {
             #[source_code]
             src: NamedSource,
             name: String,
             ty: &'static str,
-            #[label("named definition here")]
-            declared: SourceSpan,
-            #[label("redefined inline here")]
-            inline: SourceSpan,
+            #[label("unknown named {ty}")]
+            pos: SourceSpan,
         },
         #[error("unknown field")]
         #[diagnostic(help("use one of those names: {known}"))]

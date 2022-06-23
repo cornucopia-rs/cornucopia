@@ -1,3 +1,4 @@
+--: Id()
 --: Named(price?)
 --: NamedParams(price?)
 
@@ -10,10 +11,9 @@ SELECT * FROM named;
 --! named_by_id: Named
 SELECT * FROM named WHERE id = :id;
 
---: NamedComplexParams()
 --: named_composite(wow?,such_cool?)
 
---! new_named_complex NamedComplexParams
+--! new_named_complex NamedComplexParams()
 INSERT INTO named_complex (named) VALUES (:named);
 --! named_complex
 SELECT * FROM named_complex;

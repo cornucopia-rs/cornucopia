@@ -3585,15 +3585,24 @@ pub mod queries {
                 stmt.bind(client, &self.name, &self.price)
             }
         }
+        #[derive(Debug)]
+        pub struct ParamsSpace<'a> {
+            pub name: &'a str,
+            pub price: f64,
+        }
         impl<'a, C: GenericClient>
-            cornucopia_client::sync::Params<'a, NamedSpacedStmt, RowQuery<'a, C, Row, 2>, C>
-            for Params<'a>
+            cornucopia_client::sync::Params<
+                'a,
+                NamedSpacedStmt,
+                RowSpaceQuery<'a, C, RowSpace, 2>,
+                C,
+            > for ParamsSpace<'a>
         {
             fn bind(
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut NamedSpacedStmt,
-            ) -> RowQuery<'a, C, Row, 2> {
+            ) -> RowSpaceQuery<'a, C, RowSpace, 2> {
                 stmt.bind(client, &self.name, &self.price)
             }
         }
@@ -3871,6 +3880,62 @@ pub mod queries {
                 Ok(it)
             }
         }
+        #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
+        pub struct RowSpace {
+            pub id: i32,
+        }
+        pub struct RowSpaceQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a mut C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            stmt: &'a mut cornucopia_client::sync::Stmt,
+            extractor: fn(&postgres::Row) -> RowSpace,
+            mapper: fn(RowSpace) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> RowSpaceQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(self, mapper: fn(RowSpace) -> R) -> RowSpaceQuery<'a, C, R, N> {
+                RowSpaceQuery {
+                    client: self.client,
+                    params: self.params,
+                    stmt: self.stmt,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+
+            pub fn one(self) -> Result<T, postgres::Error> {
+                let stmt = self.stmt.prepare(self.client)?;
+                let row = self.client.query_one(stmt, &self.params)?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+
+            pub fn all(self) -> Result<Vec<T>, postgres::Error> {
+                self.iter()?.collect()
+            }
+
+            pub fn opt(self) -> Result<Option<T>, postgres::Error> {
+                let stmt = self.stmt.prepare(self.client)?;
+                Ok(self
+                    .client
+                    .query_opt(stmt, &self.params)?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+
+            pub fn iter(
+                self,
+            ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
+            {
+                let stmt = self.stmt.prepare(self.client)?;
+                let it = self
+                    .client
+                    .query_raw(stmt, cornucopia_client::private::slice_iter(&self.params))?
+                    .iterator()
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
+                Ok(it)
+            }
+        }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct Syntax {
             pub trick_y: String,
@@ -4089,20 +4154,25 @@ pub mod queries {
                 client: &'a mut C,
                 name: &'a &'a str,
                 price: &'a f64,
-            ) -> RowQuery<'a, C, Row, 2> {
-                RowQuery {
+            ) -> RowSpaceQuery<'a, C, RowSpace, 2> {
+                RowSpaceQuery {
                     client,
                     params: [name, price],
                     stmt: &mut self.0,
-                    extractor: |row| Row { id: row.get(0) },
-                    mapper: |it| <Row>::from(it),
+                    extractor: |row| RowSpace { id: row.get(0) },
+                    mapper: |it| <RowSpace>::from(it),
                 }
             }
             pub fn params<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-                params: &'a impl cornucopia_client::sync::Params<'a, Self, RowQuery<'a, C, Row, 2>, C>,
-            ) -> RowQuery<'a, C, Row, 2> {
+                params: &'a impl cornucopia_client::sync::Params<
+                    'a,
+                    Self,
+                    RowSpaceQuery<'a, C, RowSpace, 2>,
+                    C,
+                >,
+            ) -> RowSpaceQuery<'a, C, RowSpace, 2> {
                 params.bind(client, self)
             }
         }

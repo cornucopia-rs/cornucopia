@@ -123,11 +123,8 @@ impl TypeAnnotation {
             .ignore_then(space())
             .ignore_then(ident())
             .then_ignore(space())
-            .then(parse_nullable_ident().or_not())
-            .map(|(name, fields)| Self {
-                name,
-                fields: fields.unwrap_or_default(),
-            })
+            .then(parse_nullable_ident())
+            .map(|(name, fields)| Self { name, fields })
     }
 }
 
@@ -261,8 +258,8 @@ impl Query {
 #[derive(Debug)]
 pub(crate) struct QueryDataStruct {
     pub span: SourceSpan,
-    name: Option<Span<String>>,
-    idents: Option<Vec<NullableIdent>>,
+    pub name: Option<Span<String>>,
+    pub idents: Option<Vec<NullableIdent>>,
 }
 
 impl QueryDataStruct {
@@ -270,16 +267,12 @@ impl QueryDataStruct {
         self.name.is_none()
     }
 
-    pub fn idents(&self) -> Option<&[NullableIdent]> {
-        self.idents.as_deref()
-    }
-
     pub fn is_empty(&self) -> bool {
         self.name.is_none() && self.idents.is_none()
     }
 
-    pub fn inline_name(&self) -> Option<&Span<String>> {
-        self.idents().and(self.name.as_ref())
+    pub fn inlined(&self) -> bool {
+        self.idents.is_some() && self.name.is_some()
     }
 
     pub(crate) fn name_and_fields<'a>(
