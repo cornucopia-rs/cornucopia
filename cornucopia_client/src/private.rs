@@ -37,7 +37,7 @@ impl<T: ToSql> ToSql for Domain<T> {
     }
 }
 
-/// Wrapper for slice ToSql which ignore
+/// Wrapper for slice `ToSql` which ignore
 pub struct DomainArray<'a, T: ToSql>(pub &'a [T]);
 
 impl<'a, T: ToSql> Debug for DomainArray<'a, T> {

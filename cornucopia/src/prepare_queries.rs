@@ -325,7 +325,7 @@ fn prepare_query(
     // Prepare the statement
     let stmt = client
         .prepare(&sql_str)
-        .map_err(|e| Error::new_db_err(e, module_info, &sql_span, &name))?;
+        .map_err(|e| Error::new_db_err(&e, module_info, &sql_span, &name))?;
 
     let (nullable_params_fields, params_name) =
         params.name_and_fields(types, &name, Some("Params"));
@@ -443,7 +443,7 @@ pub(crate) mod error {
 
     impl Error {
         pub(crate) fn new_db_err(
-            err: postgres::Error,
+            err: &postgres::Error,
             module_info: &ModuleInfo,
             query_span: &SourceSpan,
             query_name: &Span<String>,

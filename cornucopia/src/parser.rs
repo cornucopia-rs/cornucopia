@@ -251,7 +251,7 @@ impl QueryDataStruct {
     }
 
     pub fn idents(&self) -> Option<&[NullableIdent]> {
-        self.idents.as_ref().map(|it| it.as_slice())
+        self.idents.as_deref()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -273,13 +273,13 @@ impl QueryDataStruct {
                             .find_map(|it| (it.name == *named).then(|| it.fields.as_slice()))
                             .unwrap_or(&[])
                     },
-                    |it| it.as_slice(),
+                    Vec::as_slice,
                 ),
                 named.clone(),
             )
         } else {
             (
-                self.idents.as_ref().map_or(&[], |it| it.as_slice()),
+                self.idents.as_ref().map_or(&[], Vec::as_slice),
                 query_name.map(|x| {
                     format!(
                         "{}{}",
