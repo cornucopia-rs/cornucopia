@@ -206,11 +206,10 @@ const KEYWORD: [&str; 52] = [
 ];
 
 fn reserved_keyword(info: &ModuleInfo, s: &Span<String>) -> Result<(), Error> {
-    // TODO binary search
-    if let Some(it) = KEYWORD.into_iter().find(|it| it == &s.value) {
+    if let Ok(it) = KEYWORD.binary_search(&s.value.as_str()) {
         Err(Error::RustKeyword {
             src: info.into(),
-            name: it,
+            name: KEYWORD[it],
             pos: s.span,
         })
     } else {
