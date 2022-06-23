@@ -1,28 +1,14 @@
+use std::collections::BTreeMap;
+
 use crate::{
-    parser::{self, NullableIdent, QueryDataStruct, Span, TypeAnnotation},
-    prepare_queries::PreparedField,
+    parser::{Module, NullableIdent, Query, QueryDataStruct, Span, TypeAnnotation},
+    prepare_queries::{PreparedField, PreparedModule},
     read_queries::ModuleInfo,
     utils::has_duplicate,
 };
 
-#[derive(Debug)]
-pub(crate) struct Module {
-    pub(crate) info: ModuleInfo,
-    pub(crate) types: Vec<TypeAnnotation>,
-    pub(crate) queries: Vec<Query>,
-}
-
-#[derive(Debug)]
-pub(crate) struct Query {
-    pub(crate) name: Span<String>,
-    pub(crate) params: QueryDataStruct,
-    pub(crate) bind_params: Vec<Span<String>>,
-    pub(crate) row: QueryDataStruct,
-    pub(crate) sql_span: SourceSpan,
-    pub(crate) sql_str: String,
-}
-
 use error::Error;
+use heck::ToUpperCamelCase;
 use miette::SourceSpan;
 use postgres::Column;
 use postgres_types::Type;
@@ -65,21 +51,18 @@ pub(crate) fn duplicate_sql_col_name(
     }
 }
 
-pub(crate) fn query_name_already_used(
-    info: &ModuleInfo,
-    queries: &[parser::Query],
-) -> Result<(), Error> {
+pub(crate) fn query_name_already_used(info: &ModuleInfo, queries: &[Query]) -> Result<(), Error> {
     for (i, first) in queries.iter().enumerate() {
         if let Some(second) = queries[i + 1..]
             .iter()
-            .find(|second| second.annotation.name == first.annotation.name)
+            .find(|second| second.name == first.name)
         {
-            return Err(Error::DuplicateName {
+            return Err(Error::DuplicateType {
                 src: info.into(),
                 ty: "query",
-                name: first.annotation.name.value.clone(),
-                first: first.annotation.name.span,
-                second: second.annotation.name.span,
+                name: first.name.value.clone(),
+                first: first.name.span,
+                second: second.name.span,
             });
         }
     }
@@ -96,7 +79,7 @@ pub(crate) fn named_type_already_used(
             .iter()
             .find(|second| second.name == first.name)
         {
-            return Err(Error::DuplicateName {
+            return Err(Error::DuplicateType {
                 src: info.into(),
                 ty: "type",
                 name: first.name.value.clone(),
@@ -188,6 +171,58 @@ pub(crate) fn row_on_execute(
     Ok(())
 }
 
+pub(crate) fn param_on_simple_query(
+    info: &ModuleInfo,
+    name: &Span<String>,
+    query: &SourceSpan,
+    param: &QueryDataStruct,
+    fields: &[(Span<String>, Type)],
+) -> Result<(), Error> {
+    let param = match param {
+        QueryDataStruct::Implicit { idents } => match (
+            idents.first().map(|it| it.name.span),
+            idents.last().map(|it| it.name.span),
+        ) {
+            (Some(first), Some(last)) => Some((first.offset()..last.offset() + last.len()).into()),
+            _ => None,
+        },
+        QueryDataStruct::Named(name) => Some(name.span),
+    };
+    if let Some(param) = param {
+        if fields.is_empty() {
+            return Err(Error::ParamsOnSimpleQuery {
+                src: info.into(),
+                name: name.value.clone(),
+                param,
+                query: *query,
+            });
+        }
+    }
+
+    Ok(())
+}
+
+const KEYWORD: [&str; 52] = [
+    "Self", "abstract", "as", "async", "await", "become", "box", "break", "const", "continue",
+    "crate", "do", "dyn", "else", "enum", "extern", "false", "final", "fn", "for", "if", "impl",
+    "in", "let", "loop", "macro", "match", "mod", "move", "mut", "override", "priv", "pub", "ref",
+    "return", "self", "static", "struct", "super", "trait", "true", "try", "type", "typeof",
+    "union", "unsafe", "unsized", "use", "virtual", "where", "while", "yield",
+];
+
+fn reserved_keyword(info: &ModuleInfo, s: &Span<String>) -> Result<(), Error> {
+    // TODO binary search
+    if let Some(it) = KEYWORD.into_iter().find(|it| it == &s.value) {
+        Err(Error::RustKeyword {
+            src: info.into(),
+            name: it,
+            pos: s.span,
+        })
+    } else {
+        Ok(())
+    }
+}
+
 pub(crate) fn named_struct_field(
     info: &ModuleInfo,
     name: &Span<String>,
@@ -239,37 +274,80 @@ pub(crate) fn named_struct_field(
     Ok(())
 }
 
-pub(crate) fn validate_module(info: ModuleInfo, module: parser::Module) -> Result<Module, Error> {
-    query_name_already_used(&info, &module.queries)?;
-    named_type_already_used(&info, &module.types)?;
-    for ty in &module.types {
-        duplicate_nullable_ident(&info, &ty.fields)?;
-    }
-    let mut validated_queries = Vec::new();
-    for query in module.queries {
-        if let QueryDataStruct::Implicit { idents } = &query.annotation.param {
-            duplicate_nullable_ident(&info, idents)?;
-        };
-        if let QueryDataStruct::Implicit { idents } = &query.annotation.row {
-            duplicate_nullable_ident(&info, idents)?;
-        };
+pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Error> {
+    // Check generated name clash
+    let mut name_registrar = BTreeMap::new();
 
-        let validated_query = Query {
-            name: query.annotation.name,
-            params: query.annotation.param,
-            bind_params: query.sql.bind_params,
-            row: query.annotation.row,
-            sql_str: query.sql.sql_str,
-            sql_span: query.sql.span,
-        };
+    let mut check_name = |name: String, span: SourceSpan, ty: &'static str| {
+        if let Some(prev) = name_registrar.insert(name.clone(), (span, ty)) {
+            // Sort by span
+            let (first, second) = if prev.0.offset() < span.offset() {
+                (prev, (span, ty))
+            } else {
+                ((span, ty), prev)
+            };
+            Err(Error::DuplicateName {
+                src: (&module.info).into(),
+                name,
+                first: first.0,
+                first_ty: first.1,
+                second: second.0,
+                second_ty: second.1,
+            })
+        } else {
+            Ok(())
+        }
+    };
 
-        validated_queries.push(validated_query);
+    for (origin, query) in &module.queries {
+        reserved_keyword(&module.info, origin)?;
+        check_name(
+            format!("{}Stmt", query.name.to_upper_camel_case()),
+            origin.span,
+            "statement",
+        )?;
     }
-    Ok(Module {
+    for (origin, row) in &module.rows {
+        reserved_keyword(&module.info, origin)?;
+        if row.fields.len() > 1 || !row.is_implicit {
+            check_name(row.name.value.clone(), origin.span, "row")?;
+
+            if !row.is_copy {
+                check_name(format!("{}Borrowed", row.name), origin.span, "borrowed row")?;
+            };
+        }
+        check_name(format!("{}Query", row.name), origin.span, "query")?;
+    }
+    for (origin, params) in &module.params {
+        reserved_keyword(&module.info, origin)?;
+        if params.fields.len() > 1 || !params.is_implicit {
+            check_name(params.name.value.clone(), origin.span, "params")?;
+        }
+    }
+    Ok(())
+}
+
+pub(crate) fn validate_module(
+    Module {
         info,
-        types: module.types,
-        queries: validated_queries,
-    })
+        types,
+        queries,
+    }: &Module,
+) -> Result<(), Error> {
+    query_name_already_used(info, queries)?;
+    named_type_already_used(info, types)?;
+    for ty in types {
+        duplicate_nullable_ident(info, &ty.fields)?;
+    }
+    for query in queries {
+        if let QueryDataStruct::Implicit { idents } = &query.param {
+            duplicate_nullable_ident(info, idents)?;
+        };
+        if let QueryDataStruct::Implicit { idents } = &query.row {
+            duplicate_nullable_ident(info, idents)?;
+        };
+    }
+    Ok(())
 }
 
 pub mod error {
@@ -279,7 +357,6 @@ pub mod error {
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError, Diagnostic)]
-    #[error("Couldn't validate queries.")]
     pub enum Error {
         #[error("column `{name}` appear multiple time")]
         #[diagnostic(help("disambiguate column names in your SQL using an `AS` clause"))]
@@ -303,7 +380,7 @@ pub mod error {
         },
         #[error("the {ty} `{name}` is defined multiple time")]
         #[diagnostic(help("use a different name for one of those"))]
-        DuplicateName {
+        DuplicateType {
             #[source_code]
             src: NamedSource,
             name: String,
@@ -345,6 +422,39 @@ pub mod error {
             row: SourceSpan,
             #[label("but query return nothing")]
             query: SourceSpan,
+        },
+        #[error("the query `{name}` declares a parameter but has no binding")]
+        #[diagnostic(help("remove parameter declaration"))]
+        ParamsOnSimpleQuery {
+            #[source_code]
+            src: NamedSource,
+            name: String,
+            #[label("parameter declared here")]
+            param: SourceSpan,
+            #[label("but query has no binding")]
+            query: SourceSpan,
+        },
+        #[error("`{name}` is used multiple time")]
+        #[diagnostic(help("use a different name for one of those"))]
+        DuplicateName {
+            #[source_code]
+            src: NamedSource,
+            name: String,
+            first_ty: &'static str,
+            #[label("previous definition as {first_ty} here")]
+            first: SourceSpan,
+            second_ty: &'static str,
+            #[label("redefined as {second_ty} here")]
+            second: SourceSpan,
+        },
+        #[error("`{name}` is a reserved rust keyword")]
+        #[diagnostic(help("use a different name"))]
+        RustKeyword {
+            #[source_code]
+            src: NamedSource,
+            name: &'static str,
+            #[label("reserved rust keyword")]
+            pos: SourceSpan,
         },
     }
 }
