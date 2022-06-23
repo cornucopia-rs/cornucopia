@@ -164,25 +164,13 @@ pub(crate) fn row_on_execute(
     row: &QueryDataStruct,
     columns: &[Column],
 ) -> Result<(), Error> {
-    let row = match row {
-        QueryDataStruct::Implicit { idents } => match (
-            idents.first().map(|it| it.name.span),
-            idents.last().map(|it| it.name.span),
-        ) {
-            (Some(first), Some(last)) => Some((first.offset()..last.offset() + last.len()).into()),
-            _ => None,
-        },
-        QueryDataStruct::Named(name) => Some(name.span),
-    };
-    if let Some(row) = row {
-        if columns.is_empty() {
-            return Err(Error::RowOnExecute {
-                src: info.into(),
-                name: name.value.clone(),
-                row,
-                query: *query,
-            });
-        }
+    if columns.is_empty() && !row.is_empty() {
+        return Err(Error::RowOnExecute {
+            src: info.into(),
+            name: name.value.clone(),
+            row: row.span,
+            query: *query,
+        });
     }
 
     Ok(())
@@ -247,10 +235,10 @@ pub(crate) fn validate_module(info: ModuleInfo, module: parser::Module) -> Resul
     }
     let mut validated_queries = Vec::new();
     for query in module.queries {
-        if let QueryDataStruct::Implicit { idents } = &query.annotation.param {
+        if let Some(idents) = &query.annotation.param.idents() {
             duplicate_nullable_ident(&info, idents)?;
         };
-        if let QueryDataStruct::Implicit { idents } = &query.annotation.row {
+        if let Some(idents) = &query.annotation.row.idents() {
             duplicate_nullable_ident(&info, idents)?;
         };
 

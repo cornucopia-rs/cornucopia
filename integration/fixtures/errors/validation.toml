@@ -188,7 +188,7 @@ error = '''
 × the query `delete` declare a row but return nothing
    ╭─[queries/test.sql:1:1]
  1 │ --! delete: (name?)
-   ·              ──┬─
+   ·             ───┬───
    ·                ╰── row declared here
  2 │ DELETE FROM author;
    · ─────────┬─────────

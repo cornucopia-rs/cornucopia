@@ -5,7 +5,7 @@ use postgres::Client;
 use postgres_types::{Kind, Type};
 
 use crate::{
-    parser::{NullableIdent, QueryDataStruct, Span, TypeAnnotation},
+    parser::{NullableIdent, Span, TypeAnnotation},
     read_queries::ModuleInfo,
     type_registrar::CornucopiaType,
     type_registrar::TypeRegistrar,
@@ -396,23 +396,17 @@ fn prepare_query(
     let row_idx = if row_fields.is_empty() {
         None
     } else {
-        Some(module.add_row(
-            registrar,
-            row_name,
-            row_fields,
-            matches!(row, QueryDataStruct::Implicit { .. }),
-        )?)
+        Some(module.add_row(registrar, row_name, row_fields, row.is_implicit())?)
     };
-    let params_is_implicit = matches!(params, QueryDataStruct::Implicit { .. });
     let query_idx = module.add_query(
         name.value.clone(),
         params_fields,
-        params_is_implicit,
+        params.is_implicit(),
         row_idx,
         sql_str,
     );
     if !params_empty {
-        module.add_param(params_name, query_idx, params_is_implicit)?;
+        module.add_param(params_name, query_idx, params.is_implicit())?;
     };
 
     Ok(())
