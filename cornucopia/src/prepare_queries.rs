@@ -5,7 +5,7 @@ use postgres::Client;
 use postgres_types::{Kind, Type};
 
 use crate::{
-    parser::{Module, NullableIdent, Query, QueryDataStruct, Span, TypeAnnotation},
+    parser::{Module, NullableIdent, Query, Span, TypeAnnotation},
     read_queries::ModuleInfo,
     type_registrar::CornucopiaType,
     type_registrar::TypeRegistrar,
@@ -326,7 +326,7 @@ fn prepare_query(
     // Prepare the statement
     let stmt = client
         .prepare(&sql_str)
-        .map_err(|e| Error::new_db_err(e, module_info, &sql_span, &name))?;
+        .map_err(|e| Error::new_db_err(&e, module_info, &sql_span, &name))?;
 
     let (nullable_params_fields, params_name) = param.name_and_fields(types, &name, Some("Params"));
     let (nullable_row_fields, row_name) = row.name_and_fields(types, &name, None);
@@ -398,17 +398,17 @@ fn prepare_query(
     let row_idx = if row_fields.is_empty() {
         None
     } else {
-        Some(module.add_row(
-            registrar,
-            row_name,
-            row_fields,
-            matches!(row, QueryDataStruct::Implicit { .. }),
-        )?)
+        Some(module.add_row(registrar, row_name, row_fields, row.is_implicit())?)
     };
-    let params_is_implicit = matches!(param, QueryDataStruct::Implicit { .. });
-    let query_idx = module.add_query(name, params_fields, params_is_implicit, row_idx, sql_str);
+    let query_idx = module.add_query(
+        name.clone(),
+        params_fields,
+        param.is_implicit(),
+        row_idx,
+        sql_str,
+    );
     if !params_empty {
-        module.add_param(params_name, query_idx, params_is_implicit)?;
+        module.add_param(params_name, query_idx, param.is_implicit())?;
     };
 
     Ok(())
@@ -445,13 +445,13 @@ pub(crate) mod error {
 
     impl Error {
         pub(crate) fn new_db_err(
-            err: postgres::Error,
+            err: &postgres::Error,
             module_info: &ModuleInfo,
             query_span: &SourceSpan,
             query_name: &Span<String>,
         ) -> Self {
             let msg = format!("{:#}", err);
-            if let Some((position, msg, help)) = db_err(&err) {
+            if let Some((position, msg, help)) = db_err(err) {
                 Self::Db {
                     msg,
                     help,
