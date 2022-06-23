@@ -202,7 +202,7 @@ pub(crate) fn param_on_simple_query(
     Ok(())
 }
 
-const KEYWORD: [&'static str; 52] = [
+const KEYWORD: [&str; 52] = [
     "Self", "abstract", "as", "async", "await", "become", "box", "break", "const", "continue",
     "crate", "do", "dyn", "else", "enum", "extern", "false", "final", "fn", "for", "if", "impl",
     "in", "let", "loop", "macro", "match", "mod", "move", "mut", "override", "priv", "pub", "ref",
@@ -276,10 +276,10 @@ pub(crate) fn named_struct_field(
 
 pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Error> {
     // Check generated name clash
-    let mut named_registrar = BTreeMap::new();
+    let mut name_registrar = BTreeMap::new();
 
     let mut check_name = |name: String, span: SourceSpan, ty: &'static str| {
-        if let Some(prev) = named_registrar.insert(name.clone(), (span, ty)) {
+        if let Some(prev) = name_registrar.insert(name.clone(), (span, ty)) {
             // Sort by span
             let (first, second) = if prev.0.offset() < span.offset() {
                 (prev, (span, ty))
@@ -300,7 +300,7 @@ pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Error>
     };
 
     for (origin, query) in &module.queries {
-        reserved_keyword(&module.info, &origin)?;
+        reserved_keyword(&module.info, origin)?;
         check_name(
             format!("{}Stmt", query.name.to_upper_camel_case()),
             origin.span,
@@ -308,7 +308,7 @@ pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Error>
         )?;
     }
     for (origin, row) in &module.rows {
-        reserved_keyword(&module.info, &origin)?;
+        reserved_keyword(&module.info, origin)?;
         if row.fields.len() > 1 || !row.is_implicit {
             check_name(row.name.value.clone(), origin.span, "row")?;
 
@@ -319,7 +319,7 @@ pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Error>
         check_name(format!("{}Query", row.name), origin.span, "query")?;
     }
     for (origin, params) in &module.params {
-        reserved_keyword(&module.info, &origin)?;
+        reserved_keyword(&module.info, origin)?;
         if params.fields.len() > 1 || !params.is_implicit {
             check_name(params.name.value.clone(), origin.span, "params")?;
         }
@@ -423,7 +423,7 @@ pub mod error {
             #[label("but query return nothing")]
             query: SourceSpan,
         },
-        #[error("the query `{name}` declare a parameter but has no binding")]
+        #[error("the query `{name}` declares a parameter but has no binding")]
         #[diagnostic(help("remove parameter declaration"))]
         ParamsOnSimpleQuery {
             #[source_code]

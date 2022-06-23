@@ -221,7 +221,7 @@ query = '''
 DELETE FROM author;
 '''
 error = '''
-× the query `delete` declare a parameter but has no binding
+× the query `delete` declares a parameter but has no binding
    ╭─[queries/test.sql:1:1]
  1 │ --! delete Param
    ·            ──┬──
@@ -239,16 +239,14 @@ query = '''
 SELECT * FROM author;
 '''
 error = '''
-× the query `delete` declare a parameter but has no binding
+× `unsized` is a reserved rust keyword
    ╭─[queries/test.sql:1:1]
- 1 │ --! delete Param
-   ·            ──┬──
-   ·              ╰── parameter declared here
- 2 │ DELETE FROM author;
-   · ─────────┬─────────
-   ·          ╰── but query has no binding
+ 1 │ --! unsized
+   ·     ───┬───
+   ·        ╰── reserved rust keyword
+ 2 │ SELECT * FROM author;
    ╰────
-  help: remove parameter declaration'''
+  help: use a different name'''
 
 [[test]]
 name = 'TypeReserved'
@@ -257,13 +255,11 @@ query = '''
 SELECT * FROM author;
 '''
 error = '''
-× the query `delete` declare a parameter but has no binding
+× `Self` is a reserved rust keyword
    ╭─[queries/test.sql:1:1]
- 1 │ --! delete Param
-   ·            ──┬──
-   ·              ╰── parameter declared here
- 2 │ DELETE FROM author;
-   · ─────────┬─────────
-   ·          ╰── but query has no binding
+ 1 │ --! select: Self
+   ·             ──┬─
+   ·               ╰── reserved rust keyword
+ 2 │ SELECT * FROM author;
    ╰────
-  help: remove parameter declaration'''
+  help: use a different name'''
