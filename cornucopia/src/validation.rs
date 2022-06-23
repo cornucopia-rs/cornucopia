@@ -4,7 +4,7 @@ use crate::{
     parser::{Module, NullableIdent, Query, QueryDataStruct, Span, TypeAnnotation},
     prepare_queries::{PreparedField, PreparedModule},
     read_queries::ModuleInfo,
-    utils::has_duplicate,
+    utils::find_duplicate,
 };
 
 use error::Error;
@@ -17,22 +17,14 @@ pub(crate) fn duplicate_nullable_ident(
     info: &ModuleInfo,
     idents: &[NullableIdent],
 ) -> Result<(), Error> {
-    for (i, ident1) in idents.iter().enumerate() {
-        if let Some((_, ident2)) = idents
-            .iter()
-            .enumerate()
-            .find(|(j, ident2)| *j != i && ident1.name == ident2.name)
-        {
-            return Err(Error::DuplicateFieldNullity {
-                src: info.into(),
-                name: ident1.name.value.clone(),
-                first: ident1.name.span,
-                second: ident2.name.span,
-            });
-        }
-    }
-
-    Ok(())
+    find_duplicate(idents, |a, b| a.name == b.name).map_or(Ok(()), |(first, second)| {
+        Err(Error::DuplicateFieldNullity {
+            src: info.into(),
+            name: first.name.value.clone(),
+            first: first.name.span,
+            second: second.name.span,
+        })
+    })
 }
 
 pub(crate) fn duplicate_sql_col_name(
@@ -40,56 +32,40 @@ pub(crate) fn duplicate_sql_col_name(
     query_name: &Span<String>,
     cols: &[Column],
 ) -> Result<(), Error> {
-    if let Some(col) = has_duplicate(cols, Column::name) {
+    find_duplicate(cols, |a, b| a.name() == b.name()).map_or(Ok(()), |(_, second)| {
         Err(Error::DuplicateSqlColName {
             src: info.clone().into(),
-            name: col.name().to_string(),
+            name: second.name().to_string(),
             pos: query_name.span,
         })
-    } else {
-        Ok(())
-    }
+    })
 }
 
 pub(crate) fn query_name_already_used(info: &ModuleInfo, queries: &[Query]) -> Result<(), Error> {
-    for (i, first) in queries.iter().enumerate() {
-        if let Some(second) = queries[i + 1..]
-            .iter()
-            .find(|second| second.name == first.name)
-        {
-            return Err(Error::DuplicateType {
-                src: info.into(),
-                ty: "query",
-                name: first.name.value.clone(),
-                first: first.name.span,
-                second: second.name.span,
-            });
-        }
-    }
-
-    Ok(())
+    find_duplicate(queries, |a, b| a.name == b.name).map_or(Ok(()), |(first, second)| {
+        Err(Error::DuplicateType {
+            src: info.into(),
+            ty: "query",
+            name: first.name.value.clone(),
+            first: first.name.span,
+            second: second.name.span,
+        })
+    })
 }
 
 pub(crate) fn named_type_already_used(
     info: &ModuleInfo,
     types: &[TypeAnnotation],
 ) -> Result<(), Error> {
-    for (i, first) in types.iter().enumerate() {
-        if let Some(second) = types[i + 1..]
-            .iter()
-            .find(|second| second.name == first.name)
-        {
-            return Err(Error::DuplicateType {
-                src: info.into(),
-                ty: "type",
-                name: first.name.value.clone(),
-                first: first.name.span,
-                second: second.name.span,
-            });
-        }
-    }
-
-    Ok(())
+    find_duplicate(types, |a, b| a.name == b.name).map_or(Ok(()), |(first, second)| {
+        Err(Error::DuplicateType {
+            src: info.into(),
+            ty: "type",
+            name: first.name.value.clone(),
+            first: first.name.span,
+            second: second.name.span,
+        })
+    })
 }
 
 pub(crate) fn inline_conflict_declared(
@@ -98,17 +74,18 @@ pub(crate) fn inline_conflict_declared(
     types: &[TypeAnnotation],
     ty: &'static str,
 ) -> Result<(), Error> {
-    if let Some(declared) = types.iter().find(|it| it.name == *name) {
-        return Err(Error::InlineConflictDeclared {
-            src: info.into(),
-            ty,
-            name: declared.name.value.clone(),
-            declared: declared.name.span,
-            inline: name.span,
-        });
-    }
-
-    Ok(())
+    types
+        .iter()
+        .find(|it| it.name == *name)
+        .map_or(Ok(()), |declared| {
+            Err(Error::InlineConflictDeclared {
+                src: info.into(),
+                ty,
+                name: declared.name.value.clone(),
+                declared: declared.name.span,
+                inline: name.span,
+            })
+        })
 }
 
 pub(crate) fn nullable_column_name(
