@@ -229,7 +229,7 @@ impl Query {
             .ignore_then(space())
             .ignore_then(ident())
             .then_ignore(space())
-            .then(QueryDataStruct::parser().or_not())
+            .then(QueryDataStruct::parser())
             .then_ignore(space())
             .then(
                 just(':')
@@ -237,7 +237,7 @@ impl Query {
                     .ignore_then(QueryDataStruct::parser())
                     .or_not(),
             )
-            .map(|((name, param), row)| (name, param.unwrap_or_default(), row.unwrap_or_default()))
+            .map(|((name, param), row)| (name, param, row.unwrap_or_default()))
     }
 
     fn parser() -> impl Parser<char, Self, Error = Simple<char>> {
@@ -259,21 +259,51 @@ impl Query {
 }
 
 #[derive(Debug)]
-pub(crate) enum QueryDataStruct {
-    Implicit { idents: Vec<NullableIdent> },
-    Named(Span<String>),
+pub(crate) struct QueryDataStruct {
+    pub span: SourceSpan,
+    name: Option<Span<String>>,
+    idents: Option<Vec<NullableIdent>>,
 }
 
 impl QueryDataStruct {
+    pub fn is_implicit(&self) -> bool {
+        self.name.is_none()
+    }
+
+    pub fn idents(&self) -> Option<&[NullableIdent]> {
+        self.idents.as_deref()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.name.is_none() && self.idents.is_none()
+    }
+
+    pub fn inline_name(&self) -> Option<&Span<String>> {
+        self.idents().and(self.name.as_ref())
+    }
+
     pub(crate) fn name_and_fields<'a>(
         &'a self,
         registered_structs: &'a [TypeAnnotation],
         query_name: &Span<String>,
         name_suffix: Option<&str>,
     ) -> (&'a [NullableIdent], Span<String>) {
-        match self {
-            QueryDataStruct::Implicit { idents } => (
-                idents,
+        if let Some(named) = &self.name {
+            (
+                self.idents.as_ref().map_or_else(
+                    || {
+                        registered_structs
+                            .iter()
+                            .find_map(|it| (it.name == *named).then(|| it.fields.as_slice()))
+                            .unwrap_or(&[])
+                    },
+                    Vec::as_slice,
+                ),
+                named.clone(),
+            )
+        } else {
+            (
+                self.idents.as_ref().map_or(&[], Vec::as_slice),
                 query_name.map(|x| {
                     format!(
                         "{}{}",
@@ -281,29 +311,32 @@ impl QueryDataStruct {
                         name_suffix.unwrap_or_default()
                     )
                 }),
-            ),
-            QueryDataStruct::Named(name) => (
-                registered_structs
-                    .iter()
-                    .find_map(|it| (it.name == *name).then(|| it.fields.as_slice()))
-                    .unwrap_or(&[]),
-                name.clone(),
-            ),
+            )
         }
     }
 }
 
 impl Default for QueryDataStruct {
     fn default() -> Self {
-        Self::Implicit { idents: Vec::new() }
+        Self {
+            span: (0..0).into(),
+            name: None,
+            idents: None,
+        }
     }
 }
 
 impl QueryDataStruct {
     fn parser() -> impl Parser<char, Self, Error = Simple<char>> {
-        parse_nullable_ident()
-            .map(|idents| Self::Implicit { idents })
-            .or(ident().map(Self::Named))
+        ident()
+            .or_not()
+            .then_ignore(space())
+            .then(parse_nullable_ident().or_not())
+            .map_with_span(|(name, idents), span| Self {
+                span: span.into(),
+                name,
+                idents,
+            })
     }
 }
 

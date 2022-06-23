@@ -2192,7 +2192,7 @@ pub mod queries {
         use futures;
         use futures::{StreamExt, TryStreamExt};
         #[derive(Debug)]
-        pub struct InsertEverythingParams<'a> {
+        pub struct EverythingParams<'a> {
             pub bool_: bool,
             pub boolean_: bool,
             pub char_: i8,
@@ -2235,7 +2235,7 @@ pub mod queries {
                     Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
                 >,
                 C,
-            > for InsertEverythingParams<'a>
+            > for EverythingParams<'a>
         {
             fn bind(
                 &'a self,
@@ -2283,7 +2283,7 @@ pub mod queries {
             }
         }
         #[derive(Debug)]
-        pub struct InsertEverythingArrayParams<'a> {
+        pub struct EverythingArrayParams<'a> {
             pub bool_: &'a [bool],
             pub boolean_: &'a [bool],
             pub char_: &'a [i8],
@@ -2320,7 +2320,7 @@ pub mod queries {
                     Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
                 >,
                 C,
-            > for InsertEverythingArrayParams<'a>
+            > for EverythingArrayParams<'a>
         {
             fn bind(
                 &'a self,
@@ -2362,7 +2362,7 @@ pub mod queries {
             }
         }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
-        pub struct SelectEverything {
+        pub struct Everything {
             pub bool_: bool,
             pub boolean_: bool,
             pub char_: i8,
@@ -2397,7 +2397,7 @@ pub mod queries {
             pub inet_: std::net::IpAddr,
             pub macaddr_: eui48::MacAddress,
         }
-        pub struct SelectEverythingBorrowed<'a> {
+        pub struct EverythingBorrowed<'a> {
             pub bool_: bool,
             pub boolean_: bool,
             pub char_: i8,
@@ -2432,9 +2432,9 @@ pub mod queries {
             pub inet_: std::net::IpAddr,
             pub macaddr_: eui48::MacAddress,
         }
-        impl<'a> From<SelectEverythingBorrowed<'a>> for SelectEverything {
+        impl<'a> From<EverythingBorrowed<'a>> for Everything {
             fn from(
-                SelectEverythingBorrowed {
+                EverythingBorrowed {
                     bool_,
                     boolean_,
                     char_,
@@ -2468,7 +2468,7 @@ pub mod queries {
                     uuid_,
                     inet_,
                     macaddr_,
-                }: SelectEverythingBorrowed<'a>,
+                }: EverythingBorrowed<'a>,
             ) -> Self {
                 Self {
                     bool_,
@@ -2507,22 +2507,22 @@ pub mod queries {
                 }
             }
         }
-        pub struct SelectEverythingQuery<'a, C: GenericClient, T, const N: usize> {
+        pub struct EverythingQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::async_::Stmt,
-            extractor: fn(&tokio_postgres::Row) -> SelectEverythingBorrowed,
-            mapper: fn(SelectEverythingBorrowed) -> T,
+            extractor: fn(&tokio_postgres::Row) -> EverythingBorrowed,
+            mapper: fn(EverythingBorrowed) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> SelectEverythingQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> EverythingQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
             pub fn map<R>(
                 self,
-                mapper: fn(SelectEverythingBorrowed) -> R,
-            ) -> SelectEverythingQuery<'a, C, R, N> {
-                SelectEverythingQuery {
+                mapper: fn(EverythingBorrowed) -> R,
+            ) -> EverythingQuery<'a, C, R, N> {
+                EverythingQuery {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -2567,7 +2567,7 @@ pub mod queries {
             }
         }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
-        pub struct SelectEverythingNull {
+        pub struct EverythingNull {
             pub bool_: Option<bool>,
             pub boolean_: Option<bool>,
             pub char_: Option<i8>,
@@ -2602,7 +2602,7 @@ pub mod queries {
             pub inet_: Option<std::net::IpAddr>,
             pub macaddr_: Option<eui48::MacAddress>,
         }
-        pub struct SelectEverythingNullBorrowed<'a> {
+        pub struct EverythingNullBorrowed<'a> {
             pub bool_: Option<bool>,
             pub boolean_: Option<bool>,
             pub char_: Option<i8>,
@@ -2637,9 +2637,9 @@ pub mod queries {
             pub inet_: Option<std::net::IpAddr>,
             pub macaddr_: Option<eui48::MacAddress>,
         }
-        impl<'a> From<SelectEverythingNullBorrowed<'a>> for SelectEverythingNull {
+        impl<'a> From<EverythingNullBorrowed<'a>> for EverythingNull {
             fn from(
-                SelectEverythingNullBorrowed {
+                EverythingNullBorrowed {
                     bool_,
                     boolean_,
                     char_,
@@ -2673,7 +2673,7 @@ pub mod queries {
                     uuid_,
                     inet_,
                     macaddr_,
-                }: SelectEverythingNullBorrowed<'a>,
+                }: EverythingNullBorrowed<'a>,
             ) -> Self {
                 Self {
                     bool_,
@@ -2712,22 +2712,22 @@ pub mod queries {
                 }
             }
         }
-        pub struct SelectEverythingNullQuery<'a, C: GenericClient, T, const N: usize> {
+        pub struct EverythingNullQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::async_::Stmt,
-            extractor: fn(&tokio_postgres::Row) -> SelectEverythingNullBorrowed,
-            mapper: fn(SelectEverythingNullBorrowed) -> T,
+            extractor: fn(&tokio_postgres::Row) -> EverythingNullBorrowed,
+            mapper: fn(EverythingNullBorrowed) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> SelectEverythingNullQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> EverythingNullQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
             pub fn map<R>(
                 self,
-                mapper: fn(SelectEverythingNullBorrowed) -> R,
-            ) -> SelectEverythingNullQuery<'a, C, R, N> {
-                SelectEverythingNullQuery {
+                mapper: fn(EverythingNullBorrowed) -> R,
+            ) -> EverythingNullQuery<'a, C, R, N> {
+                EverythingNullQuery {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -2772,7 +2772,7 @@ pub mod queries {
             }
         }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
-        pub struct SelectEverythingArray {
+        pub struct EverythingArray {
             pub bool_: Vec<bool>,
             pub boolean_: Vec<bool>,
             pub char_: Vec<i8>,
@@ -2801,7 +2801,7 @@ pub mod queries {
             pub inet_: Vec<std::net::IpAddr>,
             pub macaddr_: Vec<eui48::MacAddress>,
         }
-        pub struct SelectEverythingArrayBorrowed<'a> {
+        pub struct EverythingArrayBorrowed<'a> {
             pub bool_: cornucopia_client::ArrayIterator<'a, bool>,
             pub boolean_: cornucopia_client::ArrayIterator<'a, bool>,
             pub char_: cornucopia_client::ArrayIterator<'a, i8>,
@@ -2838,9 +2838,9 @@ pub mod queries {
             pub inet_: cornucopia_client::ArrayIterator<'a, std::net::IpAddr>,
             pub macaddr_: cornucopia_client::ArrayIterator<'a, eui48::MacAddress>,
         }
-        impl<'a> From<SelectEverythingArrayBorrowed<'a>> for SelectEverythingArray {
+        impl<'a> From<EverythingArrayBorrowed<'a>> for EverythingArray {
             fn from(
-                SelectEverythingArrayBorrowed {
+                EverythingArrayBorrowed {
                     bool_,
                     boolean_,
                     char_,
@@ -2868,7 +2868,7 @@ pub mod queries {
                     uuid_,
                     inet_,
                     macaddr_,
-                }: SelectEverythingArrayBorrowed<'a>,
+                }: EverythingArrayBorrowed<'a>,
             ) -> Self {
                 Self {
                     bool_: bool_.map(|v| v).collect(),
@@ -2905,22 +2905,22 @@ pub mod queries {
                 }
             }
         }
-        pub struct SelectEverythingArrayQuery<'a, C: GenericClient, T, const N: usize> {
+        pub struct EverythingArrayQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::async_::Stmt,
-            extractor: fn(&tokio_postgres::Row) -> SelectEverythingArrayBorrowed,
-            mapper: fn(SelectEverythingArrayBorrowed) -> T,
+            extractor: fn(&tokio_postgres::Row) -> EverythingArrayBorrowed,
+            mapper: fn(EverythingArrayBorrowed) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> SelectEverythingArrayQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> EverythingArrayQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
             pub fn map<R>(
                 self,
-                mapper: fn(SelectEverythingArrayBorrowed) -> R,
-            ) -> SelectEverythingArrayQuery<'a, C, R, N> {
-                SelectEverythingArrayQuery {
+                mapper: fn(EverythingArrayBorrowed) -> R,
+            ) -> EverythingArrayQuery<'a, C, R, N> {
+                EverythingArrayQuery {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -2965,7 +2965,7 @@ pub mod queries {
             }
         }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
-        pub struct SelectEverythingArrayNull {
+        pub struct EverythingArrayNull {
             pub bool_: Option<Vec<bool>>,
             pub boolean_: Option<Vec<bool>>,
             pub char_: Option<Vec<i8>>,
@@ -2994,7 +2994,7 @@ pub mod queries {
             pub inet_: Option<Vec<std::net::IpAddr>>,
             pub macaddr_: Option<Vec<eui48::MacAddress>>,
         }
-        pub struct SelectEverythingArrayNullBorrowed<'a> {
+        pub struct EverythingArrayNullBorrowed<'a> {
             pub bool_: Option<cornucopia_client::ArrayIterator<'a, bool>>,
             pub boolean_: Option<cornucopia_client::ArrayIterator<'a, bool>>,
             pub char_: Option<cornucopia_client::ArrayIterator<'a, i8>>,
@@ -3035,9 +3035,9 @@ pub mod queries {
             pub inet_: Option<cornucopia_client::ArrayIterator<'a, std::net::IpAddr>>,
             pub macaddr_: Option<cornucopia_client::ArrayIterator<'a, eui48::MacAddress>>,
         }
-        impl<'a> From<SelectEverythingArrayNullBorrowed<'a>> for SelectEverythingArrayNull {
+        impl<'a> From<EverythingArrayNullBorrowed<'a>> for EverythingArrayNull {
             fn from(
-                SelectEverythingArrayNullBorrowed {
+                EverythingArrayNullBorrowed {
                     bool_,
                     boolean_,
                     char_,
@@ -3065,7 +3065,7 @@ pub mod queries {
                     uuid_,
                     inet_,
                     macaddr_,
-                }: SelectEverythingArrayNullBorrowed<'a>,
+                }: EverythingArrayNullBorrowed<'a>,
             ) -> Self {
                 Self {
                     bool_: bool_.map(|v| v.map(|v| v).collect()),
@@ -3106,22 +3106,22 @@ pub mod queries {
                 }
             }
         }
-        pub struct SelectEverythingArrayNullQuery<'a, C: GenericClient, T, const N: usize> {
+        pub struct EverythingArrayNullQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::async_::Stmt,
-            extractor: fn(&tokio_postgres::Row) -> SelectEverythingArrayNullBorrowed,
-            mapper: fn(SelectEverythingArrayNullBorrowed) -> T,
+            extractor: fn(&tokio_postgres::Row) -> EverythingArrayNullBorrowed,
+            mapper: fn(EverythingArrayNullBorrowed) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> SelectEverythingArrayNullQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> EverythingArrayNullQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
             pub fn map<R>(
                 self,
-                mapper: fn(SelectEverythingArrayNullBorrowed) -> R,
-            ) -> SelectEverythingArrayNullQuery<'a, C, R, N> {
-                SelectEverythingArrayNullQuery {
+                mapper: fn(EverythingArrayNullBorrowed) -> R,
+            ) -> EverythingArrayNullQuery<'a, C, R, N> {
+                EverythingArrayNullQuery {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -3236,12 +3236,12 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-            ) -> SelectEverythingQuery<'a, C, SelectEverything, 0> {
-                SelectEverythingQuery {
+            ) -> EverythingQuery<'a, C, Everything, 0> {
+                EverythingQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
-                    extractor: |row| SelectEverythingBorrowed {
+                    extractor: |row| EverythingBorrowed {
                         bool_: row.get(0),
                         boolean_: row.get(1),
                         char_: row.get(2),
@@ -3276,7 +3276,7 @@ pub mod queries {
                         inet_: row.get(31),
                         macaddr_: row.get(32),
                     },
-                    mapper: |it| <SelectEverything>::from(it),
+                    mapper: |it| <Everything>::from(it),
                 }
             }
         }
@@ -3290,12 +3290,12 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-            ) -> SelectEverythingNullQuery<'a, C, SelectEverythingNull, 0> {
-                SelectEverythingNullQuery {
+            ) -> EverythingNullQuery<'a, C, EverythingNull, 0> {
+                EverythingNullQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
-                    extractor: |row| SelectEverythingNullBorrowed {
+                    extractor: |row| EverythingNullBorrowed {
                         bool_: row.get(0),
                         boolean_: row.get(1),
                         char_: row.get(2),
@@ -3330,7 +3330,7 @@ pub mod queries {
                         inet_: row.get(31),
                         macaddr_: row.get(32),
                     },
-                    mapper: |it| <SelectEverythingNull>::from(it),
+                    mapper: |it| <EverythingNull>::from(it),
                 }
             }
         }
@@ -3444,12 +3444,12 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-            ) -> SelectEverythingArrayQuery<'a, C, SelectEverythingArray, 0> {
-                SelectEverythingArrayQuery {
+            ) -> EverythingArrayQuery<'a, C, EverythingArray, 0> {
+                EverythingArrayQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
-                    extractor: |row| SelectEverythingArrayBorrowed {
+                    extractor: |row| EverythingArrayBorrowed {
                         bool_: row.get(0),
                         boolean_: row.get(1),
                         char_: row.get(2),
@@ -3478,7 +3478,7 @@ pub mod queries {
                         inet_: row.get(25),
                         macaddr_: row.get(26),
                     },
-                    mapper: |it| <SelectEverythingArray>::from(it),
+                    mapper: |it| <EverythingArray>::from(it),
                 }
             }
         }
@@ -3492,12 +3492,12 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-            ) -> SelectEverythingArrayNullQuery<'a, C, SelectEverythingArrayNull, 0> {
-                SelectEverythingArrayNullQuery {
+            ) -> EverythingArrayNullQuery<'a, C, EverythingArrayNull, 0> {
+                EverythingArrayNullQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
-                    extractor: |row| SelectEverythingArrayNullBorrowed {
+                    extractor: |row| EverythingArrayNullBorrowed {
                         bool_: row.get(0),
                         boolean_: row.get(1),
                         char_: row.get(2),
@@ -3526,7 +3526,7 @@ pub mod queries {
                         inet_: row.get(25),
                         macaddr_: row.get(26),
                     },
-                    mapper: |it| <SelectEverythingArrayNull>::from(it),
+                    mapper: |it| <EverythingArrayNull>::from(it),
                 }
             }
         }

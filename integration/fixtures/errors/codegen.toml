@@ -92,18 +92,33 @@ error = '''
 [[test]]
 name = 'ClashTypeReuse'
 query = '''
---: Author
 --! author Author: Author
 INSERT INTO Author (id, name) VALUES (:id, :name) RETURNING *;
 '''
 error = '''
 × `Author` is used multiple time
    ╭─[queries/test.sql:1:1]
- 1 │ --: Author
- 2 │ --! author Author: Author
+ 1 │ --! author Author: Author
    ·            ───┬──  ───┬──
    ·               │       ╰── redefined as row here
    ·               ╰── previous definition as params here
- 3 │ INSERT INTO Author (id, name) VALUES (:id, :name) RETURNING *;
+ 2 │ INSERT INTO Author (id, name) VALUES (:id, :name) RETURNING *;
+   ╰────
+  help: use a different name for one of those'''
+
+[[test]]
+name = 'ClashInlineReuse'
+query = '''
+--! author: AuthorParams(id?)
+INSERT INTO Author (id, name) VALUES (:id, :name) RETURNING *;
+'''
+error = '''
+× `AuthorParams` is used multiple time
+   ╭─[queries/test.sql:1:1]
+ 1 │ --! author: AuthorParams(id?)
+   ·     ───┬──  ──────┬─────
+   ·        │          ╰── redefined as row here
+   ·        ╰── previous definition as params here
+ 2 │ INSERT INTO Author (id, name) VALUES (:id, :name) RETURNING *;
    ╰────
   help: use a different name for one of those'''

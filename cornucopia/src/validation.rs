@@ -92,6 +92,25 @@ pub(crate) fn named_type_already_used(
     Ok(())
 }
 
+pub(crate) fn inline_conflict_declared(
+    info: &ModuleInfo,
+    name: &Span<String>,
+    types: &[TypeAnnotation],
+    ty: &'static str,
+) -> Result<(), Error> {
+    if let Some(declared) = types.iter().find(|it| it.name == *name) {
+        return Err(Error::InlineConflictDeclared {
+            src: info.into(),
+            ty,
+            name: declared.name.value.clone(),
+            declared: declared.name.span,
+            inline: name.span,
+        });
+    }
+
+    Ok(())
+}
+
 pub(crate) fn nullable_column_name(
     info: &ModuleInfo,
     nullable_col: &NullableIdent,
@@ -147,25 +166,13 @@ pub(crate) fn row_on_execute(
     row: &QueryDataStruct,
     columns: &[Column],
 ) -> Result<(), Error> {
-    let row = match row {
-        QueryDataStruct::Implicit { idents } => match (
-            idents.first().map(|it| it.name.span),
-            idents.last().map(|it| it.name.span),
-        ) {
-            (Some(first), Some(last)) => Some((first.offset()..last.offset() + last.len()).into()),
-            _ => None,
-        },
-        QueryDataStruct::Named(name) => Some(name.span),
-    };
-    if let Some(row) = row {
-        if columns.is_empty() {
-            return Err(Error::RowOnExecute {
-                src: info.into(),
-                name: name.value.clone(),
-                row,
-                query: *query,
-            });
-        }
+    if columns.is_empty() && !row.is_empty() {
+        return Err(Error::RowOnExecute {
+            src: info.into(),
+            name: name.value.clone(),
+            row: row.span,
+            query: *query,
+        });
     }
 
     Ok(())
@@ -178,25 +185,13 @@ pub(crate) fn param_on_simple_query(
     param: &QueryDataStruct,
     fields: &[(Span<String>, Type)],
 ) -> Result<(), Error> {
-    let param = match param {
-        QueryDataStruct::Implicit { idents } => match (
-            idents.first().map(|it| it.name.span),
-            idents.last().map(|it| it.name.span),
-        ) {
-            (Some(first), Some(last)) => Some((first.offset()..last.offset() + last.len()).into()),
-            _ => None,
-        },
-        QueryDataStruct::Named(name) => Some(name.span),
-    };
-    if let Some(param) = param {
-        if fields.is_empty() {
-            return Err(Error::ParamsOnSimpleQuery {
-                src: info.into(),
-                name: name.value.clone(),
-                param,
-                query: *query,
-            });
-        }
+    if fields.is_empty() && !param.is_empty() {
+        return Err(Error::ParamsOnSimpleQuery {
+            src: info.into(),
+            name: name.value.clone(),
+            param: param.span,
+            query: *query,
+        });
     }
 
     Ok(())
@@ -340,12 +335,14 @@ pub(crate) fn validate_module(
         duplicate_nullable_ident(info, &ty.fields)?;
     }
     for query in queries {
-        if let QueryDataStruct::Implicit { idents } = &query.param {
-            duplicate_nullable_ident(info, idents)?;
-        };
-        if let QueryDataStruct::Implicit { idents } = &query.row {
-            duplicate_nullable_ident(info, idents)?;
-        };
+        for (it, ty) in [(&query.param, "param"), (&query.row, "row")] {
+            if let Some(idents) = it.idents() {
+                duplicate_nullable_ident(info, idents)?;
+            };
+            if let Some(inline_name) = it.inline_name() {
+                inline_conflict_declared(info, inline_name, types, ty)?;
+            }
+        }
     }
     Ok(())
 }
@@ -389,6 +386,18 @@ pub mod error {
             first: SourceSpan,
             #[label("redefined here")]
             second: SourceSpan,
+        },
+        #[error("the inline {ty} `{name}` is already declared")]
+        #[diagnostic(help("use a different name for one of those"))]
+        InlineConflictDeclared {
+            #[source_code]
+            src: NamedSource,
+            name: String,
+            ty: &'static str,
+            #[label("named definition here")]
+            declared: SourceSpan,
+            #[label("redefined inline here")]
+            inline: SourceSpan,
         },
         #[error("unknown field")]
         #[diagnostic(help("use one of those names: {known}"))]

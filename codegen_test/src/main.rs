@@ -25,8 +25,8 @@ use crate::cornucopia_sync::{
         params::{params_use_twice, select_book, SelectBook},
         stress::{
             insert_everything, insert_everything_array, insert_nightmare, select_everything,
-            select_everything_array, select_nightmare, InsertEverythingArrayParams,
-            InsertEverythingParams, SelectEverything, SelectEverythingArray,
+            select_everything_array, select_nightmare, Everything, EverythingArray,
+            EverythingArrayParams, EverythingParams,
         },
     },
     types::public::{
@@ -287,7 +287,7 @@ pub fn test_stress(client: &mut Client) {
     let json: Value = serde_json::from_str("{}").unwrap();
 
     // Every supported type
-    let expected = SelectEverything {
+    let expected = Everything {
         bool_: true,
         boolean_: false,
         char_: 42i8,
@@ -322,7 +322,7 @@ pub fn test_stress(client: &mut Client) {
         inet_: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
         macaddr_: MacAddress::new([8, 0, 43, 1, 2, 3]),
     };
-    let params = InsertEverythingParams {
+    let params = EverythingParams {
         bigserial_: expected.bigserial_,
         bingint_: expected.bingint_,
         bool_: expected.bool_,
@@ -362,7 +362,7 @@ pub fn test_stress(client: &mut Client) {
     assert_eq!(expected, actual);
 
     // Every supported array type
-    let expected = SelectEverythingArray {
+    let expected = EverythingArray {
         bool_: vec![true],
         boolean_: vec![true],
         char_: vec![42i8],
@@ -402,7 +402,7 @@ pub fn test_stress(client: &mut Client) {
         .iter()
         .map(String::as_str)
         .collect::<Vec<_>>();
-    let params = InsertEverythingArrayParams {
+    let params = EverythingArrayParams {
         bingint_: &expected.bingint_,
         bool_: &expected.bool_,
         boolean_: &expected.boolean_,

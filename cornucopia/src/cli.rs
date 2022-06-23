@@ -120,7 +120,7 @@ pub fn run() -> Result<(), Error> {
                             derive_ser: serialize,
                         },
                     ) {
-                        let _ = container::cleanup(podman);
+                        container::cleanup(podman).ok();
                         return Err(e);
                     }
                 }
