@@ -231,3 +231,39 @@ error = '''
    ·          ╰── but query has no binding
    ╰────
   help: remove parameter declaration'''
+
+[[test]]
+name = 'QueryReserved'
+query = '''
+--! unsized
+SELECT * FROM author;
+'''
+error = '''
+× the query `delete` declare a parameter but has no binding
+   ╭─[queries/test.sql:1:1]
+ 1 │ --! delete Param
+   ·            ──┬──
+   ·              ╰── parameter declared here
+ 2 │ DELETE FROM author;
+   · ─────────┬─────────
+   ·          ╰── but query has no binding
+   ╰────
+  help: remove parameter declaration'''
+
+[[test]]
+name = 'TypeReserved'
+query = '''
+--! select: Self
+SELECT * FROM author;
+'''
+error = '''
+× the query `delete` declare a parameter but has no binding
+   ╭─[queries/test.sql:1:1]
+ 1 │ --! delete Param
+   ·            ──┬──
+   ·              ╰── parameter declared here
+ 2 │ DELETE FROM author;
+   · ─────────┬─────────
+   ·          ╰── but query has no binding
+   ╰────
+  help: remove parameter declaration'''
