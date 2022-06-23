@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use crate::{
-    parser::{NullableIdent, Query, QueryDataStruct, Span, TypeAnnotation, Module},
+    parser::{Module, NullableIdent, Query, QueryDataStruct, Span, TypeAnnotation},
     prepare_queries::{PreparedField, PreparedModule},
     read_queries::ModuleInfo,
     utils::has_duplicate,
