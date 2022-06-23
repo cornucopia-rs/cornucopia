@@ -278,6 +278,10 @@ impl QueryDataStruct {
         self.name.is_none() && self.idents.is_none()
     }
 
+    pub fn inline_name(&self) -> Option<&Span<String>> {
+        self.idents().and(self.name.as_ref())
+    }
+
     pub(crate) fn name_and_fields<'a>(
         &'a self,
         registered_structs: &'a [TypeAnnotation],

@@ -92,6 +92,25 @@ pub(crate) fn named_type_already_used(
     Ok(())
 }
 
+pub(crate) fn inline_conflict_declared(
+    info: &ModuleInfo,
+    name: &Span<String>,
+    types: &[TypeAnnotation],
+    ty: &'static str,
+) -> Result<(), Error> {
+    if let Some(declared) = types.iter().find(|it| it.name == *name) {
+        return Err(Error::InlineConflictDeclared {
+            src: info.into(),
+            ty,
+            name: declared.name.value.clone(),
+            declared: declared.name.span,
+            inline: name.span,
+        });
+    }
+
+    Ok(())
+}
+
 pub(crate) fn nullable_column_name(
     info: &ModuleInfo,
     nullable_col: &NullableIdent,
@@ -316,12 +335,14 @@ pub(crate) fn validate_module(
         duplicate_nullable_ident(info, &ty.fields)?;
     }
     for query in queries {
-        if let Some(idents) = &query.param.idents() {
-            duplicate_nullable_ident(info, idents)?;
-        };
-        if let Some(idents) = &query.row.idents() {
-            duplicate_nullable_ident(info, idents)?;
-        };
+        for (it, ty) in [(&query.param, "param"), (&query.row, "row")] {
+            if let Some(idents) = it.idents() {
+                duplicate_nullable_ident(info, idents)?;
+            };
+            if let Some(inline_name) = it.inline_name() {
+                inline_conflict_declared(info, inline_name, types, ty)?;
+            }
+        }
     }
     Ok(())
 }
@@ -365,6 +386,18 @@ pub mod error {
             first: SourceSpan,
             #[label("redefined here")]
             second: SourceSpan,
+        },
+        #[error("the inline {ty} `{name}` is already declared")]
+        #[diagnostic(help("use a different name for one of those"))]
+        InlineConflictDeclared {
+            #[source_code]
+            src: NamedSource,
+            name: String,
+            ty: &'static str,
+            #[label("named definition here")]
+            declared: SourceSpan,
+            #[label("redefined inline here")]
+            inline: SourceSpan,
         },
         #[error("unknown field")]
         #[diagnostic(help("use one of those names: {known}"))]

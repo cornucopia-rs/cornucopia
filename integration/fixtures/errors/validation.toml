@@ -107,6 +107,50 @@ error = '''
   help: use a different name for one of those'''
 
 [[test]]
+name = 'InlineConflictDeclaredRow'
+query = '''
+--: Row
+--! author_name_inline: Row()
+SELECT name FROM Author;
+--! author_name_named: Row
+SELECT name FROM Author;
+'''
+error = '''
+× the inline row `Row` is already declared
+   ╭─[queries/test.sql:1:1]
+ 1 │ --: Row
+   ·     ─┬─
+   ·      ╰── named definition here
+ 2 │ --! author_name_inline: Row()
+   ·                         ─┬─
+   ·                          ╰── redefined inline here
+ 3 │ SELECT name FROM Author;
+   ╰────
+  help: use a different name for one of those'''
+
+[[test]]
+name = 'InlineConflictDeclaredParam'
+query = '''
+--: Param
+--! author_name_inline Param()
+INSERT INTO Author (id, name) VALUES (:id, :name);
+--! author_name_named Param
+INSERT INTO Author (id, name) VALUES (:id, :name);
+'''
+error = '''
+× the inline param `Param` is already declared
+   ╭─[queries/test.sql:1:1]
+ 1 │ --: Param
+   ·     ──┬──
+   ·       ╰── named definition here
+ 2 │ --! author_name_inline Param()
+   ·                        ──┬──
+   ·                          ╰── redefined inline here
+ 3 │ INSERT INTO Author (id, name) VALUES (:id, :name);
+   ╰────
+  help: use a different name for one of those'''
+
+[[test]]
 name = 'NamedTypeMissingColumn'
 query = '''
 --! author_names: Row
