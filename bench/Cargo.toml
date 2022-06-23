@@ -19,7 +19,7 @@ diesel = { version = "2.0.0-rc.0", features = ["postgres"] }
 [[bench]]
 name = "usage"
 harness = false
-path = "usage/usage.rs"
+path = "usage/main.rs"
 
 [[bench]]
 name = "codegen"
