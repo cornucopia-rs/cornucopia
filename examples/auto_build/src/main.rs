@@ -1,3 +1,5 @@
+#![feature(generic_associated_types)]
+
 use deadpool_postgres::{Config, Runtime};
 use tokio_postgres::NoTls;
 

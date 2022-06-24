@@ -317,6 +317,7 @@ dependencies = [
  "async-trait",
  "deadpool-postgres",
  "fallible-iterator",
+ "futures",
  "postgres",
  "postgres-protocol",
  "postgres-types",
