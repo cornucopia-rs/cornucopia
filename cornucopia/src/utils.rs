@@ -81,20 +81,13 @@ pub fn join_ln<T, I: IntoIterator<Item = T>, F: Fn(&mut Formatter, T)>(
     join(iter, map, '\n')
 }
 
-pub fn has_duplicate<T, U>(
-    iter: T,
-    mapper: fn(<T as IntoIterator>::Item) -> U,
-) -> Option<<T as IntoIterator>::Item>
-where
-    T: IntoIterator + Clone,
-    U: Eq + std::hash::Hash + Clone,
-{
-    let mut uniq = std::collections::HashSet::new();
-    iter.clone()
-        .into_iter()
-        .zip(iter.into_iter().map(mapper))
-        .find(|(_, u)| !uniq.insert(u.clone()))
-        .map(|(t, _)| t)
+pub fn find_duplicate<T>(slice: &[T], eq: fn(&T, &T) -> bool) -> Option<(&T, &T)> {
+    for (i, first) in slice.iter().enumerate() {
+        if let Some(second) = slice[i + 1..].iter().find(|second| eq(first, second)) {
+            return Some((first, second));
+        }
+    }
+    None
 }
 
 /// Extracts useful info from a `postgres`-generated error.
