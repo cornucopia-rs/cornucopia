@@ -83,7 +83,6 @@ pub(crate) fn inline_conflict_declared(
             second: name.span,
         });
     }
-
     Ok(())
 }
 
@@ -112,11 +111,9 @@ pub(crate) fn nullable_column_name(
     // If none of the row's columns match the nullable column
     if stmt_cols
         .iter()
-        .any(|row_col| row_col.name() == nullable_col.name.value)
+        .all(|row_col| row_col.name() != nullable_col.name.value)
     {
-        Ok(())
-    } else {
-        Err(Error::UnknownFieldName {
+        return Err(Error::UnknownFieldName {
             src: info.into(),
             pos: nullable_col.name.span,
             known: stmt_cols
@@ -124,8 +121,9 @@ pub(crate) fn nullable_column_name(
                 .map(|it| it.name().to_string())
                 .collect::<Vec<_>>()
                 .join(", "),
-        })
+        });
     }
+    Ok(())
 }
 
 pub(crate) fn nullable_param_name(
@@ -136,11 +134,9 @@ pub(crate) fn nullable_param_name(
     // If none of the row's columns match the nullable column
     if params
         .iter()
-        .any(|(name, _)| name.value == nullable_col.name.value)
+        .all(|(name, _)| name.value != nullable_col.name.value)
     {
-        Ok(())
-    } else {
-        Err(Error::UnknownFieldName {
+        return Err(Error::UnknownFieldName {
             src: info.into(),
             pos: nullable_col.name.span,
             known: params
@@ -148,8 +144,9 @@ pub(crate) fn nullable_param_name(
                 .map(|it| it.0.value.to_string())
                 .collect::<Vec<_>>()
                 .join(", "),
-        })
+        });
     }
+    Ok(())
 }
 
 pub(crate) fn row_on_execute(
@@ -167,7 +164,6 @@ pub(crate) fn row_on_execute(
             query: *query,
         });
     }
-
     Ok(())
 }
 
@@ -186,7 +182,6 @@ pub(crate) fn param_on_simple_query(
             query: *query,
         });
     }
-
     Ok(())
 }
 
@@ -200,14 +195,13 @@ const KEYWORD: [&str; 52] = [
 
 fn reserved_keyword(info: &ModuleInfo, s: &Span<String>) -> Result<(), Error> {
     if let Ok(it) = KEYWORD.binary_search(&s.value.as_str()) {
-        Err(Error::RustKeyword {
+        return Err(Error::RustKeyword {
             src: info.into(),
             name: KEYWORD[it],
             pos: s.span,
-        })
-    } else {
-        Ok(())
+        });
     }
+    Ok(())
 }
 
 pub(crate) fn named_struct_field(
