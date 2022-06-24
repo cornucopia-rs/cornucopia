@@ -26,3 +26,4 @@ deadpool-postgres = { version = "0.10.2", optional = true }
 fallible-iterator = "0.2"
 postgres-protocol = "0.6.4"
 postgres-types = { version = "0.2.3" }
+futures = "0.3.21"

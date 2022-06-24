@@ -1,3 +1,5 @@
+#![feature(generic_associated_types)]
+
 // Take a look at the generated `cornucopia.rs` file if you want to
 // see what it looks like under the hood.
 mod cornucopia;

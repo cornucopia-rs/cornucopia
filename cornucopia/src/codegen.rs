@@ -252,10 +252,9 @@ fn gen_params_struct(
                 } else {
                     name
                 };
-                let name = &module.rows.get_index(*idx).unwrap().1.name;
                 let nb_params = params.len();
                 (
-                    format!("{name}Query<'a, C, {query_row_struct}, {nb_params}>"),
+                    format!("cornucopia_client::{mod_name}::Query<'a, C, {query_row_struct},{query_row_struct}, {nb_params}>"),
                     "",
                     "",
                 )
@@ -281,10 +280,7 @@ fn gen_params_struct(
 fn gen_row_structs(
     w: &mut impl Write,
     row: &PreparedRow,
-    CodegenSettings {
-        is_async,
-        derive_ser,
-    }: CodegenSettings,
+    CodegenSettings { derive_ser, .. }: CodegenSettings,
 ) {
     let PreparedRow {
         name,
@@ -295,18 +291,25 @@ fn gen_row_structs(
     if fields.len() > 1 || !is_implicit {
         // Generate row struct
         let struct_fields = join_comma(fields, |w, col| {
-            gen!(w, "pub {} : {}", col.name, col.own_struct());
+            gen!(w, "pub {} : {}", col.name, col.own_struct())
         });
         let copy = if *is_copy { "Copy" } else { "" };
         let ser_str = if derive_ser { "serde::Serialize," } else { "" };
         gen!(
-            w,
-            "#[derive({ser_str} Debug, Clone, PartialEq,{copy})] pub struct {name} {{ {struct_fields} }}",
-        );
+        w,
+        "#[derive({ser_str} Debug, Clone, PartialEq,{copy})] pub struct {name} {{ {struct_fields} }}",
+    );
 
-        if !is_copy {
+        if *is_copy {
+            gen!(
+                w,
+                "impl cornucopia_client::Borrow for {name} {{
+                    type Borrow<'r> = {name};
+                }}"
+            );
+        } else {
             let struct_fields = join_comma(fields, |w, col| {
-                gen!(w, "pub {} : {}", col.name, col.brw_struct(false, true));
+                gen!(w, "pub {} : {}", col.name, col.brw_struct(false, true))
             });
             let fields_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
             let fields_owning = join_comma(fields, |w, f| gen!(w, "{}", f.owning_assign()));
@@ -317,107 +320,12 @@ fn gen_row_structs(
                     fn from({name}Borrowed {{ {fields_names} }}: {name}Borrowed<'a>) -> Self {{
                         Self {{ {fields_owning} }}
                     }}
+                }}
+                impl cornucopia_client::Borrow for {name} {{
+                    type Borrow<'r> = {name}Borrowed<'r>;
                 }}"
             );
-        };
-    }
-    {
-        // Generate query struct
-        let borrowed_str = if *is_copy { "" } else { "Borrowed" };
-        let (
-            client_mut,
-            fn_async,
-            fn_await,
-            backend,
-            collect,
-            raw_type,
-            raw_pre,
-            raw_post,
-            mod_name,
-        ) = if is_async {
-            (
-                "",
-                "async",
-                ".await",
-                "tokio_postgres",
-                "try_collect().await",
-                "futures::Stream",
-                "",
-                ".into_stream()",
-                "async_",
-            )
-        } else {
-            (
-                "mut",
-                "",
-                "",
-                "postgres",
-                "collect()",
-                "Iterator",
-                ".iterator()",
-                "",
-                "sync",
-            )
-        };
-
-        let row_struct = if fields.len() == 1 && *is_implicit {
-            fields[0].brw_struct(false, false)
-        } else {
-            format!("{name}{borrowed_str}")
-        };
-
-        gen!(w,"
-            pub struct {name}Query<'a, C: GenericClient, T, const N: usize> {{
-                client: &'a {client_mut} C,
-                params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut cornucopia_client::{mod_name}::Stmt,
-                extractor: fn(&{backend}::Row) -> {row_struct},
-                mapper: fn({row_struct}) -> T,
-            }}
-            impl<'a, C, T:'a, const N: usize> {name}Query<'a, C, T, N> where C: GenericClient {{
-                pub fn map<R>(self, mapper: fn({row_struct}) -> R) -> {name}Query<'a,C,R,N> {{
-                    {name}Query {{
-                        client: self.client,
-                        params: self.params,
-                        stmt: self.stmt,
-                        extractor: self.extractor,
-                        mapper,
-                    }}
-                }}
-            
-                pub {fn_async} fn one(self) -> Result<T, {backend}::Error> {{
-                    let stmt = self.stmt.prepare(self.client){fn_await}?;
-                    let row = self.client.query_one(stmt, &self.params){fn_await}?;
-                    Ok((self.mapper)((self.extractor)(&row)))
-                }}
-            
-                pub {fn_async} fn all(self) -> Result<Vec<T>, {backend}::Error> {{
-                    self.iter(){fn_await}?.{collect}
-                }}
-            
-                pub {fn_async} fn opt(self) -> Result<Option<T>, {backend}::Error> {{
-                    let stmt = self.stmt.prepare(self.client){fn_await}?;
-                    Ok(self
-                        .client
-                        .query_opt(stmt, &self.params)
-                        {fn_await}?
-                        .map(|row| (self.mapper)((self.extractor)(&row))))
-                }}
-            
-                pub {fn_async} fn iter(
-                    self,
-                ) -> Result<impl {raw_type}<Item = Result<T, {backend}::Error>> + 'a, {backend}::Error> {{
-                    let stmt = self.stmt.prepare(self.client){fn_await}?;
-                    let it = self
-                        .client
-                        .query_raw(stmt, cornucopia_client::private::slice_iter(&self.params))
-                        {fn_await}?
-                        {raw_pre}
-                        .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
-                        {raw_post};
-                    Ok(it)
-                }}
-            }}");
+        }
     }
 }
 
@@ -485,19 +393,20 @@ fn gen_query_fn(
                 format!("<{row_name}>::from(it)"),
             )
         };
+
         gen!(w,
-            "pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, {param_list}) -> {row_name}Query<'a,C, {row_struct_name}, {nb_params}> {{
-                {row_name}Query {{
+            "pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, {param_list}) -> cornucopia_client::{mod_name}::Query<'a,C, {row_struct_name}, {row_struct_name}, {nb_params}> {{
+                cornucopia_client::{mod_name}::Query {{
                     client,
                     params: [{param_names}],
                     stmt: &mut self.0,
                     extractor: |row| {{ {extractor} }},
-                    mapper: |it| {{ {mapper} }},
+                    mapper: |it| {mapper}
                 }}
             }}",
         );
         if params.len() > 1 || (params.len() == 1 && !params_is_implicit) {
-            gen!(w,"pub fn params<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, params: &'a impl cornucopia_client::{mod_name}::Params<'a, Self, {row_name}Query<'a,C, {row_struct_name}, {nb_params}>, C>) -> {row_name}Query<'a,C, {row_struct_name}, {nb_params}> {{
+            gen!(w,"pub fn params<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, params: &'a impl cornucopia_client::{mod_name}::Params<'a, Self, cornucopia_client::{mod_name}::Query<'a,C, {row_struct_name}, {row_struct_name}, {nb_params}>, C>) ->  cornucopia_client::{mod_name}::Query<'a,C, {row_struct_name}, {row_struct_name}, {nb_params}> {{
                     params.bind(client, self)
                 }}"
             );
@@ -551,10 +460,13 @@ fn gen_custom_type(
         PreparedContent::Enum(variants) => {
             let variants_str = variants.join(",");
             gen!(w,
-                        "#[derive({ser_str} Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, Copy, PartialEq, Eq)]
-                        #[postgres(name = \"{name}\")]
-                        pub enum {struct_name} {{ {variants_str} }}",
-                    );
+                "#[derive({ser_str} Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, Copy, PartialEq, Eq)]
+                #[postgres(name = \"{name}\")]
+                pub enum {struct_name} {{ {variants_str} }}
+                impl cornucopia_client::Borrow for {struct_name} {{
+                        type Borrow<'r> = {struct_name};
+                }}"
+            );
         }
         PreparedContent::Composite(fields) => {
             let fields_str = join_comma(fields, |w, f| {
@@ -567,8 +479,15 @@ fn gen_custom_type(
                 #[postgres(name = \"{name}\")]
                 pub struct {struct_name} {{ {fields_str} }}"
             );
+
             if *is_copy {
                 struct_tosql(w, struct_name, fields, name, false, *is_params);
+                gen!(
+                    w,
+                    "impl cornucopia_client::Borrow for {struct_name} {{
+                        type Borrow<'r> = {struct_name};
+                    }}"
+                );
             } else {
                 let brw_fields = join_comma(fields, |w, f| {
                     gen!(w, "pub {} : {}", f.name, f.brw_struct(false, true));
@@ -585,7 +504,10 @@ fn gen_custom_type(
                             {field_names}
                             }}: {struct_name}Borrowed<'a>,
                         ) -> Self {{ Self {{ {fields_owning} }} }}
-                    }}",
+                    }}
+                    impl cornucopia_client::Borrow for {struct_name} {{
+                        type Borrow<'r> = {struct_name}Borrowed<'r>;
+                    }}"
                 );
                 composite_fromsql(w, struct_name, fields, name, schema);
                 if !is_params {
