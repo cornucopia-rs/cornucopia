@@ -74,18 +74,33 @@ pub(crate) fn inline_conflict_declared(
     types: &[TypeAnnotation],
     ty: &'static str,
 ) -> Result<(), Error> {
-    types
-        .iter()
-        .find(|it| it.name == *name)
-        .map_or(Ok(()), |declared| {
-            Err(Error::InlineConflictDeclared {
-                src: info.into(),
-                ty,
-                name: declared.name.value.clone(),
-                declared: declared.name.span,
-                inline: name.span,
-            })
-        })
+    if let Some(declared) = types.iter().find(|it| it.name == *name) {
+        return Err(Error::DuplicateType {
+            src: info.into(),
+            ty,
+            name: declared.name.value.clone(),
+            first: declared.name.span,
+            second: name.span,
+        });
+    }
+    Ok(())
+}
+
+pub(crate) fn reference_unknown_type(
+    info: &ModuleInfo,
+    name: &Span<String>,
+    types: &[TypeAnnotation],
+    ty: &'static str,
+) -> Result<(), Error> {
+    if types.iter().all(|it| it.name != *name) {
+        return Err(Error::UnknownNamedType {
+            src: info.into(),
+            ty,
+            name: name.value.clone(),
+            pos: name.span,
+        });
+    }
+    Ok(())
 }
 
 pub(crate) fn nullable_column_name(
@@ -96,11 +111,9 @@ pub(crate) fn nullable_column_name(
     // If none of the row's columns match the nullable column
     if stmt_cols
         .iter()
-        .any(|row_col| row_col.name() == nullable_col.name.value)
+        .all(|row_col| row_col.name() != nullable_col.name.value)
     {
-        Ok(())
-    } else {
-        Err(Error::UnknownFieldName {
+        return Err(Error::UnknownFieldName {
             src: info.into(),
             pos: nullable_col.name.span,
             known: stmt_cols
@@ -108,8 +121,9 @@ pub(crate) fn nullable_column_name(
                 .map(|it| it.name().to_string())
                 .collect::<Vec<_>>()
                 .join(", "),
-        })
+        });
     }
+    Ok(())
 }
 
 pub(crate) fn nullable_param_name(
@@ -120,11 +134,9 @@ pub(crate) fn nullable_param_name(
     // If none of the row's columns match the nullable column
     if params
         .iter()
-        .any(|(name, _)| name.value == nullable_col.name.value)
+        .all(|(name, _)| name.value != nullable_col.name.value)
     {
-        Ok(())
-    } else {
-        Err(Error::UnknownFieldName {
+        return Err(Error::UnknownFieldName {
             src: info.into(),
             pos: nullable_col.name.span,
             known: params
@@ -132,8 +144,9 @@ pub(crate) fn nullable_param_name(
                 .map(|it| it.0.value.to_string())
                 .collect::<Vec<_>>()
                 .join(", "),
-        })
+        });
     }
+    Ok(())
 }
 
 pub(crate) fn row_on_execute(
@@ -151,7 +164,6 @@ pub(crate) fn row_on_execute(
             query: *query,
         });
     }
-
     Ok(())
 }
 
@@ -170,7 +182,6 @@ pub(crate) fn param_on_simple_query(
             query: *query,
         });
     }
-
     Ok(())
 }
 
@@ -184,14 +195,13 @@ const KEYWORD: [&str; 52] = [
 
 fn reserved_keyword(info: &ModuleInfo, s: &Span<String>) -> Result<(), Error> {
     if let Ok(it) = KEYWORD.binary_search(&s.value.as_str()) {
-        Err(Error::RustKeyword {
+        return Err(Error::RustKeyword {
             src: info.into(),
             name: KEYWORD[it],
             pos: s.span,
-        })
-    } else {
-        Ok(())
+        });
     }
+    Ok(())
 }
 
 pub(crate) fn named_struct_field(
@@ -210,7 +220,7 @@ pub(crate) fn named_struct_field(
             src: info.into(),
             name: name.value.clone(),
             first_label: format!(
-                "column `{}` is expected to have type `{}` here",
+                "column `{}` has type `{}` here",
                 field.name,
                 field.ty.pg_ty()
             ),
@@ -312,11 +322,15 @@ pub(crate) fn validate_module(
     }
     for query in queries {
         for (it, ty) in [(&query.param, "param"), (&query.row, "row")] {
-            if let Some(idents) = it.idents() {
+            if let Some(idents) = &it.idents {
                 duplicate_nullable_ident(info, idents)?;
             };
-            if let Some(inline_name) = it.inline_name() {
-                inline_conflict_declared(info, inline_name, types, ty)?;
+            if let Some(name) = &it.name {
+                if it.inlined() {
+                    inline_conflict_declared(info, name, types, ty)?;
+                } else {
+                    reference_unknown_type(info, name, types, ty)?;
+                }
             }
         }
     }
@@ -358,22 +372,20 @@ pub mod error {
             src: NamedSource,
             name: String,
             ty: &'static str,
-            #[label("previous definition of the {ty} here")]
+            #[label("previous definition here")]
             first: SourceSpan,
             #[label("redefined here")]
             second: SourceSpan,
         },
-        #[error("the inline {ty} `{name}` is already declared")]
-        #[diagnostic(help("use a different name for one of those"))]
-        InlineConflictDeclared {
+        #[error("reference to an unknown named {ty} `{name}`")]
+        #[diagnostic(help("declare an inline named type using `()`: {name}()"))]
+        UnknownNamedType {
             #[source_code]
             src: NamedSource,
             name: String,
             ty: &'static str,
-            #[label("named definition here")]
-            declared: SourceSpan,
-            #[label("redefined inline here")]
-            inline: SourceSpan,
+            #[label("unknown named {ty}")]
+            pos: SourceSpan,
         },
         #[error("unknown field")]
         #[diagnostic(help("use one of those names: {known}"))]
