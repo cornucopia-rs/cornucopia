@@ -22,7 +22,7 @@ cornucopia_client = { path = "../cornucopia_client" }
 postgres-types = { version = "0.2.3", features = ["derive"] }
 serde = { version = "1.0.137", features = ["derive"] }
 serde_json = { version = "1.0.81", features = ["raw_value"] }
-time = { version = "0.3.9", features = ["parsing", "serde"] }
-uuid = { version = "1.1.0", features = ["serde"] }
+time = { version = "0.3.11", features = ["parsing", "serde"] }
+uuid = { version = "1.1.2", features = ["serde"] }
 eui48 = { version = "1.1.0", features = ["serde"] }
 futures = "0.3.21"
