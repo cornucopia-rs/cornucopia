@@ -19,9 +19,8 @@ use self::error::Error;
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedQuery {
     pub(crate) name: String,
-    pub(crate) params: Vec<PreparedField>,
-    pub(crate) params_is_implicit: bool,
-    pub(crate) row: Option<(usize, Vec<usize>)>, // None if execute
+    pub(crate) param: Option<(usize, Vec<usize>)>,
+    pub(crate) row: Option<(usize, Vec<usize>)>,
     pub(crate) sql: String,
 }
 
@@ -41,7 +40,6 @@ pub(crate) struct PreparedParams {
     pub(crate) fields: Vec<PreparedField>,
     pub(crate) is_copy: bool,
     pub(crate) is_implicit: bool,
-    pub(crate) queries: Vec<usize>,
 }
 
 /// A returned row struct
@@ -129,10 +127,9 @@ impl PreparedModule {
     fn add_param(
         &mut self,
         name: Span<String>,
-        query_idx: usize,
+        fields: Vec<PreparedField>,
         is_implicit: bool,
-    ) -> Result<usize, Error> {
-        let fields = &self.queries.get_index(query_idx).unwrap().1.params;
+    ) -> Result<(usize, Vec<usize>), Error> {
         assert!(!fields.is_empty());
         match self.params.entry(name.clone()) {
             Entry::Occupied(mut o) => {
@@ -144,12 +141,15 @@ impl PreparedModule {
                     &prev.name,
                     &prev.fields,
                     &name,
-                    fields,
+                    &fields,
                 )?;
 
-                prev.queries.push(query_idx);
-
-                Ok(o.index())
+                let indexes: Option<Vec<_>> = prev
+                    .fields
+                    .iter()
+                    .map(|f| fields.iter().position(|it| it == f))
+                    .collect();
+                Ok((o.index(), indexes.unwrap()))
             }
             Entry::Vacant(v) => {
                 let is_copy = fields.iter().all(|f| f.ty.is_copy());
@@ -157,10 +157,9 @@ impl PreparedModule {
                     name: name.clone(),
                     fields: fields.clone(),
                     is_copy,
-                    queries: vec![],
                     is_implicit,
                 });
-                self.add_param(name, query_idx, is_implicit)
+                self.add_param(name, fields, is_implicit)
             }
         }
     }
@@ -168,23 +167,19 @@ impl PreparedModule {
     fn add_query(
         &mut self,
         name: Span<String>,
-        params: Vec<PreparedField>,
-        params_is_implicit: bool,
+        param_idx: Option<(usize, Vec<usize>)>,
         row_idx: Option<(usize, Vec<usize>)>,
         sql: String,
-    ) -> usize {
-        self.queries
-            .insert_full(
-                name.clone(),
-                PreparedQuery {
-                    name: name.value,
-                    params,
-                    row: row_idx,
-                    sql,
-                    params_is_implicit,
-                },
-            )
-            .0
+    ) {
+        self.queries.insert(
+            name.clone(),
+            PreparedQuery {
+                name: name.value,
+                row: row_idx,
+                sql,
+                param: param_idx,
+            },
+        );
     }
 }
 
@@ -394,22 +389,17 @@ fn prepare_query(
         row_fields
     };
 
-    let params_empty = params_fields.is_empty();
     let row_idx = if row_fields.is_empty() {
         None
     } else {
         Some(module.add_row(registrar, row_name, row_fields, row.is_implicit())?)
     };
-    let query_idx = module.add_query(
-        name.clone(),
-        params_fields,
-        param.is_implicit(),
-        row_idx,
-        sql_str,
-    );
-    if !params_empty {
-        module.add_param(params_name, query_idx, param.is_implicit())?;
+    let param_idx = if params_fields.is_empty() {
+        None
+    } else {
+        Some(module.add_param(params_name, params_fields, param.is_implicit())?)
     };
+    module.add_query(name.clone(), param_idx, row_idx, sql_str);
 
     Ok(())
 }

@@ -201,16 +201,10 @@ fn composite_fromsql(
     );
 }
 
-fn gen_params_struct(
-    w: &mut impl Write,
-    module: &PreparedModule,
-    params: &PreparedParams,
-    CodegenSettings { is_async, .. }: CodegenSettings,
-) {
+fn gen_params_struct(w: &mut impl Write, params: &PreparedParams) {
     let PreparedParams {
         name,
         fields,
-        queries,
         is_copy,
         is_implicit,
     } = params;
@@ -223,58 +217,11 @@ fn gen_params_struct(
         } else {
             ("", "<'a>")
         };
-        let (backend, client_mut, mod_name) = if is_async {
-            ("tokio_postgres", "", "async_")
-        } else {
-            ("postgres", "mut", "sync")
-        };
         gen!(
             w,
             "#[derive({copy}Debug)]
             pub struct {name}{lifetime} {{ {struct_fields} }}"
         );
-        for idx in queries {
-            let PreparedQuery {
-                name: query_name,
-                params,
-                row,
-                ..
-            } = module.queries.get_index(*idx).unwrap().1;
-            let struct_name = query_name.to_upper_camel_case();
-
-            let param_values = join_comma(params, |w, p| gen!(w, "&self.{}", p.name));
-            let (ret_type, pre, post) = if let Some((idx, _)) = row {
-                let prepared_row = &module.rows.get_index(*idx).unwrap().1;
-                let name = prepared_row.name.value.clone();
-                let query_row_struct = if prepared_row.fields.len() == 1 && prepared_row.is_implicit
-                {
-                    prepared_row.fields[0].own_struct()
-                } else {
-                    name
-                };
-                let name = &module.rows.get_index(*idx).unwrap().1.name;
-                let nb_params = params.len();
-                (
-                    format!("{name}Query<'a, C, {query_row_struct}, {nb_params}>"),
-                    "",
-                    "",
-                )
-            } else if row.is_none() && is_async {
-                (format!(
-                        "std::pin::Pin<Box<dyn futures::Future<Output = Result<u64, {backend}::Error>> + 'a>>"
-                    ), "Box::pin(", ")")
-            } else {
-                (format!("Result<u64, {backend}::Error>"), "", "")
-            };
-            gen!(
-                w,
-                "impl <'a, C: GenericClient> cornucopia_client::{mod_name}::Params<'a, {struct_name}Stmt, {ret_type}, C> for {name}{lifetime}  {{ 
-                    fn bind(&'a self, client: &'a {client_mut} C, stmt: &'a mut {struct_name}Stmt) -> {ret_type} {{
-                        {pre}stmt.bind(client, {param_values}){post}
-                    }}
-                }}"
-            );
-        }
     }
 }
 
@@ -429,10 +376,9 @@ fn gen_query_fn(
 ) {
     let PreparedQuery {
         name,
-        params,
         row,
         sql,
-        params_is_implicit,
+        param,
     } = query;
 
     let (client_mut, fn_async, fn_await, backend, mod_name) = if is_async {
@@ -454,6 +400,21 @@ fn gen_query_fn(
             impl {struct_name}Stmt {{"
         );
     }
+    let (param, param_implicit, params, order) = match param {
+        Some((idx, order)) => {
+            let it = module.params.get_index(*idx).unwrap().1;
+            (
+                Some(it),
+                it.is_implicit,
+                it.fields.as_slice(),
+                order.as_slice(),
+            )
+        }
+        None => (None, false, [].as_slice(), [].as_slice()),
+    };
+    let param_list = join_comma(order.iter().map(|idx| &params[*idx]), |w, p| {
+        gen!(w, "{} : &'a {}", p.name, p.brw_struct(true, true));
+    });
     if let Some((idx, index)) = row {
         let PreparedRow {
             name: row_name,
@@ -463,13 +424,12 @@ fn gen_query_fn(
         } = &module.rows.get_index(*idx).unwrap().1;
         let borrowed_str = if *is_copy { "" } else { "Borrowed" };
         // Query fn
-        let param_list = join_comma(params, |w, p| {
-            gen!(w, "{} : &'a {}", p.name, p.brw_struct(true, true));
-        });
         let get_fields = join_comma(fields.iter().enumerate(), |w, (i, f)| {
             gen!(w, "{}: row.get({})", f.name, index[i]);
         });
-        let param_names = join_comma(params, |w, p| gen!(w, "{}", p.name));
+        let param_names = join_comma(order.iter().map(|idx| &params[*idx]), |w, p| {
+            gen!(w, "{}", p.name)
+        });
         let nb_params = params.len();
         let (row_struct_name, extractor, mapper) = if fields.len() == 1 && *is_implicit {
             let field = &fields[0];
@@ -496,37 +456,73 @@ fn gen_query_fn(
                 }}
             }}",
         );
-        if params.len() > 1 || (params.len() == 1 && !params_is_implicit) {
-            gen!(w,"pub fn params<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, params: &'a impl cornucopia_client::{mod_name}::Params<'a, Self, {row_name}Query<'a,C, {row_struct_name}, {nb_params}>, C>) -> {row_name}Query<'a,C, {row_struct_name}, {nb_params}> {{
-                    params.bind(client, self)
-                }}"
-            );
-        }
     } else {
         // Execute fn
-        let param_list = join_comma(params, |w, p| {
-            gen!(w, "{} : &'a {}", p.name, p.brw_struct(true, true));
+        let param_names = join_comma(order.iter().map(|idx| &params[*idx]), |w, p| {
+            gen!(w, "{}", p.ty.sql_wrapped(&p.name))
         });
-        let param_names = join_comma(params, |w, p| gen!(w, "{}", p.ty.sql_wrapped(&p.name)));
         gen!(w,
             "pub {fn_async} fn bind<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, {param_list}) -> Result<u64, {backend}::Error> {{
                 let stmt = self.0.prepare(client){fn_await}?;
                 client.execute(stmt, &[{param_names}]){fn_await}
             }}"
         );
-        if params.len() > 1 || (params.len() == 1 && !params_is_implicit) {
-            let (pre, post) = if is_async {
-                ("std::pin::Pin<Box<dyn futures::Future<Output = ", ">>>")
+    }
+
+    // Param impl
+    if let Some(param) = param {
+        if params.len() > 1 || !param_implicit {
+            let param_values = join_comma(order.iter().map(|idx| &params[*idx]), |w, p| {
+                gen!(w, "&self.{}", p.name)
+            });
+            let param_name = &param.name;
+            let lifetime = if param.is_copy { "" } else { "<'a>" };
+            if let Some((idx, _)) = row {
+                let prepared_row = &module.rows.get_index(*idx).unwrap().1;
+                let name = prepared_row.name.value.clone();
+                let query_row_struct = if prepared_row.fields.len() == 1 && prepared_row.is_implicit
+                {
+                    prepared_row.fields[0].own_struct()
+                } else {
+                    name
+                };
+                let name = &module.rows.get_index(*idx).unwrap().1.name;
+                let nb_params = params.len();
+                gen!(w,"pub fn params<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, params: &'a impl cornucopia_client::{mod_name}::Params<'a, Self, {name}Query<'a,C, {query_row_struct}, {nb_params}>, C>) -> {name}Query<'a,C, {query_row_struct}, {nb_params}> {{
+                        params.bind(client, self)
+                    }}
+                }}
+                impl <'a, C: GenericClient> cornucopia_client::{mod_name}::Params<'a, {struct_name}Stmt, {name}Query<'a, C, {query_row_struct}, {nb_params}>, C> for {param_name}{lifetime}  {{ 
+                    fn bind(&'a self, client: &'a {client_mut} C, stmt: &'a mut {struct_name}Stmt) -> {name}Query<'a, C, {query_row_struct}, {nb_params}> {{
+                        stmt.bind(client, {param_values})
+                    }}"
+                );
             } else {
-                ("", "")
-            };
-            gen!(w,
-                "pub {fn_async} fn params<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, params: &'a impl cornucopia_client::{mod_name}::Params<'a, Self, {pre}Result<u64, {backend}::Error>{post}, C>) -> Result<u64, {backend}::Error> {{
-                    params.bind(client, self){fn_await}
-                }}"
-            );
+                let (pre_ty, post_ty, post_ty_lf, pre, post) = if is_async {
+                    (
+                        "std::pin::Pin<Box<dyn futures::Future<Output = ",
+                        ">>>",
+                        "> + 'a>>",
+                        "Box::pin(",
+                        ")",
+                    )
+                } else {
+                    ("", "", "", "", "")
+                };
+                gen!(
+                    w,
+                    "pub {fn_async} fn params<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, params: &'a impl cornucopia_client::{mod_name}::Params<'a, Self, {pre_ty}Result<u64, {backend}::Error>{post_ty}, C>) -> Result<u64, {backend}::Error> {{
+                        params.bind(client, self){fn_await}
+                    }}}}impl <'a, C: GenericClient> cornucopia_client::{mod_name}::Params<'a, {struct_name}Stmt, {pre_ty}Result<u64, {backend}::Error>{post_ty_lf}, C> for {param_name}{lifetime}  {{ 
+                        fn bind(&'a self, client: &'a {client_mut} C, stmt: &'a mut {struct_name}Stmt) -> {pre_ty}Result<u64, {backend}::Error>{post_ty_lf} {{
+                            {pre}stmt.bind(client, {param_values}){post}
+                        }}
+                    "
+                );
+            }
         }
     }
+
     gen!(w, "}}");
 }
 
@@ -640,7 +636,7 @@ pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> S
             gen_query_fn(w, &module, query, settings);
         });
         let params_string = join_ln(module.params.values(), |w, params| {
-            gen_params_struct(w, &module, params, settings);
+            gen_params_struct(w, params);
         });
         let rows_string = join_ln(module.rows.values(), |w, row| {
             gen_row_structs(w, row, settings);
