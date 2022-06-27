@@ -423,21 +423,21 @@ fn gen_query_fn(
             gen!(w, "{}: row.get({})", f.name, index[i]);
         });
         let param_names = join_comma(order.iter().map(|idx| &param_field[*idx]), |w, p| {
-            gen!(w, "{}", p.name)
+            gen!(w, "{}", p.name);
         });
         let nb_params = param_field.len();
-        let (row_struct_name, extractor, mapper) = if !is_named {
+        let (row_struct_name, extractor, mapper) = if *is_named {
+            (
+                row_name.value.clone(),
+                format!("{row_name}{borrowed_str} {{{get_fields}}}"),
+                format!("<{row_name}>::from(it)"),
+            )
+        } else {
             let field = &fields[0];
             (
                 field.own_struct(),
                 String::from("row.get(0)"),
                 field.owning_call(Some("it")),
-            )
-        } else {
-            (
-                row_name.value.clone(),
-                format!("{row_name}{borrowed_str} {{{get_fields}}}"),
-                format!("<{row_name}>::from(it)"),
             )
         };
         gen!(w,
@@ -454,7 +454,7 @@ fn gen_query_fn(
     } else {
         // Execute fn
         let param_names = join_comma(order.iter().map(|idx| &param_field[*idx]), |w, p| {
-            gen!(w, "{}", p.ty.sql_wrapped(&p.name))
+            gen!(w, "{}", p.ty.sql_wrapped(&p.name));
         });
         gen!(w,
             "pub {fn_async} fn bind<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, {param_list}) -> Result<u64, {backend}::Error> {{
@@ -468,17 +468,17 @@ fn gen_query_fn(
     if let Some(param) = param {
         if param.is_named {
             let param_values = join_comma(order.iter().map(|idx| &param_field[*idx]), |w, p| {
-                gen!(w, "&self.{}", p.name)
+                gen!(w, "&self.{}", p.name);
             });
             let param_name = &param.name;
             let lifetime = if param.is_copy { "" } else { "<'a>" };
             if let Some((idx, _)) = row {
                 let prepared_row = &module.rows.get_index(*idx).unwrap().1;
                 let name = prepared_row.name.value.clone();
-                let query_row_struct = if !prepared_row.is_named {
-                    prepared_row.fields[0].own_struct()
-                } else {
+                let query_row_struct = if prepared_row.is_named {
                     name
+                } else {
+                    prepared_row.fields[0].own_struct()
                 };
                 let name = &module.rows.get_index(*idx).unwrap().1.name;
                 let nb_params = param_field.len();

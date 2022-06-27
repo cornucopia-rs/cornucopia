@@ -256,7 +256,7 @@ fn run_codegen_test(
                         derive_ser,
                     },
                 )
-                .map_err(|e| e.report())?;
+                .map_err(Error::report)?;
                 // Format the generated file
                 Command::new("rustfmt")
                     .args(["--edition", "2021"])
@@ -275,7 +275,7 @@ fn run_codegen_test(
                         derive_ser,
                     },
                 )
-                .map_err(|e| e.report())?;
+                .map_err(Error::report)?;
                 // Format the generated code string by piping to rustfmt
                 let mut rustfmt = Command::new("rustfmt")
                     .args(["--edition", "2021"])

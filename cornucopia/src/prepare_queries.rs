@@ -134,7 +134,7 @@ impl PreparedModule {
         let fuck = if fields.len() == 1 && is_implicit {
             name.map(|_| fields[0].unwrapped_name())
         } else {
-            name.clone()
+            name
         };
         Self::add(&self.info, &mut self.rows, fuck, fields, is_implicit)
     }
