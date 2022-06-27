@@ -24,7 +24,6 @@ pub mod queries {
                 stmt.bind(client, &self.name, &self.hair_color)
             }
         }
-
         #[derive(Debug, Clone, PartialEq)]
         pub struct User {
             pub id: i32,
@@ -375,6 +374,13 @@ pub mod queries {
                     mapper: |it| <User>::from(it),
                 }
             }
+            pub fn params<'a, C: GenericClient>(
+                &'a mut self,
+                client: &'a mut C,
+                params: &'a impl cornucopia_client::sync::Params<'a, Self, UserQuery<'a, C, User, 0>, C>,
+            ) -> UserQuery<'a, C, User, 0> {
+                params.bind(client, self)
+            }
         }
         pub fn insert_user() -> InsertUserStmt {
             InsertUserStmt(cornucopia_client::sync::Stmt::new(
@@ -427,6 +433,13 @@ pub mod queries {
                     mapper: |it| <Post>::from(it),
                 }
             }
+            pub fn params<'a, C: GenericClient>(
+                &'a mut self,
+                client: &'a mut C,
+                params: &'a impl cornucopia_client::sync::Params<'a, Self, PostQuery<'a, C, Post, 0>, C>,
+            ) -> PostQuery<'a, C, Post, 0> {
+                params.bind(client, self)
+            }
         }
         pub fn post_by_user_ids() -> PostByUserIdsStmt {
             PostByUserIdsStmt(cornucopia_client::sync::Stmt::new(
@@ -474,6 +487,18 @@ pub mod queries {
                     },
                     mapper: |it| <Comment>::from(it),
                 }
+            }
+            pub fn params<'a, C: GenericClient>(
+                &'a mut self,
+                client: &'a mut C,
+                params: &'a impl cornucopia_client::sync::Params<
+                    'a,
+                    Self,
+                    CommentQuery<'a, C, Comment, 0>,
+                    C,
+                >,
+            ) -> CommentQuery<'a, C, Comment, 0> {
+                params.bind(client, self)
             }
         }
         pub fn comments_by_post_id() -> CommentsByPostIdStmt {
@@ -525,6 +550,18 @@ pub mod queries {
                     },
                     mapper: |it| <SelectComplex>::from(it),
                 }
+            }
+            pub fn params<'a, C: GenericClient>(
+                &'a mut self,
+                client: &'a mut C,
+                params: &'a impl cornucopia_client::sync::Params<
+                    'a,
+                    Self,
+                    SelectComplexQuery<'a, C, SelectComplex, 0>,
+                    C,
+                >,
+            ) -> SelectComplexQuery<'a, C, SelectComplex, 0> {
+                params.bind(client, self)
             }
         }
     }

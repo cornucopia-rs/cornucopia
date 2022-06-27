@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use crate::{
     parser::{Module, NullableIdent, Query, QueryDataStruct, Span, TypeAnnotation},
-    prepare_queries::{PreparedField, PreparedModule},
+    prepare_queries::{PreparedField, PreparedModule, TypeKind},
     read_queries::ModuleInfo,
     utils::find_duplicate,
 };
@@ -290,10 +290,10 @@ pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Error>
     }
     for (origin, row) in &module.rows {
         reserved_keyword(&module.info, origin)?;
-        if row.fields.len() > 1 || !row.is_implicit {
+        if let TypeKind::Struct { is_copy, .. } = &row.kind {
             check_name(row.name.value.clone(), origin.span, "row")?;
 
-            if !row.is_copy {
+            if !is_copy {
                 check_name(format!("{}Borrowed", row.name), origin.span, "borrowed row")?;
             };
         }
@@ -301,7 +301,7 @@ pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Error>
     }
     for (origin, params) in &module.params {
         reserved_keyword(&module.info, origin)?;
-        if params.fields.len() > 1 || !params.is_implicit {
+        if let TypeKind::Struct { .. } = &params.kind {
             check_name(params.name.value.clone(), origin.span, "params")?;
         }
     }

@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{ops::Deref, rc::Rc};
 
 use indexmap::{map::Entry, IndexMap};
 use postgres::Client;
@@ -19,9 +19,8 @@ use self::error::Error;
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedQuery {
     pub(crate) name: String,
-    pub(crate) params: Vec<PreparedField>,
-    pub(crate) params_is_implicit: bool,
-    pub(crate) row: Option<(usize, Vec<usize>)>, // None if execute
+    pub(crate) params: TypeKind,
+    pub(crate) row: Option<(usize, Vec<usize>)>,
     pub(crate) sql: String,
 }
 
@@ -34,13 +33,40 @@ pub struct PreparedField {
     pub(crate) is_inner_nullable: bool, // Vec only
 }
 
+#[derive(Debug, Clone)]
+pub(crate) enum TypeKind {
+    Raw([PreparedField; 1]),
+    Struct {
+        fields: Vec<PreparedField>,
+        is_copy: bool,
+    },
+}
+
+impl TypeKind {
+    pub fn new(fields: Vec<PreparedField>, is_implicit: bool) -> Self {
+        if fields.len() == 1 && is_implicit {
+            Self::Raw(fields.try_into().unwrap())
+        } else {
+            Self::Struct {
+                is_copy: fields.iter().all(|f| f.ty.is_copy()),
+                fields,
+            }
+        }
+    }
+
+    pub fn fields(&self) -> &[PreparedField] {
+        match self {
+            TypeKind::Raw(f) => f,
+            TypeKind::Struct { fields, .. } => &fields,
+        }
+    }
+}
+
 /// A params struct
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedParams {
     pub(crate) name: Span<String>,
-    pub(crate) fields: Vec<PreparedField>,
-    pub(crate) is_copy: bool,
-    pub(crate) is_implicit: bool,
+    pub(crate) kind: TypeKind,
     pub(crate) queries: Vec<usize>,
 }
 
@@ -48,9 +74,7 @@ pub(crate) struct PreparedParams {
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedRow {
     pub(crate) name: Span<String>,
-    pub(crate) fields: Vec<PreparedField>,
-    pub(crate) is_copy: bool,
-    pub(crate) is_implicit: bool,
+    pub(crate) kind: TypeKind,
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -93,74 +117,86 @@ impl PreparedModule {
         is_implicit: bool,
     ) -> Result<(usize, Vec<usize>), Error> {
         assert!(!fields.is_empty());
+        let name = if fields.len() == 1 && is_implicit {
+            name.map(|_| fields[0].ty.name(false))
+        } else {
+            name
+        };
         match self.rows.entry(name.clone()) {
             Entry::Occupied(o) => {
                 let prev = &o.get();
                 // If the row doesn't contain the same fields as a previously
                 // registered row with the same name...
-                validation::named_struct_field(
-                    &self.info,
-                    &prev.name,
-                    &prev.fields,
-                    &name,
-                    &fields,
-                )?;
+                if let TypeKind::Struct {
+                    fields: prev_fields,
+                    ..
+                } = &prev.kind
+                {
+                    validation::named_struct_field(
+                        &self.info,
+                        &prev.name,
+                        prev_fields,
+                        &name,
+                        &fields,
+                    )?;
+                };
 
-                let indexes: Option<Vec<_>> = prev
-                    .fields
-                    .iter()
-                    .map(|f| fields.iter().position(|it| it == f))
-                    .collect();
-                Ok((o.index(), indexes.unwrap()))
+                let indexes: Vec<_> = match &prev.kind {
+                    TypeKind::Raw(_) => vec![0],
+                    TypeKind::Struct { fields, .. } => fields
+                        .iter()
+                        .map(|f| fields.iter().position(|it| it == f).unwrap())
+                        .collect(),
+                };
+                Ok((o.index(), indexes))
             }
             Entry::Vacant(v) => {
-                let is_copy = fields.iter().all(|f| f.ty.is_copy());
                 v.insert(PreparedRow {
                     name: name.clone(),
-                    fields: fields.clone(),
-                    is_copy,
-                    is_implicit,
+                    kind: TypeKind::new(fields.clone(), is_implicit),
                 });
                 self.add_row(registrar, name, fields, is_implicit)
             }
         }
     }
 
-    fn add_param(
-        &mut self,
-        name: Span<String>,
-        query_idx: usize,
-        is_implicit: bool,
-    ) -> Result<usize, Error> {
-        let fields = &self.queries.get_index(query_idx).unwrap().1.params;
-        assert!(!fields.is_empty());
+    fn add_param(&mut self, name: Span<String>, query_idx: usize) -> Result<usize, Error> {
+        let kind = &self.queries.get_index(query_idx).unwrap().1.params;
+        let name = match kind {
+            TypeKind::Raw([field]) => name.map(|_| field.ty.name(false)),
+            TypeKind::Struct { .. } => name,
+        };
+
         match self.params.entry(name.clone()) {
             Entry::Occupied(mut o) => {
                 let prev = o.get_mut();
                 // If the param doesn't contain the same fields as a previously
                 // registered param with the same name...
-                validation::named_struct_field(
-                    &self.info,
-                    &prev.name,
-                    &prev.fields,
-                    &name,
-                    fields,
-                )?;
-
+                if let TypeKind::Struct {
+                    fields: prev_fields,
+                    ..
+                } = &prev.kind
+                {
+                    if let TypeKind::Struct { fields, .. } = &kind {
+                        validation::named_struct_field(
+                            &self.info,
+                            &prev.name,
+                            prev_fields,
+                            &name,
+                            fields,
+                        )?;
+                    }
+                };
                 prev.queries.push(query_idx);
-
                 Ok(o.index())
             }
             Entry::Vacant(v) => {
-                let is_copy = fields.iter().all(|f| f.ty.is_copy());
                 v.insert(PreparedParams {
                     name: name.clone(),
-                    fields: fields.clone(),
-                    is_copy,
                     queries: vec![],
-                    is_implicit,
+                    kind: kind.clone(),
                 });
-                self.add_param(name, query_idx, is_implicit)
+                self.add_param(name, query_idx)
             }
         }
     }
@@ -169,8 +205,8 @@ impl PreparedModule {
         &mut self,
         name: Span<String>,
         params: Vec<PreparedField>,
-        params_is_implicit: bool,
         row_idx: Option<(usize, Vec<usize>)>,
+        is_implicit: bool,
         sql: String,
     ) -> usize {
         self.queries
@@ -178,10 +214,9 @@ impl PreparedModule {
                 name.clone(),
                 PreparedQuery {
                     name: name.value,
-                    params,
+                    params: TypeKind::new(params, is_implicit),
                     row: row_idx,
                     sql,
-                    params_is_implicit,
                 },
             )
             .0
@@ -400,15 +435,9 @@ fn prepare_query(
     } else {
         Some(module.add_row(registrar, row_name, row_fields, row.is_implicit())?)
     };
-    let query_idx = module.add_query(
-        name.clone(),
-        params_fields,
-        param.is_implicit(),
-        row_idx,
-        sql_str,
-    );
+    let query_idx = module.add_query(name, params_fields, row_idx, param.is_implicit(), sql_str);
     if !params_empty {
-        module.add_param(params_name, query_idx, param.is_implicit())?;
+        module.add_param(params_name, query_idx)?;
     };
 
     Ok(())

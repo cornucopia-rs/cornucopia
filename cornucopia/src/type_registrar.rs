@@ -147,6 +147,12 @@ impl CornucopiaType {
         }
     }
 
+    pub fn name(&self, is_inner_nullable: bool) -> String {
+        self.own_struct(is_inner_nullable)
+            .replace(['<', '>', '_'], "")
+            .to_upper_camel_case()
+    }
+
     /// String representing a borrowed rust equivalent of this type. Notably, if
     /// a Rust equivalent is a String or a Vec<T>, it will return a &str and a &[T] respectively.
     pub(crate) fn brw_struct(

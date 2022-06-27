@@ -9,19 +9,19 @@ pub mod queries {
         use cornucopia_client::async_::GenericClient;
         use futures;
         use futures::{StreamExt, TryStreamExt};
-        pub struct ExampleQueryQuery<'a, C: GenericClient, T, const N: usize> {
+        pub struct StringQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::async_::Stmt,
             extractor: fn(&tokio_postgres::Row) -> &str,
             mapper: fn(&str) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> ExampleQueryQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> StringQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
-            pub fn map<R>(self, mapper: fn(&str) -> R) -> ExampleQueryQuery<'a, C, R, N> {
-                ExampleQueryQuery {
+            pub fn map<R>(self, mapper: fn(&str) -> R) -> StringQuery<'a, C, R, N> {
+                StringQuery {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -78,14 +78,26 @@ FROM
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-            ) -> ExampleQueryQuery<'a, C, String, 0> {
-                ExampleQueryQuery {
+            ) -> StringQuery<'a, C, String, 0> {
+                StringQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
                     extractor: |row| row.get(0),
                     mapper: |it| it.into(),
                 }
+            }
+            pub fn params<'a, C: GenericClient>(
+                &'a mut self,
+                client: &'a C,
+                params: &'a impl cornucopia_client::async_::Params<
+                    'a,
+                    Self,
+                    StringQuery<'a, C, String, 0>,
+                    C,
+                >,
+            ) -> StringQuery<'a, C, String, 0> {
+                params.bind(client, self)
             }
         }
     }
