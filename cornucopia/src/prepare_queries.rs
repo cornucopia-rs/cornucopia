@@ -33,22 +33,23 @@ pub struct PreparedField {
     pub(crate) is_inner_nullable: bool, // Vec only
 }
 
-/// A params struct
 #[derive(Debug, Clone)]
-pub(crate) struct PreparedParams {
+pub(crate) struct PreparedItem {
     pub(crate) name: Span<String>,
     pub(crate) fields: Vec<PreparedField>,
     pub(crate) is_copy: bool,
-    pub(crate) is_implicit: bool,
+    pub(crate) is_named: bool,
 }
 
-/// A returned row struct
-#[derive(Debug, Clone)]
-pub(crate) struct PreparedRow {
-    pub(crate) name: Span<String>,
-    pub(crate) fields: Vec<PreparedField>,
-    pub(crate) is_copy: bool,
-    pub(crate) is_implicit: bool,
+impl PreparedItem {
+    pub fn new(name: Span<String>, fields: Vec<PreparedField>, is_implicit: bool) -> Self {
+        Self {
+            name,
+            is_copy: fields.iter().all(|f| f.ty.is_copy()),
+            is_named: !is_implicit || fields.len() > 1,
+            fields,
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -72,8 +73,8 @@ pub(crate) enum PreparedContent {
 pub(crate) struct PreparedModule {
     pub(crate) info: ModuleInfo,
     pub(crate) queries: IndexMap<Span<String>, PreparedQuery>,
-    pub(crate) params: IndexMap<Span<String>, PreparedParams>,
-    pub(crate) rows: IndexMap<Span<String>, PreparedRow>,
+    pub(crate) params: IndexMap<Span<String>, PreparedItem>,
+    pub(crate) rows: IndexMap<Span<String>, PreparedItem>,
 }
 
 #[derive(Debug, Clone)]
@@ -83,26 +84,20 @@ pub(crate) struct Preparation {
 }
 
 impl PreparedModule {
-    fn add_row(
-        &mut self,
-        registrar: &TypeRegistrar,
+    fn add(
+        info: &ModuleInfo,
+        map: &mut IndexMap<Span<String>, PreparedItem>,
         name: Span<String>,
         fields: Vec<PreparedField>,
         is_implicit: bool,
     ) -> Result<(usize, Vec<usize>), Error> {
         assert!(!fields.is_empty());
-        match self.rows.entry(name.clone()) {
+        match map.entry(name.clone()) {
             Entry::Occupied(o) => {
                 let prev = &o.get();
                 // If the row doesn't contain the same fields as a previously
                 // registered row with the same name...
-                validation::named_struct_field(
-                    &self.info,
-                    &prev.name,
-                    &prev.fields,
-                    &name,
-                    &fields,
-                )?;
+                validation::named_struct_field(info, &prev.name, &prev.fields, &name, &fields)?;
 
                 let indexes: Option<Vec<_>> = prev
                     .fields
@@ -112,16 +107,19 @@ impl PreparedModule {
                 Ok((o.index(), indexes.unwrap()))
             }
             Entry::Vacant(v) => {
-                let is_copy = fields.iter().all(|f| f.ty.is_copy());
-                v.insert(PreparedRow {
-                    name: name.clone(),
-                    fields: fields.clone(),
-                    is_copy,
-                    is_implicit,
-                });
-                self.add_row(registrar, name, fields, is_implicit)
+                v.insert(PreparedItem::new(name.clone(), fields.clone(), is_implicit));
+                Self::add(info, map, name, fields, is_implicit)
             }
         }
+    }
+
+    fn add_row(
+        &mut self,
+        name: Span<String>,
+        fields: Vec<PreparedField>,
+        is_implicit: bool,
+    ) -> Result<(usize, Vec<usize>), Error> {
+        Self::add(&self.info, &mut self.rows, name, fields, is_implicit)
     }
 
     fn add_param(
@@ -130,38 +128,7 @@ impl PreparedModule {
         fields: Vec<PreparedField>,
         is_implicit: bool,
     ) -> Result<(usize, Vec<usize>), Error> {
-        assert!(!fields.is_empty());
-        match self.params.entry(name.clone()) {
-            Entry::Occupied(mut o) => {
-                let prev = o.get_mut();
-                // If the param doesn't contain the same fields as a previously
-                // registered param with the same name...
-                validation::named_struct_field(
-                    &self.info,
-                    &prev.name,
-                    &prev.fields,
-                    &name,
-                    &fields,
-                )?;
-
-                let indexes: Option<Vec<_>> = prev
-                    .fields
-                    .iter()
-                    .map(|f| fields.iter().position(|it| it == f))
-                    .collect();
-                Ok((o.index(), indexes.unwrap()))
-            }
-            Entry::Vacant(v) => {
-                let is_copy = fields.iter().all(|f| f.ty.is_copy());
-                v.insert(PreparedParams {
-                    name: name.clone(),
-                    fields: fields.clone(),
-                    is_copy,
-                    is_implicit,
-                });
-                self.add_param(name, fields, is_implicit)
-            }
-        }
+        Self::add(&self.info, &mut self.params, name, fields, is_implicit)
     }
 
     fn add_query(
@@ -392,7 +359,7 @@ fn prepare_query(
     let row_idx = if row_fields.is_empty() {
         None
     } else {
-        Some(module.add_row(registrar, row_name, row_fields, row.is_implicit())?)
+        Some(module.add_row(row_name, row_fields, row.is_implicit())?)
     };
     let param_idx = if params_fields.is_empty() {
         None

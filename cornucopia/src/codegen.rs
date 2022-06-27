@@ -5,8 +5,8 @@ use indexmap::IndexMap;
 
 use crate::{
     prepare_queries::{
-        Preparation, PreparedContent, PreparedField, PreparedModule, PreparedParams, PreparedQuery,
-        PreparedRow, PreparedType,
+        Preparation, PreparedContent, PreparedField, PreparedItem, PreparedModule, PreparedQuery,
+        PreparedType,
     },
     utils::{join_comma, join_ln},
     CodegenSettings,
@@ -201,14 +201,14 @@ fn composite_fromsql(
     );
 }
 
-fn gen_params_struct(w: &mut impl Write, params: &PreparedParams) {
-    let PreparedParams {
+fn gen_params_struct(w: &mut impl Write, params: &PreparedItem) {
+    let PreparedItem {
         name,
         fields,
         is_copy,
-        is_implicit,
+        is_named,
     } = params;
-    if fields.len() > 1 || !is_implicit {
+    if *is_named {
         let struct_fields = join_comma(fields, |w, p| {
             gen!(w, "pub {} : {}", p.name, p.brw_struct(true, true));
         });
@@ -227,19 +227,19 @@ fn gen_params_struct(w: &mut impl Write, params: &PreparedParams) {
 
 fn gen_row_structs(
     w: &mut impl Write,
-    row: &PreparedRow,
+    row: &PreparedItem,
     CodegenSettings {
         is_async,
         derive_ser,
     }: CodegenSettings,
 ) {
-    let PreparedRow {
+    let PreparedItem {
         name,
         fields,
         is_copy,
-        is_implicit,
+        is_named,
     } = row;
-    if fields.len() > 1 || !is_implicit {
+    if *is_named {
         // Generate row struct
         let struct_fields = join_comma(fields, |w, col| {
             gen!(w, "pub {} : {}", col.name, col.own_struct());
@@ -307,10 +307,10 @@ fn gen_row_structs(
             )
         };
 
-        let row_struct = if fields.len() == 1 && *is_implicit {
-            fields[0].brw_struct(false, false)
-        } else {
+        let row_struct = if *is_named {
             format!("{name}{borrowed_str}")
+        } else {
+            fields[0].brw_struct(false, false)
         };
 
         gen!(w,"
@@ -400,38 +400,33 @@ fn gen_query_fn(
             impl {struct_name}Stmt {{"
         );
     }
-    let (param, param_implicit, params, order) = match param {
+    let (param, param_field, order) = match param {
         Some((idx, order)) => {
             let it = module.params.get_index(*idx).unwrap().1;
-            (
-                Some(it),
-                it.is_implicit,
-                it.fields.as_slice(),
-                order.as_slice(),
-            )
+            (Some(it), it.fields.as_slice(), order.as_slice())
         }
-        None => (None, false, [].as_slice(), [].as_slice()),
+        None => (None, [].as_slice(), [].as_slice()),
     };
-    let param_list = join_comma(order.iter().map(|idx| &params[*idx]), |w, p| {
+    let param_list = join_comma(order.iter().map(|idx| &param_field[*idx]), |w, p| {
         gen!(w, "{} : &'a {}", p.name, p.brw_struct(true, true));
     });
     if let Some((idx, index)) = row {
-        let PreparedRow {
+        let PreparedItem {
             name: row_name,
             fields,
             is_copy,
-            is_implicit,
+            is_named,
         } = &module.rows.get_index(*idx).unwrap().1;
         let borrowed_str = if *is_copy { "" } else { "Borrowed" };
         // Query fn
         let get_fields = join_comma(fields.iter().enumerate(), |w, (i, f)| {
             gen!(w, "{}: row.get({})", f.name, index[i]);
         });
-        let param_names = join_comma(order.iter().map(|idx| &params[*idx]), |w, p| {
+        let param_names = join_comma(order.iter().map(|idx| &param_field[*idx]), |w, p| {
             gen!(w, "{}", p.name)
         });
-        let nb_params = params.len();
-        let (row_struct_name, extractor, mapper) = if fields.len() == 1 && *is_implicit {
+        let nb_params = param_field.len();
+        let (row_struct_name, extractor, mapper) = if !is_named {
             let field = &fields[0];
             (
                 field.own_struct(),
@@ -458,7 +453,7 @@ fn gen_query_fn(
         );
     } else {
         // Execute fn
-        let param_names = join_comma(order.iter().map(|idx| &params[*idx]), |w, p| {
+        let param_names = join_comma(order.iter().map(|idx| &param_field[*idx]), |w, p| {
             gen!(w, "{}", p.ty.sql_wrapped(&p.name))
         });
         gen!(w,
@@ -471,8 +466,8 @@ fn gen_query_fn(
 
     // Param impl
     if let Some(param) = param {
-        if params.len() > 1 || !param_implicit {
-            let param_values = join_comma(order.iter().map(|idx| &params[*idx]), |w, p| {
+        if param.is_named {
+            let param_values = join_comma(order.iter().map(|idx| &param_field[*idx]), |w, p| {
                 gen!(w, "&self.{}", p.name)
             });
             let param_name = &param.name;
@@ -480,14 +475,13 @@ fn gen_query_fn(
             if let Some((idx, _)) = row {
                 let prepared_row = &module.rows.get_index(*idx).unwrap().1;
                 let name = prepared_row.name.value.clone();
-                let query_row_struct = if prepared_row.fields.len() == 1 && prepared_row.is_implicit
-                {
+                let query_row_struct = if !prepared_row.is_named {
                     prepared_row.fields[0].own_struct()
                 } else {
                     name
                 };
                 let name = &module.rows.get_index(*idx).unwrap().1.name;
-                let nb_params = params.len();
+                let nb_params = param_field.len();
                 gen!(w,"pub fn params<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, params: &'a impl cornucopia_client::{mod_name}::Params<'a, Self, {name}Query<'a,C, {query_row_struct}, {nb_params}>, C>) -> {name}Query<'a,C, {query_row_struct}, {nb_params}> {{
                         params.bind(client, self)
                     }}

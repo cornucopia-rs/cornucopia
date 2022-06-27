@@ -290,7 +290,7 @@ pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Error>
     }
     for (origin, row) in &module.rows {
         reserved_keyword(&module.info, origin)?;
-        if row.fields.len() > 1 || !row.is_implicit {
+        if row.is_named {
             check_name(row.name.value.clone(), origin.span, "row")?;
 
             if !row.is_copy {
@@ -301,7 +301,7 @@ pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Error>
     }
     for (origin, params) in &module.params {
         reserved_keyword(&module.info, origin)?;
-        if params.fields.len() > 1 || !params.is_implicit {
+        if params.is_named {
             check_name(params.name.value.clone(), origin.span, "params")?;
         }
     }
