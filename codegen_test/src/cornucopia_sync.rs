@@ -843,22 +843,22 @@ pub mod queries {
     pub mod copy {
         use postgres::{fallible_iterator::FallibleIterator, GenericClient};
 
-        pub struct SelectCloneQuery<'a, C: GenericClient, T, const N: usize> {
+        pub struct SuperSuperTypesPublicCloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::sync::Stmt,
             extractor: fn(&postgres::Row) -> super::super::types::public::CloneCompositeBorrowed,
             mapper: fn(super::super::types::public::CloneCompositeBorrowed) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> SelectCloneQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> SuperSuperTypesPublicCloneCompositeQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
             pub fn map<R>(
                 self,
                 mapper: fn(super::super::types::public::CloneCompositeBorrowed) -> R,
-            ) -> SelectCloneQuery<'a, C, R, N> {
-                SelectCloneQuery {
+            ) -> SuperSuperTypesPublicCloneCompositeQuery<'a, C, R, N> {
+                SuperSuperTypesPublicCloneCompositeQuery {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -899,22 +899,22 @@ pub mod queries {
             }
         }
 
-        pub struct SelectCopyQuery<'a, C: GenericClient, T, const N: usize> {
+        pub struct SuperSuperTypesPublicCopyCompositeQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::sync::Stmt,
             extractor: fn(&postgres::Row) -> super::super::types::public::CopyComposite,
             mapper: fn(super::super::types::public::CopyComposite) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> SelectCopyQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> SuperSuperTypesPublicCopyCompositeQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
             pub fn map<R>(
                 self,
                 mapper: fn(super::super::types::public::CopyComposite) -> R,
-            ) -> SelectCopyQuery<'a, C, R, N> {
-                SelectCopyQuery {
+            ) -> SuperSuperTypesPublicCopyCompositeQuery<'a, C, R, N> {
+                SuperSuperTypesPublicCopyCompositeQuery {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -978,9 +978,13 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-            ) -> SelectCloneQuery<'a, C, super::super::types::public::CloneComposite, 0>
-            {
-                SelectCloneQuery {
+            ) -> SuperSuperTypesPublicCloneCompositeQuery<
+                'a,
+                C,
+                super::super::types::public::CloneComposite,
+                0,
+            > {
+                SuperSuperTypesPublicCloneCompositeQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
@@ -1013,8 +1017,13 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-            ) -> SelectCopyQuery<'a, C, super::super::types::public::CopyComposite, 0> {
-                SelectCopyQuery {
+            ) -> SuperSuperTypesPublicCopyCompositeQuery<
+                'a,
+                C,
+                super::super::types::public::CopyComposite,
+                0,
+            > {
+                SuperSuperTypesPublicCopyCompositeQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
@@ -1485,22 +1494,22 @@ pub mod queries {
             }
         }
 
-        pub struct NamedComplexQuery<'a, C: GenericClient, T, const N: usize> {
+        pub struct SuperSuperTypesPublicNamedCompositeQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::sync::Stmt,
             extractor: fn(&postgres::Row) -> super::super::types::public::NamedCompositeBorrowed,
             mapper: fn(super::super::types::public::NamedCompositeBorrowed) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> NamedComplexQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> SuperSuperTypesPublicNamedCompositeQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
             pub fn map<R>(
                 self,
                 mapper: fn(super::super::types::public::NamedCompositeBorrowed) -> R,
-            ) -> NamedComplexQuery<'a, C, R, N> {
-                NamedComplexQuery {
+            ) -> SuperSuperTypesPublicNamedCompositeQuery<'a, C, R, N> {
+                SuperSuperTypesPublicNamedCompositeQuery {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -1725,9 +1734,13 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-            ) -> NamedComplexQuery<'a, C, super::super::types::public::NamedComposite, 0>
-            {
-                NamedComplexQuery {
+            ) -> SuperSuperTypesPublicNamedCompositeQuery<
+                'a,
+                C,
+                super::super::types::public::NamedComposite,
+                0,
+            > {
+                SuperSuperTypesPublicNamedCompositeQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
@@ -2950,7 +2963,12 @@ pub mod queries {
             }
         }
 
-        pub struct SelectNightmareQuery<'a, C: GenericClient, T, const N: usize> {
+        pub struct SuperSuperTypesPublicNightmareCompositeQuery<
+            'a,
+            C: GenericClient,
+            T,
+            const N: usize,
+        > {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::sync::Stmt,
@@ -2958,15 +2976,15 @@ pub mod queries {
                 fn(&postgres::Row) -> super::super::types::public::NightmareCompositeBorrowed,
             mapper: fn(super::super::types::public::NightmareCompositeBorrowed) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> SelectNightmareQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> SuperSuperTypesPublicNightmareCompositeQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
             pub fn map<R>(
                 self,
                 mapper: fn(super::super::types::public::NightmareCompositeBorrowed) -> R,
-            ) -> SelectNightmareQuery<'a, C, R, N> {
-                SelectNightmareQuery {
+            ) -> SuperSuperTypesPublicNightmareCompositeQuery<'a, C, R, N> {
+                SuperSuperTypesPublicNightmareCompositeQuery {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -3496,9 +3514,13 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-            ) -> SelectNightmareQuery<'a, C, super::super::types::public::NightmareComposite, 0>
-            {
-                SelectNightmareQuery {
+            ) -> SuperSuperTypesPublicNightmareCompositeQuery<
+                'a,
+                C,
+                super::super::types::public::NightmareComposite,
+                0,
+            > {
+                SuperSuperTypesPublicNightmareCompositeQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
@@ -3547,22 +3569,22 @@ pub mod queries {
             pub price: f64,
         }
 
-        pub struct SelectCompactQuery<'a, C: GenericClient, T, const N: usize> {
+        pub struct SuperSuperTypesPublicCloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::sync::Stmt,
             extractor: fn(&postgres::Row) -> super::super::types::public::CloneCompositeBorrowed,
             mapper: fn(super::super::types::public::CloneCompositeBorrowed) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> SelectCompactQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> SuperSuperTypesPublicCloneCompositeQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
             pub fn map<R>(
                 self,
                 mapper: fn(super::super::types::public::CloneCompositeBorrowed) -> R,
-            ) -> SelectCompactQuery<'a, C, R, N> {
-                SelectCompactQuery {
+            ) -> SuperSuperTypesPublicCloneCompositeQuery<'a, C, R, N> {
+                SuperSuperTypesPublicCloneCompositeQuery {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -3603,128 +3625,19 @@ pub mod queries {
             }
         }
 
-        pub struct SelectSpacedQuery<'a, C: GenericClient, T, const N: usize> {
-            client: &'a mut C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut cornucopia_client::sync::Stmt,
-            extractor: fn(&postgres::Row) -> super::super::types::public::CloneCompositeBorrowed,
-            mapper: fn(super::super::types::public::CloneCompositeBorrowed) -> T,
-        }
-        impl<'a, C, T: 'a, const N: usize> SelectSpacedQuery<'a, C, T, N>
-        where
-            C: GenericClient,
-        {
-            pub fn map<R>(
-                self,
-                mapper: fn(super::super::types::public::CloneCompositeBorrowed) -> R,
-            ) -> SelectSpacedQuery<'a, C, R, N> {
-                SelectSpacedQuery {
-                    client: self.client,
-                    params: self.params,
-                    stmt: self.stmt,
-                    extractor: self.extractor,
-                    mapper,
-                }
-            }
-
-            pub fn one(self) -> Result<T, postgres::Error> {
-                let stmt = self.stmt.prepare(self.client)?;
-                let row = self.client.query_one(stmt, &self.params)?;
-                Ok((self.mapper)((self.extractor)(&row)))
-            }
-
-            pub fn all(self) -> Result<Vec<T>, postgres::Error> {
-                self.iter()?.collect()
-            }
-
-            pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                let stmt = self.stmt.prepare(self.client)?;
-                Ok(self
-                    .client
-                    .query_opt(stmt, &self.params)?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
-            }
-
-            pub fn iter(
-                self,
-            ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
-            {
-                let stmt = self.stmt.prepare(self.client)?;
-                let it = self
-                    .client
-                    .query_raw(stmt, cornucopia_client::private::slice_iter(&self.params))?
-                    .iterator()
-                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
-                Ok(it)
-            }
-        }
-
-        pub struct ImplicitCompactQuery<'a, C: GenericClient, T, const N: usize> {
+        pub struct Optioni32Query<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::sync::Stmt,
             extractor: fn(&postgres::Row) -> Option<i32>,
             mapper: fn(Option<i32>) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> ImplicitCompactQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> Optioni32Query<'a, C, T, N>
         where
             C: GenericClient,
         {
-            pub fn map<R>(self, mapper: fn(Option<i32>) -> R) -> ImplicitCompactQuery<'a, C, R, N> {
-                ImplicitCompactQuery {
-                    client: self.client,
-                    params: self.params,
-                    stmt: self.stmt,
-                    extractor: self.extractor,
-                    mapper,
-                }
-            }
-
-            pub fn one(self) -> Result<T, postgres::Error> {
-                let stmt = self.stmt.prepare(self.client)?;
-                let row = self.client.query_one(stmt, &self.params)?;
-                Ok((self.mapper)((self.extractor)(&row)))
-            }
-
-            pub fn all(self) -> Result<Vec<T>, postgres::Error> {
-                self.iter()?.collect()
-            }
-
-            pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                let stmt = self.stmt.prepare(self.client)?;
-                Ok(self
-                    .client
-                    .query_opt(stmt, &self.params)?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
-            }
-
-            pub fn iter(
-                self,
-            ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
-            {
-                let stmt = self.stmt.prepare(self.client)?;
-                let it = self
-                    .client
-                    .query_raw(stmt, cornucopia_client::private::slice_iter(&self.params))?
-                    .iterator()
-                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
-                Ok(it)
-            }
-        }
-
-        pub struct ImplicitSpacedQuery<'a, C: GenericClient, T, const N: usize> {
-            client: &'a mut C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut cornucopia_client::sync::Stmt,
-            extractor: fn(&postgres::Row) -> Option<i32>,
-            mapper: fn(Option<i32>) -> T,
-        }
-        impl<'a, C, T: 'a, const N: usize> ImplicitSpacedQuery<'a, C, T, N>
-        where
-            C: GenericClient,
-        {
-            pub fn map<R>(self, mapper: fn(Option<i32>) -> R) -> ImplicitSpacedQuery<'a, C, R, N> {
-                ImplicitSpacedQuery {
+            pub fn map<R>(self, mapper: fn(Option<i32>) -> R) -> Optioni32Query<'a, C, R, N> {
+                Optioni32Query {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -3953,9 +3866,13 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-            ) -> SelectCompactQuery<'a, C, super::super::types::public::CloneComposite, 0>
-            {
-                SelectCompactQuery {
+            ) -> SuperSuperTypesPublicCloneCompositeQuery<
+                'a,
+                C,
+                super::super::types::public::CloneComposite,
+                0,
+            > {
+                SuperSuperTypesPublicCloneCompositeQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
@@ -3974,9 +3891,13 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-            ) -> SelectSpacedQuery<'a, C, super::super::types::public::CloneComposite, 0>
-            {
-                SelectSpacedQuery {
+            ) -> SuperSuperTypesPublicCloneCompositeQuery<
+                'a,
+                C,
+                super::super::types::public::CloneComposite,
+                0,
+            > {
+                SuperSuperTypesPublicCloneCompositeQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
@@ -3997,8 +3918,8 @@ pub mod queries {
                 client: &'a mut C,
                 name: &'a Option<&'a str>,
                 price: &'a Option<f64>,
-            ) -> ImplicitCompactQuery<'a, C, Option<i32>, 2> {
-                ImplicitCompactQuery {
+            ) -> Optioni32Query<'a, C, Option<i32>, 2> {
+                Optioni32Query {
                     client,
                     params: [name, price],
                     stmt: &mut self.0,
@@ -4012,10 +3933,10 @@ pub mod queries {
                 params: &'a impl cornucopia_client::sync::Params<
                     'a,
                     Self,
-                    ImplicitCompactQuery<'a, C, Option<i32>, 2>,
+                    Optioni32Query<'a, C, Option<i32>, 2>,
                     C,
                 >,
-            ) -> ImplicitCompactQuery<'a, C, Option<i32>, 2> {
+            ) -> Optioni32Query<'a, C, Option<i32>, 2> {
                 params.bind(client, self)
             }
         }
@@ -4023,7 +3944,7 @@ pub mod queries {
             cornucopia_client::sync::Params<
                 'a,
                 ImplicitCompactStmt,
-                ImplicitCompactQuery<'a, C, Option<i32>, 2>,
+                Optioni32Query<'a, C, Option<i32>, 2>,
                 C,
             > for ImplicitCompactParams<'a>
         {
@@ -4031,7 +3952,7 @@ pub mod queries {
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut ImplicitCompactStmt,
-            ) -> ImplicitCompactQuery<'a, C, Option<i32>, 2> {
+            ) -> Optioni32Query<'a, C, Option<i32>, 2> {
                 stmt.bind(client, &self.name, &self.price)
             }
         }
@@ -4047,8 +3968,8 @@ pub mod queries {
                 client: &'a mut C,
                 name: &'a Option<&'a str>,
                 price: &'a Option<f64>,
-            ) -> ImplicitSpacedQuery<'a, C, Option<i32>, 2> {
-                ImplicitSpacedQuery {
+            ) -> Optioni32Query<'a, C, Option<i32>, 2> {
+                Optioni32Query {
                     client,
                     params: [name, price],
                     stmt: &mut self.0,
@@ -4062,10 +3983,10 @@ pub mod queries {
                 params: &'a impl cornucopia_client::sync::Params<
                     'a,
                     Self,
-                    ImplicitSpacedQuery<'a, C, Option<i32>, 2>,
+                    Optioni32Query<'a, C, Option<i32>, 2>,
                     C,
                 >,
-            ) -> ImplicitSpacedQuery<'a, C, Option<i32>, 2> {
+            ) -> Optioni32Query<'a, C, Option<i32>, 2> {
                 params.bind(client, self)
             }
         }
@@ -4073,7 +3994,7 @@ pub mod queries {
             cornucopia_client::sync::Params<
                 'a,
                 ImplicitSpacedStmt,
-                ImplicitSpacedQuery<'a, C, Option<i32>, 2>,
+                Optioni32Query<'a, C, Option<i32>, 2>,
                 C,
             > for ImplicitSpacedParams<'a>
         {
@@ -4081,7 +4002,7 @@ pub mod queries {
                 &'a self,
                 client: &'a mut C,
                 stmt: &'a mut ImplicitSpacedStmt,
-            ) -> ImplicitSpacedQuery<'a, C, Option<i32>, 2> {
+            ) -> Optioni32Query<'a, C, Option<i32>, 2> {
                 stmt.bind(client, &self.name, &self.price)
             }
         }

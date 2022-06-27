@@ -1,5 +1,6 @@
 use std::rc::Rc;
 
+use heck::ToUpperCamelCase;
 use indexmap::{map::Entry, IndexMap};
 use postgres::Client;
 use postgres_types::{Kind, Type};
@@ -31,6 +32,14 @@ pub struct PreparedField {
     pub(crate) ty: Rc<CornucopiaType>,
     pub(crate) is_nullable: bool,
     pub(crate) is_inner_nullable: bool, // Vec only
+}
+
+impl PreparedField {
+    pub fn unwrapped_name(&self) -> String {
+        self.own_struct()
+            .replace(['<', '>', '_'], "")
+            .to_upper_camel_case()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -97,14 +106,17 @@ impl PreparedModule {
                 let prev = &o.get();
                 // If the row doesn't contain the same fields as a previously
                 // registered row with the same name...
-                validation::named_struct_field(info, &prev.name, &prev.fields, &name, &fields)?;
+                let indexes: Vec<_> = if prev.is_named {
+                    validation::named_struct_field(info, &prev.name, &prev.fields, &name, &fields)?;
+                    prev.fields
+                        .iter()
+                        .map(|f| fields.iter().position(|it| it == f).unwrap())
+                        .collect()
+                } else {
+                    vec![0]
+                };
 
-                let indexes: Option<Vec<_>> = prev
-                    .fields
-                    .iter()
-                    .map(|f| fields.iter().position(|it| it == f))
-                    .collect();
-                Ok((o.index(), indexes.unwrap()))
+                Ok((o.index(), indexes))
             }
             Entry::Vacant(v) => {
                 v.insert(PreparedItem::new(name.clone(), fields.clone(), is_implicit));
@@ -119,7 +131,12 @@ impl PreparedModule {
         fields: Vec<PreparedField>,
         is_implicit: bool,
     ) -> Result<(usize, Vec<usize>), Error> {
-        Self::add(&self.info, &mut self.rows, name, fields, is_implicit)
+        let fuck = if fields.len() == 1 && is_implicit {
+            name.map(|_| fields[0].unwrapped_name())
+        } else {
+            name.clone()
+        };
+        Self::add(&self.info, &mut self.rows, fuck, fields, is_implicit)
     }
 
     fn add_param(

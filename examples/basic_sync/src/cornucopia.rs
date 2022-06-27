@@ -227,19 +227,19 @@ pub mod queries {
             }
         }
 
-        pub struct BooksQuery<'a, C: GenericClient, T, const N: usize> {
+        pub struct StringQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::sync::Stmt,
             extractor: fn(&postgres::Row) -> &str,
             mapper: fn(&str) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> BooksQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> StringQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
-            pub fn map<R>(self, mapper: fn(&str) -> R) -> BooksQuery<'a, C, R, N> {
-                BooksQuery {
+            pub fn map<R>(self, mapper: fn(&str) -> R) -> StringQuery<'a, C, R, N> {
+                StringQuery {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -280,75 +280,19 @@ pub mod queries {
             }
         }
 
-        pub struct BooksOptRetParamQuery<'a, C: GenericClient, T, const N: usize> {
+        pub struct OptionStringQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::sync::Stmt,
             extractor: fn(&postgres::Row) -> Option<&str>,
             mapper: fn(Option<&str>) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> BooksOptRetParamQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> OptionStringQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
-            pub fn map<R>(
-                self,
-                mapper: fn(Option<&str>) -> R,
-            ) -> BooksOptRetParamQuery<'a, C, R, N> {
-                BooksOptRetParamQuery {
-                    client: self.client,
-                    params: self.params,
-                    stmt: self.stmt,
-                    extractor: self.extractor,
-                    mapper,
-                }
-            }
-
-            pub fn one(self) -> Result<T, postgres::Error> {
-                let stmt = self.stmt.prepare(self.client)?;
-                let row = self.client.query_one(stmt, &self.params)?;
-                Ok((self.mapper)((self.extractor)(&row)))
-            }
-
-            pub fn all(self) -> Result<Vec<T>, postgres::Error> {
-                self.iter()?.collect()
-            }
-
-            pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                let stmt = self.stmt.prepare(self.client)?;
-                Ok(self
-                    .client
-                    .query_opt(stmt, &self.params)?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
-            }
-
-            pub fn iter(
-                self,
-            ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
-            {
-                let stmt = self.stmt.prepare(self.client)?;
-                let it = self
-                    .client
-                    .query_raw(stmt, cornucopia_client::private::slice_iter(&self.params))?
-                    .iterator()
-                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
-                Ok(it)
-            }
-        }
-
-        pub struct AuthorNameByIdQuery<'a, C: GenericClient, T, const N: usize> {
-            client: &'a mut C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut cornucopia_client::sync::Stmt,
-            extractor: fn(&postgres::Row) -> &str,
-            mapper: fn(&str) -> T,
-        }
-        impl<'a, C, T: 'a, const N: usize> AuthorNameByIdQuery<'a, C, T, N>
-        where
-            C: GenericClient,
-        {
-            pub fn map<R>(self, mapper: fn(&str) -> R) -> AuthorNameByIdQuery<'a, C, R, N> {
-                AuthorNameByIdQuery {
+            pub fn map<R>(self, mapper: fn(Option<&str>) -> R) -> OptionStringQuery<'a, C, R, N> {
+                OptionStringQuery {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -474,22 +418,27 @@ pub mod queries {
             }
         }
 
-        pub struct ReturnCustomTypeQuery<'a, C: GenericClient, T, const N: usize> {
+        pub struct SuperSuperTypesPublicCustomCompositeQuery<
+            'a,
+            C: GenericClient,
+            T,
+            const N: usize,
+        > {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::sync::Stmt,
             extractor: fn(&postgres::Row) -> super::super::types::public::CustomCompositeBorrowed,
             mapper: fn(super::super::types::public::CustomCompositeBorrowed) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> ReturnCustomTypeQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> SuperSuperTypesPublicCustomCompositeQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
             pub fn map<R>(
                 self,
                 mapper: fn(super::super::types::public::CustomCompositeBorrowed) -> R,
-            ) -> ReturnCustomTypeQuery<'a, C, R, N> {
-                ReturnCustomTypeQuery {
+            ) -> SuperSuperTypesPublicCustomCompositeQuery<'a, C, R, N> {
+                SuperSuperTypesPublicCustomCompositeQuery {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -530,22 +479,27 @@ pub mod queries {
             }
         }
 
-        pub struct SelectWhereCustomTypeQuery<'a, C: GenericClient, T, const N: usize> {
+        pub struct SuperSuperTypesPublicSpongebobCharacterQuery<
+            'a,
+            C: GenericClient,
+            T,
+            const N: usize,
+        > {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::sync::Stmt,
             extractor: fn(&postgres::Row) -> super::super::types::public::SpongebobCharacter,
             mapper: fn(super::super::types::public::SpongebobCharacter) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> SelectWhereCustomTypeQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> SuperSuperTypesPublicSpongebobCharacterQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
             pub fn map<R>(
                 self,
                 mapper: fn(super::super::types::public::SpongebobCharacter) -> R,
-            ) -> SelectWhereCustomTypeQuery<'a, C, R, N> {
-                SelectWhereCustomTypeQuery {
+            ) -> SuperSuperTypesPublicSpongebobCharacterQuery<'a, C, R, N> {
+                SuperSuperTypesPublicSpongebobCharacterQuery {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -586,22 +540,22 @@ pub mod queries {
             }
         }
 
-        pub struct SelectTranslationsQuery<'a, C: GenericClient, T, const N: usize> {
+        pub struct VecStringQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_client::sync::Stmt,
             extractor: fn(&postgres::Row) -> cornucopia_client::ArrayIterator<'_, &str>,
             mapper: fn(cornucopia_client::ArrayIterator<'_, &str>) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> SelectTranslationsQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> VecStringQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
             pub fn map<R>(
                 self,
                 mapper: fn(cornucopia_client::ArrayIterator<'_, &str>) -> R,
-            ) -> SelectTranslationsQuery<'a, C, R, N> {
-                SelectTranslationsQuery {
+            ) -> VecStringQuery<'a, C, R, N> {
+                VecStringQuery {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -681,8 +635,8 @@ FROM
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-            ) -> BooksQuery<'a, C, String, 0> {
-                BooksQuery {
+            ) -> StringQuery<'a, C, String, 0> {
+                StringQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
@@ -704,8 +658,8 @@ FROM
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-            ) -> BooksOptRetParamQuery<'a, C, Option<String>, 0> {
-                BooksOptRetParamQuery {
+            ) -> OptionStringQuery<'a, C, Option<String>, 0> {
+                OptionStringQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
@@ -730,8 +684,8 @@ WHERE
                 &'a mut self,
                 client: &'a mut C,
                 id: &'a i32,
-            ) -> AuthorNameByIdQuery<'a, C, String, 1> {
-                AuthorNameByIdQuery {
+            ) -> StringQuery<'a, C, String, 1> {
+                StringQuery {
                     client,
                     params: [id],
                     stmt: &mut self.0,
@@ -789,9 +743,13 @@ FROM
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-            ) -> ReturnCustomTypeQuery<'a, C, super::super::types::public::CustomComposite, 0>
-            {
-                ReturnCustomTypeQuery {
+            ) -> SuperSuperTypesPublicCustomCompositeQuery<
+                'a,
+                C,
+                super::super::types::public::CustomComposite,
+                0,
+            > {
+                SuperSuperTypesPublicCustomCompositeQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
@@ -815,9 +773,13 @@ WHERE (col1).persona = $1",
                 &'a mut self,
                 client: &'a mut C,
                 spongebob_character: &'a super::super::types::public::SpongebobCharacter,
-            ) -> SelectWhereCustomTypeQuery<'a, C, super::super::types::public::SpongebobCharacter, 1>
-            {
-                SelectWhereCustomTypeQuery {
+            ) -> SuperSuperTypesPublicSpongebobCharacterQuery<
+                'a,
+                C,
+                super::super::types::public::SpongebobCharacter,
+                1,
+            > {
+                SuperSuperTypesPublicSpongebobCharacterQuery {
                     client,
                     params: [spongebob_character],
                     stmt: &mut self.0,
@@ -839,8 +801,8 @@ FROM
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-            ) -> SelectTranslationsQuery<'a, C, Vec<String>, 0> {
-                SelectTranslationsQuery {
+            ) -> VecStringQuery<'a, C, Vec<String>, 0> {
+                VecStringQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
