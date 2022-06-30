@@ -142,9 +142,7 @@ pub fn bench_trivial_query(b: &mut Bencher, conn: &mut PgConnection) {
 pub fn bench_medium_complex_query(b: &mut Bencher, conn: &mut PgConnection) {
     b.iter(|| {
         use self::users::dsl::*;
-        let target = users
-            .left_outer_join(posts::table)
-            .filter(hair_color.eq("black"));
+        let target = users.left_outer_join(posts::table);
         target.load::<(User, Option<Post>)>(conn).unwrap()
     })
 }
