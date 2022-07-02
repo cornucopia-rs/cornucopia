@@ -193,12 +193,29 @@ const KEYWORD: [&str; 52] = [
     "union", "unsafe", "unsized", "use", "virtual", "where", "while", "yield",
 ];
 
-fn reserved_keyword(info: &ModuleInfo, s: &Span<String>) -> Result<(), Error> {
+fn reserved_type_keyword(info: &ModuleInfo, s: &Span<String>) -> Result<(), Error> {
     if let Ok(it) = KEYWORD.binary_search(&s.value.as_str()) {
-        return Err(Error::RustKeyword {
+        return Err(Error::TypeRustKeyword {
             src: info.into(),
             name: KEYWORD[it],
             pos: s.span,
+        });
+    }
+    Ok(())
+}
+
+fn reserved_name_keyword(
+    info: &ModuleInfo,
+    name: &str,
+    pos: &SourceSpan,
+    ty: &'static str,
+) -> Result<(), Error> {
+    if let Ok(it) = KEYWORD.binary_search(&name) {
+        return Err(Error::NameRustKeyword {
+            src: info.into(),
+            name: KEYWORD[it],
+            pos: *pos,
+            ty,
         });
     }
     Ok(())
@@ -281,7 +298,7 @@ pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Error>
     };
 
     for (origin, query) in &module.queries {
-        reserved_keyword(&module.info, origin)?;
+        reserved_type_keyword(&module.info, origin)?;
         check_name(
             format!("{}Stmt", query.name.to_upper_camel_case()),
             origin.span,
@@ -289,9 +306,12 @@ pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Error>
         )?;
     }
     for (origin, row) in &module.rows {
-        reserved_keyword(&module.info, origin)?;
+        reserved_type_keyword(&module.info, origin)?;
         if row.is_named {
             check_name(row.name.value.clone(), origin.span, "row")?;
+            for field in &row.fields {
+                reserved_name_keyword(&module.info, &field.name, &origin.span, "row")?;
+            }
 
             if !row.is_copy {
                 check_name(format!("{}Borrowed", row.name), origin.span, "borrowed row")?;
@@ -300,9 +320,12 @@ pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Error>
         check_name(format!("{}Query", row.name), origin.span, "query")?;
     }
     for (origin, params) in &module.params {
-        reserved_keyword(&module.info, origin)?;
+        reserved_type_keyword(&module.info, origin)?;
         if params.is_named {
             check_name(params.name.value.clone(), origin.span, "params")?;
+            for field in &params.fields {
+                reserved_name_keyword(&module.info, &field.name, &origin.span, "param")?;
+            }
         }
     }
     Ok(())
@@ -446,11 +469,21 @@ pub mod error {
         },
         #[error("`{name}` is a reserved rust keyword")]
         #[diagnostic(help("use a different name"))]
-        RustKeyword {
+        TypeRustKeyword {
             #[source_code]
             src: NamedSource,
             name: &'static str,
             #[label("reserved rust keyword")]
+            pos: SourceSpan,
+        },
+        #[error("`{name}` is a reserved rust keyword")]
+        #[diagnostic(help("use a different name"))]
+        NameRustKeyword {
+            #[source_code]
+            src: NamedSource,
+            name: &'static str,
+            ty: &'static str,
+            #[label("from {ty} declared here")]
             pos: SourceSpan,
         },
     }
