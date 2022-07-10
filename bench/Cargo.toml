@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1.19.2", features = ["full"] }
 futures = "0.3.21"
-criterion = "0.3.5"
+criterion = "0.3.6"
 postgres = "0.19.3"
 tokio-postgres = "0.7.6"
 postgres-types = "0.2.3"

@@ -14,26 +14,6 @@ pub mod queries {
             pub name: &'a str,
             pub hair_color: Option<&'a str>,
         }
-        impl<'a, C: GenericClient>
-            cornucopia_client::async_::Params<
-                'a,
-                InsertUserStmt,
-                std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-                >,
-                C,
-            > for InsertUserParams<'a>
-        {
-            fn bind(
-                &'a self,
-                client: &'a C,
-                stmt: &'a mut InsertUserStmt,
-            ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
-            > {
-                Box::pin(stmt.bind(client, &self.name, &self.hair_color))
-            }
-        }
 
         #[derive(Debug, Clone, PartialEq)]
         pub struct User {
@@ -431,6 +411,26 @@ pub mod queries {
                 >,
             ) -> Result<u64, tokio_postgres::Error> {
                 params.bind(client, self).await
+            }
+        }
+        impl<'a, C: GenericClient>
+            cornucopia_client::async_::Params<
+                'a,
+                InsertUserStmt,
+                std::pin::Pin<
+                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
+                >,
+                C,
+            > for InsertUserParams<'a>
+        {
+            fn bind(
+                &'a self,
+                client: &'a C,
+                stmt: &'a mut InsertUserStmt,
+            ) -> std::pin::Pin<
+                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
+            > {
+                Box::pin(stmt.bind(client, &self.name, &self.hair_color))
             }
         }
         pub fn posts() -> PostsStmt {

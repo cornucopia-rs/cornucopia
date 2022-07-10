@@ -15,9 +15,9 @@ pub(crate) fn run_migrations(client: &mut Client, migrations: Vec<Migration>) ->
     // Install each migration that is not already installed.
     for migration in migrations {
         let migration_not_installed = !is_installed(client, migration.timestamp, &migration.name)
-            .map_err(|err| Error::new(err, migration.clone()))?;
+            .map_err(|err| Error::new(&err, migration.clone()))?;
         if migration_not_installed {
-            install_migration(client, &migration).map_err(|err| Error::new(err, migration))?;
+            install_migration(client, &migration).map_err(|err| Error::new(&err, migration))?;
         }
     }
     Ok(())
@@ -84,9 +84,9 @@ pub(crate) mod error {
     }
 
     impl Error {
-        pub(crate) fn new(err: postgres::Error, migration: Migration) -> Self {
+        pub(crate) fn new(err: &postgres::Error, migration: Migration) -> Self {
             let msg = format!("{:#}", err);
-            if let Some((position, msg, help)) = db_err(&err) {
+            if let Some((position, msg, help)) = db_err(err) {
                 Self {
                     msg,
                     help,
