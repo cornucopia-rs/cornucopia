@@ -56,7 +56,7 @@ pub fn generate_live(
 
 /// Generates your cornucopia queries residing in `queries_path` against a container
 /// managed by cornucopia. The database is created using the schema in the given
-/// `schema_maths` files.
+/// `schema_paths` files.
 /// If some `destination` is given, the generated code will be written at that path.
 pub fn generate_managed(
     queries_path: &str,
