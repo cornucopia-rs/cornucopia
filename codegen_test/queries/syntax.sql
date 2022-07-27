@@ -44,6 +44,8 @@ INSERT INTO syntax ("trick:y", price) VALUES (E'this is not a \':bind_param\'', 
 INSERT INTO syntax ("trick:y", price) VALUES (e'this is ''not'' a \':bind_param\'', :price);
 --! tricky_sql9
 INSERT INTO syntax ("trick:y", price) VALUES (E'this is \'not\' a \':bind_param\'', :price);
+--! tricky_sql10
+INSERT INTO syntax ("trick:y", price) VALUES ('this is just a cast'::text, :price);
 
 --! syntax
 SELECT * FROM syntax;
