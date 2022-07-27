@@ -217,7 +217,16 @@ fn run_codegen_test(
         let local_run = if let Some(run) = &suite.run {
             // Reset DB
             reset_db(client)?;
-            cornucopia::load_schema(client, vec![format!("../{}/migrations", run.path)])?;
+            let schema_path = format!("../{}/migrations", run.path);
+            let paths = if std::fs::metadata(&schema_path).unwrap().is_dir() {
+                std::fs::read_dir(&schema_path)
+                    .unwrap()
+                    .map(|it| it.unwrap().path().to_str().unwrap().to_string())
+                    .collect()
+            } else {
+                vec![schema_path.to_string()]
+            };
+            cornucopia::load_schema(client, paths)?;
             false
         } else {
             true
@@ -235,7 +244,15 @@ fn run_codegen_test(
             if local_run {
                 // Reset DB
                 reset_db(client)?;
-                cornucopia::load_schema(client, vec![schema_path.into()])?;
+                let paths = if std::fs::metadata(&schema_path).unwrap().is_dir() {
+                    std::fs::read_dir(&schema_path)
+                        .unwrap()
+                        .map(|it| it.unwrap().path().to_str().unwrap().to_string())
+                        .collect()
+                } else {
+                    vec![schema_path.to_string()]
+                };
+                cornucopia::load_schema(client, paths)?;
             };
 
             // If `--apply`, then the code will be regenerated.

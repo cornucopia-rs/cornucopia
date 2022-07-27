@@ -10,7 +10,7 @@ use cornucopia::queries::module_1::example_query;
 // like `include_str` if you wanted to.
 mod cornucopia;
 
-// Add more migrations and queries, rebuild the crate,
+// Add more schema files and queries, rebuild the crate,
 // and observe how your cornucopia modules are regenerated!
 #[tokio::main]
 async fn main() {

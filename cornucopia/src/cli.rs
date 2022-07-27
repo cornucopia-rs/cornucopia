@@ -34,8 +34,8 @@ enum Action {
     },
     /// Generate your modules against schema files
     Schema {
-        /// Paths containing the database schema (SQL files or directory of SQL files)
-        schema_paths: Vec<String>,
+        /// SQL files containing the database schema
+        schema_files: Vec<String>,
     },
 }
 
@@ -63,11 +63,11 @@ pub fn run() -> Result<(), Error> {
                 },
             )?;
         }
-        Action::Schema { schema_paths } => {
+        Action::Schema { schema_files } => {
             // Run the generate command. If the command is unsuccessful, cleanup Cornucopia's container
             if let Err(e) = generate_managed(
                 &queries_path,
-                schema_paths,
+                schema_files,
                 Some(&destination),
                 podman,
                 CodegenSettings {

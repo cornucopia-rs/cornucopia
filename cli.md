@@ -38,11 +38,10 @@ SUBCOMMANDS:
 Generate your modules against schema files
 
 USAGE:
-    cornucopia schema [SCHEMA_PATHS]...
+    cornucopia schema [SCHEMA_FILES]...
 
 ARGS:
-    <SCHEMA_PATHS>...    Paths containing the database schema (SQL files or directory of SQL
-                         files)
+    <SCHEMA_FILES>...    SQL files containing the database schema
 
 OPTIONS:
     -h, --help    Print help information

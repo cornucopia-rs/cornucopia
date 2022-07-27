@@ -55,12 +55,11 @@ pub fn generate_live(
 }
 
 /// Generates your cornucopia queries residing in `queries_path` against a container
-/// managed by cornucopia. The database is created using the schema in the given
-/// `schema_paths` files.
+/// managed by cornucopia. The database is created using`schema_files`.
 /// If some `destination` is given, the generated code will be written at that path.
 pub fn generate_managed(
     queries_path: &str,
-    schema_paths: Vec<String>,
+    schema_files: Vec<String>,
     destination: Option<&str>,
     podman: bool,
     settings: CodegenSettings,
@@ -72,7 +71,7 @@ pub fn generate_managed(
         .collect::<Result<_, parser::error::Error>>()?;
     container::setup(podman)?;
     let mut client = conn::cornucopia_conn()?;
-    load_schema(&mut client, schema_paths)?;
+    load_schema(&mut client, schema_files)?;
     let prepared_modules = prepare(&mut client, modules)?;
     let generated_code = generate_internal(prepared_modules, settings);
     container::cleanup(podman)?;
