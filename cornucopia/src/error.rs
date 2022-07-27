@@ -11,7 +11,7 @@ pub enum Error {
     ValidateQueries(#[from] crate::validation::error::Error),
     Container(#[from] crate::container::error::Error),
     PrepareQueries(#[from] crate::prepare_queries::error::Error),
-    ReadMigration(#[from] crate::read_schema::error::Error),
+    LoadSchema(#[from] crate::load_schema::error::Error),
     WriteCodeGenFile(#[from] WriteOutputError),
 }
 

@@ -1,10 +1,10 @@
 mod cli;
 mod codegen;
 mod error;
+mod load_schema;
 mod parser;
 mod prepare_queries;
 mod read_queries;
-mod read_schema;
 mod type_registrar;
 mod utils;
 mod validation;
@@ -22,7 +22,7 @@ use read_queries::read_query_modules;
 
 pub use cli::run;
 pub use error::Error;
-pub use read_schema::read_schemas;
+pub use load_schema::load_schema;
 
 #[derive(Clone, Copy)]
 pub struct CodegenSettings {
@@ -72,7 +72,7 @@ pub fn generate_managed(
         .collect::<Result<_, parser::error::Error>>()?;
     container::setup(podman)?;
     let mut client = conn::cornucopia_conn()?;
-    read_schemas(&mut client, schema_paths)?;
+    load_schema(&mut client, schema_paths)?;
     let prepared_modules = prepare(&mut client, modules)?;
     let generated_code = generate_internal(prepared_modules, settings);
     container::cleanup(podman)?;

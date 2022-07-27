@@ -154,7 +154,7 @@ fn run_errors_test(
 
             // Run codegen
             let result: Result<(), cornucopia::Error> = (|| {
-                cornucopia::read_schemas(client, vec!["schema.sql".into()])?;
+                cornucopia::load_schema(client, vec!["schema.sql".into()])?;
                 cornucopia::generate_live(
                     client,
                     "queries",
@@ -217,7 +217,7 @@ fn run_codegen_test(
         let local_run = if let Some(run) = &suite.run {
             // Reset DB
             reset_db(client)?;
-            cornucopia::read_schemas(client, vec![format!("../{}/migrations", run.path)])?;
+            cornucopia::load_schema(client, vec![format!("../{}/migrations", run.path)])?;
             false
         } else {
             true
@@ -235,7 +235,7 @@ fn run_codegen_test(
             if local_run {
                 // Reset DB
                 reset_db(client)?;
-                cornucopia::read_schemas(client, vec![schema_path.into()])?;
+                cornucopia::load_schema(client, vec![schema_path.into()])?;
             };
 
             // If `--apply`, then the code will be regenerated.
