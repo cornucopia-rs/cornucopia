@@ -71,7 +71,7 @@ pub(crate) fn read_query_modules(dir_path: &str) -> Result<Vec<ModuleInfo>, Erro
 pub(crate) mod error {
     use miette::Diagnostic;
     use thiserror::Error as ThisError;
-
+    
     #[derive(Debug, ThisError, Diagnostic)]
     #[error("[{path}] : {err:#}")]
     pub struct Error {

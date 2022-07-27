@@ -9,7 +9,9 @@ mod type_registrar;
 mod utils;
 mod validation;
 
+/// Helpers to establish connections to database instances.
 pub mod conn;
+/// High-level interfaces to work with Cornucopia's container manager.
 pub mod container;
 
 use postgres::Client;
@@ -24,6 +26,7 @@ pub use cli::run;
 pub use error::Error;
 pub use load_schema::load_schema;
 
+/// Struct containing the settings for code generation.
 #[derive(Clone, Copy)]
 pub struct CodegenSettings {
     pub is_async: bool,
