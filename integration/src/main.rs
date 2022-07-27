@@ -31,9 +31,8 @@ struct ErrorTestSuite<'a> {
 struct ErrorTest<'a> {
     name: &'a str,
     query: Option<&'a str>,
-    migration: Option<&'a str>,
+    schema: Option<&'a str>,
     query_name: Option<&'a str>,
-    migration_name: Option<&'a str>,
     error: Cow<'a, str>,
 }
 
@@ -50,7 +49,7 @@ struct CodegenTest<'a> {
     name: &'a str,
     base_path: &'a str,
     queries: Option<&'a str>,
-    migrations: Option<&'a str>,
+    schema: Option<&'a str>,
     destination: Option<&'a str>,
     sync: Option<bool>,
     derive_ser: Option<bool>,
@@ -103,8 +102,8 @@ fn reset_db(client: &mut postgres::Client) -> Result<(), postgres::Error> {
     client.batch_execute("DROP SCHEMA public CASCADE;CREATE SCHEMA public;")
 }
 
-// Common migration to all error tests
-const MIGRATION_BASE: &str = "CREATE TABLE author (id SERIAL, name TEXT);";
+// Common schema to all error tests
+const SCHEMA_BASE: &str = "CREATE TABLE author (id SERIAL, name TEXT);\n";
 
 /// Run errors test, return true if all test are successful
 fn run_errors_test(
@@ -142,24 +141,20 @@ fn run_errors_test(
             // We need to change current dir for error path to always be the same
             std::env::set_current_dir(&temp_dir)?;
 
-            // Generate migrations files
-            std::fs::create_dir("migrations")?;
-            std::fs::write("migrations/1653210840_base.sql", MIGRATION_BASE)?;
-            let name = test.migration_name.unwrap_or("1653210840_test.sql");
+            // Generate schema
             std::fs::write(
-                &format!("migrations/{name}"),
-                test.migration.unwrap_or_default(),
+                "schema.sql",
+                [SCHEMA_BASE, test.schema.unwrap_or_default()].concat(),
             )?;
 
-            // generate queries files
+            // Generate queries files
             std::fs::create_dir("queries")?;
             let name = test.query_name.unwrap_or("test.sql");
             std::fs::write(&format!("queries/{name}"), test.query.unwrap_or_default())?;
 
             // Run codegen
             let result: Result<(), cornucopia::Error> = (|| {
-                let migrations = cornucopia::read_migrations("migrations")?;
-                cornucopia::run_migrations(client, migrations)?;
+                cornucopia::read_schemas(client, vec!["schema.sql".into()])?;
                 cornucopia::generate_live(
                     client,
                     "queries",
@@ -218,12 +213,11 @@ fn run_codegen_test(
 
         let suite: CodegenTestSuite = toml::from_str(&content)?;
 
-        // If we're doing a global run of this codegen, only run the migrations once
+        // If we're doing a global run of this codegen, only read schema once
         let local_run = if let Some(run) = &suite.run {
-            std::env::set_current_dir(format!("../{}", run.path))?;
-            let migrations = cornucopia::read_migrations("migrations")?;
-            cornucopia::run_migrations(client, migrations)?;
-            std::env::set_current_dir(&original_pwd)?;
+            // Reset DB
+            reset_db(client)?;
+            cornucopia::read_schemas(client, vec![format!("../{}/migrations", run.path)])?;
             false
         } else {
             true
@@ -232,15 +226,16 @@ fn run_codegen_test(
         for codegen_test in suite.codegen {
             std::env::set_current_dir(format!("../{}", codegen_test.base_path))?;
             let queries_path = codegen_test.queries.unwrap_or("queries");
-            let migrations_path = codegen_test.migrations.unwrap_or("migrations");
-            let migrations = cornucopia::read_migrations(migrations_path)?;
+            let schema_path = codegen_test.schema.unwrap_or("migrations");
             let destination = codegen_test.destination.unwrap_or("src/cornucopia.rs");
             let is_async = !codegen_test.sync.unwrap_or(false);
             let derive_ser = codegen_test.derive_ser.unwrap_or(false);
 
-            // If we're doing a global run of this codegen, only run the migrations once
+            // If we're doing a global run of this codegen, only read schema once
             if local_run {
-                cornucopia::run_migrations(client, migrations)?;
+                // Reset DB
+                reset_db(client)?;
+                cornucopia::read_schemas(client, vec![schema_path.into()])?;
             };
 
             // If `--apply`, then the code will be regenerated.
@@ -313,9 +308,6 @@ fn run_codegen_test(
                             .bright_black()
                     );
                 }
-
-                // Reset DB
-                reset_db(client)?;
             }
 
             // Move back to original directory
