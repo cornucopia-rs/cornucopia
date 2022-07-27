@@ -13,7 +13,7 @@ postgres = "0.19.3"
 tokio-postgres = "0.7.6"
 postgres-types = "0.2.3"
 cornucopia = { path = "../cornucopia" }
-cornucopia_client = { path = "../cornucopia_client" }
+cornucopia_client = { path = "../cornucopia_client", features = ["sync"] }
 diesel = { version = "2.0.0-rc.0", features = ["postgres"] }
 
 [[bench]]
