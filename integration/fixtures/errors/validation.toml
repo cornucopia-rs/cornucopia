@@ -337,3 +337,19 @@ error = '''
  2 │ SELECT * FROM author;
    ╰────
   help: use a different name'''
+
+[[test]]
+name = 'NameReserved'
+query = '''
+--! select
+SELECT id, name as trait FROM author;
+'''
+error = '''
+× `trait` is a reserved rust keyword
+   ╭─[queries/test.sql:1:1]
+ 1 │ --! select
+   ·     ───┬──
+   ·        ╰── from row declared here
+ 2 │ SELECT id, name as trait FROM author;
+   ╰────
+  help: use a different name'''

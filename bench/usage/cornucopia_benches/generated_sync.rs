@@ -12,18 +12,6 @@ pub mod queries {
             pub name: &'a str,
             pub hair_color: Option<&'a str>,
         }
-        impl<'a, C: GenericClient>
-            cornucopia_client::sync::Params<'a, InsertUserStmt, Result<u64, postgres::Error>, C>
-            for InsertUserParams<'a>
-        {
-            fn bind(
-                &'a self,
-                client: &'a mut C,
-                stmt: &'a mut InsertUserStmt,
-            ) -> Result<u64, postgres::Error> {
-                stmt.bind(client, &self.name, &self.hair_color)
-            }
-        }
 
         #[derive(Debug, Clone, PartialEq)]
         pub struct User {
@@ -403,6 +391,18 @@ pub mod queries {
                 >,
             ) -> Result<u64, postgres::Error> {
                 params.bind(client, self)
+            }
+        }
+        impl<'a, C: GenericClient>
+            cornucopia_client::sync::Params<'a, InsertUserStmt, Result<u64, postgres::Error>, C>
+            for InsertUserParams<'a>
+        {
+            fn bind(
+                &'a self,
+                client: &'a mut C,
+                stmt: &'a mut InsertUserStmt,
+            ) -> Result<u64, postgres::Error> {
+                stmt.bind(client, &self.name, &self.hair_color)
             }
         }
         pub fn posts() -> PostsStmt {
