@@ -143,6 +143,8 @@ impl Query {
     fn sql_escaping() -> impl Parser<char, (), Error = Simple<char>> {
         // https://www.postgresql.org/docs/current/sql-syntax-lexical.html
 
+        // ::bind
+        let cast = just("::").ignored();
         // ":bind" TODO is this possible ?
         let constant = none_of("\"")
             .repeated()
@@ -169,6 +171,7 @@ impl Query {
             .ignored();
 
         c_style_string
+            .or(cast)
             .or(string)
             .or(constant)
             .or(dollar_quoted)
