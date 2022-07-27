@@ -4470,6 +4470,22 @@ pub mod queries {
                 client.execute(stmt, &[price]).await
             }
         }
+        pub fn tricky_sql10() -> TrickySql10Stmt {
+            TrickySql10Stmt(cornucopia_client::async_::Stmt::new(
+                "INSERT INTO syntax (\"trick:y\", price) VALUES ('this is just a cast'::text, $1)",
+            ))
+        }
+        pub struct TrickySql10Stmt(cornucopia_client::async_::Stmt);
+        impl TrickySql10Stmt {
+            pub async fn bind<'a, C: GenericClient>(
+                &'a mut self,
+                client: &'a C,
+                price: &'a f64,
+            ) -> Result<u64, tokio_postgres::Error> {
+                let stmt = self.0.prepare(client).await?;
+                client.execute(stmt, &[price]).await
+            }
+        }
         pub fn syntax() -> SyntaxStmt {
             SyntaxStmt(cornucopia_client::async_::Stmt::new("SELECT * FROM syntax"))
         }
