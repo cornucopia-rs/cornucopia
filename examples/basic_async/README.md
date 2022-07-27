@@ -11,11 +11,11 @@ In `src/main.rs` you can see the queries in action, as you would use them in you
 If you want to be able to run this example, you should
 * Have a reachable postgres database up-and-running (container or otherwise).
 * Modify the connection pool config (user, password, etc.) in `main.rs` so that it can connect to your database.
-* Run the migrations (with `cornucopia migration run` or otherwise).
+* Run the migrations
 * That's it! You should now be able to run the example.
 
 ## Start experimenting
-Feel free to modify the migrations, or add new ones with `cornucopia migration new`. You can also add or modify queries with your favorite SQL tool (no special command needed). **When you're done modifying, rebuild the Rust modules for your SQL with `cornucopia generation`. This will recreate the `src/cornucopia.rs` file.**
+You can add or modify queries with your favorite SQL tool (no special command needed). **When you're done modifying, rebuild the Rust modules for your SQL with `cornucopia live`. This will recreate the `src/cornucopia.rs` file.**
 
 ## Going deeper
 If you want to know more, the [project's readme](../../README.md) explains pretty much everything there is to know about Cornucopia. The CLI's `--help` flag is also handy.

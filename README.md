@@ -138,12 +138,8 @@ This section explain a bit more about how Cornucopia works. If you just want to 
 
 Cornucopia is pretty simple to use. In the next sections, we'll explore the basic usage, but feel free to look the CLI's whole interface using the `--help` option at any point. For convenience, the CLI's [reference document](cli.md) is also available in this repository.
 
-### Migrations
-The basic `cornucopia generate` command creates a new container, runs your migrations, generates your queries and cleanups the container. If you want to manage the database and migrations yourself, use the `cornucopia generate live` command to connect to an arbitrary live database. Keep in mind that your queries must still be otherwise compatible with Cornucopia (e.g. with regards to [supported types](#supported-types) and [annotation syntax](#query-annotation-syntax)).
-
-New migrations can be added using the command `cornucopia migration new`. 
-
-Finally, as a convenience, you can use `cornucopia migration run` to run migrations on your database too if you so desire. This feature worksfor simple cases, but is not yet thoroughly tested and it's advisable that you use a more robust migration system.
+### Schema
+The basic `cornucopia schema` command creates a new container, runs your schema, generates your queries and cleanups the container. If you want to manage the database and schema yourself, use the `cornucopia live` command to connect to an arbitrary live database. Keep in mind that your queries must still be otherwise compatible with Cornucopia (e.g. with regards to [supported types](#supported-types) and [annotation syntax](#query-annotation-syntax)).
 
 ### Queries
 
