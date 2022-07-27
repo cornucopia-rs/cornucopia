@@ -22,7 +22,9 @@ use parser::parse_query_module;
 use prepare_queries::prepare;
 use read_queries::read_query_modules;
 
+#[doc(hidden)]
 pub use cli::run;
+
 pub use error::Error;
 pub use load_schema::load_schema;
 
