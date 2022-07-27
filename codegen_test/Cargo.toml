@@ -18,7 +18,7 @@ tokio-postgres = { version = "0.7.6", features = [
     "with-uuid-1",
     "with-eui48-1",
 ] }
-cornucopia_client = { path = "../cornucopia_client" }
+cornucopia_client = { path = "../cornucopia_client", features = ["sync"] }
 postgres-types = { version = "0.2.3", features = ["derive"] }
 serde = { version = "1.0.138", features = ["derive"] }
 serde_json = { version = "1.0.82", features = ["raw_value"] }
