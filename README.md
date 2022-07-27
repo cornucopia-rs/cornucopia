@@ -69,7 +69,6 @@ Cornucopia aims to get out of your way, **transpiling your PostgreSQL queries to
 * Ergonomic type mapping.
 * One-dimensional array types.
 * Granular nullity control.
-* Optional migration management.
 * Build your queries against your own live database, or let Cornucopia manage that for you.
 * Use the connection type that you want (pooled or not, transaction or not). You can mix and match them freely.
 * Compatible with build scripts to generate whenever your SQL changes.
@@ -146,7 +145,7 @@ The basic `cornucopia schema` command creates a new container, runs your schema,
 Each `.sql` file in your queries directory will be converted into a Rust module containing your generated queries. Each query is actually prepared against your database, ensuring as many errors as possible will be caught before production. The generated functions are fully typed, giving you insight into your SQL and pretty strong guards against runtime errors.
 
 ### Generated modules
-Assuming you have the following migration
+Assuming you have the following schema
 ```sql
 CREATE TABLE Author (
     Id SERIAL NOT NULL,

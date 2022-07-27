@@ -39,8 +39,6 @@ struct ErrorTest<'a> {
 #[derive(serde::Deserialize)]
 struct CodegenTestSuite<'a> {
     #[serde(borrow)]
-    run: Option<Run<'a>>,
-    #[serde(borrow)]
     codegen: Vec<CodegenTest<'a>>,
 }
 
@@ -49,16 +47,17 @@ struct CodegenTest<'a> {
     name: &'a str,
     base_path: &'a str,
     queries: Option<&'a str>,
-    schema: Option<&'a str>,
     destination: Option<&'a str>,
     sync: Option<bool>,
     derive_ser: Option<bool>,
-    run: Option<bool>,
+    run: Option<Run>,
 }
 
 #[derive(serde::Deserialize)]
-struct Run<'a> {
-    path: &'a str,
+#[serde(untagged)]
+enum Run {
+    Bool(bool),
+    Path(String),
 }
 
 fn main() -> ExitCode {
@@ -213,47 +212,17 @@ fn run_codegen_test(
 
         let suite: CodegenTestSuite = toml::from_str(&content)?;
 
-        // If we're doing a global run of this codegen, only read schema once
-        let local_run = if let Some(run) = &suite.run {
-            // Reset DB
-            reset_db(client)?;
-            let schema_path = format!("../{}/migrations", run.path);
-            let paths = if std::fs::metadata(&schema_path).unwrap().is_dir() {
-                std::fs::read_dir(&schema_path)
-                    .unwrap()
-                    .map(|it| it.unwrap().path().to_str().unwrap().to_string())
-                    .collect()
-            } else {
-                vec![schema_path.to_string()]
-            };
-            cornucopia::load_schema(client, paths)?;
-            false
-        } else {
-            true
-        };
-
         for codegen_test in suite.codegen {
             std::env::set_current_dir(format!("../{}", codegen_test.base_path))?;
             let queries_path = codegen_test.queries.unwrap_or("queries");
-            let schema_path = codegen_test.schema.unwrap_or("migrations");
+            let schema_path = "schema.sql";
             let destination = codegen_test.destination.unwrap_or("src/cornucopia.rs");
             let is_async = !codegen_test.sync.unwrap_or(false);
             let derive_ser = codegen_test.derive_ser.unwrap_or(false);
 
-            // If we're doing a global run of this codegen, only read schema once
-            if local_run {
-                // Reset DB
-                reset_db(client)?;
-                let paths = if std::fs::metadata(&schema_path).unwrap().is_dir() {
-                    std::fs::read_dir(&schema_path)
-                        .unwrap()
-                        .map(|it| it.unwrap().path().to_str().unwrap().to_string())
-                        .collect()
-                } else {
-                    vec![schema_path.to_string()]
-                };
-                cornucopia::load_schema(client, paths)?;
-            };
+            // Load schema
+            reset_db(client)?;
+            cornucopia::load_schema(client, vec![schema_path.to_string()])?;
 
             // If `--apply`, then the code will be regenerated.
             // Otherwise, it is only checked.
@@ -310,8 +279,17 @@ fn run_codegen_test(
             }
             println!("(generate) {} {}", codegen_test.name, "OK".green());
 
-            // Run the generated code if it is a local run.
-            if codegen_test.run.unwrap_or(false) && local_run {
+            // Run code
+            let run = match codegen_test.run.unwrap_or(Run::Bool(false)) {
+                Run::Bool(bool) => bool,
+                Run::Path(path) => {
+                    // Switch directory
+                    std::env::set_current_dir(&original_pwd)?;
+                    std::env::set_current_dir(&format!("../{}", path))?;
+                    true
+                }
+            };
+            if run {
                 let result = Command::new("cargo").arg("run").output()?;
                 if result.status.success() {
                     println!("(run) {} {}", codegen_test.name, "OK".green());
@@ -328,25 +306,6 @@ fn run_codegen_test(
             }
 
             // Move back to original directory
-            std::env::set_current_dir(&original_pwd)?;
-        }
-
-        if let Some(global_run) = &suite.run {
-            std::env::set_current_dir(&format!("../{}", global_run.path))?;
-            let result = Command::new("cargo").arg("run").output()?;
-            if result.status.success() {
-                println!("(run) {}", "OK".green());
-            } else {
-                successful = false;
-                println!(
-                    " {}\n{}",
-                    "ERR".red(),
-                    String::from_utf8_lossy(&result.stderr)
-                        .as_ref()
-                        .bright_black()
-                );
-            }
-            reset_db(client)?;
             std::env::set_current_dir(&original_pwd)?;
         }
     }

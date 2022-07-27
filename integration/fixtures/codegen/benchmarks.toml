@@ -2,11 +2,9 @@
 name = "Sync"
 base_path = "bench/usage/cornucopia_benches"
 destination = "generated_sync.rs"
-schema = "schema.sql"
 sync = true
 
 [[codegen]]
 name = "Async"
 base_path = "bench/usage/cornucopia_benches"
 destination = "generated_async.rs"
-schema = "schema.sql"
