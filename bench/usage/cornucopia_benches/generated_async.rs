@@ -399,12 +399,16 @@ pub mod queries {
                 client.execute(stmt, &[name, hair_color]).await
             }
         }
-        impl<'a, C: GenericClient>
+        impl<'a, C: GenericClient + Send + Sync>
             cornucopia_client::async_::Params<
                 'a,
                 InsertUserParams<'a>,
                 std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
+                    Box<
+                        dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>
+                            + Send
+                            + 'a,
+                    >,
                 >,
                 C,
             > for InsertUserStmt
@@ -414,7 +418,7 @@ pub mod queries {
                 client: &'a C,
                 params: &'a InsertUserParams<'a>,
             ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
+                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
             > {
                 Box::pin(self.bind(client, &params.name, &params.hair_color))
             }

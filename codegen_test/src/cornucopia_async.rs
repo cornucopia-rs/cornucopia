@@ -1304,12 +1304,16 @@ pub mod queries {
                     .await
             }
         }
-        impl<'a, C: GenericClient>
+        impl<'a, C: GenericClient + Send + Sync>
             cornucopia_client::async_::Params<
                 'a,
                 InsertNightmareDomainParams<'a>,
                 std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
+                    Box<
+                        dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>
+                            + Send
+                            + 'a,
+                    >,
                 >,
                 C,
             > for InsertNightmareDomainStmt
@@ -1319,7 +1323,7 @@ pub mod queries {
                 client: &'a C,
                 params: &'a InsertNightmareDomainParams<'a>,
             ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
+                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
             > {
                 Box::pin(self.bind(
                     client,
@@ -1713,12 +1717,16 @@ pub mod queries {
                 client.execute(stmt, &[named]).await
             }
         }
-        impl<'a, C: GenericClient>
+        impl<'a, C: GenericClient + Send + Sync>
             cornucopia_client::async_::Params<
                 'a,
                 NamedComplexParams<'a>,
                 std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
+                    Box<
+                        dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>
+                            + Send
+                            + 'a,
+                    >,
                 >,
                 C,
             > for NewNamedComplexStmt
@@ -1728,7 +1736,7 @@ pub mod queries {
                 client: &'a C,
                 params: &'a NamedComplexParams<'a>,
             ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
+                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
             > {
                 Box::pin(self.bind(client, &params.named))
             }
@@ -1870,12 +1878,16 @@ pub mod queries {
                 client.execute(stmt, &[texts, name, composite]).await
             }
         }
-        impl<'a, C: GenericClient>
+        impl<'a, C: GenericClient + Send + Sync>
             cornucopia_client::async_::Params<
                 'a,
                 NullityParams<'a>,
                 std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
+                    Box<
+                        dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>
+                            + Send
+                            + 'a,
+                    >,
                 >,
                 C,
             > for NewNullityStmt
@@ -1885,7 +1897,7 @@ pub mod queries {
                 client: &'a C,
                 params: &'a NullityParams<'a>,
             ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
+                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
             > {
                 Box::pin(self.bind(client, &params.texts, &params.name, &params.composite))
             }
@@ -2024,12 +2036,16 @@ pub mod queries {
                 client.execute(stmt, &[author, name]).await
             }
         }
-        impl<'a, C: GenericClient>
+        impl<'a, C: GenericClient + Send + Sync>
             cornucopia_client::async_::Params<
                 'a,
                 InsertBookParams<'a>,
                 std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
+                    Box<
+                        dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>
+                            + Send
+                            + 'a,
+                    >,
                 >,
                 C,
             > for InsertBookStmt
@@ -2039,7 +2055,7 @@ pub mod queries {
                 client: &'a C,
                 params: &'a InsertBookParams<'a>,
             ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
+                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
             > {
                 Box::pin(self.bind(client, &params.author, &params.name))
             }
@@ -2099,12 +2115,16 @@ pub mod queries {
                 client.execute(stmt, &[c, a]).await
             }
         }
-        impl<'a, C: GenericClient>
+        impl<'a, C: GenericClient + Send + Sync>
             cornucopia_client::async_::Params<
                 'a,
                 ParamsOrderParams,
                 std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
+                    Box<
+                        dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>
+                            + Send
+                            + 'a,
+                    >,
                 >,
                 C,
             > for ParamsOrderStmt
@@ -2114,7 +2134,7 @@ pub mod queries {
                 client: &'a C,
                 params: &'a ParamsOrderParams,
             ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
+                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
             > {
                 Box::pin(self.bind(client, &params.c, &params.a))
             }
@@ -3254,12 +3274,16 @@ pub mod queries {
                     .await
             }
         }
-        impl<'a, C: GenericClient>
+        impl<'a, C: GenericClient + Send + Sync>
             cornucopia_client::async_::Params<
                 'a,
                 EverythingParams<'a>,
                 std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
+                    Box<
+                        dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>
+                            + Send
+                            + 'a,
+                    >,
                 >,
                 C,
             > for InsertEverythingStmt
@@ -3269,7 +3293,7 @@ pub mod queries {
                 client: &'a C,
                 params: &'a EverythingParams<'a>,
             ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
+                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
             > {
                 Box::pin(self.bind(
                     client,
@@ -3480,12 +3504,16 @@ pub mod queries {
                     .await
             }
         }
-        impl<'a, C: GenericClient>
+        impl<'a, C: GenericClient + Send + Sync>
             cornucopia_client::async_::Params<
                 'a,
                 EverythingArrayParams<'a>,
                 std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
+                    Box<
+                        dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>
+                            + Send
+                            + 'a,
+                    >,
                 >,
                 C,
             > for InsertEverythingArrayStmt
@@ -3495,7 +3523,7 @@ pub mod queries {
                 client: &'a C,
                 params: &'a EverythingArrayParams<'a>,
             ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
+                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
             > {
                 Box::pin(self.bind(
                     client,

@@ -9,7 +9,7 @@ use tokio_postgres::{
 /// In addition, when the `deadpool` feature is enabled (default), this trait also
 /// abstracts over deadpool clients and transactions
 #[async_trait]
-pub trait GenericClient {
+pub trait GenericClient: Send + Sync {
     async fn prepare(&self, query: &str) -> Result<Statement, Error>;
     async fn execute<T>(
         &self,

@@ -491,19 +491,20 @@ fn gen_query_fn(
                 }}"
                 );
             } else {
-                let (pre_ty, post_ty_lf, pre, post) = if is_async {
+                let (send_sync, pre_ty, post_ty_lf, pre, post) = if is_async {
                     (
+                        "+ Send + Sync",
                         "std::pin::Pin<Box<dyn futures::Future<Output = ",
-                        "> + 'a>>",
+                        "> + Send + 'a>>",
                         "Box::pin(",
                         ")",
                     )
                 } else {
-                    ("", "", "", "")
+                    ("", "", "", "", "")
                 };
                 gen!(
                     w,
-                    "impl <'a, C: GenericClient> cornucopia_client::{mod_name}::Params<'a, {param_name}{lifetime}, {pre_ty}Result<u64, {backend}::Error>{post_ty_lf}, C> for {struct_name}Stmt  {{ 
+                    "impl <'a, C: GenericClient {send_sync}> cornucopia_client::{mod_name}::Params<'a, {param_name}{lifetime}, {pre_ty}Result<u64, {backend}::Error>{post_ty_lf}, C> for {struct_name}Stmt  {{ 
                         fn params(&'a mut self, client: &'a {client_mut} C, params: &'a {param_name}{lifetime}) -> {pre_ty}Result<u64, {backend}::Error>{post_ty_lf} {{
                             {pre}self.bind(client, {param_values}){post}
                         }}
