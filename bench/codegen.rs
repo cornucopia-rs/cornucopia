@@ -6,8 +6,7 @@ fn bench(c: &mut Criterion) {
     cornucopia::container::setup(false).unwrap();
     let client = &mut cornucopia_conn().unwrap();
 
-    let migrations = cornucopia::read_migrations("../codegen_test/migrations").unwrap();
-    cornucopia::run_migrations(client, migrations).unwrap();
+    cornucopia::load_schema(client, vec!["../codegen_test/schema.sql".into()]).unwrap();
     c.bench_function("codegen_sync", |b| {
         b.iter(|| {
             cornucopia::generate_live(

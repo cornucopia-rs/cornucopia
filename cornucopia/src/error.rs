@@ -11,9 +11,7 @@ pub enum Error {
     ValidateQueries(#[from] crate::validation::error::Error),
     Container(#[from] crate::container::error::Error),
     PrepareQueries(#[from] crate::prepare_queries::error::Error),
-    NewMigration(#[from] NewMigrationError),
-    RunMigration(#[from] crate::run_migrations::error::Error),
-    ReadMigration(#[from] crate::read_migrations::error::Error),
+    LoadSchema(#[from] crate::load_schema::error::Error),
     WriteCodeGenFile(#[from] WriteOutputError),
 }
 
@@ -32,13 +30,6 @@ impl Error {
 #[derive(Debug, ThisError, Diagnostic)]
 #[error("Could not write your queries to destination file `{file_path}`: ({err})")]
 pub struct WriteOutputError {
-    pub(crate) file_path: String,
-    pub(crate) err: std::io::Error,
-}
-
-#[derive(Debug, ThisError, Diagnostic)]
-#[error("Could not create new migration `{file_path}`: ({err})")]
-pub struct NewMigrationError {
     pub(crate) file_path: String,
     pub(crate) err: std::io::Error,
 }

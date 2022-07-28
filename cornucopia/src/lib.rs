@@ -1,11 +1,10 @@
 mod cli;
 mod codegen;
 mod error;
+mod load_schema;
 mod parser;
 mod prepare_queries;
-mod read_migrations;
 mod read_queries;
-mod run_migrations;
 mod type_registrar;
 mod utils;
 mod validation;
@@ -13,50 +12,17 @@ mod validation;
 pub mod conn;
 pub mod container;
 
-use std::{
-    path::Path,
-    time::{SystemTime, UNIX_EPOCH},
-};
-
 use postgres::Client;
 
 use codegen::generate as generate_internal;
-use error::{NewMigrationError, WriteOutputError};
+use error::WriteOutputError;
 use parser::parse_query_module;
 use prepare_queries::prepare;
 use read_queries::read_query_modules;
-use run_migrations::run_migrations as run_migrations_internal;
 
 pub use cli::run;
 pub use error::Error;
-pub use read_migrations::{read_migrations, Migration};
-
-/// Runs the migrations at `migrations_path`.
-pub fn run_migrations(client: &mut Client, migrations: Vec<Migration>) -> Result<(), Error> {
-    Ok(crate::run_migrations::run_migrations(client, migrations)?)
-}
-
-/// Creates a new migration file at the specified `migrations_path`.
-/// The full name of the migration will correspond to `timestamp`_`name`.sql
-/// where `timestamp is the unix time when the migration was created.`
-pub fn new_migration(migrations_path: &str, name: &str) -> Result<(), Error> {
-    // Create a timestamp of the current time.
-    let unix_ts = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-    // Format the target file name
-    let file_path = Path::new(&migrations_path).join(format!("{}_{}.sql", unix_ts, name));
-    // Write file with header
-    Ok(
-        std::fs::write(&file_path, "-- Write your migration SQL here\n").map_err(|err| {
-            NewMigrationError {
-                err,
-                file_path: file_path.to_string_lossy().to_string(),
-            }
-        })?,
-    )
-}
+pub use load_schema::load_schema;
 
 #[derive(Clone, Copy)]
 pub struct CodegenSettings {
@@ -89,12 +55,11 @@ pub fn generate_live(
 }
 
 /// Generates your cornucopia queries residing in `queries_path` against a container
-/// managed by cornucopia. The database is created using the migrations in the given
-/// `migrations_path` folder.
+/// managed by cornucopia. The database is created using`schema_files`.
 /// If some `destination` is given, the generated code will be written at that path.
 pub fn generate_managed(
     queries_path: &str,
-    migrations_path: &str,
+    schema_files: Vec<String>,
     destination: Option<&str>,
     podman: bool,
     settings: CodegenSettings,
@@ -106,8 +71,7 @@ pub fn generate_managed(
         .collect::<Result<_, parser::error::Error>>()?;
     container::setup(podman)?;
     let mut client = conn::cornucopia_conn()?;
-    let migrations = read_migrations(migrations_path)?;
-    run_migrations_internal(&mut client, migrations)?;
+    load_schema(&mut client, schema_files)?;
     let prepared_modules = prepare(&mut client, modules)?;
     let generated_code = generate_internal(prepared_modules, settings);
     container::cleanup(podman)?;
