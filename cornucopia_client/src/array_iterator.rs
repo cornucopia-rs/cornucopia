@@ -5,7 +5,7 @@ use std::{fmt::Debug, marker::PhantomData};
 
 use crate::private::escape_domain;
 
-/// Iterator over a PostgreSQL array. You only need this if you are
+/// Iterator over the items in a PostgreSQL array. You only need this if you are
 /// working with custom zero-cost type mapping of rows containing PostgreSQL arrays.
 pub struct ArrayIterator<'a, T: FromSql<'a>> {
     values: ArrayValues<'a>,
