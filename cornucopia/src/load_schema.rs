@@ -5,8 +5,8 @@ use crate::utils::db_err;
 
 use self::error::Error;
 
-/// Loads PostgreSQL schemas into a database. 
-/// 
+/// Loads PostgreSQL schemas into a database.
+///
 /// Takes a list of file paths as parameter and loads them in their given order.
 pub fn load_schema(client: &mut Client, paths: Vec<String>) -> Result<(), Error> {
     for path in paths {

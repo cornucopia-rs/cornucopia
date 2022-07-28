@@ -35,8 +35,8 @@ pub struct CodegenSettings {
     pub derive_ser: bool,
 }
 
-/// Generates Rust queries from PostgreSQL queries located at `queries_path`, 
-/// using a live database managed by you. If some `destination` is given, 
+/// Generates Rust queries from PostgreSQL queries located at `queries_path`,
+/// using a live database managed by you. If some `destination` is given,
 /// the generated code will be written at that path. Code generation settings are
 /// set using the `settings` parameter.
 pub fn generate_live(
@@ -61,11 +61,11 @@ pub fn generate_live(
     Ok(generated_code)
 }
 
-/// Generates Rust queries from PostgreSQL queries located at `queries_path`, using 
+/// Generates Rust queries from PostgreSQL queries located at `queries_path`, using
 /// a container managed by cornucopia. The database schema is created using `schema_files`.
 /// If some `destination` is given, the generated code will be written at that path.
 /// Code generation settings are set using the `settings` parameter.
-/// 
+///
 /// By default, the container manager is Docker, but Podman can be used by setting the
 /// `podman` parameter to `true`.
 pub fn generate_managed(
