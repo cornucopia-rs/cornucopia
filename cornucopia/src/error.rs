@@ -1,17 +1,26 @@
 use miette::{Diagnostic, GraphicalReportHandler, GraphicalTheme};
 use thiserror::Error as ThisError;
 
+/// Enumeration of all the errors reported by Cornucopia.
 #[derive(Debug, ThisError, Diagnostic)]
 #[error(transparent)]
 #[diagnostic(transparent)]
 pub enum Error {
+    /// An error while trying to connect to a database.
     Connection(#[from] crate::conn::error::Error),
+    /// An error while trying to read PostgreSQL query files.
     ReadQueries(#[from] crate::read_queries::error::Error),
+    /// An error while trying to parse PostgreSQL query files.
     ParseQueries(#[from] crate::parser::error::Error),
+    /// An error while trying to validate PostgreSQL query files.
     ValidateQueries(#[from] crate::validation::error::Error),
+    /// An error while manipulating a container managed by Cornucopia.
     Container(#[from] crate::container::error::Error),
+    /// An error while trying to prepare PostgreSQL queries.
     PrepareQueries(#[from] crate::prepare_queries::error::Error),
+    /// An error while reading PostgreSQL schema files.
     LoadSchema(#[from] crate::load_schema::error::Error),
+    /// An error while trying to write the generated code to its destination file.
     WriteCodeGenFile(#[from] WriteOutputError),
 }
 

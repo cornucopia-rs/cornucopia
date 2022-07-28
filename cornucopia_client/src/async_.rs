@@ -3,6 +3,11 @@ use tokio_postgres::{
     types::BorrowToSql, Client, Error, RowStream, Statement, ToStatement, Transaction,
 };
 
+/// Abstraction over multiple types of asynchronous clients.
+/// This allows you to use tokio_postgres clients and transactions interchangeably.
+///
+/// In addition, when the `deadpool` feature is enabled (default), this trait also
+/// abstracts over deadpool clients and transactions
 #[async_trait]
 pub trait GenericClient {
     async fn prepare(&self, query: &str) -> Result<Statement, Error>;

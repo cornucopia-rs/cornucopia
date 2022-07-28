@@ -9,7 +9,9 @@ mod type_registrar;
 mod utils;
 mod validation;
 
+/// Helpers to establish connections to database instances.
 pub mod conn;
+/// High-level interfaces to work with Cornucopia's container manager.
 pub mod container;
 
 use postgres::Client;
@@ -20,18 +22,23 @@ use parser::parse_query_module;
 use prepare_queries::prepare;
 use read_queries::read_query_modules;
 
+#[doc(hidden)]
 pub use cli::run;
+
 pub use error::Error;
 pub use load_schema::load_schema;
 
+/// Struct containing the settings for code generation.
 #[derive(Clone, Copy)]
 pub struct CodegenSettings {
     pub is_async: bool,
     pub derive_ser: bool,
 }
 
-/// Generates your cornucopia queries residing in `queries_path`.
-/// If some `destination` is given, the generated code will be written at that path.
+/// Generates Rust queries from PostgreSQL queries located at `queries_path`,
+/// using a live database managed by you. If some `destination` is given,
+/// the generated code will be written at that path. Code generation settings are
+/// set using the `settings` parameter.
 pub fn generate_live(
     client: &mut Client,
     queries_path: &str,
@@ -54,9 +61,13 @@ pub fn generate_live(
     Ok(generated_code)
 }
 
-/// Generates your cornucopia queries residing in `queries_path` against a container
-/// managed by cornucopia. The database is created using`schema_files`.
+/// Generates Rust queries from PostgreSQL queries located at `queries_path`, using
+/// a container managed by cornucopia. The database schema is created using `schema_files`.
 /// If some `destination` is given, the generated code will be written at that path.
+/// Code generation settings are set using the `settings` parameter.
+///
+/// By default, the container manager is Docker, but Podman can be used by setting the
+/// `podman` parameter to `true`.
 pub fn generate_managed(
     queries_path: &str,
     schema_files: Vec<String>,
