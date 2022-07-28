@@ -449,7 +449,8 @@ fn gen_query_fn(
                     extractor: |row| {{ {extractor} }},
                     mapper: |it| {{ {mapper} }},
                 }}
-            }}",
+            }}
+        }}",
         );
     } else {
         // Execute fn
@@ -460,7 +461,8 @@ fn gen_query_fn(
             "pub {fn_async} fn bind<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, {param_list}) -> Result<u64, {backend}::Error> {{
                 let stmt = self.0.prepare(client){fn_await}?;
                 client.execute(stmt, &[{param_names}]){fn_await}
-            }}"
+            }}
+        }}"
         );
     }
 
@@ -468,7 +470,7 @@ fn gen_query_fn(
     if let Some(param) = param {
         if param.is_named {
             let param_values = join_comma(order.iter().map(|idx| &param_field[*idx]), |w, p| {
-                gen!(w, "&self.{}", p.name);
+                gen!(w, "&params.{}", p.name);
             });
             let param_name = &param.name;
             let lifetime = if param.is_copy { "" } else { "<'a>" };
@@ -482,42 +484,35 @@ fn gen_query_fn(
                 };
                 let name = &module.rows.get_index(*idx).unwrap().1.name;
                 let nb_params = param_field.len();
-                gen!(w,"pub fn params<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, params: &'a impl cornucopia_client::{mod_name}::Params<'a, Self, {name}Query<'a,C, {query_row_struct}, {nb_params}>, C>) -> {name}Query<'a,C, {query_row_struct}, {nb_params}> {{
-                        params.bind(client, self)
+                gen!(w,"impl <'a, C: GenericClient> cornucopia_client::{mod_name}::Params<'a, {param_name}{lifetime}, {name}Query<'a, C, {query_row_struct}, {nb_params}>, C> for {struct_name}Stmt  {{ 
+                    fn params(&'a mut self, client: &'a {client_mut} C, params: &'a {param_name}{lifetime}) -> {name}Query<'a, C, {query_row_struct}, {nb_params}> {{
+                        self.bind(client, {param_values})
                     }}
-                }}
-                impl <'a, C: GenericClient> cornucopia_client::{mod_name}::Params<'a, {struct_name}Stmt, {name}Query<'a, C, {query_row_struct}, {nb_params}>, C> for {param_name}{lifetime}  {{ 
-                    fn bind(&'a self, client: &'a {client_mut} C, stmt: &'a mut {struct_name}Stmt) -> {name}Query<'a, C, {query_row_struct}, {nb_params}> {{
-                        stmt.bind(client, {param_values})
-                    }}"
+                }}"
                 );
             } else {
-                let (pre_ty, post_ty, post_ty_lf, pre, post) = if is_async {
+                let (pre_ty, post_ty_lf, pre, post) = if is_async {
                     (
                         "std::pin::Pin<Box<dyn futures::Future<Output = ",
-                        ">>>",
                         "> + 'a>>",
                         "Box::pin(",
                         ")",
                     )
                 } else {
-                    ("", "", "", "", "")
+                    ("", "", "", "")
                 };
                 gen!(
                     w,
-                    "pub {fn_async} fn params<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, params: &'a impl cornucopia_client::{mod_name}::Params<'a, Self, {pre_ty}Result<u64, {backend}::Error>{post_ty}, C>) -> Result<u64, {backend}::Error> {{
-                        params.bind(client, self){fn_await}
-                    }}}}impl <'a, C: GenericClient> cornucopia_client::{mod_name}::Params<'a, {struct_name}Stmt, {pre_ty}Result<u64, {backend}::Error>{post_ty_lf}, C> for {param_name}{lifetime}  {{ 
-                        fn bind(&'a self, client: &'a {client_mut} C, stmt: &'a mut {struct_name}Stmt) -> {pre_ty}Result<u64, {backend}::Error>{post_ty_lf} {{
-                            {pre}stmt.bind(client, {param_values}){post}
+                    "impl <'a, C: GenericClient> cornucopia_client::{mod_name}::Params<'a, {param_name}{lifetime}, {pre_ty}Result<u64, {backend}::Error>{post_ty_lf}, C> for {struct_name}Stmt  {{ 
+                        fn params(&'a mut self, client: &'a {client_mut} C, params: &'a {param_name}{lifetime}) -> {pre_ty}Result<u64, {backend}::Error>{post_ty_lf} {{
+                            {pre}self.bind(client, {param_values}){post}
                         }}
+                    }}
                     "
                 );
             }
         }
     }
-
-    gen!(w, "}}");
 }
 
 /// Generates type definitions for custom user types. This includes domains, composites and enums.

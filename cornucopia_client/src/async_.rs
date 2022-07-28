@@ -198,6 +198,6 @@ impl Stmt {
     }
 }
 
-pub trait Params<'a, S, O, C> {
-    fn bind(&'a self, client: &'a C, stmt: &'a mut S) -> O;
+pub trait Params<'a, P, O, C> {
+    fn params(&'a mut self, client: &'a C, params: &'a P) -> O;
 }

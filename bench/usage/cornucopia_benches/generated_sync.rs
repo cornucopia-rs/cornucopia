@@ -380,31 +380,24 @@ pub mod queries {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[name, hair_color])
             }
-            pub fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-                params: &'a impl cornucopia_client::sync::Params<
-                    'a,
-                    Self,
-                    Result<u64, postgres::Error>,
-                    C,
-                >,
-            ) -> Result<u64, postgres::Error> {
-                params.bind(client, self)
-            }
         }
         impl<'a, C: GenericClient>
-            cornucopia_client::sync::Params<'a, InsertUserStmt, Result<u64, postgres::Error>, C>
-            for InsertUserParams<'a>
+            cornucopia_client::sync::Params<
+                'a,
+                InsertUserParams<'a>,
+                Result<u64, postgres::Error>,
+                C,
+            > for InsertUserStmt
         {
-            fn bind(
-                &'a self,
+            fn params(
+                &'a mut self,
                 client: &'a mut C,
-                stmt: &'a mut InsertUserStmt,
+                params: &'a InsertUserParams<'a>,
             ) -> Result<u64, postgres::Error> {
-                stmt.bind(client, &self.name, &self.hair_color)
+                self.bind(client, &params.name, &params.hair_color)
             }
         }
+
         pub fn posts() -> PostsStmt {
             PostsStmt(cornucopia_client::sync::Stmt::new("SELECT * FROM posts"))
         }

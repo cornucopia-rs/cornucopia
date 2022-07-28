@@ -8,6 +8,7 @@ use std::net::{IpAddr, Ipv4Addr};
 use time::{OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;
 
+use cornucopia_client::sync::Params;
 use crate::cornucopia_sync::{
     queries::{
         copy::{insert_clone, insert_copy, select_copy},
