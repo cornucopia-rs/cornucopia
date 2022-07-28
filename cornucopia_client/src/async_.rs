@@ -9,7 +9,7 @@ use tokio_postgres::{
 /// In addition, when the `deadpool` feature is enabled (default), this trait also
 /// abstracts over deadpool clients and transactions
 #[async_trait]
-pub trait GenericClient {
+pub trait GenericClient: Send + Sync {
     async fn prepare(&self, query: &str) -> Result<Statement, Error>;
     async fn execute<T>(
         &self,
@@ -198,6 +198,8 @@ impl Stmt {
     }
 }
 
-pub trait Params<'a, S, O, C> {
-    fn bind(&'a self, client: &'a C, stmt: &'a mut S) -> O;
+/// This trait allows you to bind parameters to a query using a single
+/// struct, rather than passing each bind parameter as a function parameter.
+pub trait Params<'a, P, O, C> {
+    fn params(&'a mut self, client: &'a C, params: &'a P) -> O;
 }

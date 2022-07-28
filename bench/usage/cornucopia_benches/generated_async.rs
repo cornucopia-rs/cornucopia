@@ -398,41 +398,32 @@ pub mod queries {
                 let stmt = self.0.prepare(client).await?;
                 client.execute(stmt, &[name, hair_color]).await
             }
-            pub async fn params<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a C,
-                params: &'a impl cornucopia_client::async_::Params<
-                    'a,
-                    Self,
-                    std::pin::Pin<
-                        Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>>,
-                    >,
-                    C,
-                >,
-            ) -> Result<u64, tokio_postgres::Error> {
-                params.bind(client, self).await
-            }
         }
-        impl<'a, C: GenericClient>
+        impl<'a, C: GenericClient + Send + Sync>
             cornucopia_client::async_::Params<
                 'a,
-                InsertUserStmt,
+                InsertUserParams<'a>,
                 std::pin::Pin<
-                    Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
+                    Box<
+                        dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>
+                            + Send
+                            + 'a,
+                    >,
                 >,
                 C,
-            > for InsertUserParams<'a>
+            > for InsertUserStmt
         {
-            fn bind(
-                &'a self,
+            fn params(
+                &'a mut self,
                 client: &'a C,
-                stmt: &'a mut InsertUserStmt,
+                params: &'a InsertUserParams<'a>,
             ) -> std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + 'a>,
+                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
             > {
-                Box::pin(stmt.bind(client, &self.name, &self.hair_color))
+                Box::pin(self.bind(client, &params.name, &params.hair_color))
             }
         }
+
         pub fn posts() -> PostsStmt {
             PostsStmt(cornucopia_client::async_::Stmt::new("SELECT * FROM posts"))
         }
