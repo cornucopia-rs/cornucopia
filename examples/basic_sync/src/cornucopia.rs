@@ -134,12 +134,12 @@ pub mod queries {
     pub mod module_1 {
         use postgres::{fallible_iterator::FallibleIterator, GenericClient};
         pub fn insert_book() -> InsertBookStmt {
-            InsertBookStmt(cornucopia_client::sync::Stmt::new(
+            InsertBookStmt(cornucopia_client_sync::private::Stmt::new(
                 "INSERT INTO Book (title)
   VALUES ($1)",
             ))
         }
-        pub struct InsertBookStmt(cornucopia_client::sync::Stmt);
+        pub struct InsertBookStmt(cornucopia_client_sync::private::Stmt);
         impl InsertBookStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -177,7 +177,7 @@ pub mod queries {
         pub struct AuthorsQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut cornucopia_client::sync::Stmt,
+            stmt: &'a mut cornucopia_client_sync::private::Stmt,
             extractor: fn(&postgres::Row) -> AuthorsBorrowed,
             mapper: fn(AuthorsBorrowed) -> T,
         }
@@ -220,7 +220,10 @@ pub mod queries {
                 let stmt = self.stmt.prepare(self.client)?;
                 let it = self
                     .client
-                    .query_raw(stmt, cornucopia_client::private::slice_iter(&self.params))?
+                    .query_raw(
+                        stmt,
+                        cornucopia_client_sync::private::slice_iter(&self.params),
+                    )?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(it)
@@ -230,7 +233,7 @@ pub mod queries {
         pub struct StringQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut cornucopia_client::sync::Stmt,
+            stmt: &'a mut cornucopia_client_sync::private::Stmt,
             extractor: fn(&postgres::Row) -> &str,
             mapper: fn(&str) -> T,
         }
@@ -273,7 +276,10 @@ pub mod queries {
                 let stmt = self.stmt.prepare(self.client)?;
                 let it = self
                     .client
-                    .query_raw(stmt, cornucopia_client::private::slice_iter(&self.params))?
+                    .query_raw(
+                        stmt,
+                        cornucopia_client_sync::private::slice_iter(&self.params),
+                    )?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(it)
@@ -283,7 +289,7 @@ pub mod queries {
         pub struct OptionStringQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut cornucopia_client::sync::Stmt,
+            stmt: &'a mut cornucopia_client_sync::private::Stmt,
             extractor: fn(&postgres::Row) -> Option<&str>,
             mapper: fn(Option<&str>) -> T,
         }
@@ -326,7 +332,10 @@ pub mod queries {
                 let stmt = self.stmt.prepare(self.client)?;
                 let it = self
                     .client
-                    .query_raw(stmt, cornucopia_client::private::slice_iter(&self.params))?
+                    .query_raw(
+                        stmt,
+                        cornucopia_client_sync::private::slice_iter(&self.params),
+                    )?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(it)
@@ -365,7 +374,7 @@ pub mod queries {
         pub struct AuthorNameStartingWithQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut cornucopia_client::sync::Stmt,
+            stmt: &'a mut cornucopia_client_sync::private::Stmt,
             extractor: fn(&postgres::Row) -> AuthorNameStartingWithBorrowed,
             mapper: fn(AuthorNameStartingWithBorrowed) -> T,
         }
@@ -411,7 +420,10 @@ pub mod queries {
                 let stmt = self.stmt.prepare(self.client)?;
                 let it = self
                     .client
-                    .query_raw(stmt, cornucopia_client::private::slice_iter(&self.params))?
+                    .query_raw(
+                        stmt,
+                        cornucopia_client_sync::private::slice_iter(&self.params),
+                    )?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(it)
@@ -426,7 +438,7 @@ pub mod queries {
         > {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut cornucopia_client::sync::Stmt,
+            stmt: &'a mut cornucopia_client_sync::private::Stmt,
             extractor: fn(&postgres::Row) -> super::super::types::public::CustomCompositeBorrowed,
             mapper: fn(super::super::types::public::CustomCompositeBorrowed) -> T,
         }
@@ -472,7 +484,10 @@ pub mod queries {
                 let stmt = self.stmt.prepare(self.client)?;
                 let it = self
                     .client
-                    .query_raw(stmt, cornucopia_client::private::slice_iter(&self.params))?
+                    .query_raw(
+                        stmt,
+                        cornucopia_client_sync::private::slice_iter(&self.params),
+                    )?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(it)
@@ -487,7 +502,7 @@ pub mod queries {
         > {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut cornucopia_client::sync::Stmt,
+            stmt: &'a mut cornucopia_client_sync::private::Stmt,
             extractor: fn(&postgres::Row) -> super::super::types::public::SpongebobCharacter,
             mapper: fn(super::super::types::public::SpongebobCharacter) -> T,
         }
@@ -533,7 +548,10 @@ pub mod queries {
                 let stmt = self.stmt.prepare(self.client)?;
                 let it = self
                     .client
-                    .query_raw(stmt, cornucopia_client::private::slice_iter(&self.params))?
+                    .query_raw(
+                        stmt,
+                        cornucopia_client_sync::private::slice_iter(&self.params),
+                    )?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(it)
@@ -543,9 +561,9 @@ pub mod queries {
         pub struct VecStringQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut cornucopia_client::sync::Stmt,
-            extractor: fn(&postgres::Row) -> cornucopia_client::ArrayIterator<'_, &str>,
-            mapper: fn(cornucopia_client::ArrayIterator<'_, &str>) -> T,
+            stmt: &'a mut cornucopia_client_sync::private::Stmt,
+            extractor: fn(&postgres::Row) -> cornucopia_client_sync::ArrayIterator<'_, &str>,
+            mapper: fn(cornucopia_client_sync::ArrayIterator<'_, &str>) -> T,
         }
         impl<'a, C, T: 'a, const N: usize> VecStringQuery<'a, C, T, N>
         where
@@ -553,7 +571,7 @@ pub mod queries {
         {
             pub fn map<R>(
                 self,
-                mapper: fn(cornucopia_client::ArrayIterator<'_, &str>) -> R,
+                mapper: fn(cornucopia_client_sync::ArrayIterator<'_, &str>) -> R,
             ) -> VecStringQuery<'a, C, R, N> {
                 VecStringQuery {
                     client: self.client,
@@ -589,21 +607,24 @@ pub mod queries {
                 let stmt = self.stmt.prepare(self.client)?;
                 let it = self
                     .client
-                    .query_raw(stmt, cornucopia_client::private::slice_iter(&self.params))?
+                    .query_raw(
+                        stmt,
+                        cornucopia_client_sync::private::slice_iter(&self.params),
+                    )?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(it)
             }
         }
         pub fn authors() -> AuthorsStmt {
-            AuthorsStmt(cornucopia_client::sync::Stmt::new(
+            AuthorsStmt(cornucopia_client_sync::private::Stmt::new(
                 "SELECT
     *
 FROM
     Author",
             ))
         }
-        pub struct AuthorsStmt(cornucopia_client::sync::Stmt);
+        pub struct AuthorsStmt(cornucopia_client_sync::private::Stmt);
         impl AuthorsStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -623,14 +644,14 @@ FROM
             }
         }
         pub fn books() -> BooksStmt {
-            BooksStmt(cornucopia_client::sync::Stmt::new(
+            BooksStmt(cornucopia_client_sync::private::Stmt::new(
                 "SELECT
     Title
 FROM
     Book",
             ))
         }
-        pub struct BooksStmt(cornucopia_client::sync::Stmt);
+        pub struct BooksStmt(cornucopia_client_sync::private::Stmt);
         impl BooksStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -646,14 +667,14 @@ FROM
             }
         }
         pub fn books_opt_ret_param() -> BooksOptRetParamStmt {
-            BooksOptRetParamStmt(cornucopia_client::sync::Stmt::new(
+            BooksOptRetParamStmt(cornucopia_client_sync::private::Stmt::new(
                 "SELECT
     Title
 FROM
     Book",
             ))
         }
-        pub struct BooksOptRetParamStmt(cornucopia_client::sync::Stmt);
+        pub struct BooksOptRetParamStmt(cornucopia_client_sync::private::Stmt);
         impl BooksOptRetParamStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -669,7 +690,7 @@ FROM
             }
         }
         pub fn author_name_by_id() -> AuthorNameByIdStmt {
-            AuthorNameByIdStmt(cornucopia_client::sync::Stmt::new(
+            AuthorNameByIdStmt(cornucopia_client_sync::private::Stmt::new(
                 "SELECT
     Author.Name
 FROM
@@ -678,7 +699,7 @@ WHERE
     Author.Id = $1",
             ))
         }
-        pub struct AuthorNameByIdStmt(cornucopia_client::sync::Stmt);
+        pub struct AuthorNameByIdStmt(cornucopia_client_sync::private::Stmt);
         impl AuthorNameByIdStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -695,7 +716,7 @@ WHERE
             }
         }
         pub fn author_name_starting_with() -> AuthorNameStartingWithStmt {
-            AuthorNameStartingWithStmt(cornucopia_client::sync::Stmt::new(
+            AuthorNameStartingWithStmt(cornucopia_client_sync::private::Stmt::new(
                 "SELECT
     BookAuthor.AuthorId,
     Author.Name,
@@ -709,7 +730,7 @@ WHERE
     Author.Name LIKE CONCAT($1::text, '%')",
             ))
         }
-        pub struct AuthorNameStartingWithStmt(cornucopia_client::sync::Stmt);
+        pub struct AuthorNameStartingWithStmt(cornucopia_client_sync::private::Stmt);
         impl AuthorNameStartingWithStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -731,14 +752,14 @@ WHERE
             }
         }
         pub fn return_custom_type() -> ReturnCustomTypeStmt {
-            ReturnCustomTypeStmt(cornucopia_client::sync::Stmt::new(
+            ReturnCustomTypeStmt(cornucopia_client_sync::private::Stmt::new(
                 "SELECT
     col1
 FROM
     CustomTable",
             ))
         }
-        pub struct ReturnCustomTypeStmt(cornucopia_client::sync::Stmt);
+        pub struct ReturnCustomTypeStmt(cornucopia_client_sync::private::Stmt);
         impl ReturnCustomTypeStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -759,7 +780,7 @@ FROM
             }
         }
         pub fn select_where_custom_type() -> SelectWhereCustomTypeStmt {
-            SelectWhereCustomTypeStmt(cornucopia_client::sync::Stmt::new(
+            SelectWhereCustomTypeStmt(cornucopia_client_sync::private::Stmt::new(
                 "SELECT
     col2
 FROM
@@ -767,7 +788,7 @@ FROM
 WHERE (col1).persona = $1",
             ))
         }
-        pub struct SelectWhereCustomTypeStmt(cornucopia_client::sync::Stmt);
+        pub struct SelectWhereCustomTypeStmt(cornucopia_client_sync::private::Stmt);
         impl SelectWhereCustomTypeStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -789,14 +810,14 @@ WHERE (col1).persona = $1",
             }
         }
         pub fn select_translations() -> SelectTranslationsStmt {
-            SelectTranslationsStmt(cornucopia_client::sync::Stmt::new(
+            SelectTranslationsStmt(cornucopia_client_sync::private::Stmt::new(
                 "SELECT
     Translations
 FROM
     Book",
             ))
         }
-        pub struct SelectTranslationsStmt(cornucopia_client::sync::Stmt);
+        pub struct SelectTranslationsStmt(cornucopia_client_sync::private::Stmt);
         impl SelectTranslationsStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
