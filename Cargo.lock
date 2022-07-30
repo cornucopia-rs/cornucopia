@@ -62,7 +62,7 @@ name = "auto-build"
 version = "0.1.0"
 dependencies = [
  "cornucopia",
- "cornucopia_client",
+ "cornucopia_client_async",
  "deadpool-postgres",
  "futures",
  "postgres-types",
@@ -101,7 +101,7 @@ checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 name = "basic-async"
 version = "0.1.0"
 dependencies = [
- "cornucopia_client",
+ "cornucopia_client_async",
  "deadpool-postgres",
  "futures",
  "postgres-types",
@@ -113,7 +113,7 @@ dependencies = [
 name = "basic_sync"
 version = "0.1.0"
 dependencies = [
- "cornucopia_client",
+ "cornucopia_client_sync",
  "postgres",
  "postgres-types",
 ]
@@ -123,7 +123,8 @@ name = "bench"
 version = "0.1.0"
 dependencies = [
  "cornucopia",
- "cornucopia_client",
+ "cornucopia_client_async",
+ "cornucopia_client_sync",
  "criterion",
  "diesel",
  "futures",
@@ -259,7 +260,8 @@ dependencies = [
 name = "codegen_test"
 version = "0.1.0"
 dependencies = [
- "cornucopia_client",
+ "cornucopia_client_async",
+ "cornucopia_client_sync",
  "eui48",
  "futures",
  "postgres",
@@ -308,16 +310,30 @@ dependencies = [
 ]
 
 [[package]]
-name = "cornucopia_client"
+name = "cornucopia_client_async"
 version = "0.2.2"
 dependencies = [
  "async-trait",
+ "cornucopia_client_core",
  "deadpool-postgres",
+ "tokio-postgres",
+]
+
+[[package]]
+name = "cornucopia_client_core"
+version = "0.2.2"
+dependencies = [
  "fallible-iterator",
- "postgres",
  "postgres-protocol",
  "postgres-types",
- "tokio-postgres",
+]
+
+[[package]]
+name = "cornucopia_client_sync"
+version = "0.2.2"
+dependencies = [
+ "cornucopia_client_core",
+ "postgres",
 ]
 
 [[package]]
@@ -1639,9 +1655,9 @@ dependencies = [
 
 [[package]]
 name = "tracing"
-version = "0.1.35"
+version = "0.1.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a400e31aa60b9d44a52a8ee0343b5b18566b03a8321e0d321f695cf56e940160"
+checksum = "2fce9567bd60a67d08a16488756721ba392f24f29006402881e43b19aac64307"
 dependencies = [
  "cfg-if",
  "pin-project-lite",
@@ -1650,9 +1666,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-core"
-version = "0.1.28"
+version = "0.1.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b7358be39f2f274f322d2aaed611acc57f382e8eb1e5b48cb9ae30933495ce7"
+checksum = "5aeea4303076558a00714b823f9ad67d58a3bbda1df83d8827d21193156e22f7"
 dependencies = [
  "once_cell",
 ]

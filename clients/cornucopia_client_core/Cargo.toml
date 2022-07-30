@@ -1,0 +1,18 @@
+[package]
+name = "cornucopia_client_core"
+version = "0.2.2"
+edition = "2021"
+license = "MIT/Apache-2.0"
+description = "Generic client trait for Cornucopia users"
+homepage = "https://github.com/cornucopia-rs/cornucopia"
+repository = "https://github.com/cornucopia-rs/cornucopia"
+readme = "README.md"
+categories = ["database"]
+keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+postgres-protocol = "0.6.4"
+postgres-types = { version = "0.2.3" }
+fallible-iterator = "0.2"

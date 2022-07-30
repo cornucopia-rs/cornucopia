@@ -1,5 +1,5 @@
 [package]
-name = "cornucopia_client"
+name = "cornucopia_client_async"
 version = "0.2.2"
 edition = "2021"
 license = "MIT/Apache-2.0"
@@ -12,17 +12,13 @@ keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 
 [features]
 default = ["deadpool"]
-async = ["dep:tokio-postgres", "dep:async-trait"]
-deadpool = ["async", "dep:deadpool-postgres"]
-sync = ["dep:postgres"]
+deadpool = ["dep:deadpool-postgres"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio-postgres = { version = "0.7.6", optional = true }
-postgres = { version = "0.19.3", optional = true }
-async-trait = { version = "0.1.56", optional = true }
+tokio-postgres = { version = "0.7.6" }
+async-trait = { version = "0.1.56" }
 deadpool-postgres = { version = "0.10.2", optional = true }
-fallible-iterator = "0.2"
-postgres-protocol = "0.6.4"
-postgres-types = { version = "0.2.3" }
+
+cornucopia_client_core = { path = "../cornucopia_client_core" }

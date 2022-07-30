@@ -1,7 +1,7 @@
 [workspace]
 members = [
   "examples/*",
-  "cornucopia_client",
+  "clients/*",
   "integration",
   "codegen_test",
   "bench",

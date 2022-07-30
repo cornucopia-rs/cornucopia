@@ -8,6 +8,4 @@ edition = "2021"
 [dependencies]
 postgres-types = { version = "0.2.3", features = ["derive"] }
 postgres = "0.19.3"
-cornucopia_client = { path = "../../cornucopia_client", default-features = false, features = [
-    "sync",
-] }
+cornucopia_client_sync = { path = "../../clients/cornucopia_client_sync" }

@@ -1,4 +1,7 @@
-use postgres::Statement;
+pub use cornucopia_client_core::{slice_iter, Domain, DomainArray};
+
+use crate::generic_client::GenericClient;
+use tokio_postgres::{Error, Statement};
 
 /// Cached statement
 pub struct Stmt {
@@ -15,21 +18,15 @@ impl Stmt {
         }
     }
 
-    pub fn prepare<'a, C: postgres::GenericClient>(
+    pub async fn prepare<'a, C: GenericClient>(
         &'a mut self,
-        client: &mut C,
-    ) -> Result<&'a Statement, postgres::Error> {
+        client: &C,
+    ) -> Result<&'a Statement, Error> {
         if self.cached.is_none() {
-            let stmt = client.prepare(self.query)?;
+            let stmt = client.prepare(self.query).await?;
             self.cached = Some(stmt);
         }
         // the statement is always prepared at this point
         Ok(unsafe { self.cached.as_ref().unwrap_unchecked() })
     }
-}
-
-/// This trait allows you to bind parameters to a query using a single
-/// struct, rather than passing each bind parameter as a function parameter.
-pub trait Params<'a, P, O, C> {
-    fn params(&'a mut self, client: &'a mut C, params: &'a P) -> O;
 }
