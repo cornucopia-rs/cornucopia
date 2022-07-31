@@ -52,19 +52,20 @@ impl CornucopiaType {
         }
     }
 
-    pub(crate) fn sql_wrapped(&self, name: &str) -> String {
+    pub(crate) fn sql_wrapped(&self, name: &str, is_async: bool) -> String {
+        let client_name = if is_async { "async" } else { "sync" };
         match self {
             CornucopiaType::Domain { inner, .. } => {
                 format!(
-                    "&cornucopia_client::private::Domain({})",
-                    inner.sql_wrapped(name)
+                    "&cornucopia_{client_name}::private::Domain({})",
+                    inner.sql_wrapped(name, is_async)
                 )
             }
             CornucopiaType::Array { inner } => match inner.as_ref() {
                 CornucopiaType::Domain { inner, .. } => {
                     format!(
-                        "&cornucopia_client::private::DomainArray({})",
-                        inner.sql_wrapped(name)
+                        "&cornucopia_{client_name}::private::DomainArray({})",
+                        inner.sql_wrapped(name, is_async)
                     )
                 }
                 _ => name.to_string(),
@@ -73,22 +74,23 @@ impl CornucopiaType {
         }
     }
 
-    pub(crate) fn accept_to_sql(&self) -> String {
+    pub(crate) fn accept_to_sql(&self, is_async: bool) -> String {
+        let client_name = if is_async { "async" } else { "sync" };
         match self {
             CornucopiaType::Domain { inner, .. } => format!(
-                "cornucopia_client::private::Domain::<{}>",
-                inner.accept_to_sql()
+                "cornucopia_{client_name}::private::Domain::<{}>",
+                inner.accept_to_sql(is_async)
             ),
             CornucopiaType::Array { inner } => match inner.as_ref() {
                 CornucopiaType::Domain { inner, .. } => {
                     format!(
-                        "cornucopia_client::private::DomainArray::<{}>",
-                        inner.accept_to_sql()
+                        "cornucopia_{client_name}::private::DomainArray::<{}>",
+                        inner.accept_to_sql(is_async)
                     )
                 }
-                _ => self.brw_struct(true, false, true),
+                _ => self.brw_struct(true, false, true, is_async),
             },
-            _ => self.brw_struct(true, false, true),
+            _ => self.brw_struct(true, false, true, is_async),
         }
     }
 
@@ -154,7 +156,9 @@ impl CornucopiaType {
         for_params: bool,
         is_inner_nullable: bool,
         has_lifetime: bool,
+        is_async: bool,
     ) -> String {
+        let client_name = if is_async { "async" } else { "sync" };
         let lifetime = if has_lifetime { "'a" } else { "" };
         match self {
             CornucopiaType::Simple {
@@ -172,7 +176,7 @@ impl CornucopiaType {
                 _ => (*rust_name).to_string(),
             },
             CornucopiaType::Array { inner, .. } => {
-                let inner = inner.brw_struct(for_params, false, has_lifetime);
+                let inner = inner.brw_struct(for_params, false, has_lifetime, is_async);
                 let inner = if is_inner_nullable {
                     format!("Option<{inner}>")
                 } else {
@@ -183,11 +187,11 @@ impl CornucopiaType {
                     format!("&{lifetime} [{inner}]")
                 } else {
                     let lifetime = if has_lifetime { lifetime } else { "'_" };
-                    format!("cornucopia_client::ArrayIterator<{lifetime}, {inner}>")
+                    format!("cornucopia_{client_name}::ArrayIterator<{lifetime}, {inner}>")
                 }
             }
             CornucopiaType::Domain { inner, .. } => {
-                inner.brw_struct(for_params, false, has_lifetime)
+                inner.brw_struct(for_params, false, has_lifetime, is_async)
             }
             CornucopiaType::Custom {
                 struct_path,

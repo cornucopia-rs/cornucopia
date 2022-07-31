@@ -7,7 +7,7 @@ use tokio_postgres::{
     Transaction as PgTransaction,
 };
 
-use crate::async_::GenericClient;
+use crate::generic_client::GenericClient;
 
 #[async_trait]
 impl GenericClient for DeadpoolClient {

@@ -5,6 +5,8 @@ use std::{
     fmt::{Debug, Formatter},
 };
 
+use crate::utils::escape_domain;
+
 pub struct Domain<T: ToSql>(pub T);
 
 impl<T: ToSql + Debug> Debug for Domain<T> {
@@ -37,7 +39,6 @@ impl<T: ToSql> ToSql for Domain<T> {
     }
 }
 
-/// Wrapper for slice `ToSql` which ignore
 pub struct DomainArray<'a, T: ToSql>(pub &'a [T]);
 
 impl<'a, T: ToSql> Debug for DomainArray<'a, T> {
@@ -87,23 +88,10 @@ impl<'a, T: ToSql + 'a> ToSql for DomainArray<'a, T> {
     }
 }
 
-pub fn slice_iter<'a>(
-    s: &'a [&'a (dyn ToSql + Sync)],
-) -> impl ExactSizeIterator<Item = &'a dyn ToSql> + 'a {
-    s.iter().map(|s| *s as _)
-}
-
 fn downcast(len: usize) -> Result<i32, Box<dyn Error + Sync + Send>> {
     if len > i32::max_value() as usize {
         Err("value too large to transmit".into())
     } else {
         Ok(len as i32)
-    }
-}
-
-pub fn escape_domain(ty: &Type) -> &Type {
-    match ty.kind() {
-        Kind::Domain(ty) => ty,
-        _ => ty,
     }
 }
