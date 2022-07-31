@@ -6,7 +6,8 @@ use crate::cornucopia::{
     queries::{
         module_1::insert_book,
         module_2::{
-            author_name_by_id, author_name_starting_with, authors, books, select_where_custom_type, AuthorNameStartingWithParams, select_translations,
+            author_name_by_id, author_name_starting_with, authors, books, select_translations,
+            select_where_custom_type, AuthorNameStartingWithParams,
         },
     },
     types::public::SpongebobCharacter,
