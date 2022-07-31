@@ -33,6 +33,6 @@
 
 This is a client crate for [Cornucopia](https://crates.io/crates/cornucopia). This dependency provides
 1. internals required by the generated code.
-2. public items that you may find useful when working with Cornucopia.
+2. public items that you may find useful when working with Cornucopia (you can find more info about these in the docs).
 
 ***You need to depend on this crate for Cornucopia's generated code to work properly.***
