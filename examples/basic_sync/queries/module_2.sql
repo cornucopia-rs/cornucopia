@@ -18,8 +18,7 @@ FROM
 WHERE
     Author.Id = :id;
 
---: AuthorNameStartingWithParams()
---! author_name_starting_with AuthorNameStartingWithParams
+--! author_name_starting_with AuthorNameStartingWithParams()
 SELECT
     BookAuthor.AuthorId,
     Author.Name,
