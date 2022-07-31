@@ -1,5 +1,5 @@
 # Example
-**Note:** This example uses asynchronous Rust. You can find the synchronous version [here](../basic_sync/README.md).
+**Note:** This example uses synchronous Rust. You can find the asynchronous version [here](../basic_async/README.md).
 
 ## Before starting
 Please follow the [install procedure](../../README.md#install) to ensure

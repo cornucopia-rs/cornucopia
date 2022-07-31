@@ -11,7 +11,7 @@ INSERT INTO Author (Name, Country)
 CREATE TABLE Book (
     Id serial NOT NULL,
     Title varchar(50) NOT NULL,
-    Translations text[] NOT NULL DEFAULT '{}',
+    Translations text[] NOT NULL DEFAULT ARRAY['french', 'english'],
     PRIMARY KEY (Id)
 );
 
@@ -47,3 +47,4 @@ CREATE TABLE BookAuthor (
 
 INSERT INTO BookAuthor (AuthorId, BookId)
     VALUES (1, 1), (1, 2), (2, 3), (2, 4);
+
