@@ -36,7 +36,7 @@ use crate::cornucopia_sync::{
         SpongebobCharacter,
     },
 };
-use cornucopia_client_sync::Params;
+use ::cornucopia_sync::Params;
 
 pub fn main() {
     let client = &mut Config::new()
