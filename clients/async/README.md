@@ -2,7 +2,7 @@
 <h1 align="center">Cornucopia</h1>
 <div align="center">
  <strong>
-   Generate type checked  Rust from your SQL
+   Generate type-checked Rust from your SQL
  </strong>
 </div>
 
@@ -21,27 +21,18 @@
     <img src="https://img.shields.io/crates/d/cornucopia.svg?style=flat-square"
       alt="Download" />
   </a>
-</div>
-
-<div align="center">
-  <h4>
-    <a href="#install">
-      Install
-    </a>
-    <span> | </span>
-    <a href="/examples/basic_async/README.md">
-      Example
-    </a>
-  </h4>
+  <!-- Docs -->
+  <a href="https://docs.rs/cornucopia_async/latest/cornucopia_async/">
+    <img alt="docs.rs" src="https://img.shields.io/docsrs/cornucopia_async?style=flat-square">
+  </a>
 </div>
 
 ---
 
-This crate is a small library exposing Cornucopia's `GenericClient`. You probably need this if you're a Cornucopia user.
+**Note:** This crate is the *asynchronous* client. You can find the *synchronous* client [here](TODO).
 
-The `GenericClient` is an abstraction over four types of connections (`deadpool_postgres::Client`, `deadpool_postgres::Transaction`, `tokio_postgres::Client`, `tokio_postgres::Transaction`). Its meant to allow you to mix-and-match these connection types in Cornucopia Queries.
+This is a client crate for [Cornucopia](https://crates.io/crates/cornucopia). This dependency provides
+1. internals required by the generated code.
+2. public items that you may find useful when working with Cornucopia.
 
-|                  | non-pooled                    | pooled                           |
-| ---------------- | ----------------------------- | -------------------------------- |
-| single-statement | `tokio_postgres::Client`      | `deadpool_postgres::Client`      |
-| multi-statement  | `tokio_postgres::Transaction` | `deadpool_postgres::Transaction` |
+***You need to depend on this crate for Cornucopia's generated code to work properly.***
