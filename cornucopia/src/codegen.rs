@@ -324,7 +324,7 @@ fn gen_row_structs(
             pub struct {name}Query<'a, C: GenericClient, T, const N: usize> {{
                 client: &'a {client_mut} C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut cornucopia_client_{client_name}::private::Stmt,
+                stmt: &'a mut cornucopia_{client_name}::private::Stmt,
                 extractor: fn(&{backend}::Row) -> {row_struct},
                 mapper: fn({row_struct}) -> T,
             }}
@@ -364,7 +364,7 @@ fn gen_row_structs(
                     let stmt = self.stmt.prepare(self.client){fn_await}?;
                     let it = self
                         .client
-                        .query_raw(stmt, cornucopia_client_{client_name}::private::slice_iter(&self.params))
+                        .query_raw(stmt, cornucopia_{client_name}::private::slice_iter(&self.params))
                         {fn_await}?
                         {raw_pre}
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
@@ -401,9 +401,9 @@ fn gen_query_fn(
         gen!(
             w,
             "pub fn {name}() -> {struct_name}Stmt {{
-                {struct_name}Stmt(cornucopia_client_{client_name}::private::Stmt::new(\"{sql}\"))
+                {struct_name}Stmt(cornucopia_{client_name}::private::Stmt::new(\"{sql}\"))
             }}
-            pub struct {struct_name}Stmt(cornucopia_client_{client_name}::private::Stmt);
+            pub struct {struct_name}Stmt(cornucopia_{client_name}::private::Stmt);
             impl {struct_name}Stmt {{"
         );
     }
@@ -491,7 +491,7 @@ fn gen_query_fn(
                 };
                 let name = &module.rows.get_index(*idx).unwrap().1.name;
                 let nb_params = param_field.len();
-                gen!(w,"impl <'a, C: GenericClient> cornucopia_client_{client_name}::Params<'a, {param_name}{lifetime}, {name}Query<'a, C, {query_row_struct}, {nb_params}>, C> for {struct_name}Stmt  {{ 
+                gen!(w,"impl <'a, C: GenericClient> cornucopia_{client_name}::Params<'a, {param_name}{lifetime}, {name}Query<'a, C, {query_row_struct}, {nb_params}>, C> for {struct_name}Stmt  {{ 
                     fn params(&'a mut self, client: &'a {client_mut} C, params: &'a {param_name}{lifetime}) -> {name}Query<'a, C, {query_row_struct}, {nb_params}> {{
                         self.bind(client, {param_values})
                     }}
@@ -511,7 +511,7 @@ fn gen_query_fn(
                 };
                 gen!(
                     w,
-                    "impl <'a, C: GenericClient {send_sync}> cornucopia_client_{client_name}::Params<'a, {param_name}{lifetime}, {pre_ty}Result<u64, {backend}::Error>{post_ty_lf}, C> for {struct_name}Stmt  {{ 
+                    "impl <'a, C: GenericClient {send_sync}> cornucopia_{client_name}::Params<'a, {param_name}{lifetime}, {pre_ty}Result<u64, {backend}::Error>{post_ty_lf}, C> for {struct_name}Stmt  {{ 
                         fn params(&'a mut self, client: &'a {client_mut} C, params: &'a {param_name}{lifetime}) -> {pre_ty}Result<u64, {backend}::Error>{post_ty_lf} {{
                             {pre}self.bind(client, {param_values}){post}
                         }}
@@ -622,7 +622,7 @@ fn gen_type_modules(
 
 pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> String {
     let import = if settings.is_async {
-        "use futures::{{StreamExt, TryStreamExt}};use futures; use cornucopia_client_async::GenericClient;"
+        "use futures::{{StreamExt, TryStreamExt}};use futures; use cornucopia_async::GenericClient;"
     } else {
         "use postgres::{{fallible_iterator::FallibleIterator,GenericClient}};"
     };

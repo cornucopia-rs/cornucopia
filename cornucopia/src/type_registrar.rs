@@ -57,14 +57,14 @@ impl CornucopiaType {
         match self {
             CornucopiaType::Domain { inner, .. } => {
                 format!(
-                    "&cornucopia_client_{client_name}::private::Domain({})",
+                    "&cornucopia_{client_name}::private::Domain({})",
                     inner.sql_wrapped(name, is_async)
                 )
             }
             CornucopiaType::Array { inner } => match inner.as_ref() {
                 CornucopiaType::Domain { inner, .. } => {
                     format!(
-                        "&cornucopia_client_{client_name}::private::DomainArray({})",
+                        "&cornucopia_{client_name}::private::DomainArray({})",
                         inner.sql_wrapped(name, is_async)
                     )
                 }
@@ -78,13 +78,13 @@ impl CornucopiaType {
         let client_name = if is_async { "async" } else { "sync" };
         match self {
             CornucopiaType::Domain { inner, .. } => format!(
-                "cornucopia_client_{client_name}::private::Domain::<{}>",
+                "cornucopia_{client_name}::private::Domain::<{}>",
                 inner.accept_to_sql(is_async)
             ),
             CornucopiaType::Array { inner } => match inner.as_ref() {
                 CornucopiaType::Domain { inner, .. } => {
                     format!(
-                        "cornucopia_client_{client_name}::private::DomainArray::<{}>",
+                        "cornucopia_{client_name}::private::DomainArray::<{}>",
                         inner.accept_to_sql(is_async)
                     )
                 }
@@ -187,7 +187,7 @@ impl CornucopiaType {
                     format!("&{lifetime} [{inner}]")
                 } else {
                     let lifetime = if has_lifetime { lifetime } else { "'_" };
-                    format!("cornucopia_client_{client_name}::ArrayIterator<{lifetime}, {inner}>")
+                    format!("cornucopia_{client_name}::ArrayIterator<{lifetime}, {inner}>")
                 }
             }
             CornucopiaType::Domain { inner, .. } => {
