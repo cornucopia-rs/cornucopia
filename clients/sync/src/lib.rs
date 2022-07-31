@@ -1,7 +1,7 @@
 #[doc(hidden)]
 pub mod private;
 
-pub use cornucopia_client_core::ArrayIterator;
+pub use client_core::ArrayIterator;
 
 /// This trait allows you to bind parameters to a query using a single
 /// struct, rather than passing each bind parameter as a function parameter.

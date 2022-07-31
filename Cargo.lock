@@ -62,7 +62,7 @@ name = "auto-build"
 version = "0.1.0"
 dependencies = [
  "cornucopia",
- "cornucopia_client_async",
+ "cornucopia_async",
  "deadpool-postgres",
  "futures",
  "postgres-types",
@@ -101,7 +101,7 @@ checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 name = "basic-async"
 version = "0.1.0"
 dependencies = [
- "cornucopia_client_async",
+ "cornucopia_async",
  "deadpool-postgres",
  "futures",
  "postgres-types",
@@ -113,7 +113,7 @@ dependencies = [
 name = "basic_sync"
 version = "0.1.0"
 dependencies = [
- "cornucopia_client_sync",
+ "cornucopia_sync",
  "postgres",
  "postgres-types",
 ]
@@ -123,8 +123,8 @@ name = "bench"
 version = "0.1.0"
 dependencies = [
  "cornucopia",
- "cornucopia_client_async",
- "cornucopia_client_sync",
+ "cornucopia_async",
+ "cornucopia_sync",
  "criterion",
  "diesel",
  "futures",
@@ -175,9 +175,9 @@ checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
 
 [[package]]
 name = "bytes"
-version = "1.2.0"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0b3de4a0c5e67e16066a0715723abd91edc2f9001d09c46e1dca929351e130e"
+checksum = "ec8a7b6a70fde80372154c65702f00a0f56f3e1c36abbc6c440484be248856db"
 
 [[package]]
 name = "cast"
@@ -219,9 +219,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "3.2.15"
+version = "3.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44bbe24bbd31a185bc2c4f7c2abe80bea13a20d57ee4e55be70ac512bdc76417"
+checksum = "a3dbbb6653e7c55cc8595ad3e1f7be8f32aba4eb7ff7f0fd1163d4f3d137c0a9"
 dependencies = [
  "atty",
  "bitflags",
@@ -257,11 +257,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "client_core"
+version = "0.2.2"
+dependencies = [
+ "fallible-iterator",
+ "postgres-protocol",
+ "postgres-types",
+]
+
+[[package]]
 name = "codegen_test"
 version = "0.1.0"
 dependencies = [
- "cornucopia_client_async",
- "cornucopia_client_sync",
+ "cornucopia_async",
+ "cornucopia_sync",
  "eui48",
  "futures",
  "postgres",
@@ -300,7 +309,7 @@ name = "cornucopia"
 version = "0.7.4"
 dependencies = [
  "chumsky",
- "clap 3.2.15",
+ "clap 3.2.16",
  "heck",
  "indexmap",
  "miette",
@@ -310,29 +319,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "cornucopia_client_async"
+name = "cornucopia_async"
 version = "0.2.2"
 dependencies = [
  "async-trait",
- "cornucopia_client_core",
+ "client_core",
  "deadpool-postgres",
  "tokio-postgres",
 ]
 
 [[package]]
-name = "cornucopia_client_core"
+name = "cornucopia_sync"
 version = "0.2.2"
 dependencies = [
- "fallible-iterator",
- "postgres-protocol",
- "postgres-types",
-]
-
-[[package]]
-name = "cornucopia_client_sync"
-version = "0.2.2"
-dependencies = [
- "cornucopia_client_core",
+ "client_core",
  "postgres",
 ]
 
@@ -741,7 +741,7 @@ dependencies = [
 name = "integration"
 version = "0.1.0"
 dependencies = [
- "clap 3.2.15",
+ "clap 3.2.16",
  "cornucopia",
  "owo-colors",
  "postgres",

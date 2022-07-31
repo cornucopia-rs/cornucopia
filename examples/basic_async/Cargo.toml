@@ -9,4 +9,4 @@ deadpool-postgres = "0.10.2"
 futures = "0.3.21"
 postgres-types = { version = "0.2.3", features = ["derive"] }
 tokio-postgres = "0.7.6"
-cornucopia_client_async = { path = "../../clients/cornucopia_client_async" }
+cornucopia_async = { path = "../../clients/async" }

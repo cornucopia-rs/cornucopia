@@ -26,5 +26,5 @@ uuid = { version = "1.1.2", features = ["serde"] }
 eui48 = { version = "1.1.0", features = ["serde"] }
 futures = "0.3.21"
 
-cornucopia_client_sync = { path = "../clients/cornucopia_client_sync" }
-cornucopia_client_async = { path = "../clients/cornucopia_client_async" }
+cornucopia_sync = { path = "../clients/sync" }
+cornucopia_async = { path = "../clients/async" }

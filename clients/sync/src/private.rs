@@ -1,4 +1,4 @@
-pub use cornucopia_client_core::{slice_iter, Domain, DomainArray};
+pub use client_core::{slice_iter, Domain, DomainArray};
 
 use postgres::Statement;
 
