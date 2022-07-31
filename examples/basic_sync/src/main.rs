@@ -76,7 +76,7 @@ pub fn main() {
         author_name_starting_with()
             .params(
                 &mut client,
-                &AuthorNameStartingWithParams { start_str: &"Jo" }
+                &AuthorNameStartingWithParams { start_str: "Jo" }
             )
             .all()
             .unwrap()

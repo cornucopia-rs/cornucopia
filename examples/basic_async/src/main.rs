@@ -31,23 +31,23 @@ pub async fn main() {
 
     // Queries accept regular clients.
     // The `all` method returns all rows in a `Vec`
-    println!("{:?}", authors().bind(&mut client).all().await.unwrap());
+    println!("{:?}", authors().bind(&client).all().await.unwrap());
 
     {
         // Queries also accept transactions
-        let mut transaction = client.transaction().await.unwrap();
+        let transaction = client.transaction().await.unwrap();
 
         // Insert a book
         // Note that queries with a void return type (such as regular inserts)
         // don't need to call `all`, they are executed as soon as you `bind` them.
         insert_book()
-            .bind(&mut transaction, &"The Great Gatsby")
+            .bind(&transaction, &"The Great Gatsby")
             .await
             .unwrap();
 
         // You can use a map to transform rows ergonomically.
         let uppercase_books = books()
-            .bind(&mut transaction)
+            .bind(&transaction)
             .map(|b| b.to_uppercase())
             .all()
             .await
@@ -63,11 +63,7 @@ pub async fn main() {
     // Any other number of rows will return an error.
     println!(
         "{:?}",
-        author_name_by_id()
-            .bind(&mut client, &0)
-            .opt()
-            .await
-            .unwrap()
+        author_name_by_id().bind(&client, &0).opt().await.unwrap()
     );
 
     // Using named structs as parameters and rows can be more convenient
@@ -80,10 +76,7 @@ pub async fn main() {
     println!(
         "{:?}",
         author_name_starting_with()
-            .params(
-                &mut client,
-                &AuthorNameStartingWithParams { start_str: &"Jo" }
-            )
+            .params(&client, &AuthorNameStartingWithParams { start_str: "Jo" })
             .all()
             .await
             .unwrap()
@@ -97,7 +90,7 @@ pub async fn main() {
     println!(
         "{:?}",
         select_where_custom_type()
-            .bind(&mut client, &SpongebobCharacter::Patrick)
+            .bind(&client, &SpongebobCharacter::Patrick)
             .one()
             .await
             .unwrap()
@@ -108,7 +101,7 @@ pub async fn main() {
     println!(
         "{:?}",
         select_translations()
-            .bind(&mut client)
+            .bind(&client)
             .map(|row| format!("{}: {:?}", row.title, row.translations))
             .all()
             .await
