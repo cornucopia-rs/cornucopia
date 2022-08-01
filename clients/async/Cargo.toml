@@ -21,4 +21,4 @@ tokio-postgres = { version = "0.7.6" }
 async-trait = { version = "0.1.56" }
 deadpool-postgres = { version = "0.10.2", optional = true }
 
-client_core = { path = "../core" }
+client_core = { path = "../core", version = "0.3.0"  }
