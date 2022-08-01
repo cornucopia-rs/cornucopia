@@ -1,4 +1,4 @@
-pub use client_core::{slice_iter, Domain, DomainArray};
+pub use cornucopia_client_core::{slice_iter, Domain, DomainArray};
 
 use crate::generic_client::GenericClient;
 use tokio_postgres::{Error, Statement};
