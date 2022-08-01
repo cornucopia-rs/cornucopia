@@ -51,8 +51,8 @@
 
 <div align="center">
   <h4>
-    <a href="#install">
-      Install
+    <a href="https://cornucopia-rs.netlify.app/">
+      Homepage
     </a>
     <span> | </span>
     <a href="examples/basic_async/README.md">

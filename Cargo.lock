@@ -297,7 +297,7 @@ dependencies = [
 
 [[package]]
 name = "cornucopia"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "chumsky",
  "clap 3.2.16",
@@ -311,7 +311,7 @@ dependencies = [
 
 [[package]]
 name = "cornucopia_async"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "async-trait",
  "cornucopia_client_core",
@@ -321,7 +321,7 @@ dependencies = [
 
 [[package]]
 name = "cornucopia_client_core"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "fallible-iterator",
  "postgres-protocol",
@@ -330,7 +330,7 @@ dependencies = [
 
 [[package]]
 name = "cornucopia_sync"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "cornucopia_client_core",
  "postgres",

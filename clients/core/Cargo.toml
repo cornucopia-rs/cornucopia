@@ -1,10 +1,10 @@
 [package]
 name = "cornucopia_client_core"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 license = "MIT/Apache-2.0"
-description = "Generic client trait for Cornucopia users"
-homepage = "https://github.com/cornucopia-rs/cornucopia"
+description = "Private abstractions for Cornucopia clients."
+homepage = "https://cornucopia-rs.netlify.app/"
 repository = "https://github.com/cornucopia-rs/cornucopia"
 readme = "README.md"
 categories = ["database"]
