@@ -6,7 +6,7 @@ license = "MIT/Apache-2.0"
 description = "Generate type-checked Rust from your PostgreSQL queries."
 homepage = "https://github.com/cornucopia-rs/cornucopia"
 repository = "https://github.com/cornucopia-rs/cornucopia"
-readme = "README.md"
+readme = "../README.md"
 categories = ["database"]
 keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 
