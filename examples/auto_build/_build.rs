@@ -6,7 +6,7 @@ use cornucopia::{CodegenSettings, Error};
 // file with a `include_str` statement in your project.
 fn main() -> Result<(), Error> {
     let queries_path = "queries";
-    let schema_file = String::from("schema.sql");
+    let schema_file = "schema.sql";
     let destination = "src/cornucopia.rs";
     let settings = CodegenSettings {
         is_async: true,
@@ -17,7 +17,7 @@ fn main() -> Result<(), Error> {
     println!("cargo:rerun-if-changed={schema_file}");
     cornucopia::generate_managed(
         queries_path,
-        vec![schema_file],
+        vec![schema_file.into()],
         Some(destination),
         false,
         settings,

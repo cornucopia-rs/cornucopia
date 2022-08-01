@@ -70,8 +70,8 @@ pub async fn main() {
     // and less error-prone, for example when a query has a lot of parameters.
     // This query doesn't benefit much, but is still shown for demonstration purposes.
     // ! Note: To use this feature you need to:
-    // ! 1. Declare this custom type in your query files
-    // !    (see `queries/module_2.sql` to see how this type was declared).
+    // ! 1. Have a struct generated for your params (see the `type annotations` section of the book
+    // !    and the `queries/module_2.sql` file to see how this particular type was declared).
     // ! 2. Import the `Params` trait.
     println!(
         "{:?}",
