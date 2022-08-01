@@ -15,4 +15,4 @@ keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 [dependencies]
 postgres = { version = "0.19.3" }
 
-client_core = { path = "../core", version = "0.3.0" }
+cornucopia_client_core = { path = "../core", version = "0.3.0" }

@@ -1,5 +1,5 @@
 [package]
-name = "client_core"
+name = "cornucopia_client_core"
 version = "0.3.0"
 edition = "2021"
 license = "MIT/Apache-2.0"
