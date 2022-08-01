@@ -257,15 +257,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "client_core"
-version = "0.2.2"
-dependencies = [
- "fallible-iterator",
- "postgres-protocol",
- "postgres-types",
-]
-
-[[package]]
 name = "codegen_test"
 version = "0.1.0"
 dependencies = [
@@ -306,7 +297,7 @@ dependencies = [
 
 [[package]]
 name = "cornucopia"
-version = "0.7.4"
+version = "0.8.0"
 dependencies = [
  "chumsky",
  "clap 3.2.16",
@@ -320,19 +311,28 @@ dependencies = [
 
 [[package]]
 name = "cornucopia_async"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "async-trait",
- "client_core",
+ "cornucopia_client_core",
  "deadpool-postgres",
  "tokio-postgres",
 ]
 
 [[package]]
-name = "cornucopia_sync"
-version = "0.2.2"
+name = "cornucopia_client_core"
+version = "0.3.0"
 dependencies = [
- "client_core",
+ "fallible-iterator",
+ "postgres-protocol",
+ "postgres-types",
+]
+
+[[package]]
+name = "cornucopia_sync"
+version = "0.3.0"
+dependencies = [
+ "cornucopia_client_core",
  "postgres",
 ]
 

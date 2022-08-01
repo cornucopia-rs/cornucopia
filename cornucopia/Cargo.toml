@@ -1,12 +1,12 @@
 [package]
 name = "cornucopia"
-version = "0.7.4"
+version = "0.8.0"
 edition = "2021"
 license = "MIT/Apache-2.0"
-description = "Generate type checked Rust from your SQL"
+description = "Generate type-checked Rust from your PostgreSQL queries."
 homepage = "https://github.com/cornucopia-rs/cornucopia"
 repository = "https://github.com/cornucopia-rs/cornucopia"
-readme = "README.md"
+readme = "../README.md"
 categories = ["database"]
 keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 

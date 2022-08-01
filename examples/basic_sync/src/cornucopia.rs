@@ -14,120 +14,6 @@ pub mod types {
             Patrick,
             Squidward,
         }
-        #[derive(Debug, postgres_types::FromSql, Clone, PartialEq)]
-        #[postgres(name = "custom_composite")]
-        pub struct CustomComposite {
-            pub name: String,
-            pub age: i32,
-            pub persona: super::super::types::public::SpongebobCharacter,
-        }
-        #[derive(Debug)]
-        pub struct CustomCompositeBorrowed<'a> {
-            pub name: &'a str,
-            pub age: i32,
-            pub persona: super::super::types::public::SpongebobCharacter,
-        }
-        impl<'a> From<CustomCompositeBorrowed<'a>> for CustomComposite {
-            fn from(
-                CustomCompositeBorrowed { name, age, persona }: CustomCompositeBorrowed<'a>,
-            ) -> Self {
-                Self {
-                    name: name.into(),
-                    age,
-                    persona,
-                }
-            }
-        }
-        impl<'a> postgres_types::FromSql<'a> for CustomCompositeBorrowed<'a> {
-            fn from_sql(
-                ty: &postgres_types::Type,
-                out: &'a [u8],
-            ) -> Result<CustomCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let fields = match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                let mut out = out;
-                let num_fields = postgres_types::private::read_be_i32(&mut out)?;
-                let _oid = postgres_types::private::read_be_i32(&mut out)?;
-                let name = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
-                let _oid = postgres_types::private::read_be_i32(&mut out)?;
-                let age = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
-                let _oid = postgres_types::private::read_be_i32(&mut out)?;
-                let persona = postgres_types::private::read_value(fields[2].type_(), &mut out)?;
-                Ok(CustomCompositeBorrowed { name, age, persona })
-            }
-
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                ty.name() == "custom_composite" && ty.schema() == "public"
-            }
-        }
-        impl<'a> postgres_types::ToSql for CustomCompositeBorrowed<'a> {
-            fn to_sql(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let CustomCompositeBorrowed { name, age, persona } = self;
-                let fields = match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
-                for field in fields {
-                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
-                    let base = out.len();
-                    out.extend_from_slice(&[0; 4]);
-                    let r = match field.name() {
-                        "name" => postgres_types::ToSql::to_sql(name, field.type_(), out),
-                        "age" => postgres_types::ToSql::to_sql(age, field.type_(), out),
-                        "persona" => postgres_types::ToSql::to_sql(persona, field.type_(), out),
-                        _ => unreachable!(),
-                    };
-                    let count = match r? {
-                        postgres_types::IsNull::Yes => -1,
-                        postgres_types::IsNull::No => {
-                            let len = out.len() - base - 4;
-                            if len > i32::max_value() as usize {
-                                return Err(Into::into("value too large to transmit"));
-                            }
-                            len as i32
-                        }
-                    };
-                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
-                }
-                Ok(postgres_types::IsNull::No)
-            }
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                if ty.name() != "custom_composite" {
-                    return false;
-                }
-                match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 3usize {
-                            return false;
-                        }
-                        fields.iter().all(|f| match f.name() {
-                            "name" => <&'a str as postgres_types::ToSql>::accepts(f.type_()),
-"age" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
-"persona" => <super::super::types::public::SpongebobCharacter as postgres_types::ToSql>::accepts(f.type_()),
-                            _ => false,
-                        })
-                    }
-                    _ => false,
-                }
-            }
-            fn to_sql_checked(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
-            {
-                postgres_types::__to_sql_checked(self, ty, out)
-            }
-        }
     }
 }
 pub mod queries {
@@ -153,7 +39,10 @@ pub mod queries {
     }
     pub mod module_2 {
         use postgres::{fallible_iterator::FallibleIterator, GenericClient};
-
+        #[derive(Debug)]
+        pub struct AuthorNameStartingWithParams<'a> {
+            pub start_str: &'a str,
+        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct Authors {
             pub id: i32,
@@ -279,59 +168,6 @@ pub mod queries {
                 Ok(it)
             }
         }
-
-        pub struct OptionStringQuery<'a, C: GenericClient, T, const N: usize> {
-            client: &'a mut C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut cornucopia_sync::private::Stmt,
-            extractor: fn(&postgres::Row) -> Option<&str>,
-            mapper: fn(Option<&str>) -> T,
-        }
-        impl<'a, C, T: 'a, const N: usize> OptionStringQuery<'a, C, T, N>
-        where
-            C: GenericClient,
-        {
-            pub fn map<R>(self, mapper: fn(Option<&str>) -> R) -> OptionStringQuery<'a, C, R, N> {
-                OptionStringQuery {
-                    client: self.client,
-                    params: self.params,
-                    stmt: self.stmt,
-                    extractor: self.extractor,
-                    mapper,
-                }
-            }
-
-            pub fn one(self) -> Result<T, postgres::Error> {
-                let stmt = self.stmt.prepare(self.client)?;
-                let row = self.client.query_one(stmt, &self.params)?;
-                Ok((self.mapper)((self.extractor)(&row)))
-            }
-
-            pub fn all(self) -> Result<Vec<T>, postgres::Error> {
-                self.iter()?.collect()
-            }
-
-            pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                let stmt = self.stmt.prepare(self.client)?;
-                Ok(self
-                    .client
-                    .query_opt(stmt, &self.params)?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
-            }
-
-            pub fn iter(
-                self,
-            ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
-            {
-                let stmt = self.stmt.prepare(self.client)?;
-                let it = self
-                    .client
-                    .query_raw(stmt, cornucopia_sync::private::slice_iter(&self.params))?
-                    .iterator()
-                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
-                Ok(it)
-            }
-        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct AuthorNameStartingWith {
             pub authorid: i32,
@@ -378,67 +214,6 @@ pub mod queries {
                 mapper: fn(AuthorNameStartingWithBorrowed) -> R,
             ) -> AuthorNameStartingWithQuery<'a, C, R, N> {
                 AuthorNameStartingWithQuery {
-                    client: self.client,
-                    params: self.params,
-                    stmt: self.stmt,
-                    extractor: self.extractor,
-                    mapper,
-                }
-            }
-
-            pub fn one(self) -> Result<T, postgres::Error> {
-                let stmt = self.stmt.prepare(self.client)?;
-                let row = self.client.query_one(stmt, &self.params)?;
-                Ok((self.mapper)((self.extractor)(&row)))
-            }
-
-            pub fn all(self) -> Result<Vec<T>, postgres::Error> {
-                self.iter()?.collect()
-            }
-
-            pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                let stmt = self.stmt.prepare(self.client)?;
-                Ok(self
-                    .client
-                    .query_opt(stmt, &self.params)?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
-            }
-
-            pub fn iter(
-                self,
-            ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
-            {
-                let stmt = self.stmt.prepare(self.client)?;
-                let it = self
-                    .client
-                    .query_raw(stmt, cornucopia_sync::private::slice_iter(&self.params))?
-                    .iterator()
-                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
-                Ok(it)
-            }
-        }
-
-        pub struct SuperSuperTypesPublicCustomCompositeQuery<
-            'a,
-            C: GenericClient,
-            T,
-            const N: usize,
-        > {
-            client: &'a mut C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut cornucopia_sync::private::Stmt,
-            extractor: fn(&postgres::Row) -> super::super::types::public::CustomCompositeBorrowed,
-            mapper: fn(super::super::types::public::CustomCompositeBorrowed) -> T,
-        }
-        impl<'a, C, T: 'a, const N: usize> SuperSuperTypesPublicCustomCompositeQuery<'a, C, T, N>
-        where
-            C: GenericClient,
-        {
-            pub fn map<R>(
-                self,
-                mapper: fn(super::super::types::public::CustomCompositeBorrowed) -> R,
-            ) -> SuperSuperTypesPublicCustomCompositeQuery<'a, C, R, N> {
-                SuperSuperTypesPublicCustomCompositeQuery {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -539,23 +314,44 @@ pub mod queries {
                 Ok(it)
             }
         }
-
-        pub struct VecStringQuery<'a, C: GenericClient, T, const N: usize> {
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct SelectTranslations {
+            pub title: String,
+            pub translations: Vec<String>,
+        }
+        pub struct SelectTranslationsBorrowed<'a> {
+            pub title: &'a str,
+            pub translations: cornucopia_sync::ArrayIterator<'a, &'a str>,
+        }
+        impl<'a> From<SelectTranslationsBorrowed<'a>> for SelectTranslations {
+            fn from(
+                SelectTranslationsBorrowed {
+                    title,
+                    translations,
+                }: SelectTranslationsBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    title: title.into(),
+                    translations: translations.map(|v| v.into()).collect(),
+                }
+            }
+        }
+        pub struct SelectTranslationsQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_sync::private::Stmt,
-            extractor: fn(&postgres::Row) -> cornucopia_sync::ArrayIterator<'_, &str>,
-            mapper: fn(cornucopia_sync::ArrayIterator<'_, &str>) -> T,
+            extractor: fn(&postgres::Row) -> SelectTranslationsBorrowed,
+            mapper: fn(SelectTranslationsBorrowed) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> VecStringQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> SelectTranslationsQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
             pub fn map<R>(
                 self,
-                mapper: fn(cornucopia_sync::ArrayIterator<'_, &str>) -> R,
-            ) -> VecStringQuery<'a, C, R, N> {
-                VecStringQuery {
+                mapper: fn(SelectTranslationsBorrowed) -> R,
+            ) -> SelectTranslationsQuery<'a, C, R, N> {
+                SelectTranslationsQuery {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -645,29 +441,6 @@ FROM
                 }
             }
         }
-        pub fn books_opt_ret_param() -> BooksOptRetParamStmt {
-            BooksOptRetParamStmt(cornucopia_sync::private::Stmt::new(
-                "SELECT
-    Title
-FROM
-    Book",
-            ))
-        }
-        pub struct BooksOptRetParamStmt(cornucopia_sync::private::Stmt);
-        impl BooksOptRetParamStmt {
-            pub fn bind<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-            ) -> OptionStringQuery<'a, C, Option<String>, 0> {
-                OptionStringQuery {
-                    client,
-                    params: [],
-                    stmt: &mut self.0,
-                    extractor: |row| row.get(0),
-                    mapper: |it| it.map(|v| v.into()),
-                }
-            }
-        }
         pub fn author_name_by_id() -> AuthorNameByIdStmt {
             AuthorNameByIdStmt(cornucopia_sync::private::Stmt::new(
                 "SELECT
@@ -730,32 +503,20 @@ WHERE
                 }
             }
         }
-        pub fn return_custom_type() -> ReturnCustomTypeStmt {
-            ReturnCustomTypeStmt(cornucopia_sync::private::Stmt::new(
-                "SELECT
-    col1
-FROM
-    CustomTable",
-            ))
-        }
-        pub struct ReturnCustomTypeStmt(cornucopia_sync::private::Stmt);
-        impl ReturnCustomTypeStmt {
-            pub fn bind<'a, C: GenericClient>(
+        impl<'a, C: GenericClient>
+            cornucopia_sync::Params<
+                'a,
+                AuthorNameStartingWithParams<'a>,
+                AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith, 1>,
+                C,
+            > for AuthorNameStartingWithStmt
+        {
+            fn params(
                 &'a mut self,
                 client: &'a mut C,
-            ) -> SuperSuperTypesPublicCustomCompositeQuery<
-                'a,
-                C,
-                super::super::types::public::CustomComposite,
-                0,
-            > {
-                SuperSuperTypesPublicCustomCompositeQuery {
-                    client,
-                    params: [],
-                    stmt: &mut self.0,
-                    extractor: |row| row.get(0),
-                    mapper: |it| it.into(),
-                }
+                params: &'a AuthorNameStartingWithParams<'a>,
+            ) -> AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith, 1> {
+                self.bind(client, &params.start_str)
             }
         }
         pub fn select_where_custom_type() -> SelectWhereCustomTypeStmt {
@@ -791,6 +552,7 @@ WHERE (col1).persona = $1",
         pub fn select_translations() -> SelectTranslationsStmt {
             SelectTranslationsStmt(cornucopia_sync::private::Stmt::new(
                 "SELECT
+    Title,
     Translations
 FROM
     Book",
@@ -801,13 +563,16 @@ FROM
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-            ) -> VecStringQuery<'a, C, Vec<String>, 0> {
-                VecStringQuery {
+            ) -> SelectTranslationsQuery<'a, C, SelectTranslations, 0> {
+                SelectTranslationsQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
-                    extractor: |row| row.get(0),
-                    mapper: |it| it.map(|v| v.into()).collect(),
+                    extractor: |row| SelectTranslationsBorrowed {
+                        title: row.get(0),
+                        translations: row.get(1),
+                    },
+                    mapper: |it| <SelectTranslations>::from(it),
                 }
             }
         }
