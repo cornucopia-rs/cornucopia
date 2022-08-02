@@ -87,27 +87,39 @@ You can learn more about using Cornucopia by reading our [book](https://cornucop
 ## A quick taste of Cornucopia
 The [book](https://cornucopia-rs.netlify.app/book/index.html) is the place to go to get more in-depth explanations, but here is the simplest of tasters to give you an idea.
 
-Let's say you have the following PostgreSQL query
+Let's say you have the following PostgreSQL queries
 ```sql
 -- queries/some_query_file.sql
 
 --! authors
-SELECT * FROM Authors;
+SELECT first_name, last_name, country FROM Authors;
+
+--! insert_author
+INSERT INTO Authors(first_name, last_name, country) 
+VALUES (:first_name, :last_name, :country)
 ```
-Notice the query annotation: `--! authors`.
+Notice the query annotations (`--! authors`, `--! insert_authors`) and the named bind parameters (`:first_name`, etc.).
 
 Then, after generating the Rust code with Cornucopia's CLI, you can import it into your project like so:
 ```rust
 mod cornucopia;
-use cornucopia::authors;
+use cornucopia::{authors, insert_author};
 ```
 
-Finally here is an example usage of this query:
+Finally here is an example usage of these queries:
 ```rust
-let all_authors = authors().bind(&client).all();
-```
-This would return a `Vec` of `Authors` structs with type-checked fields. 
+insert_author.bind(&client, "Agatha", "Christie", "England");
 
+let all_authors = authors().bind(&client).all();
+
+for author in all_authors {
+  println!("[{}] {}, {}", 
+    author.country, 
+    author.last_name.to_uppercase(), 
+    author.first_name
+  )
+}
+```
 You can customize pretty much every aspect of your queries easily with Cornucopia (custom parameters and row structs, renaming, nullity control, etc.), so please head over to the [book](https://cornucopia-rs.netlify.app/book/index.html) if you're interested to learn more.
 
 ## MSRV
