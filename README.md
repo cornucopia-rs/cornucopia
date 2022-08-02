@@ -80,6 +80,7 @@ Here are some defining features:
 * Ergonomic non-allocating row mapping.
 * Granular type nullity control.
 * Available as a library and a CLI.
+* As close to native `rust-postgres` performance as we can make it.
 
 You can learn more about using Cornucopia by reading our [book](https://cornucopia-rs.netlify.app/book/index.html), or you can get a quickstart by looking at our [examples](https://cornucopia-rs.netlify.app/book/examples.html).
 ## MSRV
