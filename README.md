@@ -83,6 +83,33 @@ Here are some defining features:
 * As close to native `rust-postgres` performance as we can make it.
 
 You can learn more about using Cornucopia by reading our [book](https://cornucopia-rs.netlify.app/book/index.html), or you can get a quickstart by looking at our [examples](https://cornucopia-rs.netlify.app/book/examples.html).
+
+## A quick taste of Cornucopia
+The [book](https://cornucopia-rs.netlify.app/book/index.html) is the place to go to get more in-depth explanations, but here is the simplest of tasters to give you an idea.
+
+Let's say you have the following PostgreSQL query
+```sql
+-- queries/some_query_file.sql
+
+--! authors
+SELECT * FROM Authors;
+```
+Notice the query annotation: `--! authors`.
+
+Then, after generating the Rust code with Cornucopia's CLI, you can import it into your project like so:
+```rust
+mod cornucopia;
+use cornucopia::authors;
+```
+
+Finally here is an example usage of this query:
+```rust
+let all_authors = authors().bind(&client).all();
+```
+This would return a `Vec` of `Authors` structs with type-checked fields. 
+
+You can customize pretty much every aspect of your queries easily with Cornucopia (custom parameters and row structs, renaming, nullity control, etc.), so please head over to the [book](https://cornucopia-rs.netlify.app/book/index.html) if you're interested to learn more.
+
 ## MSRV
 This crate uses Rust 2021 edition, which requires at least version 1.56.
 
