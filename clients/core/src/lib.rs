@@ -27,7 +27,7 @@ pub trait ArraySql<T: std::fmt::Debug + ToSql + Sync>: std::fmt::Debug + ToSql +
 }
 impl<T: std::fmt::Debug + ToSql + Sync, A: ArraySql<T>> ArraySql<T> for &A {
     fn slice(&self) -> &[T] {
-        A::slice(&self)
+        A::slice(self)
     }
 }
 impl<T: std::fmt::Debug + ToSql + Sync> ArraySql<T> for Vec<T> {
