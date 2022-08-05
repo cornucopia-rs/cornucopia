@@ -35,7 +35,7 @@ impl PreparedField {
         for_params: bool,
         has_lifetime: bool,
         is_async: bool,
-        support_trait: bool,
+        support_trait: &mut Option<&mut Vec<String>>,
     ) -> String {
         let it = self.ty.brw_struct(
             for_params,
@@ -226,7 +226,7 @@ fn gen_params_struct(w: &mut impl Write, params: &PreparedItem, settings: Codege
                 w,
                 "pub {} : {}",
                 p.name,
-                p.brw_struct(true, true, is_async, false)
+                p.brw_struct(true, true, is_async, &mut None)
             );
         });
         let (copy, lifetime) = if *is_copy {
@@ -274,7 +274,7 @@ fn gen_row_structs(
                     w,
                     "pub {} : {}",
                     col.name,
-                    col.brw_struct(false, true, is_async, false)
+                    col.brw_struct(false, true, is_async, &mut None)
                 );
             });
             let fields_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
@@ -332,7 +332,7 @@ fn gen_row_structs(
         let row_struct = if *is_named {
             format!("{name}{borrowed_str}")
         } else {
-            fields[0].brw_struct(false, false, is_async, false)
+            fields[0].brw_struct(false, false, is_async, &mut None)
         };
 
         gen!(w,"
@@ -390,6 +390,10 @@ fn gen_row_structs(
     }
 }
 
+pub fn idx_char(idx: usize) -> String {
+    format!("T{idx}")
+}
+
 fn gen_query_fn(
     w: &mut impl Write,
     module: &PreparedModule,
@@ -429,14 +433,23 @@ fn gen_query_fn(
         }
         None => (None, [].as_slice(), [].as_slice()),
     };
-    let param_list = join_comma(order.iter().map(|idx| &param_field[*idx]), |w, p| {
-        gen!(
-            w,
-            "{} : &'a {}",
-            p.name,
-            p.brw_struct(true, true, is_async, true)
-        );
+    let traits = &mut Vec::new();
+    let param_list = order
+        .iter()
+        .map(|idx| &param_field[*idx])
+        .map(|p| {
+            format!(
+                "{} : &'a {}",
+                p.name,
+                p.brw_struct(true, true, is_async, &mut Some(traits))
+            )
+        })
+        .collect::<Vec<String>>();
+    let param_list = join_comma(param_list, |w, s| gen!(w, "{s}"));
+    let generic = join_comma(traits.iter().enumerate(), |w, (idx, p)| {
+        gen!(w, "{}: {p}", idx_char(idx + 1));
     });
+
     if let Some((idx, index)) = row {
         let PreparedItem {
             name: row_name,
@@ -468,7 +481,7 @@ fn gen_query_fn(
             )
         };
         gen!(w,
-            "pub fn bind<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, {param_list}) -> {row_name}Query<'a,C, {row_struct_name}, {nb_params}> {{
+            "pub fn bind<'a, C: GenericClient,{generic}>(&'a mut self, client: &'a {client_mut} C, {param_list}) -> {row_name}Query<'a,C, {row_struct_name}, {nb_params}> {{
                 {row_name}Query {{
                     client,
                     params: [{param_names}],
@@ -485,7 +498,7 @@ fn gen_query_fn(
             gen!(w, "{}", p.ty.sql_wrapped(&p.name, is_async));
         });
         gen!(w,
-            "pub {fn_async} fn bind<'a, C: GenericClient>(&'a mut self, client: &'a {client_mut} C, {param_list}) -> Result<u64, {backend}::Error> {{
+            "pub {fn_async} fn bind<'a, C: GenericClient,{generic}>(&'a mut self, client: &'a {client_mut} C, {param_list}) -> Result<u64, {backend}::Error> {{
                 let stmt = self.0.prepare(client){fn_await}?;
                 client.execute(stmt, &[{param_names}]){fn_await}
             }}
@@ -591,7 +604,7 @@ fn gen_custom_type(
                         w,
                         "pub {} : {}",
                         f.name,
-                        f.brw_struct(false, true, is_async, false)
+                        f.brw_struct(false, true, is_async, &mut None)
                     );
                 });
                 let field_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
@@ -615,7 +628,7 @@ fn gen_custom_type(
                             w,
                             "pub {} : {}",
                             f.name,
-                            f.brw_struct(true, true, is_async, false)
+                            f.brw_struct(true, true, is_async, &mut None)
                         );
                     });
                     let derive = if *is_copy { ",Copy,Clone" } else { "" };

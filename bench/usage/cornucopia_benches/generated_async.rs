@@ -389,11 +389,16 @@ pub mod queries {
         }
         pub struct InsertUserStmt(cornucopia_async::private::Stmt);
         impl InsertUserStmt {
-            pub async fn bind<'a, C: GenericClient>(
+            pub async fn bind<
+                'a,
+                C: GenericClient,
+                T1: cornucopia_async::StringSql,
+                T2: cornucopia_async::StringSql,
+            >(
                 &'a mut self,
                 client: &'a C,
-                name: &'a impl cornucopia_async::StringSql,
-                hair_color: &'a Option<impl cornucopia_async::StringSql>,
+                name: &'a T1,
+                hair_color: &'a Option<T2>,
             ) -> Result<u64, tokio_postgres::Error> {
                 let stmt = self.0.prepare(client).await?;
                 client.execute(stmt, &[name, hair_color]).await

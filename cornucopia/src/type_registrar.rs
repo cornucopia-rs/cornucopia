@@ -4,7 +4,7 @@ use heck::ToUpperCamelCase;
 use indexmap::{map::Entry, IndexMap};
 use postgres_types::{Kind, Type};
 
-use crate::{parser::Span, read_queries::ModuleInfo, utils::SchemaKey};
+use crate::{codegen::idx_char, parser::Span, read_queries::ModuleInfo, utils::SchemaKey};
 
 use self::error::Error;
 
@@ -88,9 +88,9 @@ impl CornucopiaType {
                         inner.accept_to_sql(is_async)
                     )
                 }
-                _ => self.brw_struct(true, false, true, is_async, false),
+                _ => self.brw_struct(true, false, true, is_async, &mut None),
             },
-            _ => self.brw_struct(true, false, true, is_async, false),
+            _ => self.brw_struct(true, false, true, is_async, &mut None),
         }
     }
 
@@ -157,7 +157,7 @@ impl CornucopiaType {
         is_inner_nullable: bool,
         has_lifetime: bool,
         is_async: bool,
-        support_trait: bool,
+        support_trait: &mut Option<&mut Vec<String>>,
     ) -> String {
         let client_name = if is_async { "async" } else { "sync" };
         let lifetime = if has_lifetime { "'a" } else { "" };
@@ -166,15 +166,17 @@ impl CornucopiaType {
                 pg_ty, rust_name, ..
             } => match *pg_ty {
                 Type::BYTEA => {
-                    if support_trait {
-                        format!("impl cornucopia_{client_name}::BytesSql")
+                    if let Some(traits) = support_trait {
+                        traits.push(format!("cornucopia_{client_name}::BytesSql"));
+                        idx_char(traits.len())
                     } else {
                         format!("&{lifetime} [u8]")
                     }
                 }
                 Type::TEXT | Type::VARCHAR => {
-                    if support_trait {
-                        format!("impl cornucopia_{client_name}::StringSql")
+                    if let Some(traits) = support_trait {
+                        traits.push(format!("cornucopia_{client_name}::StringSql"));
+                        idx_char(traits.len())
                     } else {
                         format!("&{lifetime} str")
                     }

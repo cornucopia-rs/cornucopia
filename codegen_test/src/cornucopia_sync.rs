@@ -1255,10 +1255,10 @@ pub mod queries {
         }
         pub struct InsertNightmareDomainStmt(cornucopia_sync::private::Stmt);
         impl InsertNightmareDomainStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::StringSql>(
                 &'a mut self,
                 client: &'a mut C,
-                txt: &'a impl cornucopia_sync::StringSql,
+                txt: &'a T1,
                 json: &'a &'a serde_json::value::Value,
                 nb: &'a i32,
                 arr: &'a &'a [&'a serde_json::value::Value],
@@ -1543,10 +1543,10 @@ pub mod queries {
         }
         pub struct NewNamedVisibleStmt(cornucopia_sync::private::Stmt);
         impl NewNamedVisibleStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::StringSql>(
                 &'a mut self,
                 client: &'a mut C,
-                name: &'a impl cornucopia_sync::StringSql,
+                name: &'a T1,
                 price: &'a Option<f64>,
             ) -> IdQuery<'a, C, Id, 2> {
                 IdQuery {
@@ -1577,11 +1577,11 @@ pub mod queries {
         }
         pub struct NewNamedHiddenStmt(cornucopia_sync::private::Stmt);
         impl NewNamedHiddenStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::StringSql>(
                 &'a mut self,
                 client: &'a mut C,
                 price: &'a Option<f64>,
-                name: &'a impl cornucopia_sync::StringSql,
+                name: &'a T1,
             ) -> IdQuery<'a, C, Id, 2> {
                 IdQuery {
                     client,
@@ -1801,11 +1801,16 @@ pub mod queries {
         }
         pub struct NewNullityStmt(cornucopia_sync::private::Stmt);
         impl NewNullityStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<
+                'a,
+                C: GenericClient,
+                T1: cornucopia_sync::StringSql,
+                T2: cornucopia_sync::StringSql,
+            >(
                 &'a mut self,
                 client: &'a mut C,
-                texts: &'a &'a [Option<impl cornucopia_sync::StringSql>],
-                name: &'a impl cornucopia_sync::StringSql,
+                texts: &'a &'a [Option<T1>],
+                name: &'a T2,
                 composite: &'a Option<super::super::types::public::NullityCompositeParams<'a>>,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
@@ -2009,11 +2014,16 @@ pub mod queries {
         }
         pub struct InsertBookStmt(cornucopia_sync::private::Stmt);
         impl InsertBookStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<
+                'a,
+                C: GenericClient,
+                T1: cornucopia_sync::StringSql,
+                T2: cornucopia_sync::StringSql,
+            >(
                 &'a mut self,
                 client: &'a mut C,
-                author: &'a Option<impl cornucopia_sync::StringSql>,
-                name: &'a impl cornucopia_sync::StringSql,
+                author: &'a Option<T1>,
+                name: &'a T2,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[author, name])
@@ -2060,10 +2070,10 @@ pub mod queries {
         }
         pub struct FindBooksStmt(cornucopia_sync::private::Stmt);
         impl FindBooksStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::StringSql>(
                 &'a mut self,
                 client: &'a mut C,
-                title: &'a &'a [impl cornucopia_sync::StringSql],
+                title: &'a &'a [T1],
             ) -> FindBooksQuery<'a, C, FindBooks, 1> {
                 FindBooksQuery {
                     client,
@@ -2084,10 +2094,10 @@ pub mod queries {
         }
         pub struct ParamsUseTwiceStmt(cornucopia_sync::private::Stmt);
         impl ParamsUseTwiceStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::StringSql>(
                 &'a mut self,
                 client: &'a mut C,
-                name: &'a impl cornucopia_sync::StringSql,
+                name: &'a T1,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[name])
@@ -3154,7 +3164,13 @@ pub mod queries {
         }
         pub struct InsertEverythingStmt(cornucopia_sync::private::Stmt);
         impl InsertEverythingStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<
+                'a,
+                C: GenericClient,
+                T1: cornucopia_sync::StringSql,
+                T2: cornucopia_sync::StringSql,
+                T3: cornucopia_sync::BytesSql,
+            >(
                 &'a mut self,
                 client: &'a mut C,
                 bool_: &'a bool,
@@ -3176,9 +3192,9 @@ pub mod queries {
                 real_: &'a f32,
                 float8_: &'a f64,
                 double_precision_: &'a f64,
-                text_: &'a impl cornucopia_sync::StringSql,
-                varchar_: &'a impl cornucopia_sync::StringSql,
-                bytea_: &'a impl cornucopia_sync::BytesSql,
+                text_: &'a T1,
+                varchar_: &'a T2,
+                bytea_: &'a T3,
                 timestamp_: &'a time::PrimitiveDateTime,
                 timestamp_without_time_zone_: &'a time::PrimitiveDateTime,
                 timestamptz_: &'a time::OffsetDateTime,
@@ -3382,7 +3398,13 @@ pub mod queries {
         }
         pub struct InsertEverythingArrayStmt(cornucopia_sync::private::Stmt);
         impl InsertEverythingArrayStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<
+                'a,
+                C: GenericClient,
+                T1: cornucopia_sync::StringSql,
+                T2: cornucopia_sync::StringSql,
+                T3: cornucopia_sync::BytesSql,
+            >(
                 &'a mut self,
                 client: &'a mut C,
                 bool_: &'a &'a [bool],
@@ -3398,9 +3420,9 @@ pub mod queries {
                 real_: &'a &'a [f32],
                 float8_: &'a &'a [f64],
                 double_precision_: &'a &'a [f64],
-                text_: &'a &'a [impl cornucopia_sync::StringSql],
-                varchar_: &'a &'a [impl cornucopia_sync::StringSql],
-                bytea_: &'a &'a [impl cornucopia_sync::BytesSql],
+                text_: &'a &'a [T1],
+                varchar_: &'a &'a [T2],
+                bytea_: &'a &'a [T3],
                 timestamp_: &'a &'a [time::PrimitiveDateTime],
                 timestamp_without_time_zone_: &'a &'a [time::PrimitiveDateTime],
                 timestamptz_: &'a &'a [time::OffsetDateTime],
@@ -3899,10 +3921,10 @@ pub mod queries {
         }
         pub struct ImplicitCompactStmt(cornucopia_sync::private::Stmt);
         impl ImplicitCompactStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::StringSql>(
                 &'a mut self,
                 client: &'a mut C,
-                name: &'a Option<impl cornucopia_sync::StringSql>,
+                name: &'a Option<T1>,
                 price: &'a Option<f64>,
             ) -> Optioni32Query<'a, C, Option<i32>, 2> {
                 Optioni32Query {
@@ -3937,10 +3959,10 @@ pub mod queries {
         }
         pub struct ImplicitSpacedStmt(cornucopia_sync::private::Stmt);
         impl ImplicitSpacedStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::StringSql>(
                 &'a mut self,
                 client: &'a mut C,
-                name: &'a Option<impl cornucopia_sync::StringSql>,
+                name: &'a Option<T1>,
                 price: &'a Option<f64>,
             ) -> Optioni32Query<'a, C, Option<i32>, 2> {
                 Optioni32Query {
@@ -3975,10 +3997,10 @@ pub mod queries {
         }
         pub struct NamedCompactStmt(cornucopia_sync::private::Stmt);
         impl NamedCompactStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::StringSql>(
                 &'a mut self,
                 client: &'a mut C,
-                name: &'a impl cornucopia_sync::StringSql,
+                name: &'a T1,
                 price: &'a f64,
             ) -> RowQuery<'a, C, Row, 2> {
                 RowQuery {
@@ -4009,10 +4031,10 @@ pub mod queries {
         }
         pub struct NamedSpacedStmt(cornucopia_sync::private::Stmt);
         impl NamedSpacedStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::StringSql>(
                 &'a mut self,
                 client: &'a mut C,
-                name: &'a impl cornucopia_sync::StringSql,
+                name: &'a T1,
                 price: &'a f64,
             ) -> RowSpaceQuery<'a, C, RowSpace, 2> {
                 RowSpaceQuery {

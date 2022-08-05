@@ -27,10 +27,10 @@ pub mod queries {
         }
         pub struct InsertBookStmt(cornucopia_sync::private::Stmt);
         impl InsertBookStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::StringSql>(
                 &'a mut self,
                 client: &'a mut C,
-                title: &'a impl cornucopia_sync::StringSql,
+                title: &'a T1,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[title])
@@ -484,10 +484,10 @@ WHERE
         }
         pub struct AuthorNameStartingWithStmt(cornucopia_sync::private::Stmt);
         impl AuthorNameStartingWithStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::StringSql>(
                 &'a mut self,
                 client: &'a mut C,
-                start_str: &'a impl cornucopia_sync::StringSql,
+                start_str: &'a T1,
             ) -> AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith, 1> {
                 AuthorNameStartingWithQuery {
                     client,

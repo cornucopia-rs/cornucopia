@@ -371,11 +371,16 @@ pub mod queries {
         }
         pub struct InsertUserStmt(cornucopia_sync::private::Stmt);
         impl InsertUserStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<
+                'a,
+                C: GenericClient,
+                T1: cornucopia_sync::StringSql,
+                T2: cornucopia_sync::StringSql,
+            >(
                 &'a mut self,
                 client: &'a mut C,
-                name: &'a impl cornucopia_sync::StringSql,
-                hair_color: &'a Option<impl cornucopia_sync::StringSql>,
+                name: &'a T1,
+                hair_color: &'a Option<T2>,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[name, hair_color])
