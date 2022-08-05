@@ -30,10 +30,20 @@ impl PreparedField {
         }
     }
 
-    pub fn brw_struct(&self, for_params: bool, has_lifetime: bool, is_async: bool) -> String {
-        let it = self
-            .ty
-            .brw_struct(for_params, self.is_inner_nullable, has_lifetime, is_async);
+    pub fn brw_struct(
+        &self,
+        for_params: bool,
+        has_lifetime: bool,
+        is_async: bool,
+        support_trait: bool,
+    ) -> String {
+        let it = self.ty.brw_struct(
+            for_params,
+            self.is_inner_nullable,
+            has_lifetime,
+            is_async,
+            support_trait,
+        );
         if self.is_nullable {
             format!("Option<{}>", it)
         } else {
@@ -212,7 +222,12 @@ fn gen_params_struct(w: &mut impl Write, params: &PreparedItem, settings: Codege
     let is_async = settings.is_async;
     if *is_named {
         let struct_fields = join_comma(fields, |w, p| {
-            gen!(w, "pub {} : {}", p.name, p.brw_struct(true, true, is_async));
+            gen!(
+                w,
+                "pub {} : {}",
+                p.name,
+                p.brw_struct(true, true, is_async, false)
+            );
         });
         let (copy, lifetime) = if *is_copy {
             ("Clone,Copy,", "")
@@ -259,7 +274,7 @@ fn gen_row_structs(
                     w,
                     "pub {} : {}",
                     col.name,
-                    col.brw_struct(false, true, is_async)
+                    col.brw_struct(false, true, is_async, false)
                 );
             });
             let fields_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
@@ -317,7 +332,7 @@ fn gen_row_structs(
         let row_struct = if *is_named {
             format!("{name}{borrowed_str}")
         } else {
-            fields[0].brw_struct(false, false, is_async)
+            fields[0].brw_struct(false, false, is_async, false)
         };
 
         gen!(w,"
@@ -415,7 +430,12 @@ fn gen_query_fn(
         None => (None, [].as_slice(), [].as_slice()),
     };
     let param_list = join_comma(order.iter().map(|idx| &param_field[*idx]), |w, p| {
-        gen!(w, "{} : &'a {}", p.name, p.brw_struct(true, true, is_async));
+        gen!(
+            w,
+            "{} : &'a {}",
+            p.name,
+            p.brw_struct(true, true, is_async, true)
+        );
     });
     if let Some((idx, index)) = row {
         let PreparedItem {
@@ -571,7 +591,7 @@ fn gen_custom_type(
                         w,
                         "pub {} : {}",
                         f.name,
-                        f.brw_struct(false, true, is_async)
+                        f.brw_struct(false, true, is_async, false)
                     );
                 });
                 let field_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
@@ -591,7 +611,12 @@ fn gen_custom_type(
                 composite_fromsql(w, struct_name, fields, name, schema);
                 if !is_params {
                     let fields = join_comma(fields, |w, f| {
-                        gen!(w, "pub {} : {}", f.name, f.brw_struct(true, true, is_async));
+                        gen!(
+                            w,
+                            "pub {} : {}",
+                            f.name,
+                            f.brw_struct(true, true, is_async, false)
+                        );
                     });
                     let derive = if *is_copy { ",Copy,Clone" } else { "" };
                     gen!(

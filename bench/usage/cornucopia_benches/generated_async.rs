@@ -392,8 +392,8 @@ pub mod queries {
             pub async fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                name: &'a &'a str,
-                hair_color: &'a Option<&'a str>,
+                name: &'a impl cornucopia_async::StringSql,
+                hair_color: &'a Option<impl cornucopia_async::StringSql>,
             ) -> Result<u64, tokio_postgres::Error> {
                 let stmt = self.0.prepare(client).await?;
                 client.execute(stmt, &[name, hair_color]).await

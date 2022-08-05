@@ -1281,7 +1281,7 @@ pub mod queries {
             pub async fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                txt: &'a &'a str,
+                txt: &'a impl cornucopia_async::StringSql,
                 json: &'a &'a serde_json::value::Value,
                 nb: &'a i32,
                 arr: &'a &'a [&'a serde_json::value::Value],
@@ -1594,7 +1594,7 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                name: &'a &'a str,
+                name: &'a impl cornucopia_async::StringSql,
                 price: &'a Option<f64>,
             ) -> IdQuery<'a, C, Id, 2> {
                 IdQuery {
@@ -1629,7 +1629,7 @@ pub mod queries {
                 &'a mut self,
                 client: &'a C,
                 price: &'a Option<f64>,
-                name: &'a &'a str,
+                name: &'a impl cornucopia_async::StringSql,
             ) -> IdQuery<'a, C, Id, 2> {
                 IdQuery {
                     client,
@@ -1870,8 +1870,8 @@ pub mod queries {
             pub async fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                texts: &'a &'a [Option<&'a str>],
-                name: &'a &'a str,
+                texts: &'a &'a [Option<impl cornucopia_async::StringSql>],
+                name: &'a impl cornucopia_async::StringSql,
                 composite: &'a Option<super::super::types::public::NullityCompositeParams<'a>>,
             ) -> Result<u64, tokio_postgres::Error> {
                 let stmt = self.0.prepare(client).await?;
@@ -2019,6 +2019,79 @@ pub mod queries {
                 Ok(it)
             }
         }
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
+        pub struct FindBooks {
+            pub name: String,
+            pub author: Option<String>,
+        }
+        pub struct FindBooksBorrowed<'a> {
+            pub name: &'a str,
+            pub author: Option<&'a str>,
+        }
+        impl<'a> From<FindBooksBorrowed<'a>> for FindBooks {
+            fn from(FindBooksBorrowed { name, author }: FindBooksBorrowed<'a>) -> Self {
+                Self {
+                    name: name.into(),
+                    author: author.map(|v| v.into()),
+                }
+            }
+        }
+        pub struct FindBooksQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            stmt: &'a mut cornucopia_async::private::Stmt,
+            extractor: fn(&tokio_postgres::Row) -> FindBooksBorrowed,
+            mapper: fn(FindBooksBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> FindBooksQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(self, mapper: fn(FindBooksBorrowed) -> R) -> FindBooksQuery<'a, C, R, N> {
+                FindBooksQuery {
+                    client: self.client,
+                    params: self.params,
+                    stmt: self.stmt,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+
+            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+                let stmt = self.stmt.prepare(self.client).await?;
+                let row = self.client.query_one(stmt, &self.params).await?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+
+            pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.iter().await?.try_collect().await
+            }
+
+            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+                let stmt = self.stmt.prepare(self.client).await?;
+                Ok(self
+                    .client
+                    .query_opt(stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+
+            pub async fn iter(
+                self,
+            ) -> Result<
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
+                let stmt = self.stmt.prepare(self.client).await?;
+                let it = self
+                    .client
+                    .query_raw(stmt, cornucopia_async::private::slice_iter(&self.params))
+                    .await?
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                    .into_stream();
+                Ok(it)
+            }
+        }
         pub fn insert_book() -> InsertBookStmt {
             InsertBookStmt(cornucopia_async::private::Stmt::new(
                 "INSERT INTO book (author, name) VALUES ($1, $2)",
@@ -2029,8 +2102,8 @@ pub mod queries {
             pub async fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                author: &'a Option<&'a str>,
-                name: &'a &'a str,
+                author: &'a Option<impl cornucopia_async::StringSql>,
+                name: &'a impl cornucopia_async::StringSql,
             ) -> Result<u64, tokio_postgres::Error> {
                 let stmt = self.0.prepare(client).await?;
                 client.execute(stmt, &[author, name]).await
@@ -2082,6 +2155,30 @@ pub mod queries {
                 }
             }
         }
+        pub fn find_books() -> FindBooksStmt {
+            FindBooksStmt(cornucopia_async::private::Stmt::new(
+                "SELECT * FROM book WHERE name = ANY ($1)",
+            ))
+        }
+        pub struct FindBooksStmt(cornucopia_async::private::Stmt);
+        impl FindBooksStmt {
+            pub fn bind<'a, C: GenericClient>(
+                &'a mut self,
+                client: &'a C,
+                title: &'a &'a [impl cornucopia_async::StringSql],
+            ) -> FindBooksQuery<'a, C, FindBooks, 1> {
+                FindBooksQuery {
+                    client,
+                    params: [title],
+                    stmt: &mut self.0,
+                    extractor: |row| FindBooksBorrowed {
+                        name: row.get(0),
+                        author: row.get(1),
+                    },
+                    mapper: |it| <FindBooks>::from(it),
+                }
+            }
+        }
         pub fn params_use_twice() -> ParamsUseTwiceStmt {
             ParamsUseTwiceStmt(cornucopia_async::private::Stmt::new(
                 "UPDATE book SET name = $1 WHERE length(name) > 42 AND length($1) < 42",
@@ -2092,7 +2189,7 @@ pub mod queries {
             pub async fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                name: &'a &'a str,
+                name: &'a impl cornucopia_async::StringSql,
             ) -> Result<u64, tokio_postgres::Error> {
                 let stmt = self.0.prepare(client).await?;
                 client.execute(stmt, &[name]).await
@@ -3216,8 +3313,8 @@ pub mod queries {
                 real_: &'a f32,
                 float8_: &'a f64,
                 double_precision_: &'a f64,
-                text_: &'a &'a str,
-                varchar_: &'a &'a str,
+                text_: &'a impl cornucopia_async::StringSql,
+                varchar_: &'a impl cornucopia_async::StringSql,
                 bytea_: &'a &'a [u8],
                 timestamp_: &'a time::PrimitiveDateTime,
                 timestamp_without_time_zone_: &'a time::PrimitiveDateTime,
@@ -3452,8 +3549,8 @@ pub mod queries {
                 real_: &'a &'a [f32],
                 float8_: &'a &'a [f64],
                 double_precision_: &'a &'a [f64],
-                text_: &'a &'a [&'a str],
-                varchar_: &'a &'a [&'a str],
+                text_: &'a &'a [impl cornucopia_async::StringSql],
+                varchar_: &'a &'a [impl cornucopia_async::StringSql],
                 bytea_: &'a &'a [&'a [u8]],
                 timestamp_: &'a &'a [time::PrimitiveDateTime],
                 timestamp_without_time_zone_: &'a &'a [time::PrimitiveDateTime],
@@ -3993,7 +4090,7 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                name: &'a Option<&'a str>,
+                name: &'a Option<impl cornucopia_async::StringSql>,
                 price: &'a Option<f64>,
             ) -> Optioni32Query<'a, C, Option<i32>, 2> {
                 Optioni32Query {
@@ -4031,7 +4128,7 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                name: &'a Option<&'a str>,
+                name: &'a Option<impl cornucopia_async::StringSql>,
                 price: &'a Option<f64>,
             ) -> Optioni32Query<'a, C, Option<i32>, 2> {
                 Optioni32Query {
@@ -4069,7 +4166,7 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                name: &'a &'a str,
+                name: &'a impl cornucopia_async::StringSql,
                 price: &'a f64,
             ) -> RowQuery<'a, C, Row, 2> {
                 RowQuery {
@@ -4103,7 +4200,7 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                name: &'a &'a str,
+                name: &'a impl cornucopia_async::StringSql,
                 price: &'a f64,
             ) -> RowSpaceQuery<'a, C, RowSpace, 2> {
                 RowSpaceQuery {

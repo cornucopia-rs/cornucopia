@@ -4,7 +4,10 @@ mod cornucopia_sync;
 use eui48::MacAddress;
 use postgres::{Client, Config, NoTls};
 use serde_json::Value;
-use std::net::{IpAddr, Ipv4Addr};
+use std::{
+    borrow::Cow,
+    net::{IpAddr, Ipv4Addr},
+};
 use time::{OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;
 
@@ -22,7 +25,7 @@ use crate::cornucopia_sync::{
         nullity::{new_nullity, nullity},
         nullity::{Nullity, NullityParams},
         params::insert_book,
-        params::{params_use_twice, select_book, SelectBook},
+        params::{find_books, params_use_twice, select_book, SelectBook},
         stress::{
             insert_everything, insert_everything_array, insert_nightmare, select_everything,
             select_everything_array, select_nightmare, Everything, EverythingArray,
@@ -53,6 +56,7 @@ pub fn main() {
     test_nullity(client);
     test_stress(client);
     test_domain(client);
+    test_string_sql(client);
 }
 
 pub fn moving<T>(_item: T) {}
@@ -60,7 +64,9 @@ pub fn moving<T>(_item: T) {}
 pub fn test_params(client: &mut Client) {
     assert_eq!(
         1,
-        insert_book().bind(client, &None, &"Necronomicon").unwrap()
+        insert_book()
+            .bind(client, &None::<&str>, &"Necronomicon")
+            .unwrap()
     );
     assert_eq!(
         1,
@@ -82,6 +88,36 @@ pub fn test_params(client: &mut Client) {
         ]
     );
     params_use_twice().bind(client, &"name").unwrap();
+}
+
+pub fn test_string_sql(client: &mut Client) {
+    let str = "hello world";
+    insert_book().bind(client, &Some(str), &str).unwrap();
+    find_books().bind(client, &[str].as_slice()).all().unwrap();
+
+    let string = str.to_string();
+    insert_book()
+        .bind(client, &Some(string.clone()), &string)
+        .unwrap();
+    find_books()
+        .bind(client, &[string.clone()].as_slice())
+        .all()
+        .unwrap();
+
+    let boxed = string.clone().into_boxed_str();
+    insert_book()
+        .bind(client, &Some(boxed.clone()), &boxed)
+        .unwrap();
+    find_books()
+        .bind(client, &[boxed].as_slice())
+        .all()
+        .unwrap();
+
+    let cow = Cow::Borrowed(str);
+    insert_book()
+        .bind(client, &Some(cow.clone()), &cow)
+        .unwrap();
+    find_books().bind(client, &[cow].as_slice()).all().unwrap();
 }
 
 pub fn test_nullity(client: &mut Client) {

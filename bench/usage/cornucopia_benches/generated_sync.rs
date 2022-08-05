@@ -374,8 +374,8 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-                name: &'a &'a str,
-                hair_color: &'a Option<&'a str>,
+                name: &'a impl cornucopia_sync::StringSql,
+                hair_color: &'a Option<impl cornucopia_sync::StringSql>,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[name, hair_color])

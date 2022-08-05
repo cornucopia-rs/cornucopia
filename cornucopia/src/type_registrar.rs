@@ -88,9 +88,9 @@ impl CornucopiaType {
                         inner.accept_to_sql(is_async)
                     )
                 }
-                _ => self.brw_struct(true, false, true, is_async),
+                _ => self.brw_struct(true, false, true, is_async, false),
             },
-            _ => self.brw_struct(true, false, true, is_async),
+            _ => self.brw_struct(true, false, true, is_async, false),
         }
     }
 
@@ -157,6 +157,7 @@ impl CornucopiaType {
         is_inner_nullable: bool,
         has_lifetime: bool,
         is_async: bool,
+        support_trait: bool,
     ) -> String {
         let client_name = if is_async { "async" } else { "sync" };
         let lifetime = if has_lifetime { "'a" } else { "" };
@@ -165,7 +166,13 @@ impl CornucopiaType {
                 pg_ty, rust_name, ..
             } => match *pg_ty {
                 Type::BYTEA => format!("&{lifetime} [u8]"),
-                Type::TEXT | Type::VARCHAR => format!("&{lifetime} str"),
+                Type::TEXT | Type::VARCHAR => {
+                    if support_trait {
+                        format!("impl cornucopia_{client_name}::StringSql")
+                    } else {
+                        format!("&{lifetime} str")
+                    }
+                }
                 Type::JSON | Type::JSONB => {
                     if for_params {
                         format!("&{lifetime} serde_json::value::Value")
@@ -176,7 +183,8 @@ impl CornucopiaType {
                 _ => (*rust_name).to_string(),
             },
             CornucopiaType::Array { inner, .. } => {
-                let inner = inner.brw_struct(for_params, false, has_lifetime, is_async);
+                let inner =
+                    inner.brw_struct(for_params, false, has_lifetime, is_async, support_trait);
                 let inner = if is_inner_nullable {
                     format!("Option<{inner}>")
                 } else {
@@ -191,7 +199,7 @@ impl CornucopiaType {
                 }
             }
             CornucopiaType::Domain { inner, .. } => {
-                inner.brw_struct(for_params, false, has_lifetime, is_async)
+                inner.brw_struct(for_params, false, has_lifetime, is_async, support_trait)
             }
             CornucopiaType::Custom {
                 struct_path,

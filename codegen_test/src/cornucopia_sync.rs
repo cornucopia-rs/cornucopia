@@ -1258,7 +1258,7 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-                txt: &'a &'a str,
+                txt: &'a impl cornucopia_sync::StringSql,
                 json: &'a &'a serde_json::value::Value,
                 nb: &'a i32,
                 arr: &'a &'a [&'a serde_json::value::Value],
@@ -1546,7 +1546,7 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-                name: &'a &'a str,
+                name: &'a impl cornucopia_sync::StringSql,
                 price: &'a Option<f64>,
             ) -> IdQuery<'a, C, Id, 2> {
                 IdQuery {
@@ -1581,7 +1581,7 @@ pub mod queries {
                 &'a mut self,
                 client: &'a mut C,
                 price: &'a Option<f64>,
-                name: &'a &'a str,
+                name: &'a impl cornucopia_sync::StringSql,
             ) -> IdQuery<'a, C, Id, 2> {
                 IdQuery {
                     client,
@@ -1804,8 +1804,8 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-                texts: &'a &'a [Option<&'a str>],
-                name: &'a &'a str,
+                texts: &'a &'a [Option<impl cornucopia_sync::StringSql>],
+                name: &'a impl cornucopia_sync::StringSql,
                 composite: &'a Option<super::super::types::public::NullityCompositeParams<'a>>,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
@@ -1933,6 +1933,75 @@ pub mod queries {
                 Ok(it)
             }
         }
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
+        pub struct FindBooks {
+            pub name: String,
+            pub author: Option<String>,
+        }
+        pub struct FindBooksBorrowed<'a> {
+            pub name: &'a str,
+            pub author: Option<&'a str>,
+        }
+        impl<'a> From<FindBooksBorrowed<'a>> for FindBooks {
+            fn from(FindBooksBorrowed { name, author }: FindBooksBorrowed<'a>) -> Self {
+                Self {
+                    name: name.into(),
+                    author: author.map(|v| v.into()),
+                }
+            }
+        }
+        pub struct FindBooksQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a mut C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            stmt: &'a mut cornucopia_sync::private::Stmt,
+            extractor: fn(&postgres::Row) -> FindBooksBorrowed,
+            mapper: fn(FindBooksBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> FindBooksQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(self, mapper: fn(FindBooksBorrowed) -> R) -> FindBooksQuery<'a, C, R, N> {
+                FindBooksQuery {
+                    client: self.client,
+                    params: self.params,
+                    stmt: self.stmt,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+
+            pub fn one(self) -> Result<T, postgres::Error> {
+                let stmt = self.stmt.prepare(self.client)?;
+                let row = self.client.query_one(stmt, &self.params)?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+
+            pub fn all(self) -> Result<Vec<T>, postgres::Error> {
+                self.iter()?.collect()
+            }
+
+            pub fn opt(self) -> Result<Option<T>, postgres::Error> {
+                let stmt = self.stmt.prepare(self.client)?;
+                Ok(self
+                    .client
+                    .query_opt(stmt, &self.params)?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+
+            pub fn iter(
+                self,
+            ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
+            {
+                let stmt = self.stmt.prepare(self.client)?;
+                let it = self
+                    .client
+                    .query_raw(stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                    .iterator()
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
+                Ok(it)
+            }
+        }
         pub fn insert_book() -> InsertBookStmt {
             InsertBookStmt(cornucopia_sync::private::Stmt::new(
                 "INSERT INTO book (author, name) VALUES ($1, $2)",
@@ -1943,8 +2012,8 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-                author: &'a Option<&'a str>,
-                name: &'a &'a str,
+                author: &'a Option<impl cornucopia_sync::StringSql>,
+                name: &'a impl cornucopia_sync::StringSql,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[author, name])
@@ -1984,6 +2053,30 @@ pub mod queries {
                 }
             }
         }
+        pub fn find_books() -> FindBooksStmt {
+            FindBooksStmt(cornucopia_sync::private::Stmt::new(
+                "SELECT * FROM book WHERE name = ANY ($1)",
+            ))
+        }
+        pub struct FindBooksStmt(cornucopia_sync::private::Stmt);
+        impl FindBooksStmt {
+            pub fn bind<'a, C: GenericClient>(
+                &'a mut self,
+                client: &'a mut C,
+                title: &'a &'a [impl cornucopia_sync::StringSql],
+            ) -> FindBooksQuery<'a, C, FindBooks, 1> {
+                FindBooksQuery {
+                    client,
+                    params: [title],
+                    stmt: &mut self.0,
+                    extractor: |row| FindBooksBorrowed {
+                        name: row.get(0),
+                        author: row.get(1),
+                    },
+                    mapper: |it| <FindBooks>::from(it),
+                }
+            }
+        }
         pub fn params_use_twice() -> ParamsUseTwiceStmt {
             ParamsUseTwiceStmt(cornucopia_sync::private::Stmt::new(
                 "UPDATE book SET name = $1 WHERE length(name) > 42 AND length($1) < 42",
@@ -1994,7 +2087,7 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-                name: &'a &'a str,
+                name: &'a impl cornucopia_sync::StringSql,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[name])
@@ -3083,8 +3176,8 @@ pub mod queries {
                 real_: &'a f32,
                 float8_: &'a f64,
                 double_precision_: &'a f64,
-                text_: &'a &'a str,
-                varchar_: &'a &'a str,
+                text_: &'a impl cornucopia_sync::StringSql,
+                varchar_: &'a impl cornucopia_sync::StringSql,
                 bytea_: &'a &'a [u8],
                 timestamp_: &'a time::PrimitiveDateTime,
                 timestamp_without_time_zone_: &'a time::PrimitiveDateTime,
@@ -3305,8 +3398,8 @@ pub mod queries {
                 real_: &'a &'a [f32],
                 float8_: &'a &'a [f64],
                 double_precision_: &'a &'a [f64],
-                text_: &'a &'a [&'a str],
-                varchar_: &'a &'a [&'a str],
+                text_: &'a &'a [impl cornucopia_sync::StringSql],
+                varchar_: &'a &'a [impl cornucopia_sync::StringSql],
                 bytea_: &'a &'a [&'a [u8]],
                 timestamp_: &'a &'a [time::PrimitiveDateTime],
                 timestamp_without_time_zone_: &'a &'a [time::PrimitiveDateTime],
@@ -3809,7 +3902,7 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-                name: &'a Option<&'a str>,
+                name: &'a Option<impl cornucopia_sync::StringSql>,
                 price: &'a Option<f64>,
             ) -> Optioni32Query<'a, C, Option<i32>, 2> {
                 Optioni32Query {
@@ -3847,7 +3940,7 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-                name: &'a Option<&'a str>,
+                name: &'a Option<impl cornucopia_sync::StringSql>,
                 price: &'a Option<f64>,
             ) -> Optioni32Query<'a, C, Option<i32>, 2> {
                 Optioni32Query {
@@ -3885,7 +3978,7 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-                name: &'a &'a str,
+                name: &'a impl cornucopia_sync::StringSql,
                 price: &'a f64,
             ) -> RowQuery<'a, C, Row, 2> {
                 RowQuery {
@@ -3919,7 +4012,7 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-                name: &'a &'a str,
+                name: &'a impl cornucopia_sync::StringSql,
                 price: &'a f64,
             ) -> RowSpaceQuery<'a, C, RowSpace, 2> {
                 RowSpaceQuery {

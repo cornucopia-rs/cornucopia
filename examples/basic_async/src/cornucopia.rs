@@ -32,7 +32,7 @@ pub mod queries {
             pub async fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                title: &'a &'a str,
+                title: &'a impl cornucopia_async::StringSql,
             ) -> Result<u64, tokio_postgres::Error> {
                 let stmt = self.0.prepare(client).await?;
                 client.execute(stmt, &[title]).await
@@ -511,7 +511,7 @@ WHERE
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                start_str: &'a &'a str,
+                start_str: &'a impl cornucopia_async::StringSql,
             ) -> AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith, 1> {
                 AuthorNameStartingWithQuery {
                     client,
