@@ -40,8 +40,8 @@ pub mod queries {
     pub mod module_2 {
         use postgres::{fallible_iterator::FallibleIterator, GenericClient};
         #[derive(Debug)]
-        pub struct AuthorNameStartingWithParams<'a> {
-            pub start_str: &'a str,
+        pub struct AuthorNameStartingWithParams<T1: cornucopia_sync::StringSql> {
+            pub start_str: T1,
         }
         #[derive(Debug, Clone, PartialEq)]
         pub struct Authors {
@@ -503,18 +503,20 @@ WHERE
                 }
             }
         }
-        impl<'a, C: GenericClient>
+        impl<'a, C: GenericClient, T1>
             cornucopia_sync::Params<
                 'a,
-                AuthorNameStartingWithParams<'a>,
+                AuthorNameStartingWithParams<T1>,
                 AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith, 1>,
                 C,
             > for AuthorNameStartingWithStmt
+        where
+            T1: cornucopia_sync::StringSql,
         {
             fn params(
                 &'a mut self,
                 client: &'a mut C,
-                params: &'a AuthorNameStartingWithParams<'a>,
+                params: &'a AuthorNameStartingWithParams<T1>,
             ) -> AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith, 1> {
                 self.bind(client, &params.start_str)
             }

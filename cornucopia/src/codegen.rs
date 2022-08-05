@@ -1,3 +1,4 @@
+use core::str;
 use std::fmt::Write;
 
 use heck::ToUpperCamelCase;
@@ -218,26 +219,51 @@ fn gen_params_struct(w: &mut impl Write, params: &PreparedItem, settings: Codege
         fields,
         is_copy,
         is_named,
+        is_ref,
     } = params;
     let is_async = settings.is_async;
     if *is_named {
-        let struct_fields = join_comma(fields, |w, p| {
-            gen!(
-                w,
-                "pub {} : {}",
-                p.name,
-                p.brw_struct(true, true, is_async, &mut None)
-            );
-        });
+        let traits = &mut Vec::new();
+        let mut unused_traits = Vec::new();
+        let struct_fields = fields
+            .iter()
+            .map(|p| {
+                let len = traits.len();
+                let brw = p.brw_struct(true, true, is_async, &mut Some(traits));
+                for idx in len..traits.len().saturating_sub(1) {
+                    unused_traits.push(idx_char(idx + 1))
+                }
+                format!("pub {} : {brw}", p.name,)
+            })
+            .collect::<Vec<String>>();
+
         let (copy, lifetime) = if *is_copy {
             ("Clone,Copy,", "")
+        } else if *is_ref {
+            unused_traits.push("&'a str".to_string());
+            ("", "'a,")
         } else {
-            ("", "<'a>")
+            ("", "")
+        };
+        let struct_fields = join_comma(&struct_fields, |w, s| gen!(w, "{s}"));
+        let generic = join_comma(traits.iter().enumerate(), |w, (idx, p)| {
+            gen!(w, "{}: {p}", idx_char(idx + 1));
+        });
+
+        let ugly_hack = if unused_traits.is_empty() {
+            "".to_string()
+        } else if let [single] = &unused_traits[..] {
+            format!(",pub _i_am_ugly: std::marker::PhantomData<{single}>")
+        } else {
+            let unused = join_comma(&unused_traits, |w, str| {
+                gen!(w, "{str}");
+            });
+            format!(",pub _i_am_ugly: std::marker::PhantomData<({unused})>")
         };
         gen!(
             w,
             "#[derive({copy}Debug)]
-            pub struct {name}{lifetime} {{ {struct_fields} }}"
+            pub struct {name}<{lifetime}{generic}> {{ {struct_fields} {ugly_hack} }}"
         );
     }
 }
@@ -255,6 +281,7 @@ fn gen_row_structs(
         fields,
         is_copy,
         is_named,
+        ..
     } = row;
     if *is_named {
         // Generate row struct
@@ -445,7 +472,7 @@ fn gen_query_fn(
             )
         })
         .collect::<Vec<String>>();
-    let param_list = join_comma(param_list, |w, s| gen!(w, "{s}"));
+    let param_list = join_comma(&param_list, |w, s| gen!(w, "{s}"));
     let generic = join_comma(traits.iter().enumerate(), |w, (idx, p)| {
         gen!(w, "{}: {p}", idx_char(idx + 1));
     });
@@ -456,6 +483,7 @@ fn gen_query_fn(
             fields,
             is_copy,
             is_named,
+            ..
         } = &module.rows.get_index(*idx).unwrap().1;
         let borrowed_str = if *is_copy { "" } else { "Borrowed" };
         // Query fn
@@ -508,12 +536,28 @@ fn gen_query_fn(
 
     // Param impl
     if let Some(param) = param {
+        let traits = &mut Vec::new();
+        for p in &param.fields {
+            p.brw_struct(true, true, is_async, &mut Some(traits));
+        }
+        let generic = join_comma(traits.iter().enumerate(), |w, (idx, p)| {
+            gen!(w, "{}: {p}", idx_char(idx + 1));
+        });
+        let traits = join_comma(traits.iter().enumerate(), |w, (idx, _)| {
+            gen!(w, "{}", idx_char(idx + 1));
+        })
+        .to_string();
+
         if param.is_named {
             let param_values = join_comma(order.iter().map(|idx| &param_field[*idx]), |w, p| {
-                gen!(w, "&params.{}", p.name);
+                gen!(w, "&params.{}", p.name)
             });
             let param_name = &param.name;
-            let lifetime = if param.is_copy { "" } else { "<'a>" };
+            let lifetime = if param.is_copy || !param.is_ref {
+                ""
+            } else {
+                "'a,"
+            };
             if let Some((idx, _)) = row {
                 let prepared_row = &module.rows.get_index(*idx).unwrap().1;
                 let name = prepared_row.name.value.clone();
@@ -524,8 +568,8 @@ fn gen_query_fn(
                 };
                 let name = &module.rows.get_index(*idx).unwrap().1.name;
                 let nb_params = param_field.len();
-                gen!(w,"impl <'a, C: GenericClient> cornucopia_{client_name}::Params<'a, {param_name}{lifetime}, {name}Query<'a, C, {query_row_struct}, {nb_params}>, C> for {struct_name}Stmt  {{ 
-                    fn params(&'a mut self, client: &'a {client_mut} C, params: &'a {param_name}{lifetime}) -> {name}Query<'a, C, {query_row_struct}, {nb_params}> {{
+                gen!(w,"impl <'a, C: GenericClient,{traits}> cornucopia_{client_name}::Params<'a, {param_name}<{lifetime}{traits}>, {name}Query<'a, C, {query_row_struct}, {nb_params}>, C> for {struct_name}Stmt where {generic} {{ 
+                    fn params(&'a mut self, client: &'a {client_mut} C, params: &'a {param_name}<{lifetime}{traits}>) -> {name}Query<'a, C, {query_row_struct}, {nb_params}> {{
                         self.bind(client, {param_values})
                     }}
                 }}"
@@ -544,8 +588,8 @@ fn gen_query_fn(
                 };
                 gen!(
                     w,
-                    "impl <'a, C: GenericClient {send_sync}> cornucopia_{client_name}::Params<'a, {param_name}{lifetime}, {pre_ty}Result<u64, {backend}::Error>{post_ty_lf}, C> for {struct_name}Stmt  {{ 
-                        fn params(&'a mut self, client: &'a {client_mut} C, params: &'a {param_name}{lifetime}) -> {pre_ty}Result<u64, {backend}::Error>{post_ty_lf} {{
+                    "impl <'a, C: GenericClient {send_sync},{traits}> cornucopia_{client_name}::Params<'a, {param_name}<{lifetime}{traits}>, {pre_ty}Result<u64, {backend}::Error>{post_ty_lf}, C> for {struct_name}Stmt where {generic} {{ 
+                        fn params(&'a mut self, client: &'a {client_mut} C, params: &'a {param_name}<{lifetime}{traits}>) -> {pre_ty}Result<u64, {backend}::Error>{post_ty_lf} {{
                             {pre}self.bind(client, {param_values}){post}
                         }}
                     }}

@@ -10,9 +10,12 @@ pub mod queries {
         use futures;
         use futures::{StreamExt, TryStreamExt};
         #[derive(Debug)]
-        pub struct InsertUserParams<'a> {
-            pub name: &'a str,
-            pub hair_color: Option<&'a str>,
+        pub struct InsertUserParams<
+            T1: cornucopia_async::StringSql,
+            T2: cornucopia_async::StringSql,
+        > {
+            pub name: T1,
+            pub hair_color: Option<T2>,
         }
 
         #[derive(Debug, Clone, PartialEq)]
@@ -404,10 +407,10 @@ pub mod queries {
                 client.execute(stmt, &[name, hair_color]).await
             }
         }
-        impl<'a, C: GenericClient + Send + Sync>
+        impl<'a, C: GenericClient + Send + Sync, T1, T2>
             cornucopia_async::Params<
                 'a,
-                InsertUserParams<'a>,
+                InsertUserParams<T1, T2>,
                 std::pin::Pin<
                     Box<
                         dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>
@@ -417,11 +420,14 @@ pub mod queries {
                 >,
                 C,
             > for InsertUserStmt
+        where
+            T1: cornucopia_async::StringSql,
+            T2: cornucopia_async::StringSql,
         {
             fn params(
                 &'a mut self,
                 client: &'a C,
-                params: &'a InsertUserParams<'a>,
+                params: &'a InsertUserParams<T1, T2>,
             ) -> std::pin::Pin<
                 Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
             > {

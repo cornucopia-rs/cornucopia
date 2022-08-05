@@ -8,6 +8,7 @@ use serde_json::Value;
 use std::{
     borrow::Cow,
     collections::HashMap,
+    marker::PhantomData,
     net::{IpAddr, Ipv4Addr},
 };
 use time::{OffsetDateTime, PrimitiveDateTime};
@@ -143,7 +144,8 @@ pub fn test_nullity(client: &mut Client) {
                     id: 42,
                 }),
                 name: "James Bond",
-                texts: &[Some("Hello"), Some("world"), None],
+                texts: [Some("Hello"), Some("world"), None].as_slice(),
+                _i_am_ugly: PhantomData::default(),
             },
         )
         .unwrap();
@@ -242,6 +244,7 @@ pub fn test_named(client: &mut Client) {
                     wow: Some("Hello world"),
                     such_cool: None,
                 },
+                _i_am_ugly: PhantomData::default(),
             },
         )
         .unwrap();
@@ -282,18 +285,19 @@ pub fn test_domain(client: &mut Client) {
     let json: Value = serde_json::from_str(r#"{"name": "James Bond"}"#).unwrap();
 
     // Erased domain not null
-    let arr = &[&json];
+    let arr = [&json];
     let params = InsertNightmareDomainParams {
-        arr,
+        arr: arr.as_slice(),
         json: &json,
         nb: 42,
         txt: "Hello world",
         composite: Some(DomainCompositeParams {
-            arr,
+            arr: arr.as_slice(),
             json: &json,
             nb: 42,
             txt: "Hello world",
         }),
+        _i_am_ugly: PhantomData::default(),
     };
     let expected = SelectNightmareDomain {
         arr: vec![json.clone()],
@@ -406,6 +410,7 @@ pub fn test_stress(client: &mut Client) {
         timestamptz_: expected.timestamptz_,
         uuid_: expected.uuid_,
         varchar_: &expected.varchar_,
+        _i_am_ugly: PhantomData::default(),
     };
     assert_eq!(1, insert_everything().params(client, &params).unwrap());
     let actual = select_everything().bind(client).one().unwrap();
@@ -452,6 +457,7 @@ pub fn test_stress(client: &mut Client) {
         .iter()
         .map(String::as_str)
         .collect::<Vec<_>>();
+    let jsons = [&json];
     let params = EverythingArrayParams {
         bingint_: &expected.bingint_,
         bool_: &expected.bool_,
@@ -467,12 +473,12 @@ pub fn test_stress(client: &mut Client) {
         int4_: &expected.int4_,
         int8_: &expected.int8_,
         int_: &expected.int_,
-        json_: &[&json],
-        jsonb_: &[&json],
+        json_: jsons.as_slice(),
+        jsonb_: jsons.as_slice(),
         macaddr_: &expected.macaddr_,
         real_: &expected.real_,
         smallint_: &expected.smallint_,
-        text_: txt,
+        text_: &txt,
         time_: &expected.time_,
         timestamp_: &expected.timestamp_,
         timestamp_with_time_zone_: &expected.timestamp_with_time_zone_,
@@ -480,6 +486,7 @@ pub fn test_stress(client: &mut Client) {
         timestamptz_: &expected.timestamptz_,
         uuid_: &expected.uuid_,
         varchar_: txt,
+        _i_am_ugly: PhantomData::default(),
     };
     assert_eq!(
         1,

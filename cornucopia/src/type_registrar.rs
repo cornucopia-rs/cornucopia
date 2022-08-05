@@ -33,6 +33,20 @@ pub(crate) enum CornucopiaType {
 }
 
 impl CornucopiaType {
+    pub fn is_ref(&self) -> bool {
+        match self {
+            CornucopiaType::Simple { pg_ty, .. } => match *pg_ty {
+                Type::BYTEA => false,
+                Type::TEXT | Type::VARCHAR => false,
+                _ => !self.is_copy(),
+            },
+            CornucopiaType::Domain { inner, .. } | CornucopiaType::Array { inner } => {
+                inner.is_ref()
+            }
+            _ => !self.is_copy(),
+        }
+    }
+
     pub fn is_copy(&self) -> bool {
         match self {
             CornucopiaType::Simple { is_copy, .. } | CornucopiaType::Custom { is_copy, .. } => {

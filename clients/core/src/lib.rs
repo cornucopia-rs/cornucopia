@@ -11,17 +11,24 @@ use postgres_types::{private::BytesMut, to_sql_checked, IsNull, Kind, ToSql, Typ
 pub use utils::slice_iter;
 
 pub trait StringSql: std::fmt::Debug + ToSql + Sync {}
+impl<T: StringSql> StringSql for &T {}
 impl StringSql for String {}
 impl StringSql for &str {}
 impl StringSql for Cow<'_, str> {}
 impl StringSql for Box<str> {}
 
 pub trait BytesSql: std::fmt::Debug + ToSql + Sync {}
+impl<T: BytesSql> BytesSql for &T {}
 impl BytesSql for Vec<u8> {}
 impl BytesSql for &[u8] {}
 
 pub trait ArraySql<T: std::fmt::Debug + ToSql + Sync>: std::fmt::Debug + ToSql + Sync {
     fn slice(&self) -> &[T];
+}
+impl<T: std::fmt::Debug + ToSql + Sync, A: ArraySql<T>> ArraySql<T> for &A {
+    fn slice(&self) -> &[T] {
+        A::slice(&self)
+    }
 }
 impl<T: std::fmt::Debug + ToSql + Sync> ArraySql<T> for Vec<T> {
     fn slice(&self) -> &[T] {
