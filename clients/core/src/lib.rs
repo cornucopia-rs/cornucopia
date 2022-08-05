@@ -14,9 +14,7 @@ impl StringSql for String {}
 impl StringSql for &str {}
 impl StringSql for Cow<'_, str> {}
 impl StringSql for Box<str> {}
-/*
-pub fn test<'a>(str: &'a str) {
-    let cow: Cow<'a, str> = str.into();
-    let cow: Cow<'a, str> = str.to_string().into();
-    let cow: Cow<'a, str> = str.to_string().into_boxed_str().as_ref().into();
-}*/
+
+pub trait BytesSql: std::fmt::Debug + ToSql + Sync {}
+impl BytesSql for Vec<u8> {}
+impl BytesSql for &[u8] {}

@@ -165,7 +165,13 @@ impl CornucopiaType {
             CornucopiaType::Simple {
                 pg_ty, rust_name, ..
             } => match *pg_ty {
-                Type::BYTEA => format!("&{lifetime} [u8]"),
+                Type::BYTEA => {
+                    if support_trait {
+                        format!("impl cornucopia_{client_name}::BytesSql")
+                    } else {
+                        format!("&{lifetime} [u8]")
+                    }
+                }
                 Type::TEXT | Type::VARCHAR => {
                     if support_trait {
                         format!("impl cornucopia_{client_name}::StringSql")

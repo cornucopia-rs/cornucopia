@@ -2,6 +2,7 @@
 pub mod private;
 
 pub use cornucopia_client_core::ArrayIterator;
+pub use cornucopia_client_core::BytesSql;
 pub use cornucopia_client_core::StringSql;
 
 /// This trait allows you to bind parameters to a query using a single
