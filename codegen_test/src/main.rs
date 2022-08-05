@@ -1,11 +1,13 @@
 mod cornucopia_async;
 mod cornucopia_sync;
 
+use ::cornucopia_async::IterSql;
 use eui48::MacAddress;
 use postgres::{Client, Config, NoTls};
 use serde_json::Value;
 use std::{
     borrow::Cow,
+    collections::HashMap,
     net::{IpAddr, Ipv4Addr},
 };
 use time::{OffsetDateTime, PrimitiveDateTime};
@@ -56,7 +58,7 @@ pub fn main() {
     test_nullity(client);
     test_stress(client);
     test_domain(client);
-    test_string_sql(client);
+    test_trait_sql(client);
 }
 
 pub fn moving<T>(_item: T) {}
@@ -90,7 +92,7 @@ pub fn test_params(client: &mut Client) {
     params_use_twice().bind(client, &"name").unwrap();
 }
 
-pub fn test_string_sql(client: &mut Client) {
+pub fn test_trait_sql(client: &mut Client) {
     let str = "hello world";
     insert_book().bind(client, &Some(str), &str).unwrap();
     find_books().bind(client, &[str].as_slice()).all().unwrap();
@@ -115,6 +117,20 @@ pub fn test_string_sql(client: &mut Client) {
         .bind(client, &Some(cow.clone()), &cow)
         .unwrap();
     find_books().bind(client, &vec![cow]).all().unwrap();
+
+    let map: HashMap<&str, &str> =
+        HashMap::from_iter([("one", "1"), ("two", "2"), ("three", "3")].into_iter());
+
+    // Old way with allocation
+    let vec: Vec<_> = map.values().copied().collect();
+    find_books().bind(client, &vec.as_slice()).all().unwrap();
+    // A little more ergonomic
+    find_books().bind(client, &vec).all().unwrap();
+    // Zero allocation
+    find_books()
+        .bind(client, &IterSql(|| map.values().copied()))
+        .all()
+        .unwrap();
 }
 
 pub fn test_nullity(client: &mut Client) {
