@@ -29,6 +29,6 @@ impl<T: std::fmt::Debug + ToSql + Sync> ArraySql<T> for Vec<T> {
 }
 impl<T: std::fmt::Debug + ToSql + Sync> ArraySql<T> for &[T] {
     fn slice(&self) -> &[T] {
-        &self
+        self
     }
 }
