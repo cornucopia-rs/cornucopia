@@ -280,7 +280,7 @@ pub mod types {
                         ),
                         "arr" => postgres_types::ToSql::to_sql(
                             &cornucopia_sync::private::Domain(
-                                &cornucopia_sync::private::DomainArray(arr),
+                                &cornucopia_sync::private::DomainArray::new(arr),
                             ),
                             field.type_(),
                             out,
@@ -314,7 +314,7 @@ pub mod types {
                             "txt" => <cornucopia_sync::private::Domain::<&'a str> as postgres_types::ToSql>::accepts(f.type_()),
 "json" => <cornucopia_sync::private::Domain::<&'a serde_json::value::Value> as postgres_types::ToSql>::accepts(f.type_()),
 "nb" => <cornucopia_sync::private::Domain::<i32> as postgres_types::ToSql>::accepts(f.type_()),
-"arr" => <cornucopia_sync::private::Domain::<cornucopia_sync::private::DomainArray::<&'a serde_json::value::Value>> as postgres_types::ToSql>::accepts(f.type_()),
+"arr" => <cornucopia_sync::private::Domain::<cornucopia_sync::private::DomainArray::<&'a serde_json::value::Value, &[&'a serde_json::value::Value]>> as postgres_types::ToSql>::accepts(f.type_()),
                             _ => false,
                         })
                     }
@@ -1255,13 +1255,18 @@ pub mod queries {
         }
         pub struct InsertNightmareDomainStmt(cornucopia_sync::private::Stmt);
         impl InsertNightmareDomainStmt {
-            pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::StringSql>(
+            pub fn bind<
+                'a,
+                C: GenericClient,
+                T1: cornucopia_sync::StringSql,
+                T2: cornucopia_sync::ArraySql<&'a serde_json::value::Value>,
+            >(
                 &'a mut self,
                 client: &'a mut C,
                 txt: &'a T1,
                 json: &'a &'a serde_json::value::Value,
                 nb: &'a i32,
-                arr: &'a &'a [&'a serde_json::value::Value],
+                arr: &'a T2,
                 composite: &'a Option<super::super::types::public::DomainCompositeParams<'a>>,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
@@ -1271,9 +1276,9 @@ pub mod queries {
                         &cornucopia_sync::private::Domain(txt),
                         &cornucopia_sync::private::Domain(json),
                         &cornucopia_sync::private::Domain(nb),
-                        &cornucopia_sync::private::Domain(&cornucopia_sync::private::DomainArray(
-                            arr,
-                        )),
+                        &cornucopia_sync::private::Domain(
+                            &cornucopia_sync::private::DomainArray::new(arr),
+                        ),
                         composite,
                     ],
                 )
@@ -1805,12 +1810,13 @@ pub mod queries {
                 'a,
                 C: GenericClient,
                 T1: cornucopia_sync::StringSql,
-                T2: cornucopia_sync::StringSql,
+                T2: cornucopia_sync::ArraySql<Option<T1>>,
+                T3: cornucopia_sync::StringSql,
             >(
                 &'a mut self,
                 client: &'a mut C,
-                texts: &'a &'a [Option<T1>],
-                name: &'a T2,
+                texts: &'a T2,
+                name: &'a T3,
                 composite: &'a Option<super::super::types::public::NullityCompositeParams<'a>>,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
@@ -2070,10 +2076,15 @@ pub mod queries {
         }
         pub struct FindBooksStmt(cornucopia_sync::private::Stmt);
         impl FindBooksStmt {
-            pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::StringSql>(
+            pub fn bind<
+                'a,
+                C: GenericClient,
+                T1: cornucopia_sync::StringSql,
+                T2: cornucopia_sync::ArraySql<T1>,
+            >(
                 &'a mut self,
                 client: &'a mut C,
-                title: &'a &'a [T1],
+                title: &'a T2,
             ) -> FindBooksQuery<'a, C, FindBooks, 1> {
                 FindBooksQuery {
                     client,
@@ -3401,39 +3412,66 @@ pub mod queries {
             pub fn bind<
                 'a,
                 C: GenericClient,
-                T1: cornucopia_sync::StringSql,
-                T2: cornucopia_sync::StringSql,
-                T3: cornucopia_sync::BytesSql,
+                T1: cornucopia_sync::ArraySql<bool>,
+                T2: cornucopia_sync::ArraySql<bool>,
+                T3: cornucopia_sync::ArraySql<i8>,
+                T4: cornucopia_sync::ArraySql<i16>,
+                T5: cornucopia_sync::ArraySql<i16>,
+                T6: cornucopia_sync::ArraySql<i32>,
+                T7: cornucopia_sync::ArraySql<i32>,
+                T8: cornucopia_sync::ArraySql<i64>,
+                T9: cornucopia_sync::ArraySql<i64>,
+                T10: cornucopia_sync::ArraySql<f32>,
+                T11: cornucopia_sync::ArraySql<f32>,
+                T12: cornucopia_sync::ArraySql<f64>,
+                T13: cornucopia_sync::ArraySql<f64>,
+                T14: cornucopia_sync::StringSql,
+                T15: cornucopia_sync::ArraySql<T14>,
+                T16: cornucopia_sync::StringSql,
+                T17: cornucopia_sync::ArraySql<T16>,
+                T18: cornucopia_sync::BytesSql,
+                T19: cornucopia_sync::ArraySql<T18>,
+                T20: cornucopia_sync::ArraySql<time::PrimitiveDateTime>,
+                T21: cornucopia_sync::ArraySql<time::PrimitiveDateTime>,
+                T22: cornucopia_sync::ArraySql<time::OffsetDateTime>,
+                T23: cornucopia_sync::ArraySql<time::OffsetDateTime>,
+                T24: cornucopia_sync::ArraySql<time::Date>,
+                T25: cornucopia_sync::ArraySql<time::Time>,
+                T26: cornucopia_sync::ArraySql<&'a serde_json::value::Value>,
+                T27: cornucopia_sync::ArraySql<&'a serde_json::value::Value>,
+                T28: cornucopia_sync::ArraySql<uuid::Uuid>,
+                T29: cornucopia_sync::ArraySql<std::net::IpAddr>,
+                T30: cornucopia_sync::ArraySql<eui48::MacAddress>,
             >(
                 &'a mut self,
                 client: &'a mut C,
-                bool_: &'a &'a [bool],
-                boolean_: &'a &'a [bool],
-                char_: &'a &'a [i8],
-                smallint_: &'a &'a [i16],
-                int2_: &'a &'a [i16],
-                int_: &'a &'a [i32],
-                int4_: &'a &'a [i32],
-                bingint_: &'a &'a [i64],
-                int8_: &'a &'a [i64],
-                float4_: &'a &'a [f32],
-                real_: &'a &'a [f32],
-                float8_: &'a &'a [f64],
-                double_precision_: &'a &'a [f64],
-                text_: &'a &'a [T1],
-                varchar_: &'a &'a [T2],
-                bytea_: &'a &'a [T3],
-                timestamp_: &'a &'a [time::PrimitiveDateTime],
-                timestamp_without_time_zone_: &'a &'a [time::PrimitiveDateTime],
-                timestamptz_: &'a &'a [time::OffsetDateTime],
-                timestamp_with_time_zone_: &'a &'a [time::OffsetDateTime],
-                date_: &'a &'a [time::Date],
-                time_: &'a &'a [time::Time],
-                json_: &'a &'a [&'a serde_json::value::Value],
-                jsonb_: &'a &'a [&'a serde_json::value::Value],
-                uuid_: &'a &'a [uuid::Uuid],
-                inet_: &'a &'a [std::net::IpAddr],
-                macaddr_: &'a &'a [eui48::MacAddress],
+                bool_: &'a T1,
+                boolean_: &'a T2,
+                char_: &'a T3,
+                smallint_: &'a T4,
+                int2_: &'a T5,
+                int_: &'a T6,
+                int4_: &'a T7,
+                bingint_: &'a T8,
+                int8_: &'a T9,
+                float4_: &'a T10,
+                real_: &'a T11,
+                float8_: &'a T12,
+                double_precision_: &'a T13,
+                text_: &'a T15,
+                varchar_: &'a T17,
+                bytea_: &'a T19,
+                timestamp_: &'a T20,
+                timestamp_without_time_zone_: &'a T21,
+                timestamptz_: &'a T22,
+                timestamp_with_time_zone_: &'a T23,
+                date_: &'a T24,
+                time_: &'a T25,
+                json_: &'a T26,
+                jsonb_: &'a T27,
+                uuid_: &'a T28,
+                inet_: &'a T29,
+                macaddr_: &'a T30,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
                 client.execute(

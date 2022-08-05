@@ -100,7 +100,7 @@ pub fn test_string_sql(client: &mut Client) {
         .bind(client, &Some(string.clone()), &string)
         .unwrap();
     find_books()
-        .bind(client, &[string.clone()].as_slice())
+        .bind(client, &vec![string.clone()])
         .all()
         .unwrap();
 
@@ -108,16 +108,13 @@ pub fn test_string_sql(client: &mut Client) {
     insert_book()
         .bind(client, &Some(boxed.clone()), &boxed)
         .unwrap();
-    find_books()
-        .bind(client, &[boxed].as_slice())
-        .all()
-        .unwrap();
+    find_books().bind(client, &vec![boxed]).all().unwrap();
 
     let cow = Cow::Borrowed(str);
     insert_book()
         .bind(client, &Some(cow.clone()), &cow)
         .unwrap();
-    find_books().bind(client, &[cow].as_slice()).all().unwrap();
+    find_books().bind(client, &vec![cow]).all().unwrap();
 }
 
 pub fn test_nullity(client: &mut Client) {

@@ -459,10 +459,10 @@ pub mod queries {
         }
         pub struct PostByUserIdsStmt(cornucopia_async::private::Stmt);
         impl PostByUserIdsStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<'a, C: GenericClient, T1: cornucopia_async::ArraySql<i32>>(
                 &'a mut self,
                 client: &'a C,
-                ids: &'a &'a [i32],
+                ids: &'a T1,
             ) -> PostQuery<'a, C, Post, 1> {
                 PostQuery {
                     client,
@@ -509,10 +509,10 @@ pub mod queries {
         }
         pub struct CommentsByPostIdStmt(cornucopia_async::private::Stmt);
         impl CommentsByPostIdStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<'a, C: GenericClient, T1: cornucopia_async::ArraySql<i32>>(
                 &'a mut self,
                 client: &'a C,
-                ids: &'a &'a [i32],
+                ids: &'a T1,
             ) -> CommentQuery<'a, C, Comment, 1> {
                 CommentQuery {
                     client,

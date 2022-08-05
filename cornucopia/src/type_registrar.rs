@@ -64,7 +64,7 @@ impl CornucopiaType {
             CornucopiaType::Array { inner } => match inner.as_ref() {
                 CornucopiaType::Domain { inner, .. } => {
                     format!(
-                        "&cornucopia_{client_name}::private::DomainArray({})",
+                        "&cornucopia_{client_name}::private::DomainArray::new({})",
                         inner.sql_wrapped(name, is_async)
                     )
                 }
@@ -83,9 +83,10 @@ impl CornucopiaType {
             ),
             CornucopiaType::Array { inner } => match inner.as_ref() {
                 CornucopiaType::Domain { inner, .. } => {
+                    let ty = inner.accept_to_sql(is_async);
                     format!(
-                        "cornucopia_{client_name}::private::DomainArray::<{}>",
-                        inner.accept_to_sql(is_async)
+                        "cornucopia_{client_name}::private::DomainArray::<{}, &[{ty}]>",
+                        ty
                     )
                 }
                 _ => self.brw_struct(true, false, true, is_async, &mut None),
@@ -200,7 +201,12 @@ impl CornucopiaType {
                 };
                 // Its more practical for users to use a slice
                 if for_params {
-                    format!("&{lifetime} [{inner}]")
+                    if let Some(traits) = support_trait {
+                        traits.push(format!("cornucopia_{client_name}::ArraySql<{inner}>"));
+                        idx_char(traits.len())
+                    } else {
+                        format!("&{lifetime} [{inner}]")
+                    }
                 } else {
                     let lifetime = if has_lifetime { lifetime } else { "'_" };
                     format!("cornucopia_{client_name}::ArrayIterator<{lifetime}, {inner}>")

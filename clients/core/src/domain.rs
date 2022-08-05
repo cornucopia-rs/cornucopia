@@ -3,9 +3,10 @@ use postgres_types::{private::BytesMut, IsNull, Kind, ToSql, Type};
 use std::{
     error::Error,
     fmt::{Debug, Formatter},
+    marker::PhantomData,
 };
 
-use crate::utils::escape_domain;
+use crate::{utils::escape_domain, ArraySql};
 
 pub struct Domain<T: ToSql>(pub T);
 
@@ -39,30 +40,38 @@ impl<T: ToSql> ToSql for Domain<T> {
     }
 }
 
-pub struct DomainArray<'a, T: ToSql>(pub &'a [T]);
+pub struct DomainArray<'a, T: ToSql + Sync, A: ArraySql<T>>(pub &'a A, pub PhantomData<T>);
 
-impl<'a, T: ToSql> Debug for DomainArray<'a, T> {
+impl<'a, T: ToSql + Sync, A: ArraySql<T>> DomainArray<'a, T, A> {
+    pub fn new(array: &'a A) -> Self {
+        Self(array, PhantomData::default())
+    }
+}
+
+impl<'a, T: ToSql + Sync, A: ArraySql<T>> Debug for DomainArray<'a, T, A> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("ArrayDomain").field(&self.0).finish()
     }
 }
 
-impl<'a, T: ToSql + 'a> ToSql for DomainArray<'a, T> {
+impl<'a, T: ToSql + Sync + 'a, A: ArraySql<T>> ToSql for DomainArray<'a, T, A> {
     fn to_sql(&self, ty: &Type, w: &mut BytesMut) -> Result<IsNull, Box<dyn Error + Sync + Send>> {
         let member_type = match *ty.kind() {
             Kind::Array(ref member) => escape_domain(member),
             _ => panic!("expected array type got {}", ty),
         };
 
+        let slice = self.0.slice();
+
         let dimension = ArrayDimension {
-            len: downcast(self.0.len())?,
+            len: downcast(slice.len())?,
             lower_bound: 1,
         };
 
         array_to_sql(
             Some(dimension),
             member_type.oid(),
-            self.0.iter(),
+            slice.iter(),
             |e, w| match Domain(e).to_sql(member_type, w)? {
                 IsNull::No => Ok(postgres_protocol::IsNull::No),
                 IsNull::Yes => Ok(postgres_protocol::IsNull::Yes),

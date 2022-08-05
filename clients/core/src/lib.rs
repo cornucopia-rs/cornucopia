@@ -18,3 +18,17 @@ impl StringSql for Box<str> {}
 pub trait BytesSql: std::fmt::Debug + ToSql + Sync {}
 impl BytesSql for Vec<u8> {}
 impl BytesSql for &[u8] {}
+
+pub trait ArraySql<T: std::fmt::Debug + ToSql + Sync>: std::fmt::Debug + ToSql + Sync {
+    fn slice(&self) -> &[T];
+}
+impl<T: std::fmt::Debug + ToSql + Sync> ArraySql<T> for Vec<T> {
+    fn slice(&self) -> &[T] {
+        self.as_slice()
+    }
+}
+impl<T: std::fmt::Debug + ToSql + Sync> ArraySql<T> for &[T] {
+    fn slice(&self) -> &[T] {
+        &self
+    }
+}
