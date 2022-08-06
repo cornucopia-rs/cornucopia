@@ -568,7 +568,7 @@ fn gen_query_fn(
                 };
                 let name = &module.rows.get_index(*idx).unwrap().1.name;
                 let nb_params = param_field.len();
-                gen!(w,"impl <'a, C: GenericClient,{traits}> cornucopia_{client_name}::Params<'a, {param_name}<{lifetime}{traits}>, {name}Query<'a, C, {query_row_struct}, {nb_params}>, C> for {struct_name}Stmt where {generic} {{ 
+                gen!(w,"impl <'a, C: GenericClient,{generic}> cornucopia_{client_name}::Params<'a, {param_name}<{lifetime}{traits}>, {name}Query<'a, C, {query_row_struct}, {nb_params}>, C> for {struct_name}Stmt {{ 
                     fn params(&'a mut self, client: &'a {client_mut} C, params: &'a {param_name}<{lifetime}{traits}>) -> {name}Query<'a, C, {query_row_struct}, {nb_params}> {{
                         self.bind(client, {param_values})
                     }}
@@ -588,7 +588,7 @@ fn gen_query_fn(
                 };
                 gen!(
                     w,
-                    "impl <'a, C: GenericClient {send_sync},{traits}> cornucopia_{client_name}::Params<'a, {param_name}<{lifetime}{traits}>, {pre_ty}Result<u64, {backend}::Error>{post_ty_lf}, C> for {struct_name}Stmt where {generic} {{ 
+                    "impl <'a, C: GenericClient {send_sync},{generic}> cornucopia_{client_name}::Params<'a, {param_name}<{lifetime}{traits}>, {pre_ty}Result<u64, {backend}::Error>{post_ty_lf}, C> for {struct_name}Stmt {{ 
                         fn params(&'a mut self, client: &'a {client_mut} C, params: &'a {param_name}<{lifetime}{traits}>) -> {pre_ty}Result<u64, {backend}::Error>{post_ty_lf} {{
                             {pre}self.bind(client, {param_values}){post}
                         }}

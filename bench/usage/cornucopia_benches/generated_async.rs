@@ -407,7 +407,12 @@ pub mod queries {
                 client.execute(stmt, &[name, hair_color]).await
             }
         }
-        impl<'a, C: GenericClient + Send + Sync, T1, T2>
+        impl<
+                'a,
+                C: GenericClient + Send + Sync,
+                T1: cornucopia_async::StringSql,
+                T2: cornucopia_async::StringSql,
+            >
             cornucopia_async::Params<
                 'a,
                 InsertUserParams<T1, T2>,
@@ -420,9 +425,6 @@ pub mod queries {
                 >,
                 C,
             > for InsertUserStmt
-        where
-            T1: cornucopia_async::StringSql,
-            T2: cornucopia_async::StringSql,
         {
             fn params(
                 &'a mut self,

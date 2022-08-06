@@ -386,12 +386,14 @@ pub mod queries {
                 client.execute(stmt, &[name, hair_color])
             }
         }
-        impl<'a, C: GenericClient, T1, T2>
+        impl<
+                'a,
+                C: GenericClient,
+                T1: cornucopia_sync::StringSql,
+                T2: cornucopia_sync::StringSql,
+            >
             cornucopia_sync::Params<'a, InsertUserParams<T1, T2>, Result<u64, postgres::Error>, C>
             for InsertUserStmt
-        where
-            T1: cornucopia_sync::StringSql,
-            T2: cornucopia_sync::StringSql,
         {
             fn params(
                 &'a mut self,

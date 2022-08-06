@@ -503,15 +503,13 @@ WHERE
                 }
             }
         }
-        impl<'a, C: GenericClient, T1>
+        impl<'a, C: GenericClient, T1: cornucopia_sync::StringSql>
             cornucopia_sync::Params<
                 'a,
                 AuthorNameStartingWithParams<T1>,
                 AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith, 1>,
                 C,
             > for AuthorNameStartingWithStmt
-        where
-            T1: cornucopia_sync::StringSql,
         {
             fn params(
                 &'a mut self,

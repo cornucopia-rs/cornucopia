@@ -1318,7 +1318,14 @@ pub mod queries {
                     .await
             }
         }
-        impl<'a, C: GenericClient + Send + Sync, T1, T2, T3, T4>
+        impl<
+                'a,
+                C: GenericClient + Send + Sync,
+                T1: cornucopia_async::StringSql,
+                T2: cornucopia_async::JsonSql,
+                T3: cornucopia_async::JsonSql,
+                T4: cornucopia_async::ArraySql<T3>,
+            >
             cornucopia_async::Params<
                 'a,
                 InsertNightmareDomainParams<'a, T1, T2, T3, T4>,
@@ -1331,11 +1338,6 @@ pub mod queries {
                 >,
                 C,
             > for InsertNightmareDomainStmt
-        where
-            T1: cornucopia_async::StringSql,
-            T2: cornucopia_async::JsonSql,
-            T3: cornucopia_async::JsonSql,
-            T4: cornucopia_async::ArraySql<T3>,
         {
             fn params(
                 &'a mut self,
@@ -1626,11 +1628,9 @@ pub mod queries {
                 }
             }
         }
-        impl<'a, C: GenericClient, T1>
+        impl<'a, C: GenericClient, T1: cornucopia_async::StringSql>
             cornucopia_async::Params<'a, NamedParams<T1>, IdQuery<'a, C, Id, 2>, C>
             for NewNamedVisibleStmt
-        where
-            T1: cornucopia_async::StringSql,
         {
             fn params(
                 &'a mut self,
@@ -1662,11 +1662,9 @@ pub mod queries {
                 }
             }
         }
-        impl<'a, C: GenericClient, T1>
+        impl<'a, C: GenericClient, T1: cornucopia_async::StringSql>
             cornucopia_async::Params<'a, NamedParams<T1>, IdQuery<'a, C, Id, 2>, C>
             for NewNamedHiddenStmt
-        where
-            T1: cornucopia_async::StringSql,
         {
             fn params(
                 &'a mut self,
@@ -1914,7 +1912,13 @@ pub mod queries {
                 client.execute(stmt, &[texts, name, composite]).await
             }
         }
-        impl<'a, C: GenericClient + Send + Sync, T1, T2, T3>
+        impl<
+                'a,
+                C: GenericClient + Send + Sync,
+                T1: cornucopia_async::StringSql,
+                T2: cornucopia_async::ArraySql<Option<T1>>,
+                T3: cornucopia_async::StringSql,
+            >
             cornucopia_async::Params<
                 'a,
                 NullityParams<'a, T1, T2, T3>,
@@ -1927,10 +1931,6 @@ pub mod queries {
                 >,
                 C,
             > for NewNullityStmt
-        where
-            T1: cornucopia_async::StringSql,
-            T2: cornucopia_async::ArraySql<Option<T1>>,
-            T3: cornucopia_async::StringSql,
         {
             fn params(
                 &'a mut self,
@@ -2157,7 +2157,12 @@ pub mod queries {
                 client.execute(stmt, &[author, name]).await
             }
         }
-        impl<'a, C: GenericClient + Send + Sync, T1, T2>
+        impl<
+                'a,
+                C: GenericClient + Send + Sync,
+                T1: cornucopia_async::StringSql,
+                T2: cornucopia_async::StringSql,
+            >
             cornucopia_async::Params<
                 'a,
                 InsertBookParams<T1, T2>,
@@ -2170,9 +2175,6 @@ pub mod queries {
                 >,
                 C,
             > for InsertBookStmt
-        where
-            T1: cornucopia_async::StringSql,
-            T2: cornucopia_async::StringSql,
         {
             fn params(
                 &'a mut self,
@@ -3475,7 +3477,15 @@ pub mod queries {
                     .await
             }
         }
-        impl<'a, C: GenericClient + Send + Sync, T1, T2, T3, T4, T5>
+        impl<
+                'a,
+                C: GenericClient + Send + Sync,
+                T1: cornucopia_async::StringSql,
+                T2: cornucopia_async::StringSql,
+                T3: cornucopia_async::BytesSql,
+                T4: cornucopia_async::JsonSql,
+                T5: cornucopia_async::JsonSql,
+            >
             cornucopia_async::Params<
                 'a,
                 EverythingParams<T1, T2, T3, T4, T5>,
@@ -3488,12 +3498,6 @@ pub mod queries {
                 >,
                 C,
             > for InsertEverythingStmt
-        where
-            T1: cornucopia_async::StringSql,
-            T2: cornucopia_async::StringSql,
-            T3: cornucopia_async::BytesSql,
-            T4: cornucopia_async::JsonSql,
-            T5: cornucopia_async::JsonSql,
         {
             fn params(
                 &'a mut self,
@@ -3749,38 +3753,38 @@ pub mod queries {
         impl<
                 'a,
                 C: GenericClient + Send + Sync,
-                T1,
-                T2,
-                T3,
-                T4,
-                T5,
-                T6,
-                T7,
-                T8,
-                T9,
-                T10,
-                T11,
-                T12,
-                T13,
-                T14,
-                T15,
-                T16,
-                T17,
-                T18,
-                T19,
-                T20,
-                T21,
-                T22,
-                T23,
-                T24,
-                T25,
-                T26,
-                T27,
-                T28,
-                T29,
-                T30,
-                T31,
-                T32,
+                T1: cornucopia_async::ArraySql<bool>,
+                T2: cornucopia_async::ArraySql<bool>,
+                T3: cornucopia_async::ArraySql<i8>,
+                T4: cornucopia_async::ArraySql<i16>,
+                T5: cornucopia_async::ArraySql<i16>,
+                T6: cornucopia_async::ArraySql<i32>,
+                T7: cornucopia_async::ArraySql<i32>,
+                T8: cornucopia_async::ArraySql<i64>,
+                T9: cornucopia_async::ArraySql<i64>,
+                T10: cornucopia_async::ArraySql<f32>,
+                T11: cornucopia_async::ArraySql<f32>,
+                T12: cornucopia_async::ArraySql<f64>,
+                T13: cornucopia_async::ArraySql<f64>,
+                T14: cornucopia_async::StringSql,
+                T15: cornucopia_async::ArraySql<T14>,
+                T16: cornucopia_async::StringSql,
+                T17: cornucopia_async::ArraySql<T16>,
+                T18: cornucopia_async::BytesSql,
+                T19: cornucopia_async::ArraySql<T18>,
+                T20: cornucopia_async::ArraySql<time::PrimitiveDateTime>,
+                T21: cornucopia_async::ArraySql<time::PrimitiveDateTime>,
+                T22: cornucopia_async::ArraySql<time::OffsetDateTime>,
+                T23: cornucopia_async::ArraySql<time::OffsetDateTime>,
+                T24: cornucopia_async::ArraySql<time::Date>,
+                T25: cornucopia_async::ArraySql<time::Time>,
+                T26: cornucopia_async::JsonSql,
+                T27: cornucopia_async::ArraySql<T26>,
+                T28: cornucopia_async::JsonSql,
+                T29: cornucopia_async::ArraySql<T28>,
+                T30: cornucopia_async::ArraySql<uuid::Uuid>,
+                T31: cornucopia_async::ArraySql<std::net::IpAddr>,
+                T32: cornucopia_async::ArraySql<eui48::MacAddress>,
             >
             cornucopia_async::Params<
                 'a,
@@ -3827,39 +3831,6 @@ pub mod queries {
                 >,
                 C,
             > for InsertEverythingArrayStmt
-        where
-            T1: cornucopia_async::ArraySql<bool>,
-            T2: cornucopia_async::ArraySql<bool>,
-            T3: cornucopia_async::ArraySql<i8>,
-            T4: cornucopia_async::ArraySql<i16>,
-            T5: cornucopia_async::ArraySql<i16>,
-            T6: cornucopia_async::ArraySql<i32>,
-            T7: cornucopia_async::ArraySql<i32>,
-            T8: cornucopia_async::ArraySql<i64>,
-            T9: cornucopia_async::ArraySql<i64>,
-            T10: cornucopia_async::ArraySql<f32>,
-            T11: cornucopia_async::ArraySql<f32>,
-            T12: cornucopia_async::ArraySql<f64>,
-            T13: cornucopia_async::ArraySql<f64>,
-            T14: cornucopia_async::StringSql,
-            T15: cornucopia_async::ArraySql<T14>,
-            T16: cornucopia_async::StringSql,
-            T17: cornucopia_async::ArraySql<T16>,
-            T18: cornucopia_async::BytesSql,
-            T19: cornucopia_async::ArraySql<T18>,
-            T20: cornucopia_async::ArraySql<time::PrimitiveDateTime>,
-            T21: cornucopia_async::ArraySql<time::PrimitiveDateTime>,
-            T22: cornucopia_async::ArraySql<time::OffsetDateTime>,
-            T23: cornucopia_async::ArraySql<time::OffsetDateTime>,
-            T24: cornucopia_async::ArraySql<time::Date>,
-            T25: cornucopia_async::ArraySql<time::Time>,
-            T26: cornucopia_async::JsonSql,
-            T27: cornucopia_async::ArraySql<T26>,
-            T28: cornucopia_async::JsonSql,
-            T29: cornucopia_async::ArraySql<T28>,
-            T30: cornucopia_async::ArraySql<uuid::Uuid>,
-            T31: cornucopia_async::ArraySql<std::net::IpAddr>,
-            T32: cornucopia_async::ArraySql<eui48::MacAddress>,
         {
             fn params(
                 &'a mut self,
@@ -4381,15 +4352,13 @@ pub mod queries {
                 }
             }
         }
-        impl<'a, C: GenericClient, T1>
+        impl<'a, C: GenericClient, T1: cornucopia_async::StringSql>
             cornucopia_async::Params<
                 'a,
                 ImplicitCompactParams<T1>,
                 Optioni32Query<'a, C, Option<i32>, 2>,
                 C,
             > for ImplicitCompactStmt
-        where
-            T1: cornucopia_async::StringSql,
         {
             fn params(
                 &'a mut self,
@@ -4421,15 +4390,13 @@ pub mod queries {
                 }
             }
         }
-        impl<'a, C: GenericClient, T1>
+        impl<'a, C: GenericClient, T1: cornucopia_async::StringSql>
             cornucopia_async::Params<
                 'a,
                 ImplicitSpacedParams<T1>,
                 Optioni32Query<'a, C, Option<i32>, 2>,
                 C,
             > for ImplicitSpacedStmt
-        where
-            T1: cornucopia_async::StringSql,
         {
             fn params(
                 &'a mut self,
@@ -4461,11 +4428,9 @@ pub mod queries {
                 }
             }
         }
-        impl<'a, C: GenericClient, T1>
+        impl<'a, C: GenericClient, T1: cornucopia_async::StringSql>
             cornucopia_async::Params<'a, Params<T1>, RowQuery<'a, C, Row, 2>, C>
             for NamedCompactStmt
-        where
-            T1: cornucopia_async::StringSql,
         {
             fn params(
                 &'a mut self,
@@ -4497,11 +4462,9 @@ pub mod queries {
                 }
             }
         }
-        impl<'a, C: GenericClient, T1>
+        impl<'a, C: GenericClient, T1: cornucopia_async::StringSql>
             cornucopia_async::Params<'a, ParamsSpace<T1>, RowSpaceQuery<'a, C, RowSpace, 2>, C>
             for NamedSpacedStmt
-        where
-            T1: cornucopia_async::StringSql,
         {
             fn params(
                 &'a mut self,
