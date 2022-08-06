@@ -6,6 +6,7 @@ pub use cornucopia_client_core::ArrayIterator;
 pub use cornucopia_client_core::ArraySql;
 pub use cornucopia_client_core::BytesSql;
 pub use cornucopia_client_core::IterSql;
+pub use cornucopia_client_core::JsonSql;
 pub use cornucopia_client_core::StringSql;
 
 #[cfg(feature = "deadpool")]

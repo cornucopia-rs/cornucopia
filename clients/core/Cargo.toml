@@ -14,5 +14,9 @@ keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 
 [dependencies]
 postgres-protocol = "0.6.4"
-postgres-types = { version = "0.2.3" }
+# TODO json feature
+postgres-types = { version = "0.2.3", features = ["with-serde_json-1"] }
 fallible-iterator = "0.2"
+# TODO json feature
+serde = "1.0.142"
+serde_json = "1.0.83"

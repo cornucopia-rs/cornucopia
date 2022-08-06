@@ -1052,14 +1052,16 @@ pub mod queries {
         pub struct InsertNightmareDomainParams<
             'a,
             T1: cornucopia_async::StringSql,
-            T2: cornucopia_async::ArraySql<&'a serde_json::value::Value>,
+            T2: cornucopia_async::JsonSql,
+            T3: cornucopia_async::JsonSql,
+            T4: cornucopia_async::ArraySql<T3>,
         > {
             pub txt: T1,
-            pub json: &'a serde_json::value::Value,
+            pub json: T2,
             pub nb: i32,
-            pub arr: T2,
+            pub arr: T4,
             pub composite: Option<super::super::types::public::DomainCompositeParams<'a>>,
-            pub _i_am_ugly: std::marker::PhantomData<&'a str>,
+            pub _i_am_ugly: std::marker::PhantomData<(T3, &'a str)>,
         }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct SelectNightmareDomain {
@@ -1287,14 +1289,16 @@ pub mod queries {
                 'a,
                 C: GenericClient,
                 T1: cornucopia_async::StringSql,
-                T2: cornucopia_async::ArraySql<&'a serde_json::value::Value>,
+                T2: cornucopia_async::JsonSql,
+                T3: cornucopia_async::JsonSql,
+                T4: cornucopia_async::ArraySql<T3>,
             >(
                 &'a mut self,
                 client: &'a C,
                 txt: &'a T1,
-                json: &'a &'a serde_json::value::Value,
+                json: &'a T2,
                 nb: &'a i32,
-                arr: &'a T2,
+                arr: &'a T4,
                 composite: &'a Option<super::super::types::public::DomainCompositeParams<'a>>,
             ) -> Result<u64, tokio_postgres::Error> {
                 let stmt = self.0.prepare(client).await?;
@@ -1314,10 +1318,10 @@ pub mod queries {
                     .await
             }
         }
-        impl<'a, C: GenericClient + Send + Sync, T1, T2>
+        impl<'a, C: GenericClient + Send + Sync, T1, T2, T3, T4>
             cornucopia_async::Params<
                 'a,
-                InsertNightmareDomainParams<'a, T1, T2>,
+                InsertNightmareDomainParams<'a, T1, T2, T3, T4>,
                 std::pin::Pin<
                     Box<
                         dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>
@@ -1329,12 +1333,14 @@ pub mod queries {
             > for InsertNightmareDomainStmt
         where
             T1: cornucopia_async::StringSql,
-            T2: cornucopia_async::ArraySql<&'a serde_json::value::Value>,
+            T2: cornucopia_async::JsonSql,
+            T3: cornucopia_async::JsonSql,
+            T4: cornucopia_async::ArraySql<T3>,
         {
             fn params(
                 &'a mut self,
                 client: &'a C,
-                params: &'a InsertNightmareDomainParams<'a, T1, T2>,
+                params: &'a InsertNightmareDomainParams<'a, T1, T2, T3, T4>,
             ) -> std::pin::Pin<
                 Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
             > {
@@ -2293,10 +2299,11 @@ pub mod queries {
         use futures::{StreamExt, TryStreamExt};
         #[derive(Debug)]
         pub struct EverythingParams<
-            'a,
             T1: cornucopia_async::StringSql,
             T2: cornucopia_async::StringSql,
             T3: cornucopia_async::BytesSql,
+            T4: cornucopia_async::JsonSql,
+            T5: cornucopia_async::JsonSql,
         > {
             pub bool_: bool,
             pub boolean_: bool,
@@ -2326,16 +2333,14 @@ pub mod queries {
             pub timestamp_with_time_zone_: time::OffsetDateTime,
             pub date_: time::Date,
             pub time_: time::Time,
-            pub json_: &'a serde_json::value::Value,
-            pub jsonb_: &'a serde_json::value::Value,
+            pub json_: T4,
+            pub jsonb_: T5,
             pub uuid_: uuid::Uuid,
             pub inet_: std::net::IpAddr,
             pub macaddr_: eui48::MacAddress,
-            pub _i_am_ugly: std::marker::PhantomData<&'a str>,
         }
         #[derive(Debug)]
         pub struct EverythingArrayParams<
-            'a,
             T1: cornucopia_async::ArraySql<bool>,
             T2: cornucopia_async::ArraySql<bool>,
             T3: cornucopia_async::ArraySql<i8>,
@@ -2361,11 +2366,13 @@ pub mod queries {
             T23: cornucopia_async::ArraySql<time::OffsetDateTime>,
             T24: cornucopia_async::ArraySql<time::Date>,
             T25: cornucopia_async::ArraySql<time::Time>,
-            T26: cornucopia_async::ArraySql<&'a serde_json::value::Value>,
-            T27: cornucopia_async::ArraySql<&'a serde_json::value::Value>,
-            T28: cornucopia_async::ArraySql<uuid::Uuid>,
-            T29: cornucopia_async::ArraySql<std::net::IpAddr>,
-            T30: cornucopia_async::ArraySql<eui48::MacAddress>,
+            T26: cornucopia_async::JsonSql,
+            T27: cornucopia_async::ArraySql<T26>,
+            T28: cornucopia_async::JsonSql,
+            T29: cornucopia_async::ArraySql<T28>,
+            T30: cornucopia_async::ArraySql<uuid::Uuid>,
+            T31: cornucopia_async::ArraySql<std::net::IpAddr>,
+            T32: cornucopia_async::ArraySql<eui48::MacAddress>,
         > {
             pub bool_: T1,
             pub boolean_: T2,
@@ -2389,12 +2396,12 @@ pub mod queries {
             pub timestamp_with_time_zone_: T23,
             pub date_: T24,
             pub time_: T25,
-            pub json_: T26,
-            pub jsonb_: T27,
-            pub uuid_: T28,
-            pub inet_: T29,
-            pub macaddr_: T30,
-            pub _i_am_ugly: std::marker::PhantomData<(T14, T16, T18, &'a str)>,
+            pub json_: T27,
+            pub jsonb_: T29,
+            pub uuid_: T30,
+            pub inet_: T31,
+            pub macaddr_: T32,
+            pub _i_am_ugly: std::marker::PhantomData<(T14, T16, T18, T26, T28)>,
         }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct Everything {
@@ -3386,6 +3393,8 @@ pub mod queries {
                 T1: cornucopia_async::StringSql,
                 T2: cornucopia_async::StringSql,
                 T3: cornucopia_async::BytesSql,
+                T4: cornucopia_async::JsonSql,
+                T5: cornucopia_async::JsonSql,
             >(
                 &'a mut self,
                 client: &'a C,
@@ -3417,8 +3426,8 @@ pub mod queries {
                 timestamp_with_time_zone_: &'a time::OffsetDateTime,
                 date_: &'a time::Date,
                 time_: &'a time::Time,
-                json_: &'a &'a serde_json::value::Value,
-                jsonb_: &'a &'a serde_json::value::Value,
+                json_: &'a T4,
+                jsonb_: &'a T5,
                 uuid_: &'a uuid::Uuid,
                 inet_: &'a std::net::IpAddr,
                 macaddr_: &'a eui48::MacAddress,
@@ -3466,10 +3475,10 @@ pub mod queries {
                     .await
             }
         }
-        impl<'a, C: GenericClient + Send + Sync, T1, T2, T3>
+        impl<'a, C: GenericClient + Send + Sync, T1, T2, T3, T4, T5>
             cornucopia_async::Params<
                 'a,
-                EverythingParams<'a, T1, T2, T3>,
+                EverythingParams<T1, T2, T3, T4, T5>,
                 std::pin::Pin<
                     Box<
                         dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>
@@ -3483,11 +3492,13 @@ pub mod queries {
             T1: cornucopia_async::StringSql,
             T2: cornucopia_async::StringSql,
             T3: cornucopia_async::BytesSql,
+            T4: cornucopia_async::JsonSql,
+            T5: cornucopia_async::JsonSql,
         {
             fn params(
                 &'a mut self,
                 client: &'a C,
-                params: &'a EverythingParams<'a, T1, T2, T3>,
+                params: &'a EverythingParams<T1, T2, T3, T4, T5>,
             ) -> std::pin::Pin<
                 Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
             > {
@@ -3660,11 +3671,13 @@ pub mod queries {
                 T23: cornucopia_async::ArraySql<time::OffsetDateTime>,
                 T24: cornucopia_async::ArraySql<time::Date>,
                 T25: cornucopia_async::ArraySql<time::Time>,
-                T26: cornucopia_async::ArraySql<&'a serde_json::value::Value>,
-                T27: cornucopia_async::ArraySql<&'a serde_json::value::Value>,
-                T28: cornucopia_async::ArraySql<uuid::Uuid>,
-                T29: cornucopia_async::ArraySql<std::net::IpAddr>,
-                T30: cornucopia_async::ArraySql<eui48::MacAddress>,
+                T26: cornucopia_async::JsonSql,
+                T27: cornucopia_async::ArraySql<T26>,
+                T28: cornucopia_async::JsonSql,
+                T29: cornucopia_async::ArraySql<T28>,
+                T30: cornucopia_async::ArraySql<uuid::Uuid>,
+                T31: cornucopia_async::ArraySql<std::net::IpAddr>,
+                T32: cornucopia_async::ArraySql<eui48::MacAddress>,
             >(
                 &'a mut self,
                 client: &'a C,
@@ -3690,11 +3703,11 @@ pub mod queries {
                 timestamp_with_time_zone_: &'a T23,
                 date_: &'a T24,
                 time_: &'a T25,
-                json_: &'a T26,
-                jsonb_: &'a T27,
-                uuid_: &'a T28,
-                inet_: &'a T29,
-                macaddr_: &'a T30,
+                json_: &'a T27,
+                jsonb_: &'a T29,
+                uuid_: &'a T30,
+                inet_: &'a T31,
+                macaddr_: &'a T32,
             ) -> Result<u64, tokio_postgres::Error> {
                 let stmt = self.0.prepare(client).await?;
                 client
@@ -3766,11 +3779,12 @@ pub mod queries {
                 T28,
                 T29,
                 T30,
+                T31,
+                T32,
             >
             cornucopia_async::Params<
                 'a,
                 EverythingArrayParams<
-                    'a,
                     T1,
                     T2,
                     T3,
@@ -3801,6 +3815,8 @@ pub mod queries {
                     T28,
                     T29,
                     T30,
+                    T31,
+                    T32,
                 >,
                 std::pin::Pin<
                     Box<
@@ -3837,17 +3853,18 @@ pub mod queries {
             T23: cornucopia_async::ArraySql<time::OffsetDateTime>,
             T24: cornucopia_async::ArraySql<time::Date>,
             T25: cornucopia_async::ArraySql<time::Time>,
-            T26: cornucopia_async::ArraySql<&'a serde_json::value::Value>,
-            T27: cornucopia_async::ArraySql<&'a serde_json::value::Value>,
-            T28: cornucopia_async::ArraySql<uuid::Uuid>,
-            T29: cornucopia_async::ArraySql<std::net::IpAddr>,
-            T30: cornucopia_async::ArraySql<eui48::MacAddress>,
+            T26: cornucopia_async::JsonSql,
+            T27: cornucopia_async::ArraySql<T26>,
+            T28: cornucopia_async::JsonSql,
+            T29: cornucopia_async::ArraySql<T28>,
+            T30: cornucopia_async::ArraySql<uuid::Uuid>,
+            T31: cornucopia_async::ArraySql<std::net::IpAddr>,
+            T32: cornucopia_async::ArraySql<eui48::MacAddress>,
         {
             fn params(
                 &'a mut self,
                 client: &'a C,
                 params: &'a EverythingArrayParams<
-                    'a,
                     T1,
                     T2,
                     T3,
@@ -3878,6 +3895,8 @@ pub mod queries {
                     T28,
                     T29,
                     T30,
+                    T31,
+                    T32,
                 >,
             ) -> std::pin::Pin<
                 Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,

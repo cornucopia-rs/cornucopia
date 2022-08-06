@@ -36,8 +36,7 @@ impl CornucopiaType {
     pub fn is_ref(&self) -> bool {
         match self {
             CornucopiaType::Simple { pg_ty, .. } => match *pg_ty {
-                Type::BYTEA => false,
-                Type::TEXT | Type::VARCHAR => false,
+                Type::BYTEA | Type::TEXT | Type::VARCHAR | Type::JSON | Type::JSONB => false,
                 _ => !self.is_copy(),
             },
             CornucopiaType::Domain { inner, .. } | CornucopiaType::Array { inner } => {
@@ -197,7 +196,10 @@ impl CornucopiaType {
                     }
                 }
                 Type::JSON | Type::JSONB => {
-                    if for_params {
+                    if let Some(traits) = support_trait {
+                        traits.push(format!("cornucopia_{client_name}::JsonSql"));
+                        idx_char(traits.len())
+                    } else if for_params {
                         format!("&{lifetime} serde_json::value::Value")
                     } else {
                         format!("postgres_types::Json<&{lifetime} serde_json::value::RawValue>")

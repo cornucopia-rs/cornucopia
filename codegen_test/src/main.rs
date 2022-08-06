@@ -410,7 +410,6 @@ pub fn test_stress(client: &mut Client) {
         timestamptz_: expected.timestamptz_,
         uuid_: expected.uuid_,
         varchar_: &expected.varchar_,
-        _i_am_ugly: PhantomData::default(),
     };
     assert_eq!(1, insert_everything().params(client, &params).unwrap());
     let actual = select_everything().bind(client).one().unwrap();
