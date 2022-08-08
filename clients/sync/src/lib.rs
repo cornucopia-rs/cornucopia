@@ -1,12 +1,7 @@
 #[doc(hidden)]
 pub mod private;
 
-pub use cornucopia_client_core::ArrayIterator;
-pub use cornucopia_client_core::ArraySql;
-pub use cornucopia_client_core::BytesSql;
-pub use cornucopia_client_core::IterSql;
-pub use cornucopia_client_core::JsonSql;
-pub use cornucopia_client_core::StringSql;
+pub use cornucopia_client_core::{ArrayIterator, ArraySql, BytesSql, IterSql, JsonSql, StringSql};
 
 /// This trait allows you to bind parameters to a query using a single
 /// struct, rather than passing each bind parameter as a function parameter.

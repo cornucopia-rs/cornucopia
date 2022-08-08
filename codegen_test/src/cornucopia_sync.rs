@@ -280,7 +280,7 @@ pub mod types {
                         ),
                         "arr" => postgres_types::ToSql::to_sql(
                             &cornucopia_sync::private::Domain(
-                                &cornucopia_sync::private::DomainArray::new(arr),
+                                &cornucopia_sync::private::DomainArray(arr),
                             ),
                             field.type_(),
                             out,
@@ -1284,9 +1284,9 @@ pub mod queries {
                         &cornucopia_sync::private::Domain(txt),
                         &cornucopia_sync::private::Domain(json),
                         &cornucopia_sync::private::Domain(nb),
-                        &cornucopia_sync::private::Domain(
-                            &cornucopia_sync::private::DomainArray::new(arr),
-                        ),
+                        &cornucopia_sync::private::Domain(&cornucopia_sync::private::DomainArray(
+                            arr,
+                        )),
                         composite,
                     ],
                 )

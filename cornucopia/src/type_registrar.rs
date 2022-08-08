@@ -77,7 +77,7 @@ impl CornucopiaType {
             CornucopiaType::Array { inner } => match inner.as_ref() {
                 CornucopiaType::Domain { inner, .. } => {
                     format!(
-                        "&cornucopia_{client_name}::private::DomainArray::new({})",
+                        "&cornucopia_{client_name}::private::DomainArray({})",
                         inner.sql_wrapped(name, is_async)
                     )
                 }

@@ -3,7 +3,6 @@ use postgres_types::{private::BytesMut, IsNull, Kind, ToSql, Type};
 use std::{
     error::Error,
     fmt::{Debug, Formatter},
-    marker::PhantomData,
 };
 
 use crate::{utils::escape_domain, ArraySql};
@@ -40,13 +39,7 @@ impl<T: ToSql> ToSql for Domain<T> {
     }
 }
 
-pub struct DomainArray<'a, T: ToSql + Sync, A: ArraySql<Item = T>>(pub &'a A, pub PhantomData<T>);
-
-impl<'a, T: ToSql + Sync, A: ArraySql<Item = T>> DomainArray<'a, T, A> {
-    pub fn new(array: &'a A) -> Self {
-        Self(array, PhantomData::default())
-    }
-}
+pub struct DomainArray<'a, T: ToSql + Sync, A: ArraySql<Item = T>>(pub &'a A);
 
 impl<'a, T: ToSql + Sync, A: ArraySql<Item = T>> Debug for DomainArray<'a, T, A> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
