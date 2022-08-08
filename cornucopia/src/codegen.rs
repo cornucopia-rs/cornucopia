@@ -23,7 +23,7 @@ macro_rules! gen {
 
 impl PreparedField {
     pub fn own_struct(&self) -> String {
-        let it = self.ty.own_struct(self.is_inner_nullable);
+        let it = self.ty.own_ty(self.is_inner_nullable);
         if self.is_nullable {
             format!("Option<{}>", it)
         } else {
@@ -31,20 +31,30 @@ impl PreparedField {
         }
     }
 
-    pub fn brw_struct(
-        &self,
-        for_params: bool,
-        has_lifetime: bool,
-        is_async: bool,
-        support_trait: &mut Option<&mut Vec<String>>,
-    ) -> String {
-        let it = self.ty.brw_struct(
-            for_params,
-            self.is_inner_nullable,
-            has_lifetime,
-            is_async,
-            support_trait,
-        );
+    pub fn param_ergo_ty(&self, is_async: bool, traits: &mut Vec<String>) -> String {
+        let it = self
+            .ty
+            .param_ergo_ty(self.is_inner_nullable, is_async, traits);
+        if self.is_nullable {
+            format!("Option<{}>", it)
+        } else {
+            it
+        }
+    }
+
+    pub fn param_ty(&self, is_async: bool) -> String {
+        let it = self.ty.param_ty(self.is_inner_nullable, is_async);
+        if self.is_nullable {
+            format!("Option<{}>", it)
+        } else {
+            it
+        }
+    }
+
+    pub fn brw_ty(&self, has_lifetime: bool, is_async: bool) -> String {
+        let it = self
+            .ty
+            .brw_ty(self.is_inner_nullable, has_lifetime, is_async);
         if self.is_nullable {
             format!("Option<{}>", it)
         } else {
@@ -227,7 +237,7 @@ fn gen_params_struct(w: &mut impl Write, params: &PreparedItem, settings: Codege
         let struct_fields = fields
             .iter()
             .map(|p| {
-                let brw = p.brw_struct(true, true, is_async, &mut Some(traits));
+                let brw = p.param_ergo_ty(is_async, traits);
                 format!("pub {} : {brw}", p.name,)
             })
             .collect::<Vec<String>>();
@@ -276,12 +286,7 @@ fn gen_row_structs(
 
         if !is_copy {
             let struct_fields = join_comma(fields, |w, col| {
-                gen!(
-                    w,
-                    "pub {} : {}",
-                    col.name,
-                    col.brw_struct(false, true, is_async, &mut None)
-                );
+                gen!(w, "pub {} : {}", col.name, col.brw_ty(true, is_async));
             });
             let fields_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
             let fields_owning = join_comma(fields, |w, f| gen!(w, "{}", f.owning_assign()));
@@ -338,7 +343,7 @@ fn gen_row_structs(
         let row_struct = if *is_named {
             format!("{name}{borrowed_str}")
         } else {
-            fields[0].brw_struct(false, false, is_async, &mut None)
+            fields[0].brw_ty(false, is_async)
         };
 
         gen!(w,"
@@ -443,13 +448,7 @@ fn gen_query_fn(
     let param_list = order
         .iter()
         .map(|idx| &param_field[*idx])
-        .map(|p| {
-            format!(
-                "{} : &'a {}",
-                p.name,
-                p.brw_struct(true, true, is_async, &mut Some(traits))
-            )
-        })
+        .map(|p| format!("{} : &'a {}", p.name, p.param_ergo_ty(is_async, traits)))
         .collect::<Vec<String>>();
     let param_list = join_comma(&param_list, |w, s| gen!(w, "{s}"));
     let generic = join_comma(traits.iter().enumerate(), |w, (idx, p)| {
@@ -517,7 +516,7 @@ fn gen_query_fn(
     if let Some(param) = param {
         let traits = &mut Vec::new();
         for p in &param.fields {
-            p.brw_struct(true, true, is_async, &mut Some(traits));
+            p.param_ergo_ty(is_async, traits);
         }
         let generic = join_comma(traits.iter().enumerate(), |w, (idx, p)| {
             gen!(w, "{}: {p}", idx_char(idx + 1));
@@ -623,12 +622,7 @@ fn gen_custom_type(
                 struct_tosql(w, struct_name, fields, name, false, *is_params, is_async);
             } else {
                 let brw_fields = join_comma(fields, |w, f| {
-                    gen!(
-                        w,
-                        "pub {} : {}",
-                        f.name,
-                        f.brw_struct(false, true, is_async, &mut None)
-                    );
+                    gen!(w, "pub {} : {}", f.name, f.brw_ty(true, is_async));
                 });
                 let field_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
                 let fields_owning = join_comma(fields, |w, f| gen!(w, "{}", f.owning_assign()));
@@ -647,12 +641,7 @@ fn gen_custom_type(
                 composite_fromsql(w, struct_name, fields, name, schema);
                 if !is_params {
                     let fields = join_comma(fields, |w, f| {
-                        gen!(
-                            w,
-                            "pub {} : {}",
-                            f.name,
-                            f.brw_struct(true, true, is_async, &mut None)
-                        );
+                        gen!(w, "pub {} : {}", f.name, f.param_ty(is_async));
                     });
                     let derive = if *is_copy { ",Copy,Clone" } else { "" };
                     gen!(

@@ -33,6 +33,7 @@ pub(crate) enum CornucopiaType {
 }
 
 impl CornucopiaType {
+    /// Is this type need a generic lifetime
     pub fn is_ref(&self) -> bool {
         match self {
             CornucopiaType::Simple { pg_ty, .. } => match *pg_ty {
@@ -46,6 +47,7 @@ impl CornucopiaType {
         }
     }
 
+    /// Is this type copyable
     pub fn is_copy(&self) -> bool {
         match self {
             CornucopiaType::Simple { is_copy, .. } | CornucopiaType::Custom { is_copy, .. } => {
@@ -56,6 +58,7 @@ impl CornucopiaType {
         }
     }
 
+    /// Can this used in parameters as it is
     pub fn is_params(&self) -> bool {
         match self {
             CornucopiaType::Simple { .. } => true,
@@ -65,6 +68,7 @@ impl CornucopiaType {
         }
     }
 
+    /// Wrap type to escape domains in parameters
     pub(crate) fn sql_wrapped(&self, name: &str, is_async: bool) -> String {
         let client_name = if is_async { "async" } else { "sync" };
         match self {
@@ -87,6 +91,7 @@ impl CornucopiaType {
         }
     }
 
+    /// Wrap type to escape domains when writing to sql
     pub(crate) fn accept_to_sql(&self, is_async: bool) -> String {
         let client_name = if is_async { "async" } else { "sync" };
         match self {
@@ -102,12 +107,13 @@ impl CornucopiaType {
                         ty
                     )
                 }
-                _ => self.brw_struct(true, false, true, is_async, &mut None),
+                _ => self.param_ty(false, is_async),
             },
-            _ => self.brw_struct(true, false, true, is_async, &mut None),
+            _ => self.param_ty(false, is_async),
         }
     }
 
+    /// Corresponding postgres type
     pub(crate) fn pg_ty(&self) -> &Type {
         match self {
             CornucopiaType::Simple { pg_ty, .. }
@@ -117,6 +123,7 @@ impl CornucopiaType {
         }
     }
 
+    /// Code to transform its borrowed type to its owned one
     pub(crate) fn owning_call(
         &self,
         name: &str,
@@ -147,31 +154,106 @@ impl CornucopiaType {
         }
     }
 
-    pub(crate) fn own_struct(&self, is_inner_nullable: bool) -> String {
+    /// Corresponding owned type
+    pub(crate) fn own_ty(&self, is_inner_nullable: bool) -> String {
         match self {
             CornucopiaType::Simple { rust_name, .. } => (*rust_name).to_string(),
             CornucopiaType::Array { inner, .. } => {
-                let own_inner = inner.own_struct(false);
+                let own_inner = inner.own_ty(false);
                 if is_inner_nullable {
                     format!("Vec<Option<{own_inner}>>")
                 } else {
                     format!("Vec<{own_inner}>")
                 }
             }
-            CornucopiaType::Domain { inner, .. } => inner.own_struct(false),
+            CornucopiaType::Domain { inner, .. } => inner.own_ty(false),
             CornucopiaType::Custom { struct_path, .. } => struct_path.to_string(),
+        }
+    }
+
+    /// Corresponding borrowed ergonomic parameter type (using traits if possible)
+    pub(crate) fn param_ergo_ty(
+        &self,
+        is_inner_nullable: bool,
+        is_async: bool,
+        traits: &mut Vec<String>,
+    ) -> String {
+        let client_name = if is_async { "async" } else { "sync" };
+        match self {
+            CornucopiaType::Simple { pg_ty, .. } => match *pg_ty {
+                Type::BYTEA => {
+                    traits.push(format!("cornucopia_{client_name}::BytesSql"));
+                    idx_char(traits.len())
+                }
+                Type::TEXT | Type::VARCHAR => {
+                    traits.push(format!("cornucopia_{client_name}::StringSql"));
+                    idx_char(traits.len())
+                }
+                Type::JSON | Type::JSONB => {
+                    traits.push(format!("cornucopia_{client_name}::JsonSql"));
+                    idx_char(traits.len())
+                }
+                _ => self.param_ty(is_inner_nullable, is_async),
+            },
+            CornucopiaType::Array { inner, .. } => {
+                let inner = inner.param_ergo_ty(is_inner_nullable, is_async, traits);
+                let inner = if is_inner_nullable {
+                    format!("Option<{inner}>")
+                } else {
+                    inner
+                };
+                traits.push(format!(
+                    "cornucopia_{client_name}::ArraySql<Item = {inner}>"
+                ));
+                idx_char(traits.len())
+            }
+            CornucopiaType::Domain { inner, .. } => {
+                inner.param_ergo_ty(is_inner_nullable, is_async, traits)
+            }
+            CornucopiaType::Custom { .. } => self.param_ty(is_inner_nullable, is_async),
+        }
+    }
+
+    /// Corresponding borrowed parameter type
+    pub(crate) fn param_ty(&self, is_inner_nullable: bool, is_async: bool) -> String {
+        match self {
+            CornucopiaType::Simple { pg_ty, .. } => match *pg_ty {
+                Type::JSON | Type::JSONB => "&'a serde_json::value::Value".to_string(),
+                _ => self.brw_ty(is_inner_nullable, true, is_async),
+            },
+            CornucopiaType::Array { inner, .. } => {
+                let inner = inner.param_ty(is_inner_nullable, is_async);
+                let inner = if is_inner_nullable {
+                    format!("Option<{inner}>")
+                } else {
+                    inner
+                };
+                // Its more practical for users to use a slice
+                format!("&'a [{inner}]")
+            }
+            CornucopiaType::Domain { inner, .. } => inner.param_ty(false, is_async),
+            CornucopiaType::Custom {
+                struct_path,
+                is_params,
+                is_copy,
+                ..
+            } => {
+                if !is_copy && !is_params {
+                    format!("{}Params<'a>", struct_path)
+                } else {
+                    self.brw_ty(is_inner_nullable, true, is_async)
+                }
+            }
         }
     }
 
     /// String representing a borrowed rust equivalent of this type. Notably, if
     /// a Rust equivalent is a String or a Vec<T>, it will return a &str and a &[T] respectively.
-    pub(crate) fn brw_struct(
+    pub(crate) fn brw_ty(
         &self,
-        for_params: bool,
         is_inner_nullable: bool,
         has_lifetime: bool,
         is_async: bool,
-        support_trait: &mut Option<&mut Vec<String>>,
     ) -> String {
         let client_name = if is_async { "async" } else { "sync" };
         let lifetime = if has_lifetime { "'a" } else { "" };
@@ -179,70 +261,32 @@ impl CornucopiaType {
             CornucopiaType::Simple {
                 pg_ty, rust_name, ..
             } => match *pg_ty {
-                Type::BYTEA => {
-                    if let Some(traits) = support_trait {
-                        traits.push(format!("cornucopia_{client_name}::BytesSql"));
-                        idx_char(traits.len())
-                    } else {
-                        format!("&{lifetime} [u8]")
-                    }
-                }
-                Type::TEXT | Type::VARCHAR => {
-                    if let Some(traits) = support_trait {
-                        traits.push(format!("cornucopia_{client_name}::StringSql"));
-                        idx_char(traits.len())
-                    } else {
-                        format!("&{lifetime} str")
-                    }
-                }
+                Type::BYTEA => format!("&{lifetime} [u8]"),
+                Type::TEXT | Type::VARCHAR => format!("&{lifetime} str"),
                 Type::JSON | Type::JSONB => {
-                    if let Some(traits) = support_trait {
-                        traits.push(format!("cornucopia_{client_name}::JsonSql"));
-                        idx_char(traits.len())
-                    } else if for_params {
-                        format!("&{lifetime} serde_json::value::Value")
-                    } else {
-                        format!("postgres_types::Json<&{lifetime} serde_json::value::RawValue>")
-                    }
+                    format!("postgres_types::Json<&{lifetime} serde_json::value::RawValue>")
                 }
                 _ => (*rust_name).to_string(),
             },
             CornucopiaType::Array { inner, .. } => {
-                let inner =
-                    inner.brw_struct(for_params, false, has_lifetime, is_async, support_trait);
+                let inner = inner.brw_ty(is_inner_nullable, has_lifetime, is_async);
                 let inner = if is_inner_nullable {
                     format!("Option<{inner}>")
                 } else {
                     inner
                 };
                 // Its more practical for users to use a slice
-                if for_params {
-                    if let Some(traits) = support_trait {
-                        traits.push(format!(
-                            "cornucopia_{client_name}::ArraySql<Item = {inner}>"
-                        ));
-                        idx_char(traits.len())
-                    } else {
-                        format!("&{lifetime} [{inner}]")
-                    }
-                } else {
-                    let lifetime = if has_lifetime { lifetime } else { "'_" };
-                    format!("cornucopia_{client_name}::ArrayIterator<{lifetime}, {inner}>")
-                }
+                let lifetime = if has_lifetime { lifetime } else { "'_" };
+                format!("cornucopia_{client_name}::ArrayIterator<{lifetime}, {inner}>")
             }
-            CornucopiaType::Domain { inner, .. } => {
-                inner.brw_struct(for_params, false, has_lifetime, is_async, support_trait)
-            }
+            CornucopiaType::Domain { inner, .. } => inner.brw_ty(false, has_lifetime, is_async),
             CornucopiaType::Custom {
                 struct_path,
-                is_params,
                 is_copy,
                 ..
             } => {
                 if *is_copy {
                     struct_path.to_string()
-                } else if for_params && !is_params {
-                    format!("{}Params<{lifetime}>", struct_path)
                 } else {
                     format!("{}Borrowed<{lifetime}>", struct_path)
                 }
