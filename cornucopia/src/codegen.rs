@@ -224,27 +224,16 @@ fn gen_params_struct(w: &mut impl Write, params: &PreparedItem, settings: Codege
     let is_async = settings.is_async;
     if *is_named {
         let traits = &mut Vec::new();
-        let mut unused_traits = Vec::new();
         let struct_fields = fields
             .iter()
             .map(|p| {
-                let len = traits.len();
                 let brw = p.brw_struct(true, true, is_async, &mut Some(traits));
-                for idx in len..traits.len().saturating_sub(1) {
-                    unused_traits.push(idx_char(idx + 1))
-                }
                 format!("pub {} : {brw}", p.name,)
             })
             .collect::<Vec<String>>();
 
-        let (copy, lifetime) = if *is_copy {
-            ("Clone,Copy,", "")
-        } else if *is_ref {
-            unused_traits.push("&'a str".to_string());
-            ("", "'a,")
-        } else {
-            ("", "")
-        };
+        let copy = if *is_copy { "Clone,Copy," } else { "" };
+        let lifetime = if *is_ref { "'a," } else { "" };
         let struct_fields = join_comma(&struct_fields, |w, s| gen!(w, "{s}"));
         let generic = join_comma(traits.iter().enumerate(), |w, (idx, p)| {
             gen!(w, "{}: {p}", idx_char(idx + 1));
