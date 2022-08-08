@@ -250,20 +250,10 @@ fn gen_params_struct(w: &mut impl Write, params: &PreparedItem, settings: Codege
             gen!(w, "{}: {p}", idx_char(idx + 1));
         });
 
-        let ugly_hack = if unused_traits.is_empty() {
-            "".to_string()
-        } else if let [single] = &unused_traits[..] {
-            format!(",pub _i_am_ugly: std::marker::PhantomData<{single}>")
-        } else {
-            let unused = join_comma(&unused_traits, |w, str| {
-                gen!(w, "{str}");
-            });
-            format!(",pub _i_am_ugly: std::marker::PhantomData<({unused})>")
-        };
         gen!(
             w,
             "#[derive({copy}Debug)]
-            pub struct {name}<{lifetime}{generic}> {{ {struct_fields} {ugly_hack} }}"
+            pub struct {name}<{lifetime}{generic}> {{ {struct_fields} }}"
         );
     }
 }

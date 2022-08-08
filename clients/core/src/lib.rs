@@ -27,30 +27,38 @@ impl<T: JsonSql> JsonSql for &T {}
 impl JsonSql for serde_json::value::Value {}
 impl<T: serde::ser::Serialize + std::fmt::Debug + Sync + Send> JsonSql for postgres_types::Json<T> {}
 
-pub trait ArraySql<T: std::fmt::Debug + ToSql + Sync>: std::fmt::Debug + ToSql + Sync {
-    fn slice(&self) -> &[T];
+pub trait ArraySql: std::fmt::Debug + ToSql + Sync {
+    type Item;
+    fn slice(&self) -> &[Self::Item];
 }
-impl<T: std::fmt::Debug + ToSql + Sync, A: ArraySql<T>> ArraySql<T> for &A {
+impl<T: std::fmt::Debug + ToSql + Sync, A: ArraySql<Item = T>> ArraySql for &A {
+    type Item = T;
+
     fn slice(&self) -> &[T] {
         A::slice(self)
     }
 }
-impl<T: std::fmt::Debug + ToSql + Sync> ArraySql<T> for Vec<T> {
+impl<T: std::fmt::Debug + ToSql + Sync> ArraySql for Vec<T> {
+    type Item = T;
+
     fn slice(&self) -> &[T] {
         self.as_slice()
     }
 }
-impl<T: std::fmt::Debug + ToSql + Sync> ArraySql<T> for &[T] {
+impl<T: std::fmt::Debug + ToSql + Sync> ArraySql for &[T] {
+    type Item = T;
     fn slice(&self) -> &[T] {
         self
     }
 }
+
 impl<
         T: std::fmt::Debug + ToSql + Sync,
         I: Iterator<Item = T> + ExactSizeIterator,
         F: Fn() -> I + Sync,
-    > ArraySql<T> for IterSql<T, I, F>
+    > ArraySql for IterSql<T, I, F>
 {
+    type Item = T;
     fn slice(&self) -> &[T] {
         todo!("Can't use IterSql with Domains yet")
     }

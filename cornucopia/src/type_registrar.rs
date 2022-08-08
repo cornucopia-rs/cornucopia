@@ -218,7 +218,7 @@ impl CornucopiaType {
                 // Its more practical for users to use a slice
                 if for_params {
                     if let Some(traits) = support_trait {
-                        traits.push(format!("cornucopia_{client_name}::ArraySql<{inner}>"));
+                        traits.push(format!("cornucopia_{client_name}::ArraySql<Item = {inner}>"));
                         idx_char(traits.len())
                     } else {
                         format!("&{lifetime} [{inner}]")

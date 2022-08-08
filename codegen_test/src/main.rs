@@ -8,7 +8,6 @@ use serde_json::Value;
 use std::{
     borrow::Cow,
     collections::HashMap,
-    marker::PhantomData,
     net::{IpAddr, Ipv4Addr},
 };
 use time::{OffsetDateTime, PrimitiveDateTime};
@@ -145,7 +144,6 @@ pub fn test_nullity(client: &mut Client) {
                 }),
                 name: "James Bond",
                 texts: [Some("Hello"), Some("world"), None].as_slice(),
-                _i_am_ugly: PhantomData::default(),
             },
         )
         .unwrap();
@@ -244,7 +242,6 @@ pub fn test_named(client: &mut Client) {
                     wow: Some("Hello world"),
                     such_cool: None,
                 },
-                _i_am_ugly: PhantomData::default(),
             },
         )
         .unwrap();
@@ -297,7 +294,6 @@ pub fn test_domain(client: &mut Client) {
             nb: 42,
             txt: "Hello world",
         }),
-        _i_am_ugly: PhantomData::default(),
     };
     let expected = SelectNightmareDomain {
         arr: vec![json.clone()],
@@ -485,7 +481,6 @@ pub fn test_stress(client: &mut Client) {
         timestamptz_: &expected.timestamptz_,
         uuid_: &expected.uuid_,
         varchar_: txt,
-        _i_am_ugly: PhantomData::default(),
     };
     assert_eq!(
         1,

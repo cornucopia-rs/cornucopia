@@ -40,21 +40,21 @@ impl<T: ToSql> ToSql for Domain<T> {
     }
 }
 
-pub struct DomainArray<'a, T: ToSql + Sync, A: ArraySql<T>>(pub &'a A, pub PhantomData<T>);
+pub struct DomainArray<'a, T: ToSql + Sync, A: ArraySql<Item = T>>(pub &'a A, pub PhantomData<T>);
 
-impl<'a, T: ToSql + Sync, A: ArraySql<T>> DomainArray<'a, T, A> {
+impl<'a, T: ToSql + Sync, A: ArraySql<Item = T>> DomainArray<'a, T, A> {
     pub fn new(array: &'a A) -> Self {
         Self(array, PhantomData::default())
     }
 }
 
-impl<'a, T: ToSql + Sync, A: ArraySql<T>> Debug for DomainArray<'a, T, A> {
+impl<'a, T: ToSql + Sync, A: ArraySql<Item = T>> Debug for DomainArray<'a, T, A> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("ArrayDomain").field(&self.0).finish()
     }
 }
 
-impl<'a, T: ToSql + Sync + 'a, A: ArraySql<T>> ToSql for DomainArray<'a, T, A> {
+impl<'a, T: ToSql + Sync + 'a, A: ArraySql<Item = T>> ToSql for DomainArray<'a, T, A> {
     fn to_sql(&self, ty: &Type, w: &mut BytesMut) -> Result<IsNull, Box<dyn Error + Sync + Send>> {
         let member_type = match *ty.kind() {
             Kind::Array(ref member) => escape_domain(member),
