@@ -49,29 +49,7 @@ impl<'a, T: ToSql + Sync, A: ArraySql<Item = T>> Debug for DomainArray<'a, T, A>
 
 impl<'a, T: ToSql + Sync + 'a, A: ArraySql<Item = T>> ToSql for DomainArray<'a, T, A> {
     fn to_sql(&self, ty: &Type, w: &mut BytesMut) -> Result<IsNull, Box<dyn Error + Sync + Send>> {
-        let member_type = match *ty.kind() {
-            Kind::Array(ref member) => escape_domain(member),
-            _ => panic!("expected array type got {}", ty),
-        };
-
-        let slice = self.0.slice();
-
-        let dimension = ArrayDimension {
-            len: downcast(slice.len())?,
-            lower_bound: 1,
-        };
-
-        array_to_sql(
-            Some(dimension),
-            member_type.oid(),
-            slice.iter(),
-            |e, w| match Domain(e).to_sql(member_type, w)? {
-                IsNull::No => Ok(postgres_protocol::IsNull::No),
-                IsNull::Yes => Ok(postgres_protocol::IsNull::Yes),
-            },
-            w,
-        )?;
-        Ok(IsNull::No)
+        self.0.escape_domain_to_sql(ty, w)
     }
 
     fn accepts(ty: &Type) -> bool {
@@ -88,6 +66,34 @@ impl<'a, T: ToSql + Sync + 'a, A: ArraySql<Item = T>> ToSql for DomainArray<'a, 
     ) -> Result<IsNull, Box<dyn Error + Sync + Send>> {
         postgres_types::__to_sql_checked(self, ty, out)
     }
+}
+
+pub fn escape_domain_to_sql<T: ToSql>(
+    ty: &Type,
+    w: &mut BytesMut,
+    iter: impl Iterator<Item = T> + ExactSizeIterator,
+) -> Result<IsNull, Box<dyn Error + Sync + Send>> {
+    let member_type = match *ty.kind() {
+        Kind::Array(ref member) => escape_domain(member),
+        _ => panic!("expected array type got {}", ty),
+    };
+
+    let dimension = ArrayDimension {
+        len: downcast(iter.len())?,
+        lower_bound: 1,
+    };
+
+    array_to_sql(
+        Some(dimension),
+        member_type.oid(),
+        iter,
+        |e, w| match Domain(e).to_sql(member_type, w)? {
+            IsNull::No => Ok(postgres_protocol::IsNull::No),
+            IsNull::Yes => Ok(postgres_protocol::IsNull::Yes),
+        },
+        w,
+    )?;
+    Ok(IsNull::No)
 }
 
 fn downcast(len: usize) -> Result<i32, Box<dyn Error + Sync + Send>> {

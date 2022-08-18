@@ -29,26 +29,44 @@ impl<T: serde::ser::Serialize + std::fmt::Debug + Sync + Send> JsonSql for postg
 
 pub trait ArraySql: std::fmt::Debug + ToSql + Sync {
     type Item;
-    fn slice(&self) -> &[Self::Item];
+    fn escape_domain_to_sql(
+        &self,
+        ty: &Type,
+        w: &mut BytesMut,
+    ) -> Result<IsNull, Box<dyn std::error::Error + Sync + Send>>;
 }
 impl<T: std::fmt::Debug + ToSql + Sync, A: ArraySql<Item = T>> ArraySql for &A {
     type Item = T;
 
-    fn slice(&self) -> &[T] {
-        A::slice(self)
+    fn escape_domain_to_sql(
+        &self,
+        ty: &Type,
+        w: &mut BytesMut,
+    ) -> Result<IsNull, Box<dyn std::error::Error + Sync + Send>> {
+        A::escape_domain_to_sql(self, ty, w)
     }
 }
 impl<T: std::fmt::Debug + ToSql + Sync> ArraySql for Vec<T> {
     type Item = T;
 
-    fn slice(&self) -> &[T] {
-        self.as_slice()
+    fn escape_domain_to_sql(
+        &self,
+        ty: &Type,
+        w: &mut BytesMut,
+    ) -> Result<IsNull, Box<dyn std::error::Error + Sync + Send>> {
+        domain::escape_domain_to_sql(ty, w, self.iter())
     }
 }
+
 impl<T: std::fmt::Debug + ToSql + Sync> ArraySql for &[T] {
     type Item = T;
-    fn slice(&self) -> &[T] {
-        self
+
+    fn escape_domain_to_sql(
+        &self,
+        ty: &Type,
+        w: &mut BytesMut,
+    ) -> Result<IsNull, Box<dyn std::error::Error + Sync + Send>> {
+        domain::escape_domain_to_sql(ty, w, self.iter())
     }
 }
 
@@ -59,8 +77,13 @@ impl<
     > ArraySql for IterSql<T, I, F>
 {
     type Item = T;
-    fn slice(&self) -> &[T] {
-        todo!("Can't use IterSql with Domains yet")
+
+    fn escape_domain_to_sql(
+        &self,
+        ty: &Type,
+        w: &mut BytesMut,
+    ) -> Result<IsNull, Box<dyn std::error::Error + Sync + Send>> {
+        domain::escape_domain_to_sql(ty, w, (self.0)())
     }
 }
 
