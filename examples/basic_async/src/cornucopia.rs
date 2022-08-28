@@ -1,8 +1,9 @@
 // This file was generated with `cornucopia`. Do not modify.
-#![allow(clippy::all, clippy::pedantic)]
-#![allow(unused_variables)]
-#![allow(unused_imports)]
-#![allow(dead_code)]
+
+#[allow(clippy::all, clippy::pedantic)]
+#[allow(unused_variables)]
+#[allow(unused_imports)]
+#[allow(dead_code)]
 pub mod types {
     pub mod public {
         #[derive(
@@ -16,6 +17,10 @@ pub mod types {
         }
     }
 }
+#[allow(clippy::all, clippy::pedantic)]
+#[allow(unused_variables)]
+#[allow(unused_imports)]
+#[allow(dead_code)]
 pub mod queries {
     pub mod module_1 {
         use cornucopia_async::GenericClient;
