@@ -1,8 +1,9 @@
 // This file was generated with `cornucopia`. Do not modify.
-#![allow(clippy::all, clippy::pedantic)]
-#![allow(unused_variables)]
-#![allow(unused_imports)]
-#![allow(dead_code)]
+
+#[allow(clippy::all, clippy::pedantic)]
+#[allow(unused_variables)]
+#[allow(unused_imports)]
+#[allow(dead_code)]
 pub mod types {
     pub mod public {
         #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
@@ -837,6 +838,10 @@ pub mod types {
         }
     }
 }
+#[allow(clippy::all, clippy::pedantic)]
+#[allow(unused_variables)]
+#[allow(unused_imports)]
+#[allow(dead_code)]
 pub mod queries {
     pub mod copy {
         use postgres::{fallible_iterator::FallibleIterator, GenericClient};
