@@ -1,6 +1,6 @@
 [package]
 name = "cornucopia"
-version = "0.8.1"
+version = "0.8.2"
 edition = "2021"
 license = "MIT/Apache-2.0"
 description = "Generate type-checked Rust from your PostgreSQL queries."

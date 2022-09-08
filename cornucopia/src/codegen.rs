@@ -667,7 +667,14 @@ fn gen_type_modules(
         gen!(w, "pub mod {schema} {{ {tys_str} }}");
     });
 
-    gen!(w, "pub mod types {{ {modules_str} }}");
+    gen!(
+        w,
+        "#[allow(clippy::all, clippy::pedantic)]
+    #[allow(unused_variables)]
+    #[allow(unused_imports)]
+    #[allow(dead_code)]
+    pub mod types {{ {modules_str} }}"
+    );
 }
 
 pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> String {
@@ -676,13 +683,7 @@ pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> S
     } else {
         "use postgres::{{fallible_iterator::FallibleIterator,GenericClient}};"
     };
-    let mut buff = "// This file was generated with `cornucopia`. Do not modify.
-    #![allow(clippy::all, clippy::pedantic)]
-    #![allow(unused_variables)]
-    #![allow(unused_imports)]
-    #![allow(dead_code)]
-    "
-    .to_string();
+    let mut buff = "// This file was generated with `cornucopia`. Do not modify.\n\n".to_string();
     // Generate database type
     gen_type_modules(&mut buff, &preparation.types, settings);
     // Generate queries
@@ -702,6 +703,14 @@ pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> S
             module.info.name
         );
     });
-    gen!(&mut buff, "pub mod queries {{ {} }}", query_modules);
+    gen!(
+        &mut buff,
+        "#[allow(clippy::all, clippy::pedantic)]
+    #[allow(unused_variables)]
+    #[allow(unused_imports)]
+    #[allow(dead_code)]
+    pub mod queries {{ {} }}",
+        query_modules
+    );
     buff
 }
