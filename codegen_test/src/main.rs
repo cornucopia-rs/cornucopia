@@ -284,7 +284,7 @@ pub fn test_domain(client: &mut Client) {
     // Erased domain not null
     let arr = [&json];
     let params = InsertNightmareDomainParams {
-        arr: arr.as_slice(),
+        arr: IterSql(|| arr.iter()),
         json: &json,
         nb: 42,
         txt: "Hello world",
