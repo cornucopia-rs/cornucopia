@@ -48,6 +48,7 @@ pub(crate) struct PreparedItem {
     pub(crate) fields: Vec<PreparedField>,
     pub(crate) is_copy: bool,
     pub(crate) is_named: bool,
+    pub(crate) is_ref: bool,
 }
 
 impl PreparedItem {
@@ -55,6 +56,7 @@ impl PreparedItem {
         Self {
             name,
             is_copy: fields.iter().all(|f| f.ty.is_copy()),
+            is_ref: fields.iter().any(|f| f.ty.is_ref()),
             is_named: !is_implicit || fields.len() > 1,
             fields,
         }

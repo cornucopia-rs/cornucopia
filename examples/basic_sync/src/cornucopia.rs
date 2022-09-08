@@ -32,10 +32,10 @@ pub mod queries {
         }
         pub struct InsertBookStmt(cornucopia_sync::private::Stmt);
         impl InsertBookStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::StringSql>(
                 &'a mut self,
                 client: &'a mut C,
-                title: &'a &'a str,
+                title: &'a T1,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[title])
@@ -45,8 +45,8 @@ pub mod queries {
     pub mod module_2 {
         use postgres::{fallible_iterator::FallibleIterator, GenericClient};
         #[derive(Debug)]
-        pub struct AuthorNameStartingWithParams<'a> {
-            pub start_str: &'a str,
+        pub struct AuthorNameStartingWithParams<T1: cornucopia_sync::StringSql> {
+            pub start_str: T1,
         }
         #[derive(Debug, Clone, PartialEq)]
         pub struct Authors {
@@ -489,10 +489,10 @@ WHERE
         }
         pub struct AuthorNameStartingWithStmt(cornucopia_sync::private::Stmt);
         impl AuthorNameStartingWithStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::StringSql>(
                 &'a mut self,
                 client: &'a mut C,
-                start_str: &'a &'a str,
+                start_str: &'a T1,
             ) -> AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith, 1> {
                 AuthorNameStartingWithQuery {
                     client,
@@ -508,10 +508,10 @@ WHERE
                 }
             }
         }
-        impl<'a, C: GenericClient>
+        impl<'a, C: GenericClient, T1: cornucopia_sync::StringSql>
             cornucopia_sync::Params<
                 'a,
-                AuthorNameStartingWithParams<'a>,
+                AuthorNameStartingWithParams<T1>,
                 AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith, 1>,
                 C,
             > for AuthorNameStartingWithStmt
@@ -519,7 +519,7 @@ WHERE
             fn params(
                 &'a mut self,
                 client: &'a mut C,
-                params: &'a AuthorNameStartingWithParams<'a>,
+                params: &'a AuthorNameStartingWithParams<T1>,
             ) -> AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith, 1> {
                 self.bind(client, &params.start_str)
             }

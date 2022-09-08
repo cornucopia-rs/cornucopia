@@ -2,7 +2,7 @@
 pub mod private;
 
 pub use crate::generic_client::GenericClient;
-pub use cornucopia_client_core::ArrayIterator;
+pub use cornucopia_client_core::{ArrayIterator, ArraySql, BytesSql, IterSql, JsonSql, StringSql};
 
 #[cfg(feature = "deadpool")]
 mod deadpool;

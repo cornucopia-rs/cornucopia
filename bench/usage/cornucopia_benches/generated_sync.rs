@@ -13,9 +13,9 @@ pub mod queries {
     pub mod bench {
         use postgres::{fallible_iterator::FallibleIterator, GenericClient};
         #[derive(Debug)]
-        pub struct InsertUserParams<'a> {
-            pub name: &'a str,
-            pub hair_color: Option<&'a str>,
+        pub struct InsertUserParams<T1: cornucopia_sync::StringSql, T2: cornucopia_sync::StringSql> {
+            pub name: T1,
+            pub hair_color: Option<T2>,
         }
 
         #[derive(Debug, Clone, PartialEq)]
@@ -376,24 +376,34 @@ pub mod queries {
         }
         pub struct InsertUserStmt(cornucopia_sync::private::Stmt);
         impl InsertUserStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<
+                'a,
+                C: GenericClient,
+                T1: cornucopia_sync::StringSql,
+                T2: cornucopia_sync::StringSql,
+            >(
                 &'a mut self,
                 client: &'a mut C,
-                name: &'a &'a str,
-                hair_color: &'a Option<&'a str>,
+                name: &'a T1,
+                hair_color: &'a Option<T2>,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
                 client.execute(stmt, &[name, hair_color])
             }
         }
-        impl<'a, C: GenericClient>
-            cornucopia_sync::Params<'a, InsertUserParams<'a>, Result<u64, postgres::Error>, C>
+        impl<
+                'a,
+                C: GenericClient,
+                T1: cornucopia_sync::StringSql,
+                T2: cornucopia_sync::StringSql,
+            >
+            cornucopia_sync::Params<'a, InsertUserParams<T1, T2>, Result<u64, postgres::Error>, C>
             for InsertUserStmt
         {
             fn params(
                 &'a mut self,
                 client: &'a mut C,
-                params: &'a InsertUserParams<'a>,
+                params: &'a InsertUserParams<T1, T2>,
             ) -> Result<u64, postgres::Error> {
                 self.bind(client, &params.name, &params.hair_color)
             }
@@ -429,10 +439,10 @@ pub mod queries {
         }
         pub struct PostByUserIdsStmt(cornucopia_sync::private::Stmt);
         impl PostByUserIdsStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::ArraySql<Item = i32>>(
                 &'a mut self,
                 client: &'a mut C,
-                ids: &'a &'a [i32],
+                ids: &'a T1,
             ) -> PostQuery<'a, C, Post, 1> {
                 PostQuery {
                     client,
@@ -479,10 +489,10 @@ pub mod queries {
         }
         pub struct CommentsByPostIdStmt(cornucopia_sync::private::Stmt);
         impl CommentsByPostIdStmt {
-            pub fn bind<'a, C: GenericClient>(
+            pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::ArraySql<Item = i32>>(
                 &'a mut self,
                 client: &'a mut C,
-                ids: &'a &'a [i32],
+                ids: &'a T1,
             ) -> CommentQuery<'a, C, Comment, 1> {
                 CommentQuery {
                     client,

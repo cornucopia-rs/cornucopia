@@ -1,10 +1,15 @@
 mod cornucopia_async;
 mod cornucopia_sync;
 
+use ::cornucopia_async::IterSql;
 use eui48::MacAddress;
 use postgres::{Client, Config, NoTls};
 use serde_json::Value;
-use std::net::{IpAddr, Ipv4Addr};
+use std::{
+    borrow::Cow,
+    collections::HashMap,
+    net::{IpAddr, Ipv4Addr},
+};
 use time::{OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;
 
@@ -22,7 +27,7 @@ use crate::cornucopia_sync::{
         nullity::{new_nullity, nullity},
         nullity::{Nullity, NullityParams},
         params::insert_book,
-        params::{params_use_twice, select_book, SelectBook},
+        params::{find_books, params_use_twice, select_book, SelectBook},
         stress::{
             insert_everything, insert_everything_array, insert_nightmare, select_everything,
             select_everything_array, select_nightmare, Everything, EverythingArray,
@@ -53,6 +58,7 @@ pub fn main() {
     test_nullity(client);
     test_stress(client);
     test_domain(client);
+    test_trait_sql(client);
 }
 
 pub fn moving<T>(_item: T) {}
@@ -60,7 +66,9 @@ pub fn moving<T>(_item: T) {}
 pub fn test_params(client: &mut Client) {
     assert_eq!(
         1,
-        insert_book().bind(client, &None, &"Necronomicon").unwrap()
+        insert_book()
+            .bind(client, &None::<&str>, &"Necronomicon")
+            .unwrap()
     );
     assert_eq!(
         1,
@@ -84,6 +92,47 @@ pub fn test_params(client: &mut Client) {
     params_use_twice().bind(client, &"name").unwrap();
 }
 
+pub fn test_trait_sql(client: &mut Client) {
+    let str = "hello world";
+    insert_book().bind(client, &Some(str), &str).unwrap();
+    find_books().bind(client, &[str].as_slice()).all().unwrap();
+
+    let string = str.to_string();
+    insert_book()
+        .bind(client, &Some(string.clone()), &string)
+        .unwrap();
+    find_books()
+        .bind(client, &vec![string.clone()])
+        .all()
+        .unwrap();
+
+    let boxed = string.clone().into_boxed_str();
+    insert_book()
+        .bind(client, &Some(boxed.clone()), &boxed)
+        .unwrap();
+    find_books().bind(client, &vec![boxed]).all().unwrap();
+
+    let cow = Cow::Borrowed(str);
+    insert_book()
+        .bind(client, &Some(cow.clone()), &cow)
+        .unwrap();
+    find_books().bind(client, &vec![cow]).all().unwrap();
+
+    let map: HashMap<&str, &str> =
+        HashMap::from_iter([("one", "1"), ("two", "2"), ("three", "3")].into_iter());
+
+    // Old way with allocation
+    let vec: Vec<_> = map.values().copied().collect();
+    find_books().bind(client, &vec.as_slice()).all().unwrap();
+    // A little more ergonomic
+    find_books().bind(client, &vec).all().unwrap();
+    // Zero allocation
+    find_books()
+        .bind(client, &IterSql(|| map.values().copied()))
+        .all()
+        .unwrap();
+}
+
 pub fn test_nullity(client: &mut Client) {
     new_nullity()
         .params(
@@ -94,7 +143,7 @@ pub fn test_nullity(client: &mut Client) {
                     id: 42,
                 }),
                 name: "James Bond",
-                texts: &[Some("Hello"), Some("world"), None],
+                texts: [Some("Hello"), Some("world"), None].as_slice(),
             },
         )
         .unwrap();
@@ -233,14 +282,14 @@ pub fn test_domain(client: &mut Client) {
     let json: Value = serde_json::from_str(r#"{"name": "James Bond"}"#).unwrap();
 
     // Erased domain not null
-    let arr = &[&json];
+    let arr = [&json];
     let params = InsertNightmareDomainParams {
-        arr,
+        arr: IterSql(|| arr.iter()),
         json: &json,
         nb: 42,
         txt: "Hello world",
         composite: Some(DomainCompositeParams {
-            arr,
+            arr: arr.as_slice(),
             json: &json,
             nb: 42,
             txt: "Hello world",
@@ -403,6 +452,7 @@ pub fn test_stress(client: &mut Client) {
         .iter()
         .map(String::as_str)
         .collect::<Vec<_>>();
+    let jsons = [&json];
     let params = EverythingArrayParams {
         bingint_: &expected.bingint_,
         bool_: &expected.bool_,
@@ -418,12 +468,12 @@ pub fn test_stress(client: &mut Client) {
         int4_: &expected.int4_,
         int8_: &expected.int8_,
         int_: &expected.int_,
-        json_: &[&json],
-        jsonb_: &[&json],
+        json_: jsons.as_slice(),
+        jsonb_: jsons.as_slice(),
         macaddr_: &expected.macaddr_,
         real_: &expected.real_,
         smallint_: &expected.smallint_,
-        text_: txt,
+        text_: &txt,
         time_: &expected.time_,
         timestamp_: &expected.timestamp_,
         timestamp_with_time_zone_: &expected.timestamp_with_time_zone_,
