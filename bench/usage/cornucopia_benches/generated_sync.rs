@@ -44,58 +44,10 @@ pub mod queries {
                 }
             }
         }
-        pub struct UserQuery<'a, C: GenericClient, T, const N: usize> {
-            client: &'a mut C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut cornucopia_sync::private::Stmt,
-            extractor: fn(&postgres::Row) -> UserBorrowed,
-            mapper: fn(UserBorrowed) -> T,
+        impl cornucopia_sync::Borrow for User {
+            type Borrow<'r> = UserBorrowed<'r>;
         }
-        impl<'a, C, T: 'a, const N: usize> UserQuery<'a, C, T, N>
-        where
-            C: GenericClient,
-        {
-            pub fn map<R>(self, mapper: fn(UserBorrowed) -> R) -> UserQuery<'a, C, R, N> {
-                UserQuery {
-                    client: self.client,
-                    params: self.params,
-                    stmt: self.stmt,
-                    extractor: self.extractor,
-                    mapper,
-                }
-            }
 
-            pub fn one(self) -> Result<T, postgres::Error> {
-                let stmt = self.stmt.prepare(self.client)?;
-                let row = self.client.query_one(stmt, &self.params)?;
-                Ok((self.mapper)((self.extractor)(&row)))
-            }
-
-            pub fn all(self) -> Result<Vec<T>, postgres::Error> {
-                self.iter()?.collect()
-            }
-
-            pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                let stmt = self.stmt.prepare(self.client)?;
-                Ok(self
-                    .client
-                    .query_opt(stmt, &self.params)?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
-            }
-
-            pub fn iter(
-                self,
-            ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
-            {
-                let stmt = self.stmt.prepare(self.client)?;
-                let it = self
-                    .client
-                    .query_raw(stmt, cornucopia_sync::private::slice_iter(&self.params))?
-                    .iterator()
-                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
-                Ok(it)
-            }
-        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct Post {
             pub id: i32,
@@ -126,58 +78,10 @@ pub mod queries {
                 }
             }
         }
-        pub struct PostQuery<'a, C: GenericClient, T, const N: usize> {
-            client: &'a mut C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut cornucopia_sync::private::Stmt,
-            extractor: fn(&postgres::Row) -> PostBorrowed,
-            mapper: fn(PostBorrowed) -> T,
+        impl cornucopia_sync::Borrow for Post {
+            type Borrow<'r> = PostBorrowed<'r>;
         }
-        impl<'a, C, T: 'a, const N: usize> PostQuery<'a, C, T, N>
-        where
-            C: GenericClient,
-        {
-            pub fn map<R>(self, mapper: fn(PostBorrowed) -> R) -> PostQuery<'a, C, R, N> {
-                PostQuery {
-                    client: self.client,
-                    params: self.params,
-                    stmt: self.stmt,
-                    extractor: self.extractor,
-                    mapper,
-                }
-            }
 
-            pub fn one(self) -> Result<T, postgres::Error> {
-                let stmt = self.stmt.prepare(self.client)?;
-                let row = self.client.query_one(stmt, &self.params)?;
-                Ok((self.mapper)((self.extractor)(&row)))
-            }
-
-            pub fn all(self) -> Result<Vec<T>, postgres::Error> {
-                self.iter()?.collect()
-            }
-
-            pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                let stmt = self.stmt.prepare(self.client)?;
-                Ok(self
-                    .client
-                    .query_opt(stmt, &self.params)?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
-            }
-
-            pub fn iter(
-                self,
-            ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
-            {
-                let stmt = self.stmt.prepare(self.client)?;
-                let it = self
-                    .client
-                    .query_raw(stmt, cornucopia_sync::private::slice_iter(&self.params))?
-                    .iterator()
-                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
-                Ok(it)
-            }
-        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct Comment {
             pub id: i32,
@@ -198,58 +102,10 @@ pub mod queries {
                 }
             }
         }
-        pub struct CommentQuery<'a, C: GenericClient, T, const N: usize> {
-            client: &'a mut C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut cornucopia_sync::private::Stmt,
-            extractor: fn(&postgres::Row) -> CommentBorrowed,
-            mapper: fn(CommentBorrowed) -> T,
+        impl cornucopia_sync::Borrow for Comment {
+            type Borrow<'r> = CommentBorrowed<'r>;
         }
-        impl<'a, C, T: 'a, const N: usize> CommentQuery<'a, C, T, N>
-        where
-            C: GenericClient,
-        {
-            pub fn map<R>(self, mapper: fn(CommentBorrowed) -> R) -> CommentQuery<'a, C, R, N> {
-                CommentQuery {
-                    client: self.client,
-                    params: self.params,
-                    stmt: self.stmt,
-                    extractor: self.extractor,
-                    mapper,
-                }
-            }
 
-            pub fn one(self) -> Result<T, postgres::Error> {
-                let stmt = self.stmt.prepare(self.client)?;
-                let row = self.client.query_one(stmt, &self.params)?;
-                Ok((self.mapper)((self.extractor)(&row)))
-            }
-
-            pub fn all(self) -> Result<Vec<T>, postgres::Error> {
-                self.iter()?.collect()
-            }
-
-            pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                let stmt = self.stmt.prepare(self.client)?;
-                Ok(self
-                    .client
-                    .query_opt(stmt, &self.params)?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
-            }
-
-            pub fn iter(
-                self,
-            ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
-            {
-                let stmt = self.stmt.prepare(self.client)?;
-                let it = self
-                    .client
-                    .query_raw(stmt, cornucopia_sync::private::slice_iter(&self.params))?
-                    .iterator()
-                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
-                Ok(it)
-            }
-        }
         #[derive(Debug, Clone, PartialEq)]
         pub struct SelectComplex {
             pub myuser_id: i32,
@@ -292,60 +148,8 @@ pub mod queries {
                 }
             }
         }
-        pub struct SelectComplexQuery<'a, C: GenericClient, T, const N: usize> {
-            client: &'a mut C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut cornucopia_sync::private::Stmt,
-            extractor: fn(&postgres::Row) -> SelectComplexBorrowed,
-            mapper: fn(SelectComplexBorrowed) -> T,
-        }
-        impl<'a, C, T: 'a, const N: usize> SelectComplexQuery<'a, C, T, N>
-        where
-            C: GenericClient,
-        {
-            pub fn map<R>(
-                self,
-                mapper: fn(SelectComplexBorrowed) -> R,
-            ) -> SelectComplexQuery<'a, C, R, N> {
-                SelectComplexQuery {
-                    client: self.client,
-                    params: self.params,
-                    stmt: self.stmt,
-                    extractor: self.extractor,
-                    mapper,
-                }
-            }
-
-            pub fn one(self) -> Result<T, postgres::Error> {
-                let stmt = self.stmt.prepare(self.client)?;
-                let row = self.client.query_one(stmt, &self.params)?;
-                Ok((self.mapper)((self.extractor)(&row)))
-            }
-
-            pub fn all(self) -> Result<Vec<T>, postgres::Error> {
-                self.iter()?.collect()
-            }
-
-            pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                let stmt = self.stmt.prepare(self.client)?;
-                Ok(self
-                    .client
-                    .query_opt(stmt, &self.params)?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
-            }
-
-            pub fn iter(
-                self,
-            ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
-            {
-                let stmt = self.stmt.prepare(self.client)?;
-                let it = self
-                    .client
-                    .query_raw(stmt, cornucopia_sync::private::slice_iter(&self.params))?
-                    .iterator()
-                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
-                Ok(it)
-            }
+        impl cornucopia_sync::Borrow for SelectComplex {
+            type Borrow<'r> = SelectComplexBorrowed<'r>;
         }
         pub fn users() -> UsersStmt {
             UsersStmt(cornucopia_sync::private::Stmt::new("SELECT * FROM users"))
@@ -355,8 +159,8 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-            ) -> UserQuery<'a, C, User, 0> {
-                UserQuery {
+            ) -> cornucopia_sync::private::Query<'a, C, User, User, 0> {
+                cornucopia_sync::private::Query {
                     client,
                     params: [],
                     stmt: &mut self.0,
@@ -417,8 +221,8 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-            ) -> PostQuery<'a, C, Post, 0> {
-                PostQuery {
+            ) -> cornucopia_sync::private::Query<'a, C, Post, Post, 0> {
+                cornucopia_sync::private::Query {
                     client,
                     params: [],
                     stmt: &mut self.0,
@@ -443,8 +247,8 @@ pub mod queries {
                 &'a mut self,
                 client: &'a mut C,
                 ids: &'a T1,
-            ) -> PostQuery<'a, C, Post, 1> {
-                PostQuery {
+            ) -> cornucopia_sync::private::Query<'a, C, Post, Post, 1> {
+                cornucopia_sync::private::Query {
                     client,
                     params: [ids],
                     stmt: &mut self.0,
@@ -468,8 +272,8 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-            ) -> CommentQuery<'a, C, Comment, 0> {
-                CommentQuery {
+            ) -> cornucopia_sync::private::Query<'a, C, Comment, Comment, 0> {
+                cornucopia_sync::private::Query {
                     client,
                     params: [],
                     stmt: &mut self.0,
@@ -493,8 +297,8 @@ pub mod queries {
                 &'a mut self,
                 client: &'a mut C,
                 ids: &'a T1,
-            ) -> CommentQuery<'a, C, Comment, 1> {
-                CommentQuery {
+            ) -> cornucopia_sync::private::Query<'a, C, Comment, Comment, 1> {
+                cornucopia_sync::private::Query {
                     client,
                     params: [ids],
                     stmt: &mut self.0,
@@ -515,8 +319,9 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-            ) -> SelectComplexQuery<'a, C, SelectComplex, 0> {
-                SelectComplexQuery {
+            ) -> cornucopia_sync::private::Query<'a, C, SelectComplex, SelectComplex, 0>
+            {
+                cornucopia_sync::private::Query {
                     client,
                     params: [],
                     stmt: &mut self.0,

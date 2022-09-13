@@ -47,7 +47,7 @@ fn spawn_container(podman: bool) -> Result<(), Error> {
 /// Checks if Cornucopia's container reports healthy
 fn is_postgres_healthy(podman: bool) -> Result<bool, Error> {
     let command = if podman { "podman" } else { "docker" };
-    Ok(Command::new(&command)
+    Ok(Command::new(command)
         .arg("exec")
         .arg("cornucopia_postgres")
         .arg("pg_isready")
@@ -96,7 +96,7 @@ fn healthcheck(podman: bool, max_retries: u64, ms_per_retry: u64) -> Result<(), 
 /// Stops Cornucopia's container.
 fn stop_container(podman: bool) -> Result<(), Error> {
     let command = if podman { "podman" } else { "docker" };
-    let success = Command::new(&command)
+    let success = Command::new(command)
         .arg("stop")
         .arg("cornucopia_postgres")
         .stderr(Stdio::null())
@@ -117,7 +117,7 @@ fn stop_container(podman: bool) -> Result<(), Error> {
 /// Removes Cornucopia's container and its volume.
 fn remove_container(podman: bool) -> Result<(), Error> {
     let command = if podman { "podman" } else { "docker" };
-    let success = Command::new(&command)
+    let success = Command::new(command)
         .arg("rm")
         .arg("-v")
         .arg("cornucopia_postgres")

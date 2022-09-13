@@ -1,3 +1,5 @@
+#![feature(generic_associated_types)]
+
 mod cornucopia_async;
 mod cornucopia_sync;
 

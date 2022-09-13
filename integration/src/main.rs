@@ -1,3 +1,5 @@
+#![feature(generic_associated_types)]
+
 use std::{
     borrow::Cow,
     fmt::Display,
@@ -245,7 +247,7 @@ fn run_codegen_test(
                     .output()?;
             } else {
                 // Get currently checked-in generate file
-                let old_codegen = std::fs::read_to_string(&destination).unwrap_or_default();
+                let old_codegen = std::fs::read_to_string(destination).unwrap_or_default();
                 // Generate new file
                 let new_codegen = cornucopia::generate_live(
                     client,

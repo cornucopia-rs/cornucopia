@@ -1,8 +1,12 @@
+#![feature(generic_associated_types)]
+
 #[doc(hidden)]
 pub mod private;
 
 pub use crate::generic_client::GenericClient;
-pub use cornucopia_client_core::{ArrayIterator, ArraySql, BytesSql, IterSql, JsonSql, StringSql};
+pub use cornucopia_client_core::{
+    ArrayIterator, ArraySql, Borrow, BytesSql, IterSql, JsonSql, StringSql,
+};
 
 #[cfg(feature = "deadpool")]
 mod deadpool;
