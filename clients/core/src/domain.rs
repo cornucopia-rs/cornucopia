@@ -5,7 +5,7 @@ use std::{
     fmt::{Debug, Formatter},
 };
 
-use crate::{utils::escape_domain, ArraySql};
+use crate::{type_traits::ArraySql, utils::escape_domain};
 
 pub struct Domain<T: ToSql>(pub T);
 
