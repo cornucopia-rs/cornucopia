@@ -14,10 +14,10 @@ keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 
 [dependencies]
 postgres-protocol = "0.6.4"
-postgres-types = "0.2.3"
-fallible-iterator = "0.2"
-serde-1 = { version = "1.0", package = "serde", optional = true }
-serde_json-1 = { version = "1.0", package = "serde_json", optional = true }
+postgres-types = "0.2.4"
+fallible-iterator = "0.2.0"
+serde-1 = { version = "1.0.144", package = "serde", optional = true }
+serde_json-1 = { version = "1.0.85", package = "serde_json", optional = true }
 
 [features]
 with-serde_json-1 = [

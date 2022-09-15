@@ -18,8 +18,8 @@ with-serde_json-1 = ["cornucopia_client_core/with-serde_json-1"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio-postgres = { version = "0.7.6" }
-async-trait = { version = "0.1.56" }
+tokio-postgres = "0.7.7"
+async-trait = "0.1.57"
 deadpool-postgres = { version = "0.10.2", optional = true }
 
 cornucopia_client_core = { path = "../core", version = "0.3.1"  }

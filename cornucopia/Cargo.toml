@@ -11,11 +11,11 @@ categories = ["database"]
 keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 
 [dependencies]
-postgres = { version = "0.19.3" }
-postgres-types = { version = "0.2.3" }
-thiserror = "1.0.31"
-miette = { version = "5.1.1", features = ["fancy"] }
-clap = { version = "3.2.8", features = ["derive"] }
+postgres = "0.19.4"
+postgres-types = "0.2.4"
+thiserror = "1.0.35"
+miette = { version = "5.3.0", features = ["fancy"] }
+clap = { version = "3.2.21", features = ["derive"] }
 heck = "0.4.0"
 indexmap = "1.9.1"
 chumsky = "0.8.0"

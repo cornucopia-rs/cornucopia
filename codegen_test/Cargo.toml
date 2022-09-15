@@ -6,25 +6,25 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-postgres = { version = "0.19.3", features = [
+postgres = { version = "0.19.4", features = [
     "with-serde_json-1",
     "with-time-0_3",
     "with-uuid-1",
     "with-eui48-1",
 ] }
-tokio-postgres = { version = "0.7.6", features = [
+tokio-postgres = { version = "0.7.7", features = [
     "with-serde_json-1",
     "with-time-0_3",
     "with-uuid-1",
     "with-eui48-1",
 ] }
-postgres-types = { version = "0.2.3", features = ["derive"] }
-serde = { version = "1.0.138", features = ["derive"] }
-serde_json = { version = "1.0.82", features = ["raw_value"] }
-time = { version = "0.3.11", features = ["parsing", "serde"] }
+postgres-types = { version = "0.2.4", features = ["derive"] }
+serde = { version = "1.0.144", features = ["derive"], package = "serde" }
+serde_json = { version = "1.0.85", features = ["raw_value"], package = "serde_json" }
+time = { version = "0.3.14", features = ["parsing", "serde"] }
 uuid = { version = "1.1.2", features = ["serde"] }
 eui48 = { version = "1.1.0", features = ["serde"] }
-futures = "0.3.21"
+futures = "0.3.24"
 
 cornucopia_sync = { path = "../clients/sync", features = ["with-serde_json-1"] }
 cornucopia_async = { path = "../clients/async", features = [
