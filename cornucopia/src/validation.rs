@@ -185,7 +185,7 @@ pub(crate) fn param_on_simple_query(
     Ok(())
 }
 
-const KEYWORD: [&str; 52] = [
+pub(crate) const KEYWORD: [&str; 52] = [
     "Self", "abstract", "as", "async", "await", "become", "box", "break", "const", "continue",
     "crate", "do", "dyn", "else", "enum", "extern", "false", "final", "fn", "for", "if", "impl",
     "in", "let", "loop", "macro", "match", "mod", "move", "mut", "override", "priv", "pub", "ref",

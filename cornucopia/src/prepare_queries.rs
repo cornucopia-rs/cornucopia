@@ -10,7 +10,7 @@ use crate::{
     read_queries::ModuleInfo,
     type_registrar::CornucopiaType,
     type_registrar::TypeRegistrar,
-    validation,
+    validation::{self, KEYWORD},
 };
 
 use self::error::Error;
@@ -227,7 +227,18 @@ fn prepare_type(
             .find(|it| it.name.value == pg_ty.name())
             .map_or(&[] as &[NullableIdent], |it| it.fields.as_slice());
         let content = match pg_ty.kind() {
-            Kind::Enum(variants) => PreparedContent::Enum(variants.clone()),
+            Kind::Enum(variants) => PreparedContent::Enum(
+                variants
+                    .iter()
+                    .map(|v| {
+                        if KEYWORD.contains(&v.as_ref()) {
+                            format!("r#{v}")
+                        } else {
+                            v.to_owned()
+                        }
+                    })
+                    .collect(),
+            ),
             Kind::Domain(_) => return None,
             Kind::Composite(fields) => PreparedContent::Composite(
                 fields
