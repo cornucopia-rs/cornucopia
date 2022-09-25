@@ -33,12 +33,13 @@ use crate::cornucopia_sync::{
             select_everything_array, select_nightmare, Everything, EverythingArray,
             EverythingArrayParams, EverythingParams,
         },
+        syntax::{syntax, tricky_sql10, TrickySql10Params},
     },
     types::public::{
         CloneCompositeBorrowed, CopyComposite, CustomComposite, CustomCompositeBorrowed,
         DomainComposite, DomainCompositeParams, NamedComposite, NamedCompositeBorrowed,
         NightmareComposite, NightmareCompositeParams, NullityComposite, NullityCompositeParams,
-        SpongebobCharacter,
+        SpongebobCharacter, SyntaxComposite, SyntaxEnum,
     },
 };
 use ::cornucopia_sync::Params;
@@ -59,6 +60,7 @@ pub fn main() {
     test_stress(client);
     test_domain(client);
     test_trait_sql(client);
+    test_keyword_escaping(client);
 }
 
 pub fn moving<T>(_item: T) {}
@@ -512,4 +514,14 @@ pub fn test_stress(client: &mut Client) {
     assert_eq!(1, insert_nightmare().bind(client, &params).unwrap());
     let actual = select_nightmare().bind(client).one().unwrap();
     assert_eq!(expected, actual);
+}
+
+// Test keyword escaping
+pub fn test_keyword_escaping(client: &mut Client) {
+    let params = TrickySql10Params {
+        r#async: SyntaxComposite { r#async: 34 },
+        r#enum: SyntaxEnum::r#box,
+    };
+    tricky_sql10().params(client, &params).unwrap();
+    syntax().bind(client).all().unwrap();
 }

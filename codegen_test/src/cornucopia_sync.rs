@@ -554,21 +554,87 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(
-            serde::Serialize,
-            Debug,
-            postgres_types::ToSql,
-            postgres_types::FromSql,
-            Clone,
-            Copy,
-            PartialEq,
-            Eq,
-        )]
-        #[postgres(name = "spongebob_character")]
+        #[derive(serde::Serialize, Debug, Clone, Copy, PartialEq, Eq)]
+        #[allow(non_camel_case_types)]
         pub enum SpongebobCharacter {
             Bob,
             Patrick,
             Squidward,
+        }
+        impl<'a> postgres_types::ToSql for SpongebobCharacter {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                buf: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let s = match *self {
+                    SpongebobCharacter::Bob => "Bob",
+                    SpongebobCharacter::Patrick => "Patrick",
+                    SpongebobCharacter::Squidward => "Squidward",
+                };
+                buf.extend_from_slice(s.as_bytes());
+                std::result::Result::Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "spongebob_character" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Enum(ref variants) => {
+                        if variants.len() != 3usize {
+                            return false;
+                        }
+                        variants.iter().all(|v| match &**v {
+                            "Bob" => true,
+                            "Patrick" => true,
+                            "Squidward" => true,
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        impl<'a> postgres_types::FromSql<'a> for SpongebobCharacter {
+            fn from_sql(
+                ty: &postgres_types::Type,
+                buf: &'a [u8],
+            ) -> Result<SpongebobCharacter, Box<dyn std::error::Error + Sync + Send>> {
+                match std::str::from_utf8(buf)? {
+                    "Bob" => Ok(SpongebobCharacter::Bob),
+                    "Patrick" => Ok(SpongebobCharacter::Patrick),
+                    "Squidward" => Ok(SpongebobCharacter::Squidward),
+                    s => Result::Err(Into::into(format!("invalid variant `{}`", s))),
+                }
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "spongebob_character" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Enum(ref variants) => {
+                        if variants.len() != 3usize {
+                            return false;
+                        }
+                        variants.iter().all(|v| match &**v {
+                            "Bob" => true,
+                            "Patrick" => true,
+                            "Squidward" => true,
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
         }
         #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
         #[postgres(name = "custom_composite")]
@@ -834,6 +900,149 @@ pub mod types {
             ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
             {
                 postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Copy, Clone, PartialEq)]
+        #[postgres(name = "syntax_composite")]
+        pub struct SyntaxComposite {
+            pub r#async: i32,
+        }
+        impl<'a> postgres_types::ToSql for SyntaxComposite {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let SyntaxComposite { r#async } = self;
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {
+                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = out.len();
+                    out.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {
+                        "async" => postgres_types::ToSql::to_sql(r#async, field.type_(), out),
+                        _ => unreachable!(),
+                    };
+                    let count = match r? {
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {
+                            let len = out.len() - base - 4;
+                            if len > i32::max_value() as usize {
+                                return Err(Into::into("value too large to transmit"));
+                            }
+                            len as i32
+                        }
+                    };
+                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                }
+                Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "syntax_composite" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != 1usize {
+                            return false;
+                        }
+                        fields.iter().all(|f| match f.name() {
+                            "async" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        #[derive(serde::Serialize, Debug, Clone, Copy, PartialEq, Eq)]
+        #[allow(non_camel_case_types)]
+        pub enum SyntaxEnum {
+            r#async,
+            r#box,
+        }
+        impl<'a> postgres_types::ToSql for SyntaxEnum {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                buf: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let s = match *self {
+                    SyntaxEnum::r#async => "async",
+                    SyntaxEnum::r#box => "box",
+                };
+                buf.extend_from_slice(s.as_bytes());
+                std::result::Result::Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "syntax_enum" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Enum(ref variants) => {
+                        if variants.len() != 2usize {
+                            return false;
+                        }
+                        variants.iter().all(|v| match &**v {
+                            "async" => true,
+                            "box" => true,
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        impl<'a> postgres_types::FromSql<'a> for SyntaxEnum {
+            fn from_sql(
+                ty: &postgres_types::Type,
+                buf: &'a [u8],
+            ) -> Result<SyntaxEnum, Box<dyn std::error::Error + Sync + Send>> {
+                match std::str::from_utf8(buf)? {
+                    "async" => Ok(SyntaxEnum::r#async),
+                    "box" => Ok(SyntaxEnum::r#box),
+                    s => Result::Err(Into::into(format!("invalid variant `{}`", s))),
+                }
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "syntax_enum" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Enum(ref variants) => {
+                        if variants.len() != 2usize {
+                            return false;
+                        }
+                        variants.iter().all(|v| match &**v {
+                            "async" => true,
+                            "box" => true,
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
             }
         }
     }
@@ -3814,7 +4023,56 @@ pub mod queries {
             pub name: T1,
             pub price: f64,
         }
-
+        #[derive(Clone, Copy, Debug)]
+        pub struct TrickySqlParams {
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
+        }
+        #[derive(Clone, Copy, Debug)]
+        pub struct TrickySql1Params {
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
+        }
+        #[derive(Clone, Copy, Debug)]
+        pub struct TrickySql2Params {
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
+        }
+        #[derive(Clone, Copy, Debug)]
+        pub struct TrickySql3Params {
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
+        }
+        #[derive(Clone, Copy, Debug)]
+        pub struct TrickySql4Params {
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
+        }
+        #[derive(Clone, Copy, Debug)]
+        pub struct TrickySql6Params {
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
+        }
+        #[derive(Clone, Copy, Debug)]
+        pub struct TrickySql7Params {
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
+        }
+        #[derive(Clone, Copy, Debug)]
+        pub struct TrickySql8Params {
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
+        }
+        #[derive(Clone, Copy, Debug)]
+        pub struct TrickySql9Params {
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
+        }
+        #[derive(Clone, Copy, Debug)]
+        pub struct TrickySql10Params {
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
+        }
         pub struct SuperSuperTypesPublicCloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -4038,17 +4296,26 @@ pub mod queries {
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct Syntax {
             pub trick_y: String,
-            pub price: f64,
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
         }
         pub struct SyntaxBorrowed<'a> {
             pub trick_y: &'a str,
-            pub price: f64,
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
         }
         impl<'a> From<SyntaxBorrowed<'a>> for Syntax {
-            fn from(SyntaxBorrowed { trick_y, price }: SyntaxBorrowed<'a>) -> Self {
+            fn from(
+                SyntaxBorrowed {
+                    trick_y,
+                    r#async,
+                    r#enum,
+                }: SyntaxBorrowed<'a>,
+            ) -> Self {
                 Self {
                     trick_y: trick_y.into(),
-                    price,
+                    r#async,
+                    r#enum,
                 }
             }
         }
@@ -4297,151 +4564,285 @@ pub mod queries {
             }
         }
         pub fn tricky_sql() -> TrickySqlStmt {
-            TrickySqlStmt(cornucopia_sync::private::Stmt::new(
-                "INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a bind_param\', $1)",
-            ))
+            TrickySqlStmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a bind_param\', $1, $2)"))
         }
         pub struct TrickySqlStmt(cornucopia_sync::private::Stmt);
         impl TrickySqlStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-                price: &'a f64,
+                r#async: &'a super::super::types::public::SyntaxComposite,
+                r#enum: &'a super::super::types::public::SyntaxEnum,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
-                client.execute(stmt, &[price])
+                client.execute(stmt, &[r#async, r#enum])
             }
         }
+        impl<'a, C: GenericClient>
+            cornucopia_sync::Params<'a, TrickySqlParams, Result<u64, postgres::Error>, C>
+            for TrickySqlStmt
+        {
+            fn params(
+                &'a mut self,
+                client: &'a mut C,
+                params: &'a TrickySqlParams,
+            ) -> Result<u64, postgres::Error> {
+                self.bind(client, &params.r#async, &params.r#enum)
+            }
+        }
+
         pub fn tricky_sql1() -> TrickySql1Stmt {
-            TrickySql1Stmt(cornucopia_sync::private::Stmt::new(
-                "INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a :bind_param', $1)",
-            ))
+            TrickySql1Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a :bind_param', $1, $2)"))
         }
         pub struct TrickySql1Stmt(cornucopia_sync::private::Stmt);
         impl TrickySql1Stmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-                price: &'a f64,
+                r#async: &'a super::super::types::public::SyntaxComposite,
+                r#enum: &'a super::super::types::public::SyntaxEnum,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
-                client.execute(stmt, &[price])
+                client.execute(stmt, &[r#async, r#enum])
             }
         }
+        impl<'a, C: GenericClient>
+            cornucopia_sync::Params<'a, TrickySql1Params, Result<u64, postgres::Error>, C>
+            for TrickySql1Stmt
+        {
+            fn params(
+                &'a mut self,
+                client: &'a mut C,
+                params: &'a TrickySql1Params,
+            ) -> Result<u64, postgres::Error> {
+                self.bind(client, &params.r#async, &params.r#enum)
+            }
+        }
+
         pub fn tricky_sql2() -> TrickySql2Stmt {
-            TrickySql2Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a '':bind_param''', $1)"))
+            TrickySql2Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a '':bind_param''', $1, $2)"))
         }
         pub struct TrickySql2Stmt(cornucopia_sync::private::Stmt);
         impl TrickySql2Stmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-                price: &'a f64,
+                r#async: &'a super::super::types::public::SyntaxComposite,
+                r#enum: &'a super::super::types::public::SyntaxEnum,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
-                client.execute(stmt, &[price])
+                client.execute(stmt, &[r#async, r#enum])
             }
         }
+        impl<'a, C: GenericClient>
+            cornucopia_sync::Params<'a, TrickySql2Params, Result<u64, postgres::Error>, C>
+            for TrickySql2Stmt
+        {
+            fn params(
+                &'a mut self,
+                client: &'a mut C,
+                params: &'a TrickySql2Params,
+            ) -> Result<u64, postgres::Error> {
+                self.bind(client, &params.r#async, &params.r#enum)
+            }
+        }
+
         pub fn tricky_sql3() -> TrickySql3Stmt {
-            TrickySql3Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", price)  VALUES ($$this is not a :bind_param$$, $1)"))
+            TrickySql3Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", async, enum)  VALUES ($$this is not a :bind_param$$, $1, $2)"))
         }
         pub struct TrickySql3Stmt(cornucopia_sync::private::Stmt);
         impl TrickySql3Stmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-                price: &'a f64,
+                r#async: &'a super::super::types::public::SyntaxComposite,
+                r#enum: &'a super::super::types::public::SyntaxEnum,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
-                client.execute(stmt, &[price])
+                client.execute(stmt, &[r#async, r#enum])
             }
         }
+        impl<'a, C: GenericClient>
+            cornucopia_sync::Params<'a, TrickySql3Params, Result<u64, postgres::Error>, C>
+            for TrickySql3Stmt
+        {
+            fn params(
+                &'a mut self,
+                client: &'a mut C,
+                params: &'a TrickySql3Params,
+            ) -> Result<u64, postgres::Error> {
+                self.bind(client, &params.r#async, &params.r#enum)
+            }
+        }
+
         pub fn tricky_sql4() -> TrickySql4Stmt {
-            TrickySql4Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", price) VALUES ($tag$this is not a :bind_param$tag$, $1)"))
+            TrickySql4Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ($tag$this is not a :bind_param$tag$, $1, $2)"))
         }
         pub struct TrickySql4Stmt(cornucopia_sync::private::Stmt);
         impl TrickySql4Stmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-                price: &'a f64,
+                r#async: &'a super::super::types::public::SyntaxComposite,
+                r#enum: &'a super::super::types::public::SyntaxEnum,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
-                client.execute(stmt, &[price])
+                client.execute(stmt, &[r#async, r#enum])
             }
         }
+        impl<'a, C: GenericClient>
+            cornucopia_sync::Params<'a, TrickySql4Params, Result<u64, postgres::Error>, C>
+            for TrickySql4Stmt
+        {
+            fn params(
+                &'a mut self,
+                client: &'a mut C,
+                params: &'a TrickySql4Params,
+            ) -> Result<u64, postgres::Error> {
+                self.bind(client, &params.r#async, &params.r#enum)
+            }
+        }
+
         pub fn tricky_sql6() -> TrickySql6Stmt {
-            TrickySql6Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", price) VALUES (e'this is not a '':bind_param''', $1)"))
+            TrickySql6Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (e'this is not a '':bind_param''', $1, $2)"))
         }
         pub struct TrickySql6Stmt(cornucopia_sync::private::Stmt);
         impl TrickySql6Stmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-                price: &'a f64,
+                r#async: &'a super::super::types::public::SyntaxComposite,
+                r#enum: &'a super::super::types::public::SyntaxEnum,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
-                client.execute(stmt, &[price])
+                client.execute(stmt, &[r#async, r#enum])
             }
         }
+        impl<'a, C: GenericClient>
+            cornucopia_sync::Params<'a, TrickySql6Params, Result<u64, postgres::Error>, C>
+            for TrickySql6Stmt
+        {
+            fn params(
+                &'a mut self,
+                client: &'a mut C,
+                params: &'a TrickySql6Params,
+            ) -> Result<u64, postgres::Error> {
+                self.bind(client, &params.r#async, &params.r#enum)
+            }
+        }
+
         pub fn tricky_sql7() -> TrickySql7Stmt {
-            TrickySql7Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", price) VALUES (E'this is not a \':bind_param\'', $1)"))
+            TrickySql7Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (E'this is not a \':bind_param\'', $1, $2)"))
         }
         pub struct TrickySql7Stmt(cornucopia_sync::private::Stmt);
         impl TrickySql7Stmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-                price: &'a f64,
+                r#async: &'a super::super::types::public::SyntaxComposite,
+                r#enum: &'a super::super::types::public::SyntaxEnum,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
-                client.execute(stmt, &[price])
+                client.execute(stmt, &[r#async, r#enum])
             }
         }
+        impl<'a, C: GenericClient>
+            cornucopia_sync::Params<'a, TrickySql7Params, Result<u64, postgres::Error>, C>
+            for TrickySql7Stmt
+        {
+            fn params(
+                &'a mut self,
+                client: &'a mut C,
+                params: &'a TrickySql7Params,
+            ) -> Result<u64, postgres::Error> {
+                self.bind(client, &params.r#async, &params.r#enum)
+            }
+        }
+
         pub fn tricky_sql8() -> TrickySql8Stmt {
-            TrickySql8Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", price) VALUES (e'this is ''not'' a \':bind_param\'', $1)"))
+            TrickySql8Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (e'this is ''not'' a \':bind_param\'', $1, $2)"))
         }
         pub struct TrickySql8Stmt(cornucopia_sync::private::Stmt);
         impl TrickySql8Stmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-                price: &'a f64,
+                r#async: &'a super::super::types::public::SyntaxComposite,
+                r#enum: &'a super::super::types::public::SyntaxEnum,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
-                client.execute(stmt, &[price])
+                client.execute(stmt, &[r#async, r#enum])
             }
         }
+        impl<'a, C: GenericClient>
+            cornucopia_sync::Params<'a, TrickySql8Params, Result<u64, postgres::Error>, C>
+            for TrickySql8Stmt
+        {
+            fn params(
+                &'a mut self,
+                client: &'a mut C,
+                params: &'a TrickySql8Params,
+            ) -> Result<u64, postgres::Error> {
+                self.bind(client, &params.r#async, &params.r#enum)
+            }
+        }
+
         pub fn tricky_sql9() -> TrickySql9Stmt {
-            TrickySql9Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", price) VALUES (E'this is \'not\' a \':bind_param\'', $1)"))
+            TrickySql9Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (E'this is \'not\' a \':bind_param\'', $1, $2)"))
         }
         pub struct TrickySql9Stmt(cornucopia_sync::private::Stmt);
         impl TrickySql9Stmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-                price: &'a f64,
+                r#async: &'a super::super::types::public::SyntaxComposite,
+                r#enum: &'a super::super::types::public::SyntaxEnum,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
-                client.execute(stmt, &[price])
+                client.execute(stmt, &[r#async, r#enum])
             }
         }
+        impl<'a, C: GenericClient>
+            cornucopia_sync::Params<'a, TrickySql9Params, Result<u64, postgres::Error>, C>
+            for TrickySql9Stmt
+        {
+            fn params(
+                &'a mut self,
+                client: &'a mut C,
+                params: &'a TrickySql9Params,
+            ) -> Result<u64, postgres::Error> {
+                self.bind(client, &params.r#async, &params.r#enum)
+            }
+        }
+
         pub fn tricky_sql10() -> TrickySql10Stmt {
-            TrickySql10Stmt(cornucopia_sync::private::Stmt::new(
-                "INSERT INTO syntax (\"trick:y\", price) VALUES ('this is just a cast'::text, $1)",
-            ))
+            TrickySql10Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is just a cast'::text, $1, $2)"))
         }
         pub struct TrickySql10Stmt(cornucopia_sync::private::Stmt);
         impl TrickySql10Stmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
-                price: &'a f64,
+                r#async: &'a super::super::types::public::SyntaxComposite,
+                r#enum: &'a super::super::types::public::SyntaxEnum,
             ) -> Result<u64, postgres::Error> {
                 let stmt = self.0.prepare(client)?;
-                client.execute(stmt, &[price])
+                client.execute(stmt, &[r#async, r#enum])
             }
         }
+        impl<'a, C: GenericClient>
+            cornucopia_sync::Params<'a, TrickySql10Params, Result<u64, postgres::Error>, C>
+            for TrickySql10Stmt
+        {
+            fn params(
+                &'a mut self,
+                client: &'a mut C,
+                params: &'a TrickySql10Params,
+            ) -> Result<u64, postgres::Error> {
+                self.bind(client, &params.r#async, &params.r#enum)
+            }
+        }
+
         pub fn syntax() -> SyntaxStmt {
             SyntaxStmt(cornucopia_sync::private::Stmt::new("SELECT * FROM syntax"))
         }
@@ -4457,7 +4858,8 @@ pub mod queries {
                     stmt: &mut self.0,
                     extractor: |row| SyntaxBorrowed {
                         trick_y: row.get(0),
-                        price: row.get(1),
+                        r#async: row.get(1),
+                        r#enum: row.get(2),
                     },
                     mapper: |it| <Syntax>::from(it),
                 }

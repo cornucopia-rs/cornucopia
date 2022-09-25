@@ -9,7 +9,7 @@ use crate::{
         Preparation, PreparedContent, PreparedField, PreparedItem, PreparedModule, PreparedQuery,
         PreparedType,
     },
-    utils::{join_comma, join_ln},
+    utils::{join_comma, join_ln, unescape_keyword},
     CodegenSettings,
 };
 
@@ -80,6 +80,94 @@ impl PreparedField {
     }
 }
 
+fn enum_sql(w: &mut impl Write, name: &str, enum_name: &str, variants: &[String]) {
+    let nb_variants = variants.len();
+    let write_variants = join_ln(variants.iter(), |w, s| {
+        gen!(w, "{enum_name}::{} => \"{}\",", s, unescape_keyword(s));
+    });
+    let w_accept_variants = join_ln(variants.iter(), |w, s| {
+        gen!(w, "\"{}\" => true,", unescape_keyword(s));
+    });
+    let read_variants = join_ln(variants.iter(), |w, s| {
+        gen!(w, "\"{}\" => Ok({enum_name}::{}),", unescape_keyword(s), s);
+    });
+    let r_accept_variants = join_ln(variants.iter(), |w, s| {
+        gen!(w, "\"{}\" => true,", unescape_keyword(s));
+    });
+
+    gen!(
+        w,
+        r#"impl<'a> postgres_types::ToSql for {enum_name} {{
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                buf: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>,> {{
+                let s = match *self {{
+                    {write_variants}
+                }};
+                buf.extend_from_slice(s.as_bytes());
+                std::result::Result::Ok(postgres_types::IsNull::No)
+            }}
+            fn accepts(ty: &postgres_types::Type) -> bool {{
+                if ty.name() != "{name}" {{
+                    return false;
+                }}
+                match *ty.kind() {{
+                    postgres_types::Kind::Enum(ref variants) => {{
+                        if variants.len() != {nb_variants}usize {{
+                            return false;
+                        }}
+                        variants.iter().all(|v| match &**v {{
+                            {w_accept_variants}
+                            _ => false,
+                        }})
+                    }}
+                    _ => false,
+                }}
+            }}
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {{
+                postgres_types::__to_sql_checked(self, ty, out)
+            }}
+        }}
+        impl<'a> postgres_types::FromSql<'a> for {enum_name} {{
+            fn from_sql(
+                ty: &postgres_types::Type,
+                buf: &'a [u8],
+            ) -> Result<{enum_name}, Box<dyn std::error::Error + Sync + Send>,> {{
+                match std::str::from_utf8(buf)? {{
+                    {read_variants}
+                    s => Result::Err(Into::into(format!(
+                        "invalid variant `{{}}`",
+                        s
+                    ))),
+                }}
+            }}
+            fn accepts(ty: &postgres_types::Type) -> bool {{
+                if ty.name() != "{name}" {{
+                    return false;
+                }}
+                match *ty.kind() {{
+                    postgres_types::Kind::Enum(ref variants) => {{
+                        if variants.len() != {nb_variants}usize {{
+                            return false;
+                        }}
+                        variants.iter().all(|v| match &**v {{
+                            {r_accept_variants}
+                            _ => false,
+                        }})
+                    }}
+                    _ => false,
+                }}
+            }}
+        }}"#
+    );
+}
+
 fn struct_tosql(
     w: &mut impl Write,
     struct_name: &str,
@@ -101,18 +189,18 @@ fn struct_tosql(
     let nb_fields = fields.len();
     let field_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
     let write_fields = join_ln(fields.iter(), |w, f| {
-        let name = &f.name;
         gen!(
             w,
-            "\"{name}\" => postgres_types::ToSql::to_sql({},field.type_(), out),",
-            f.ty.sql_wrapped(name, is_async)
+            "\"{}\" => postgres_types::ToSql::to_sql({},field.type_(), out),",
+            unescape_keyword(&f.name),
+            f.ty.sql_wrapped(&f.name, is_async)
         );
     });
     let accept_fields = join_ln(fields.iter(), |w, f| {
         gen!(
             w,
             "\"{}\" => <{} as postgres_types::ToSql>::accepts(f.type_()),",
-            f.name,
+            unescape_keyword(&f.name),
             f.ty.accept_to_sql(is_async)
         );
     });
@@ -601,11 +689,13 @@ fn gen_custom_type(
     match content {
         PreparedContent::Enum(variants) => {
             let variants_str = variants.join(",");
-            gen!(w,
-                        "#[derive({ser_str} Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, Copy, PartialEq, Eq)]
-                        #[postgres(name = \"{name}\")]
-                        pub enum {struct_name} {{ {variants_str} }}",
-                    );
+            gen!(
+                w,
+                "#[derive({ser_str} Debug, Clone, Copy, PartialEq, Eq)]
+                #[allow(non_camel_case_types)]
+                pub enum {struct_name} {{ {variants_str} }}",
+            );
+            enum_sql(w, name, struct_name, &variants);
         }
         PreparedContent::Composite(fields) => {
             let fields_str = join_comma(fields, |w, f| {
