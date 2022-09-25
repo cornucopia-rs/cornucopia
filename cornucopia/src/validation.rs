@@ -206,7 +206,7 @@ pub(crate) fn named_struct_field(
     if let Some((field, prev_field)) = fields.iter().find_map(|f| {
         prev_fields
             .iter()
-            .find_map(|prev_f| (f.name == prev_f.name && f.ty != prev_f.ty).then(|| (f, prev_f)))
+            .find_map(|prev_f| (f.name == prev_f.name && f.ty != prev_f.ty).then_some((f, prev_f)))
     }) {
         return Err(Error::IncompatibleNamedType {
             src: info.into(),

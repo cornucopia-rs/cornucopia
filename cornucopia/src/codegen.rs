@@ -695,7 +695,7 @@ fn gen_custom_type(
                 #[allow(non_camel_case_types)]
                 pub enum {struct_name} {{ {variants_str} }}",
             );
-            enum_sql(w, name, struct_name, &variants);
+            enum_sql(w, name, struct_name, variants);
         }
         PreparedContent::Composite(fields) => {
             let fields_str = join_comma(fields, |w, f| {

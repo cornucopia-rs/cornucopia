@@ -39,14 +39,13 @@ impl PreparedField {
     pub(crate) fn new(
         name: String,
         ty: Rc<CornucopiaType>,
-        is_nullable: bool,
-        is_inner_nullable: bool,
+        nullity: Option<&NullableIdent>,
     ) -> Self {
         Self {
-            name: escape_keyword(name.clone()),
+            name: escape_keyword(name),
             ty,
-            is_nullable,
-            is_inner_nullable,
+            is_nullable: nullity.map_or(false, |it| it.nullable),
+            is_inner_nullable: nullity.map_or(false, |it| it.inner_nullable),
         }
     }
 }
@@ -257,8 +256,7 @@ fn prepare_type(
                         PreparedField::new(
                             field.name().to_string(),
                             registrar.ref_of(field.type_()),
-                            nullity.map_or(false, |it| it.nullable),
-                            nullity.map_or(false, |it| it.inner_nullable),
+                            nullity,
                         )
                     })
                     .collect(),
@@ -357,8 +355,7 @@ fn prepare_query(
                 registrar
                     .register(&col_name.value, &col_ty, &name, module_info)?
                     .clone(),
-                nullity.map_or(false, |it| it.nullable),
-                nullity.map_or(false, |it| it.inner_nullable),
+                nullity,
             ));
         }
         param_fields
@@ -388,8 +385,7 @@ fn prepare_query(
             row_fields.push(PreparedField::new(
                 normalize_rust_name(&col_name),
                 ty,
-                nullity.map_or(false, |it| it.nullable),
-                nullity.map_or(false, |it| it.inner_nullable),
+                nullity,
             ));
         }
         row_fields
