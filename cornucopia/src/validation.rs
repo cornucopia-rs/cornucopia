@@ -4,7 +4,7 @@ use crate::{
     parser::{Module, NullableIdent, Query, QueryDataStruct, Span, TypeAnnotation},
     prepare_queries::{PreparedField, PreparedModule},
     read_queries::ModuleInfo,
-    utils::{find_duplicate, KEYWORD},
+    utils::{find_duplicate, unescape_keyword, STRICT_KEYWORD},
 };
 
 use error::Error;
@@ -186,11 +186,28 @@ pub(crate) fn param_on_simple_query(
 }
 
 fn reserved_type_keyword(info: &ModuleInfo, s: &Span<String>) -> Result<(), Error> {
-    if let Ok(it) = KEYWORD.binary_search(&s.value.as_str()) {
+    if let Ok(it) = STRICT_KEYWORD.binary_search(&s.value.as_str()) {
         return Err(Error::TypeRustKeyword {
             src: info.into(),
-            name: KEYWORD[it],
+            name: STRICT_KEYWORD[it],
             pos: s.span,
+        });
+    }
+    Ok(())
+}
+
+fn reserved_name_keyword(
+    info: &ModuleInfo,
+    name: &str,
+    pos: &SourceSpan,
+    ty: &'static str,
+) -> Result<(), Error> {
+    if let Ok(it) = STRICT_KEYWORD.binary_search(&unescape_keyword(name)) {
+        return Err(Error::NameRustKeyword {
+            src: info.into(),
+            name: STRICT_KEYWORD[it],
+            pos: *pos,
+            ty,
         });
     }
     Ok(())
@@ -284,6 +301,9 @@ pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Error>
         reserved_type_keyword(&module.info, origin)?;
         if row.is_named {
             check_name(row.name.value.clone(), origin.span, "row")?;
+            for field in &row.fields {
+                reserved_name_keyword(&module.info, &field.name, &origin.span, "row")?;
+            }
 
             if !row.is_copy {
                 check_name(format!("{}Borrowed", row.name), origin.span, "borrowed row")?;
@@ -295,6 +315,9 @@ pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Error>
         reserved_type_keyword(&module.info, origin)?;
         if params.is_named {
             check_name(params.name.value.clone(), origin.span, "params")?;
+            for field in &params.fields {
+                reserved_name_keyword(&module.info, &field.name, &origin.span, "param")?;
+            }
         }
     }
     Ok(())
@@ -436,13 +459,23 @@ pub mod error {
             #[label("redefined as {second_ty} here")]
             second: SourceSpan,
         },
-        #[error("`{name}` is a reserved rust keyword")]
+        #[error("`{name}` is a reserved rust keyword that cannot be escaped")]
         #[diagnostic(help("use a different name"))]
         TypeRustKeyword {
             #[source_code]
             src: NamedSource,
             name: &'static str,
             #[label("reserved rust keyword")]
+            pos: SourceSpan,
+        },
+        #[error("`{name}` is a reserved rust keyword that cannot be escaped")]
+        #[diagnostic(help("use a different name"))]
+        NameRustKeyword {
+            #[source_code]
+            src: NamedSource,
+            name: &'static str,
+            ty: &'static str,
+            #[label("from {ty} declared here")]
             pos: SourceSpan,
         },
     }

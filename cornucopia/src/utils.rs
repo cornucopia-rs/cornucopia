@@ -107,9 +107,12 @@ pub(crate) fn db_err(err: &postgres::Error) -> Option<(u32, String, Option<Strin
     }
 }
 
+/// Sorted list of rust reserved keywords that cannot be escaped
+pub(crate) const STRICT_KEYWORD: [&str; 5] = ["Self", "_", "crate", "self", "super"];
+
 /// Sorted list of rust reserved keywords
-pub(crate) const KEYWORD: [&str; 52] = [
-    "Self", "abstract", "as", "async", "await", "become", "box", "break", "const", "continue",
+pub(crate) const KEYWORD: [&str; 53] = [
+    "Self", "_", "abstract", "as", "async", "await", "become", "box", "break", "const", "continue",
     "crate", "do", "dyn", "else", "enum", "extern", "false", "final", "fn", "for", "if", "impl",
     "in", "let", "loop", "macro", "match", "mod", "move", "mut", "override", "priv", "pub", "ref",
     "return", "self", "static", "struct", "super", "trait", "true", "try", "type", "typeof",

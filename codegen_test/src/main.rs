@@ -33,7 +33,7 @@ use crate::cornucopia_sync::{
             select_everything_array, select_nightmare, Everything, EverythingArray,
             EverythingArrayParams, EverythingParams,
         },
-        syntax::{syntax, tricky_sql10, TrickySql10Params},
+        syntax::{r#typeof, tricky_sql10, TrickySql10Params},
     },
     types::public::{
         CloneCompositeBorrowed, CopyComposite, CustomComposite, CustomCompositeBorrowed,
@@ -523,5 +523,5 @@ pub fn test_keyword_escaping(client: &mut Client) {
         r#enum: SyntaxEnum::r#box,
     };
     tricky_sql10().params(client, &params).unwrap();
-    syntax().bind(client).all().unwrap();
+    r#typeof().bind(client).all().unwrap();
 }

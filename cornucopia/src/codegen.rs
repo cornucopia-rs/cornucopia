@@ -9,7 +9,7 @@ use crate::{
         Preparation, PreparedContent, PreparedField, PreparedItem, PreparedModule, PreparedQuery,
         PreparedType,
     },
-    utils::{join_comma, join_ln, unescape_keyword},
+    utils::{escape_keyword, join_comma, join_ln, unescape_keyword},
     CodegenSettings,
 };
 
@@ -516,9 +516,10 @@ fn gen_query_fn(
     let struct_name = name.to_upper_camel_case();
     {
         let sql = sql.replace('"', "\\\""); // Rust string format escaping
+        let escaped = escape_keyword(name.clone());
         gen!(
             w,
-            "pub fn {name}() -> {struct_name}Stmt {{
+            "pub fn {escaped}() -> {struct_name}Stmt {{
                 {struct_name}Stmt(cornucopia_{client_name}::private::Stmt::new(\"{sql}\"))
             }}
             pub struct {struct_name}Stmt(cornucopia_{client_name}::private::Stmt);

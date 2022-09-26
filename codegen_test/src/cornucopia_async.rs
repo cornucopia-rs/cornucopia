@@ -4469,23 +4469,23 @@ pub mod queries {
             }
         }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
-        pub struct Syntax {
+        pub struct Typeof {
             pub trick_y: String,
             pub r#async: super::super::types::public::SyntaxComposite,
             pub r#enum: super::super::types::public::SyntaxEnum,
         }
-        pub struct SyntaxBorrowed<'a> {
+        pub struct TypeofBorrowed<'a> {
             pub trick_y: &'a str,
             pub r#async: super::super::types::public::SyntaxComposite,
             pub r#enum: super::super::types::public::SyntaxEnum,
         }
-        impl<'a> From<SyntaxBorrowed<'a>> for Syntax {
+        impl<'a> From<TypeofBorrowed<'a>> for Typeof {
             fn from(
-                SyntaxBorrowed {
+                TypeofBorrowed {
                     trick_y,
                     r#async,
                     r#enum,
-                }: SyntaxBorrowed<'a>,
+                }: TypeofBorrowed<'a>,
             ) -> Self {
                 Self {
                     trick_y: trick_y.into(),
@@ -4494,19 +4494,19 @@ pub mod queries {
                 }
             }
         }
-        pub struct SyntaxQuery<'a, C: GenericClient, T, const N: usize> {
+        pub struct TypeofQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_async::private::Stmt,
-            extractor: fn(&tokio_postgres::Row) -> SyntaxBorrowed,
-            mapper: fn(SyntaxBorrowed) -> T,
+            extractor: fn(&tokio_postgres::Row) -> TypeofBorrowed,
+            mapper: fn(TypeofBorrowed) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> SyntaxQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> TypeofQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
-            pub fn map<R>(self, mapper: fn(SyntaxBorrowed) -> R) -> SyntaxQuery<'a, C, R, N> {
-                SyntaxQuery {
+            pub fn map<R>(self, mapper: fn(TypeofBorrowed) -> R) -> TypeofQuery<'a, C, R, N> {
+                TypeofQuery {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -5142,25 +5142,25 @@ pub mod queries {
             }
         }
 
-        pub fn syntax() -> SyntaxStmt {
-            SyntaxStmt(cornucopia_async::private::Stmt::new("SELECT * FROM syntax"))
+        pub fn r#typeof() -> TypeofStmt {
+            TypeofStmt(cornucopia_async::private::Stmt::new("SELECT * FROM syntax"))
         }
-        pub struct SyntaxStmt(cornucopia_async::private::Stmt);
-        impl SyntaxStmt {
+        pub struct TypeofStmt(cornucopia_async::private::Stmt);
+        impl TypeofStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-            ) -> SyntaxQuery<'a, C, Syntax, 0> {
-                SyntaxQuery {
+            ) -> TypeofQuery<'a, C, Typeof, 0> {
+                TypeofQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
-                    extractor: |row| SyntaxBorrowed {
+                    extractor: |row| TypeofBorrowed {
                         trick_y: row.get(0),
                         r#async: row.get(1),
                         r#enum: row.get(2),
                     },
-                    mapper: |it| <Syntax>::from(it),
+                    mapper: |it| <Typeof>::from(it),
                 }
             }
         }

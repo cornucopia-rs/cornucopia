@@ -47,7 +47,7 @@ INSERT INTO syntax ("trick:y", async, enum) VALUES (E'this is \'not\' a \':bind_
 --! tricky_sql10
 INSERT INTO syntax ("trick:y", async, enum) VALUES ('this is just a cast'::text, :async, :enum);
 
---! syntax
+--! typeof
 SELECT * FROM syntax;
 
 -- Multi
