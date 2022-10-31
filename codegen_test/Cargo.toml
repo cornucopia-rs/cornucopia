@@ -20,10 +20,16 @@ tokio-postgres = { version = "0.7.7", features = [
 ] }
 postgres-types = { version = "0.2.4", features = ["derive"] }
 serde = { version = "1.0.144", features = ["derive"], package = "serde" }
-serde_json = { version = "1.0.85", features = ["raw_value"], package = "serde_json" }
+serde_json = { version = "1.0.85", features = [
+    "raw_value",
+], package = "serde_json" }
 time = { version = "0.3.14", features = ["parsing", "serde"] }
 uuid = { version = "1.1.2", features = ["serde"] }
 eui48 = { version = "1.1.0", features = ["serde"] }
+rust_decimal = { version = "1.26.1", features = [
+    "db-tokio-postgres",
+    "db-postgres",
+] }
 futures = "0.3.24"
 
 cornucopia_sync = { path = "../clients/sync", features = ["with-serde_json-1"] }
