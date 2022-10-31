@@ -10,6 +10,7 @@ use crate::{
     read_queries::ModuleInfo,
     type_registrar::CornucopiaType,
     type_registrar::TypeRegistrar,
+    utils::escape_keyword,
     validation,
 };
 
@@ -32,6 +33,21 @@ pub struct PreparedField {
     pub(crate) ty: Rc<CornucopiaType>,
     pub(crate) is_nullable: bool,
     pub(crate) is_inner_nullable: bool, // Vec only
+}
+
+impl PreparedField {
+    pub(crate) fn new(
+        name: String,
+        ty: Rc<CornucopiaType>,
+        nullity: Option<&NullableIdent>,
+    ) -> Self {
+        Self {
+            name: escape_keyword(name),
+            ty,
+            is_nullable: nullity.map_or(false, |it| it.nullable),
+            is_inner_nullable: nullity.map_or(false, |it| it.inner_nullable),
+        }
+    }
 }
 
 impl PreparedField {
@@ -227,19 +243,21 @@ fn prepare_type(
             .find(|it| it.name.value == pg_ty.name())
             .map_or(&[] as &[NullableIdent], |it| it.fields.as_slice());
         let content = match pg_ty.kind() {
-            Kind::Enum(variants) => PreparedContent::Enum(variants.clone()),
+            Kind::Enum(variants) => {
+                PreparedContent::Enum(variants.clone().into_iter().map(escape_keyword).collect())
+            }
+
             Kind::Domain(_) => return None,
             Kind::Composite(fields) => PreparedContent::Composite(
                 fields
                     .iter()
                     .map(|field| {
                         let nullity = declared.iter().find(|it| it.name.value == field.name());
-                        PreparedField {
-                            name: field.name().to_string(),
-                            ty: registrar.ref_of(field.type_()),
-                            is_nullable: nullity.map_or(false, |it| it.nullable),
-                            is_inner_nullable: nullity.map_or(false, |it| it.inner_nullable),
-                        }
+                        PreparedField::new(
+                            field.name().to_string(),
+                            registrar.ref_of(field.type_()),
+                            nullity,
+                        )
                     })
                     .collect(),
             ),
@@ -332,14 +350,13 @@ fn prepare_query(
                 .iter()
                 .find(|x| x.name.value == col_name.value);
             // Register type
-            param_fields.push(PreparedField {
-                name: col_name.value.clone(),
-                ty: registrar
+            param_fields.push(PreparedField::new(
+                col_name.value.clone(),
+                registrar
                     .register(&col_name.value, &col_ty, &name, module_info)?
                     .clone(),
-                is_nullable: nullity.map_or(false, |it| it.nullable),
-                is_inner_nullable: nullity.map_or(false, |it| it.inner_nullable),
-            });
+                nullity,
+            ));
         }
         param_fields
     };
@@ -365,12 +382,11 @@ fn prepare_query(
             let ty = registrar
                 .register(&col_name, col_ty, &name, module_info)?
                 .clone();
-            row_fields.push(PreparedField {
-                name: normalize_rust_name(&col_name),
+            row_fields.push(PreparedField::new(
+                normalize_rust_name(&col_name),
                 ty,
-                is_nullable: nullity.map_or(false, |it| it.nullable),
-                is_inner_nullable: nullity.map_or(false, |it| it.inner_nullable),
-            });
+                nullity,
+            ));
         }
         row_fields
     };

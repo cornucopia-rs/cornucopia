@@ -4,7 +4,7 @@ use crate::{
     parser::{Module, NullableIdent, Query, QueryDataStruct, Span, TypeAnnotation},
     prepare_queries::{PreparedField, PreparedModule},
     read_queries::ModuleInfo,
-    utils::find_duplicate,
+    utils::{find_duplicate, unescape_keyword, STRICT_KEYWORD},
 };
 
 use error::Error;
@@ -185,19 +185,11 @@ pub(crate) fn param_on_simple_query(
     Ok(())
 }
 
-const KEYWORD: [&str; 52] = [
-    "Self", "abstract", "as", "async", "await", "become", "box", "break", "const", "continue",
-    "crate", "do", "dyn", "else", "enum", "extern", "false", "final", "fn", "for", "if", "impl",
-    "in", "let", "loop", "macro", "match", "mod", "move", "mut", "override", "priv", "pub", "ref",
-    "return", "self", "static", "struct", "super", "trait", "true", "try", "type", "typeof",
-    "union", "unsafe", "unsized", "use", "virtual", "where", "while", "yield",
-];
-
 fn reserved_type_keyword(info: &ModuleInfo, s: &Span<String>) -> Result<(), Error> {
-    if let Ok(it) = KEYWORD.binary_search(&s.value.as_str()) {
+    if let Ok(it) = STRICT_KEYWORD.binary_search(&s.value.as_str()) {
         return Err(Error::TypeRustKeyword {
             src: info.into(),
-            name: KEYWORD[it],
+            name: STRICT_KEYWORD[it],
             pos: s.span,
         });
     }
@@ -210,10 +202,10 @@ fn reserved_name_keyword(
     pos: &SourceSpan,
     ty: &'static str,
 ) -> Result<(), Error> {
-    if let Ok(it) = KEYWORD.binary_search(&name) {
+    if let Ok(it) = STRICT_KEYWORD.binary_search(&unescape_keyword(name)) {
         return Err(Error::NameRustKeyword {
             src: info.into(),
-            name: KEYWORD[it],
+            name: STRICT_KEYWORD[it],
             pos: *pos,
             ty,
         });
@@ -467,7 +459,7 @@ pub mod error {
             #[label("redefined as {second_ty} here")]
             second: SourceSpan,
         },
-        #[error("`{name}` is a reserved rust keyword")]
+        #[error("`{name}` is a reserved rust keyword that cannot be escaped")]
         #[diagnostic(help("use a different name"))]
         TypeRustKeyword {
             #[source_code]
@@ -476,7 +468,7 @@ pub mod error {
             #[label("reserved rust keyword")]
             pos: SourceSpan,
         },
-        #[error("`{name}` is a reserved rust keyword")]
+        #[error("`{name}` is a reserved rust keyword that cannot be escaped")]
         #[diagnostic(help("use a different name"))]
         NameRustKeyword {
             #[source_code]

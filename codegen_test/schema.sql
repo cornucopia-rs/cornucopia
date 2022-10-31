@@ -184,7 +184,12 @@ CREATE TABLE nightmare (
 
 -- Syntax
 
+CREATE TYPE syntax_composite AS (
+    async INT
+);
+CREATE TYPE syntax_enum AS Enum('async', 'box');
 CREATE TABLE Syntax (
     "trick:y" TEXT,
-    price FLOAT
+    async syntax_composite,
+    enum syntax_enum
 );
