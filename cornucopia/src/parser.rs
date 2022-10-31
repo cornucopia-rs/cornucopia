@@ -290,7 +290,7 @@ impl QueryDataStruct {
                     || {
                         registered_structs
                             .iter()
-                            .find_map(|it| (it.name == *named).then(|| it.fields.as_slice()))
+                            .find_map(|it| (it.name == *named).then_some(it.fields.as_slice()))
                             .unwrap_or(&[])
                     },
                     Vec::as_slice,
