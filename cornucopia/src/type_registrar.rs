@@ -376,6 +376,7 @@ impl TypeRegistrar {
                     Type::UUID => ("uuid::Uuid", true),
                     Type::INET => ("std::net::IpAddr", true),
                     Type::MACADDR => ("eui48::MacAddress", true),
+                    Type::NUMERIC => ("rust_decimal::Decimal", true),
                     _ => {
                         return Err(Error::UnsupportedPostgresType {
                             src: module_info.clone().into(),

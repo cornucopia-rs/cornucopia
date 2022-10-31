@@ -2551,6 +2551,7 @@ pub mod queries {
             pub uuid_: uuid::Uuid,
             pub inet_: std::net::IpAddr,
             pub macaddr_: eui48::MacAddress,
+            pub numeric_: rust_decimal::Decimal,
         }
         #[derive(Debug)]
         pub struct EverythingArrayParams<
@@ -2586,6 +2587,7 @@ pub mod queries {
             T30: cornucopia_async::ArraySql<Item = uuid::Uuid>,
             T31: cornucopia_async::ArraySql<Item = std::net::IpAddr>,
             T32: cornucopia_async::ArraySql<Item = eui48::MacAddress>,
+            T33: cornucopia_async::ArraySql<Item = rust_decimal::Decimal>,
         > {
             pub bool_: T1,
             pub boolean_: T2,
@@ -2614,6 +2616,7 @@ pub mod queries {
             pub uuid_: T30,
             pub inet_: T31,
             pub macaddr_: T32,
+            pub numeric_: T33,
         }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct Everything {
@@ -2650,6 +2653,7 @@ pub mod queries {
             pub uuid_: uuid::Uuid,
             pub inet_: std::net::IpAddr,
             pub macaddr_: eui48::MacAddress,
+            pub numeric_: rust_decimal::Decimal,
         }
         pub struct EverythingBorrowed<'a> {
             pub bool_: bool,
@@ -2685,6 +2689,7 @@ pub mod queries {
             pub uuid_: uuid::Uuid,
             pub inet_: std::net::IpAddr,
             pub macaddr_: eui48::MacAddress,
+            pub numeric_: rust_decimal::Decimal,
         }
         impl<'a> From<EverythingBorrowed<'a>> for Everything {
             fn from(
@@ -2722,6 +2727,7 @@ pub mod queries {
                     uuid_,
                     inet_,
                     macaddr_,
+                    numeric_,
                 }: EverythingBorrowed<'a>,
             ) -> Self {
                 Self {
@@ -2758,6 +2764,7 @@ pub mod queries {
                     uuid_,
                     inet_,
                     macaddr_,
+                    numeric_,
                 }
             }
         }
@@ -2855,6 +2862,7 @@ pub mod queries {
             pub uuid_: Option<uuid::Uuid>,
             pub inet_: Option<std::net::IpAddr>,
             pub macaddr_: Option<eui48::MacAddress>,
+            pub numeric_: Option<rust_decimal::Decimal>,
         }
         pub struct EverythingNullBorrowed<'a> {
             pub bool_: Option<bool>,
@@ -2890,6 +2898,7 @@ pub mod queries {
             pub uuid_: Option<uuid::Uuid>,
             pub inet_: Option<std::net::IpAddr>,
             pub macaddr_: Option<eui48::MacAddress>,
+            pub numeric_: Option<rust_decimal::Decimal>,
         }
         impl<'a> From<EverythingNullBorrowed<'a>> for EverythingNull {
             fn from(
@@ -2927,6 +2936,7 @@ pub mod queries {
                     uuid_,
                     inet_,
                     macaddr_,
+                    numeric_,
                 }: EverythingNullBorrowed<'a>,
             ) -> Self {
                 Self {
@@ -2963,6 +2973,7 @@ pub mod queries {
                     uuid_,
                     inet_,
                     macaddr_,
+                    numeric_,
                 }
             }
         }
@@ -3054,6 +3065,7 @@ pub mod queries {
             pub uuid_: Vec<uuid::Uuid>,
             pub inet_: Vec<std::net::IpAddr>,
             pub macaddr_: Vec<eui48::MacAddress>,
+            pub numeric_: Vec<rust_decimal::Decimal>,
         }
         pub struct EverythingArrayBorrowed<'a> {
             pub bool_: cornucopia_async::ArrayIterator<'a, bool>,
@@ -3091,6 +3103,7 @@ pub mod queries {
             pub uuid_: cornucopia_async::ArrayIterator<'a, uuid::Uuid>,
             pub inet_: cornucopia_async::ArrayIterator<'a, std::net::IpAddr>,
             pub macaddr_: cornucopia_async::ArrayIterator<'a, eui48::MacAddress>,
+            pub numeric_: cornucopia_async::ArrayIterator<'a, rust_decimal::Decimal>,
         }
         impl<'a> From<EverythingArrayBorrowed<'a>> for EverythingArray {
             fn from(
@@ -3122,6 +3135,7 @@ pub mod queries {
                     uuid_,
                     inet_,
                     macaddr_,
+                    numeric_,
                 }: EverythingArrayBorrowed<'a>,
             ) -> Self {
                 Self {
@@ -3156,6 +3170,7 @@ pub mod queries {
                     uuid_: uuid_.map(|v| v).collect(),
                     inet_: inet_.map(|v| v).collect(),
                     macaddr_: macaddr_.map(|v| v).collect(),
+                    numeric_: numeric_.map(|v| v).collect(),
                 }
             }
         }
@@ -3247,6 +3262,7 @@ pub mod queries {
             pub uuid_: Option<Vec<uuid::Uuid>>,
             pub inet_: Option<Vec<std::net::IpAddr>>,
             pub macaddr_: Option<Vec<eui48::MacAddress>>,
+            pub numeric_: Option<Vec<rust_decimal::Decimal>>,
         }
         pub struct EverythingArrayNullBorrowed<'a> {
             pub bool_: Option<cornucopia_async::ArrayIterator<'a, bool>>,
@@ -3288,6 +3304,7 @@ pub mod queries {
             pub uuid_: Option<cornucopia_async::ArrayIterator<'a, uuid::Uuid>>,
             pub inet_: Option<cornucopia_async::ArrayIterator<'a, std::net::IpAddr>>,
             pub macaddr_: Option<cornucopia_async::ArrayIterator<'a, eui48::MacAddress>>,
+            pub numeric_: Option<cornucopia_async::ArrayIterator<'a, rust_decimal::Decimal>>,
         }
         impl<'a> From<EverythingArrayNullBorrowed<'a>> for EverythingArrayNull {
             fn from(
@@ -3319,6 +3336,7 @@ pub mod queries {
                     uuid_,
                     inet_,
                     macaddr_,
+                    numeric_,
                 }: EverythingArrayNullBorrowed<'a>,
             ) -> Self {
                 Self {
@@ -3357,6 +3375,7 @@ pub mod queries {
                     uuid_: uuid_.map(|v| v.map(|v| v).collect()),
                     inet_: inet_.map(|v| v.map(|v| v).collect()),
                     macaddr_: macaddr_.map(|v| v.map(|v| v).collect()),
+                    numeric_: numeric_.map(|v| v.map(|v| v).collect()),
                 }
             }
         }
@@ -3487,7 +3506,10 @@ pub mod queries {
         }
         pub fn select_everything() -> SelectEverythingStmt {
             SelectEverythingStmt(cornucopia_async::private::Stmt::new(
-                "SELECT * FROM Everything",
+                "SELECT
+    *
+FROM
+    Everything",
             ))
         }
         pub struct SelectEverythingStmt(cornucopia_async::private::Stmt);
@@ -3534,6 +3556,7 @@ pub mod queries {
                         uuid_: row.get(30),
                         inet_: row.get(31),
                         macaddr_: row.get(32),
+                        numeric_: row.get(33),
                     },
                     mapper: |it| <Everything>::from(it),
                 }
@@ -3541,7 +3564,10 @@ pub mod queries {
         }
         pub fn select_everything_null() -> SelectEverythingNullStmt {
             SelectEverythingNullStmt(cornucopia_async::private::Stmt::new(
-                "SELECT * FROM Everything",
+                "SELECT
+    *
+FROM
+    Everything",
             ))
         }
         pub struct SelectEverythingNullStmt(cornucopia_async::private::Stmt);
@@ -3588,14 +3614,15 @@ pub mod queries {
                         uuid_: row.get(30),
                         inet_: row.get(31),
                         macaddr_: row.get(32),
+                        numeric_: row.get(33),
                     },
                     mapper: |it| <EverythingNull>::from(it),
                 }
             }
         }
         pub fn insert_everything() -> InsertEverythingStmt {
-            InsertEverythingStmt(cornucopia_async::private::Stmt::new("INSERT INTO Everything (bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)"))
+            InsertEverythingStmt(cornucopia_async::private::Stmt::new("INSERT INTO Everything (bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_, numeric_)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34)"))
         }
         pub struct InsertEverythingStmt(cornucopia_async::private::Stmt);
         impl InsertEverythingStmt {
@@ -3643,6 +3670,7 @@ pub mod queries {
                 uuid_: &'a uuid::Uuid,
                 inet_: &'a std::net::IpAddr,
                 macaddr_: &'a eui48::MacAddress,
+                numeric_: &'a rust_decimal::Decimal,
             ) -> Result<u64, tokio_postgres::Error> {
                 let stmt = self.0.prepare(client).await?;
                 client
@@ -3682,6 +3710,7 @@ pub mod queries {
                             uuid_,
                             inet_,
                             macaddr_,
+                            numeric_,
                         ],
                     )
                     .await
@@ -3751,13 +3780,17 @@ pub mod queries {
                     &params.uuid_,
                     &params.inet_,
                     &params.macaddr_,
+                    &params.numeric_,
                 ))
             }
         }
 
         pub fn select_everything_array() -> SelectEverythingArrayStmt {
             SelectEverythingArrayStmt(cornucopia_async::private::Stmt::new(
-                "SELECT * FROM EverythingArray",
+                "SELECT
+    *
+FROM
+    EverythingArray",
             ))
         }
         pub struct SelectEverythingArrayStmt(cornucopia_async::private::Stmt);
@@ -3798,6 +3831,7 @@ pub mod queries {
                         uuid_: row.get(24),
                         inet_: row.get(25),
                         macaddr_: row.get(26),
+                        numeric_: row.get(27),
                     },
                     mapper: |it| <EverythingArray>::from(it),
                 }
@@ -3805,7 +3839,10 @@ pub mod queries {
         }
         pub fn select_everything_array_null() -> SelectEverythingArrayNullStmt {
             SelectEverythingArrayNullStmt(cornucopia_async::private::Stmt::new(
-                "SELECT * FROM EverythingArray",
+                "SELECT
+    *
+FROM
+    EverythingArray",
             ))
         }
         pub struct SelectEverythingArrayNullStmt(cornucopia_async::private::Stmt);
@@ -3846,14 +3883,15 @@ pub mod queries {
                         uuid_: row.get(24),
                         inet_: row.get(25),
                         macaddr_: row.get(26),
+                        numeric_: row.get(27),
                     },
                     mapper: |it| <EverythingArrayNull>::from(it),
                 }
             }
         }
         pub fn insert_everything_array() -> InsertEverythingArrayStmt {
-            InsertEverythingArrayStmt(cornucopia_async::private::Stmt::new("INSERT INTO EverythingArray (bool_, boolean_, char_, smallint_, int2_, int_, int4_, bingint_, int8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)"))
+            InsertEverythingArrayStmt(cornucopia_async::private::Stmt::new("INSERT INTO EverythingArray (bool_, boolean_, char_, smallint_, int2_, int_, int4_, bingint_, int8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_, numeric_)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)"))
         }
         pub struct InsertEverythingArrayStmt(cornucopia_async::private::Stmt);
         impl InsertEverythingArrayStmt {
@@ -3892,6 +3930,7 @@ pub mod queries {
                 T30: cornucopia_async::ArraySql<Item = uuid::Uuid>,
                 T31: cornucopia_async::ArraySql<Item = std::net::IpAddr>,
                 T32: cornucopia_async::ArraySql<Item = eui48::MacAddress>,
+                T33: cornucopia_async::ArraySql<Item = rust_decimal::Decimal>,
             >(
                 &'a mut self,
                 client: &'a C,
@@ -3922,6 +3961,7 @@ pub mod queries {
                 uuid_: &'a T30,
                 inet_: &'a T31,
                 macaddr_: &'a T32,
+                numeric_: &'a T33,
             ) -> Result<u64, tokio_postgres::Error> {
                 let stmt = self.0.prepare(client).await?;
                 client
@@ -3955,6 +3995,7 @@ pub mod queries {
                             uuid_,
                             inet_,
                             macaddr_,
+                            numeric_,
                         ],
                     )
                     .await
@@ -3995,6 +4036,7 @@ pub mod queries {
                 T30: cornucopia_async::ArraySql<Item = uuid::Uuid>,
                 T31: cornucopia_async::ArraySql<Item = std::net::IpAddr>,
                 T32: cornucopia_async::ArraySql<Item = eui48::MacAddress>,
+                T33: cornucopia_async::ArraySql<Item = rust_decimal::Decimal>,
             >
             cornucopia_async::Params<
                 'a,
@@ -4031,6 +4073,7 @@ pub mod queries {
                     T30,
                     T31,
                     T32,
+                    T33,
                 >,
                 std::pin::Pin<
                     Box<
@@ -4078,6 +4121,7 @@ pub mod queries {
                     T30,
                     T31,
                     T32,
+                    T33,
                 >,
             ) -> std::pin::Pin<
                 Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
@@ -4111,13 +4155,17 @@ pub mod queries {
                     &params.uuid_,
                     &params.inet_,
                     &params.macaddr_,
+                    &params.numeric_,
                 ))
             }
         }
 
         pub fn select_nightmare() -> SelectNightmareStmt {
             SelectNightmareStmt(cornucopia_async::private::Stmt::new(
-                "SELECT * FROM nightmare",
+                "SELECT
+    *
+FROM
+    nightmare",
             ))
         }
         pub struct SelectNightmareStmt(cornucopia_async::private::Stmt);
@@ -4142,7 +4190,8 @@ pub mod queries {
         }
         pub fn insert_nightmare() -> InsertNightmareStmt {
             InsertNightmareStmt(cornucopia_async::private::Stmt::new(
-                "INSERT INTO nightmare (composite) VALUES ($1)",
+                "INSERT INTO nightmare (composite)
+    VALUES ($1)",
             ))
         }
         pub struct InsertNightmareStmt(cornucopia_async::private::Stmt);

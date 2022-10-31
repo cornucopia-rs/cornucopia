@@ -121,7 +121,8 @@ CREATE TABLE Everything (
     jsonb_ jsonb,
     uuid_ uuid,
     inet_ inet,
-    macaddr_ macaddr
+    macaddr_ macaddr,
+    numeric_ numeric
 );
 
 CREATE TABLE EverythingArray (
@@ -151,7 +152,9 @@ CREATE TABLE EverythingArray (
     jsonb_ jsonb[],
     uuid_ uuid[],
     inet_ inet[],
-    macaddr_ macaddr[]
+    macaddr_ macaddr[],
+    numeric_ numeric[]
+
 );
 
 CREATE TYPE spongebob_character AS enum (
