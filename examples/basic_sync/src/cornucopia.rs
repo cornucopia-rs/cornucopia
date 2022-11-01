@@ -6,14 +6,87 @@
 #[allow(dead_code)]
 pub mod types {
     pub mod public {
-        #[derive(
-            Debug, postgres_types :: ToSql, postgres_types :: FromSql, Clone, Copy, PartialEq, Eq,
-        )]
-        #[postgres(name = "spongebob_character")]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        #[allow(non_camel_case_types)]
         pub enum SpongebobCharacter {
             Bob,
             Patrick,
             Squidward,
+        }
+        impl<'a> postgres_types::ToSql for SpongebobCharacter {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                buf: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let s = match *self {
+                    SpongebobCharacter::Bob => "Bob",
+                    SpongebobCharacter::Patrick => "Patrick",
+                    SpongebobCharacter::Squidward => "Squidward",
+                };
+                buf.extend_from_slice(s.as_bytes());
+                std::result::Result::Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "spongebob_character" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Enum(ref variants) => {
+                        if variants.len() != 3usize {
+                            return false;
+                        }
+                        variants.iter().all(|v| match &**v {
+                            "Bob" => true,
+                            "Patrick" => true,
+                            "Squidward" => true,
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        impl<'a> postgres_types::FromSql<'a> for SpongebobCharacter {
+            fn from_sql(
+                ty: &postgres_types::Type,
+                buf: &'a [u8],
+            ) -> Result<SpongebobCharacter, Box<dyn std::error::Error + Sync + Send>> {
+                match std::str::from_utf8(buf)? {
+                    "Bob" => Ok(SpongebobCharacter::Bob),
+                    "Patrick" => Ok(SpongebobCharacter::Patrick),
+                    "Squidward" => Ok(SpongebobCharacter::Squidward),
+                    s => Result::Err(Into::into(format!("invalid variant `{}`", s))),
+                }
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "spongebob_character" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Enum(ref variants) => {
+                        if variants.len() != 3usize {
+                            return false;
+                        }
+                        variants.iter().all(|v| match &**v {
+                            "Bob" => true,
+                            "Patrick" => true,
+                            "Squidward" => true,
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
         }
     }
 }
@@ -37,10 +110,8 @@ pub mod queries {
                 client: &'a mut C,
                 title: &'a T1,
             ) -> Result<u64, postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client)?;
-                    client.execute(stmt, &[title])
-                }
+                let stmt = self.0.prepare(client)?;
+                client.execute(stmt, &[title])
             }
         }
     }

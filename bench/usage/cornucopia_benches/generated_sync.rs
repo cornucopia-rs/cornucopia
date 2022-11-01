@@ -370,10 +370,8 @@ pub mod queries {
                 name: &'a T1,
                 hair_color: &'a Option<T2>,
             ) -> Result<u64, postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client)?;
-                    client.execute(stmt, &[name, hair_color])
-                }
+                let stmt = self.0.prepare(client)?;
+                client.execute(stmt, &[name, hair_color])
             }
         }
         impl<

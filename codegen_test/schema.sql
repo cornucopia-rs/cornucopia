@@ -121,7 +121,8 @@ CREATE TABLE Everything (
     jsonb_ jsonb,
     uuid_ uuid,
     inet_ inet,
-    macaddr_ macaddr
+    macaddr_ macaddr,
+    numeric_ numeric
 );
 
 CREATE TABLE EverythingArray (
@@ -151,7 +152,9 @@ CREATE TABLE EverythingArray (
     jsonb_ jsonb[],
     uuid_ uuid[],
     inet_ inet[],
-    macaddr_ macaddr[]
+    macaddr_ macaddr[],
+    numeric_ numeric[]
+
 );
 
 CREATE TYPE spongebob_character AS enum (
@@ -181,7 +184,12 @@ CREATE TABLE nightmare (
 
 -- Syntax
 
+CREATE TYPE syntax_composite AS (
+    async INT
+);
+CREATE TYPE syntax_enum AS Enum('async', 'box');
 CREATE TABLE Syntax (
     "trick:y" TEXT,
-    price FLOAT
+    async syntax_composite,
+    enum syntax_enum
 );

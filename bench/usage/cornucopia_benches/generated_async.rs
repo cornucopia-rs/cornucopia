@@ -391,10 +391,8 @@ pub mod queries {
                 name: &'a T1,
                 hair_color: &'a Option<T2>,
             ) -> Result<u64, tokio_postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client).await?;
-                    client.execute(stmt, &[name, hair_color]).await
-                }
+                let stmt = self.0.prepare(client).await?;
+                client.execute(stmt, &[name, hair_color]).await
             }
         }
         impl<

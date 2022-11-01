@@ -10,7 +10,7 @@ use crate::{
         Preparation, PreparedContent, PreparedField, PreparedItem, PreparedModule, PreparedQuery,
         PreparedType,
     },
-    utils::Lazy,
+    utils::{escape_keyword, unescape_keyword, Lazy},
     CodegenSettings,
 };
 
@@ -73,6 +73,87 @@ impl PreparedField {
     }
 }
 
+fn enum_sql(w: &mut impl Write, name: &str, enum_name: &str, variants: &[String]) {
+    let enum_names = std::iter::repeat(enum_name);
+    let enum_names2 = enum_names.clone();
+    let unescaped_variants_str: Vec<_> = variants
+        .iter()
+        .map(|v| format!("\"{}\"", unescape_keyword(v)))
+        .collect();
+    let name = format!("\"{name}\"");
+    let nb_variants = format!("{}usize", variants.len());
+    quote!(w =>
+        impl<'a> postgres_types::ToSql for #enum_name {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                buf: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>,> {
+                let s = match *self {
+                    #(#enum_names::#variants => #unescaped_variants_str,)*
+                };
+                buf.extend_from_slice(s.as_bytes());
+                std::result::Result::Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != #name {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Enum(ref variants) => {
+                        if variants.len() != #nb_variants {
+                            return false;
+                        }
+                        variants.iter().all(|v| match &**v {
+                            #(#unescaped_variants_str => true,)*
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        impl<'a> postgres_types::FromSql<'a> for #enum_name {
+            fn from_sql(
+                ty: &postgres_types::Type,
+                buf: &'a [u8],
+            ) -> Result<#enum_name, Box<dyn std::error::Error + Sync + Send>,> {
+                match std::str::from_utf8(buf)? {
+                    #(#unescaped_variants_str => Ok(#enum_names2::#variants),)*
+                    s => Result::Err(Into::into(format!(
+                        "invalid variant `{}`",
+                        s
+                    ))),
+                }
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() !=  #name {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Enum(ref variants) => {
+                        if variants.len() != #nb_variants {
+                            return false;
+                        }
+                        variants.iter().all(|v| match &**v {
+                            #(#unescaped_variants_str => true,)*
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+        }
+    );
+}
+
 fn struct_tosql(
     w: &mut impl Write,
     struct_name: &str,
@@ -92,7 +173,9 @@ fn struct_tosql(
         (struct_name.to_string(), "")
     };
     let field_names = fields.iter().map(|p| &p.name);
-    let write_names = fields.iter().map(|p| format!("\"{}\"", &p.name));
+    let write_names = fields
+        .iter()
+        .map(|p| format!("\"{}\"", unescape_keyword(&p.name)));
     let write_ty = fields.iter().map(|p| p.ty.sql_wrapped(&p.name, is_async));
     let accept_names = write_names.clone();
     let accept_ty = fields.iter().map(|p| p.ty.accept_to_sql(is_async));
@@ -482,10 +565,10 @@ fn gen_query_fn(
             let traits_idx = traits_idx.clone();
             let params_name = params_name.clone();
             quote!(w =>
-                pub #fn_async fn bind<'a, C: GenericClient,#(#traits_idx: #traits),*>(&'a mut self, client: &'a #client_mut C, #(#params_name: &'a #params_ty),*) -> Result<u64, #backend::Error> {{
+                pub #fn_async fn bind<'a, C: GenericClient,#(#traits_idx: #traits),*>(&'a mut self, client: &'a #client_mut C, #(#params_name: &'a #params_ty),*) -> Result<u64, #backend::Error> {
                     let stmt = self.0.prepare(client)#fn_await?;
                     client.execute(stmt, &[ #(#params_wrap),* ])#fn_await
-                }}
+                }
             );
         }
     });
@@ -493,6 +576,7 @@ fn gen_query_fn(
     {
         let sql = sql.replace('"', "\\\""); // Rust string format escaping
         let sql = format!("\"{sql}\"");
+        let name = escape_keyword(name.clone());
         quote!(w =>
             pub fn #name() -> #stmt_name {
                 #stmt_name(#client::private::Stmt::new(#sql))
@@ -582,12 +666,13 @@ fn gen_custom_type(
     match content {
         PreparedContent::Enum(variants) => {
             quote!(w =>
-                #[derive(#ser_str Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, Copy, PartialEq, Eq)]
-                #[postgres(name = #name_str)]
+                #[derive(#ser_str Debug, Clone, Copy, PartialEq, Eq)]
+                #[allow(non_camel_case_types)]
                 pub enum #struct_name {
                     #(#variants),*
                 }
             );
+            enum_sql(w, name, struct_name, variants);
         }
         PreparedContent::Composite(fields) => {
             let fields_name = fields.iter().map(|p| &p.name);
@@ -700,7 +785,7 @@ pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> S
             let queries_string = module
                 .queries
                 .values()
-                .map(|query| Lazy::new(|w| gen_query_fn(w, &module, query, settings)));
+                .map(|query| Lazy::new(|w| gen_query_fn(w, module, query, settings)));
             quote!(w =>
                 pub mod #name {
                     #import

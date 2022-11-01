@@ -568,21 +568,87 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(
-            serde::Serialize,
-            Debug,
-            postgres_types :: ToSql,
-            postgres_types :: FromSql,
-            Clone,
-            Copy,
-            PartialEq,
-            Eq,
-        )]
-        #[postgres(name = "spongebob_character")]
+        #[derive(serde::Serialize, Debug, Clone, Copy, PartialEq, Eq)]
+        #[allow(non_camel_case_types)]
         pub enum SpongebobCharacter {
             Bob,
             Patrick,
             Squidward,
+        }
+        impl<'a> postgres_types::ToSql for SpongebobCharacter {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                buf: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let s = match *self {
+                    SpongebobCharacter::Bob => "Bob",
+                    SpongebobCharacter::Patrick => "Patrick",
+                    SpongebobCharacter::Squidward => "Squidward",
+                };
+                buf.extend_from_slice(s.as_bytes());
+                std::result::Result::Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "spongebob_character" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Enum(ref variants) => {
+                        if variants.len() != 3usize {
+                            return false;
+                        }
+                        variants.iter().all(|v| match &**v {
+                            "Bob" => true,
+                            "Patrick" => true,
+                            "Squidward" => true,
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        impl<'a> postgres_types::FromSql<'a> for SpongebobCharacter {
+            fn from_sql(
+                ty: &postgres_types::Type,
+                buf: &'a [u8],
+            ) -> Result<SpongebobCharacter, Box<dyn std::error::Error + Sync + Send>> {
+                match std::str::from_utf8(buf)? {
+                    "Bob" => Ok(SpongebobCharacter::Bob),
+                    "Patrick" => Ok(SpongebobCharacter::Patrick),
+                    "Squidward" => Ok(SpongebobCharacter::Squidward),
+                    s => Result::Err(Into::into(format!("invalid variant `{}`", s))),
+                }
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "spongebob_character" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Enum(ref variants) => {
+                        if variants.len() != 3usize {
+                            return false;
+                        }
+                        variants.iter().all(|v| match &**v {
+                            "Bob" => true,
+                            "Patrick" => true,
+                            "Squidward" => true,
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
         }
         #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Clone, PartialEq)]
         #[postgres(name = "custom_composite")]
@@ -854,6 +920,149 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
+        #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Copy, Clone, PartialEq)]
+        #[postgres(name = "syntax_composite")]
+        pub struct SyntaxComposite {
+            pub r#async: i32,
+        }
+        impl<'a> postgres_types::ToSql for SyntaxComposite {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let SyntaxComposite { r#async } = self;
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {
+                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = out.len();
+                    out.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {
+                        "async" => postgres_types::ToSql::to_sql(r#async, field.type_(), out),
+                        _ => unreachable!(),
+                    };
+                    let count = match r? {
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {
+                            let len = out.len() - base - 4;
+                            if len > i32::max_value() as usize {
+                                return Err(Into::into("value too large to transmit"));
+                            }
+                            len as i32
+                        }
+                    };
+                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                }
+                Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "syntax_composite" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != 1usize {
+                            return false;
+                        }
+                        fields.iter().all(|f| match f.name() {
+                            "async" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        #[derive(serde::Serialize, Debug, Clone, Copy, PartialEq, Eq)]
+        #[allow(non_camel_case_types)]
+        pub enum SyntaxEnum {
+            r#async,
+            r#box,
+        }
+        impl<'a> postgres_types::ToSql for SyntaxEnum {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                buf: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let s = match *self {
+                    SyntaxEnum::r#async => "async",
+                    SyntaxEnum::r#box => "box",
+                };
+                buf.extend_from_slice(s.as_bytes());
+                std::result::Result::Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "syntax_enum" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Enum(ref variants) => {
+                        if variants.len() != 2usize {
+                            return false;
+                        }
+                        variants.iter().all(|v| match &**v {
+                            "async" => true,
+                            "box" => true,
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        impl<'a> postgres_types::FromSql<'a> for SyntaxEnum {
+            fn from_sql(
+                ty: &postgres_types::Type,
+                buf: &'a [u8],
+            ) -> Result<SyntaxEnum, Box<dyn std::error::Error + Sync + Send>> {
+                match std::str::from_utf8(buf)? {
+                    "async" => Ok(SyntaxEnum::r#async),
+                    "box" => Ok(SyntaxEnum::r#box),
+                    s => Result::Err(Into::into(format!("invalid variant `{}`", s))),
+                }
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "syntax_enum" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Enum(ref variants) => {
+                        if variants.len() != 2usize {
+                            return false;
+                        }
+                        variants.iter().all(|v| match &**v {
+                            "async" => true,
+                            "box" => true,
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+        }
     }
 }
 #[allow(clippy::all, clippy::pedantic)]
@@ -988,10 +1197,8 @@ pub mod queries {
                 client: &'a C,
                 composite: &'a super::super::types::public::CloneCompositeBorrowed<'a>,
             ) -> Result<u64, tokio_postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client).await?;
-                    client.execute(stmt, &[composite]).await
-                }
+                let stmt = self.0.prepare(client).await?;
+                client.execute(stmt, &[composite]).await
             }
         }
         pub fn select_clone() -> SelectCloneStmt {
@@ -1029,10 +1236,8 @@ pub mod queries {
                 client: &'a C,
                 composite: &'a super::super::types::public::CopyComposite,
             ) -> Result<u64, tokio_postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client).await?;
-                    client.execute(stmt, &[composite]).await
-                }
+                let stmt = self.0.prepare(client).await?;
+                client.execute(stmt, &[composite]).await
             }
         }
         pub fn select_copy() -> SelectCopyStmt {
@@ -1307,23 +1512,21 @@ pub mod queries {
                 arr: &'a T4,
                 composite: &'a Option<super::super::types::public::DomainCompositeParams<'a>>,
             ) -> Result<u64, tokio_postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client).await?;
-                    client
-                        .execute(
-                            stmt,
-                            &[
-                                &cornucopia_async::private::Domain(txt),
-                                &cornucopia_async::private::Domain(json),
-                                &cornucopia_async::private::Domain(nb),
-                                &cornucopia_async::private::Domain(
-                                    &cornucopia_async::private::DomainArray(arr),
-                                ),
-                                composite,
-                            ],
-                        )
-                        .await
-                }
+                let stmt = self.0.prepare(client).await?;
+                client
+                    .execute(
+                        stmt,
+                        &[
+                            &cornucopia_async::private::Domain(txt),
+                            &cornucopia_async::private::Domain(json),
+                            &cornucopia_async::private::Domain(nb),
+                            &cornucopia_async::private::Domain(
+                                &cornucopia_async::private::DomainArray(arr),
+                            ),
+                            composite,
+                        ],
+                    )
+                    .await
             }
         }
         impl<
@@ -1727,10 +1930,8 @@ pub mod queries {
                 client: &'a C,
                 named: &'a super::super::types::public::NamedCompositeBorrowed<'a>,
             ) -> Result<u64, tokio_postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client).await?;
-                    client.execute(stmt, &[named]).await
-                }
+                let stmt = self.0.prepare(client).await?;
+                client.execute(stmt, &[named]).await
             }
         }
         impl<'a, C: GenericClient + Send + Sync>
@@ -1896,10 +2097,8 @@ pub mod queries {
                 name: &'a T3,
                 composite: &'a Option<super::super::types::public::NullityCompositeParams<'a>>,
             ) -> Result<u64, tokio_postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client).await?;
-                    client.execute(stmt, &[texts, name, composite]).await
-                }
+                let stmt = self.0.prepare(client).await?;
+                client.execute(stmt, &[texts, name, composite]).await
             }
         }
         impl<
@@ -2133,10 +2332,8 @@ pub mod queries {
                 author: &'a Option<T1>,
                 name: &'a T2,
             ) -> Result<u64, tokio_postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client).await?;
-                    client.execute(stmt, &[author, name]).await
-                }
+                let stmt = self.0.prepare(client).await?;
+                client.execute(stmt, &[author, name]).await
             }
         }
         impl<
@@ -2230,10 +2427,8 @@ pub mod queries {
                 client: &'a C,
                 name: &'a T1,
             ) -> Result<u64, tokio_postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client).await?;
-                    client.execute(stmt, &[name]).await
-                }
+                let stmt = self.0.prepare(client).await?;
+                client.execute(stmt, &[name]).await
             }
         }
         pub fn params_order() -> ParamsOrderStmt {
@@ -2249,10 +2444,8 @@ pub mod queries {
                 c: &'a i32,
                 a: &'a i32,
             ) -> Result<u64, tokio_postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client).await?;
-                    client.execute(stmt, &[c, a]).await
-                }
+                let stmt = self.0.prepare(client).await?;
+                client.execute(stmt, &[c, a]).await
             }
         }
         impl<'a, C: GenericClient + Send + Sync>
@@ -2325,6 +2518,7 @@ pub mod queries {
             pub uuid_: uuid::Uuid,
             pub inet_: std::net::IpAddr,
             pub macaddr_: eui48::MacAddress,
+            pub numeric_: rust_decimal::Decimal,
         }
         #[derive(Debug)]
         pub struct EverythingArrayParams<
@@ -2360,6 +2554,7 @@ pub mod queries {
             T30: cornucopia_async::ArraySql<Item = uuid::Uuid>,
             T31: cornucopia_async::ArraySql<Item = std::net::IpAddr>,
             T32: cornucopia_async::ArraySql<Item = eui48::MacAddress>,
+            T33: cornucopia_async::ArraySql<Item = rust_decimal::Decimal>,
         > {
             pub bool_: T1,
             pub boolean_: T2,
@@ -2388,6 +2583,7 @@ pub mod queries {
             pub uuid_: T30,
             pub inet_: T31,
             pub macaddr_: T32,
+            pub numeric_: T33,
         }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct Everything {
@@ -2424,6 +2620,7 @@ pub mod queries {
             pub uuid_: uuid::Uuid,
             pub inet_: std::net::IpAddr,
             pub macaddr_: eui48::MacAddress,
+            pub numeric_: rust_decimal::Decimal,
         }
         pub struct EverythingBorrowed<'a> {
             pub bool_: bool,
@@ -2459,6 +2656,7 @@ pub mod queries {
             pub uuid_: uuid::Uuid,
             pub inet_: std::net::IpAddr,
             pub macaddr_: eui48::MacAddress,
+            pub numeric_: rust_decimal::Decimal,
         }
         impl<'a> From<EverythingBorrowed<'a>> for Everything {
             fn from(
@@ -2496,6 +2694,7 @@ pub mod queries {
                     uuid_,
                     inet_,
                     macaddr_,
+                    numeric_,
                 }: EverythingBorrowed<'a>,
             ) -> Self {
                 Self {
@@ -2532,6 +2731,7 @@ pub mod queries {
                     uuid_,
                     inet_,
                     macaddr_,
+                    numeric_,
                 }
             }
         }
@@ -2625,6 +2825,7 @@ pub mod queries {
             pub uuid_: Option<uuid::Uuid>,
             pub inet_: Option<std::net::IpAddr>,
             pub macaddr_: Option<eui48::MacAddress>,
+            pub numeric_: Option<rust_decimal::Decimal>,
         }
         pub struct EverythingNullBorrowed<'a> {
             pub bool_: Option<bool>,
@@ -2660,6 +2861,7 @@ pub mod queries {
             pub uuid_: Option<uuid::Uuid>,
             pub inet_: Option<std::net::IpAddr>,
             pub macaddr_: Option<eui48::MacAddress>,
+            pub numeric_: Option<rust_decimal::Decimal>,
         }
         impl<'a> From<EverythingNullBorrowed<'a>> for EverythingNull {
             fn from(
@@ -2697,6 +2899,7 @@ pub mod queries {
                     uuid_,
                     inet_,
                     macaddr_,
+                    numeric_,
                 }: EverythingNullBorrowed<'a>,
             ) -> Self {
                 Self {
@@ -2733,6 +2936,7 @@ pub mod queries {
                     uuid_,
                     inet_,
                     macaddr_,
+                    numeric_,
                 }
             }
         }
@@ -2820,6 +3024,7 @@ pub mod queries {
             pub uuid_: Vec<uuid::Uuid>,
             pub inet_: Vec<std::net::IpAddr>,
             pub macaddr_: Vec<eui48::MacAddress>,
+            pub numeric_: Vec<rust_decimal::Decimal>,
         }
         pub struct EverythingArrayBorrowed<'a> {
             pub bool_: cornucopia_async::ArrayIterator<'a, bool>,
@@ -2857,6 +3062,7 @@ pub mod queries {
             pub uuid_: cornucopia_async::ArrayIterator<'a, uuid::Uuid>,
             pub inet_: cornucopia_async::ArrayIterator<'a, std::net::IpAddr>,
             pub macaddr_: cornucopia_async::ArrayIterator<'a, eui48::MacAddress>,
+            pub numeric_: cornucopia_async::ArrayIterator<'a, rust_decimal::Decimal>,
         }
         impl<'a> From<EverythingArrayBorrowed<'a>> for EverythingArray {
             fn from(
@@ -2888,6 +3094,7 @@ pub mod queries {
                     uuid_,
                     inet_,
                     macaddr_,
+                    numeric_,
                 }: EverythingArrayBorrowed<'a>,
             ) -> Self {
                 Self {
@@ -2922,6 +3129,7 @@ pub mod queries {
                     uuid_: uuid_.map(|v| v).collect(),
                     inet_: inet_.map(|v| v).collect(),
                     macaddr_: macaddr_.map(|v| v).collect(),
+                    numeric_: numeric_.map(|v| v).collect(),
                 }
             }
         }
@@ -3009,6 +3217,7 @@ pub mod queries {
             pub uuid_: Option<Vec<uuid::Uuid>>,
             pub inet_: Option<Vec<std::net::IpAddr>>,
             pub macaddr_: Option<Vec<eui48::MacAddress>>,
+            pub numeric_: Option<Vec<rust_decimal::Decimal>>,
         }
         pub struct EverythingArrayNullBorrowed<'a> {
             pub bool_: Option<cornucopia_async::ArrayIterator<'a, bool>>,
@@ -3050,6 +3259,7 @@ pub mod queries {
             pub uuid_: Option<cornucopia_async::ArrayIterator<'a, uuid::Uuid>>,
             pub inet_: Option<cornucopia_async::ArrayIterator<'a, std::net::IpAddr>>,
             pub macaddr_: Option<cornucopia_async::ArrayIterator<'a, eui48::MacAddress>>,
+            pub numeric_: Option<cornucopia_async::ArrayIterator<'a, rust_decimal::Decimal>>,
         }
         impl<'a> From<EverythingArrayNullBorrowed<'a>> for EverythingArrayNull {
             fn from(
@@ -3081,6 +3291,7 @@ pub mod queries {
                     uuid_,
                     inet_,
                     macaddr_,
+                    numeric_,
                 }: EverythingArrayNullBorrowed<'a>,
             ) -> Self {
                 Self {
@@ -3119,6 +3330,7 @@ pub mod queries {
                     uuid_: uuid_.map(|v| v.map(|v| v).collect()),
                     inet_: inet_.map(|v| v.map(|v| v).collect()),
                     macaddr_: macaddr_.map(|v| v.map(|v| v).collect()),
+                    numeric_: numeric_.map(|v| v.map(|v| v).collect()),
                 }
             }
         }
@@ -3240,7 +3452,10 @@ pub mod queries {
         }
         pub fn select_everything() -> SelectEverythingStmt {
             SelectEverythingStmt(cornucopia_async::private::Stmt::new(
-                "SELECT * FROM Everything",
+                "SELECT
+    *
+FROM
+    Everything",
             ))
         }
         pub struct SelectEverythingStmt(cornucopia_async::private::Stmt);
@@ -3287,6 +3502,7 @@ pub mod queries {
                         uuid_: row.get(30),
                         inet_: row.get(31),
                         macaddr_: row.get(32),
+                        numeric_: row.get(33),
                     },
                     mapper: |it| <Everything>::from(it),
                 }
@@ -3294,7 +3510,10 @@ pub mod queries {
         }
         pub fn select_everything_null() -> SelectEverythingNullStmt {
             SelectEverythingNullStmt(cornucopia_async::private::Stmt::new(
-                "SELECT * FROM Everything",
+                "SELECT
+    *
+FROM
+    Everything",
             ))
         }
         pub struct SelectEverythingNullStmt(cornucopia_async::private::Stmt);
@@ -3341,14 +3560,15 @@ pub mod queries {
                         uuid_: row.get(30),
                         inet_: row.get(31),
                         macaddr_: row.get(32),
+                        numeric_: row.get(33),
                     },
                     mapper: |it| <EverythingNull>::from(it),
                 }
             }
         }
         pub fn insert_everything() -> InsertEverythingStmt {
-            InsertEverythingStmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO Everything (bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)" ) )
+            InsertEverythingStmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO Everything (bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_, numeric_)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34)" ) )
         }
         pub struct InsertEverythingStmt(cornucopia_async::private::Stmt);
         impl InsertEverythingStmt {
@@ -3396,50 +3616,50 @@ pub mod queries {
                 uuid_: &'a uuid::Uuid,
                 inet_: &'a std::net::IpAddr,
                 macaddr_: &'a eui48::MacAddress,
+                numeric_: &'a rust_decimal::Decimal,
             ) -> Result<u64, tokio_postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client).await?;
-                    client
-                        .execute(
-                            stmt,
-                            &[
-                                bool_,
-                                boolean_,
-                                char_,
-                                smallint_,
-                                int2_,
-                                smallserial_,
-                                serial2_,
-                                int_,
-                                int4_,
-                                serial_,
-                                serial4_,
-                                bingint_,
-                                int8_,
-                                bigserial_,
-                                serial8_,
-                                float4_,
-                                real_,
-                                float8_,
-                                double_precision_,
-                                text_,
-                                varchar_,
-                                bytea_,
-                                timestamp_,
-                                timestamp_without_time_zone_,
-                                timestamptz_,
-                                timestamp_with_time_zone_,
-                                date_,
-                                time_,
-                                json_,
-                                jsonb_,
-                                uuid_,
-                                inet_,
-                                macaddr_,
-                            ],
-                        )
-                        .await
-                }
+                let stmt = self.0.prepare(client).await?;
+                client
+                    .execute(
+                        stmt,
+                        &[
+                            bool_,
+                            boolean_,
+                            char_,
+                            smallint_,
+                            int2_,
+                            smallserial_,
+                            serial2_,
+                            int_,
+                            int4_,
+                            serial_,
+                            serial4_,
+                            bingint_,
+                            int8_,
+                            bigserial_,
+                            serial8_,
+                            float4_,
+                            real_,
+                            float8_,
+                            double_precision_,
+                            text_,
+                            varchar_,
+                            bytea_,
+                            timestamp_,
+                            timestamp_without_time_zone_,
+                            timestamptz_,
+                            timestamp_with_time_zone_,
+                            date_,
+                            time_,
+                            json_,
+                            jsonb_,
+                            uuid_,
+                            inet_,
+                            macaddr_,
+                            numeric_,
+                        ],
+                    )
+                    .await
             }
         }
         impl<
@@ -3506,12 +3726,16 @@ pub mod queries {
                     &params.uuid_,
                     &params.inet_,
                     &params.macaddr_,
+                    &params.numeric_,
                 ))
             }
         }
         pub fn select_everything_array() -> SelectEverythingArrayStmt {
             SelectEverythingArrayStmt(cornucopia_async::private::Stmt::new(
-                "SELECT * FROM EverythingArray",
+                "SELECT
+    *
+FROM
+    EverythingArray",
             ))
         }
         pub struct SelectEverythingArrayStmt(cornucopia_async::private::Stmt);
@@ -3552,6 +3776,7 @@ pub mod queries {
                         uuid_: row.get(24),
                         inet_: row.get(25),
                         macaddr_: row.get(26),
+                        numeric_: row.get(27),
                     },
                     mapper: |it| <EverythingArray>::from(it),
                 }
@@ -3559,7 +3784,10 @@ pub mod queries {
         }
         pub fn select_everything_array_null() -> SelectEverythingArrayNullStmt {
             SelectEverythingArrayNullStmt(cornucopia_async::private::Stmt::new(
-                "SELECT * FROM EverythingArray",
+                "SELECT
+    *
+FROM
+    EverythingArray",
             ))
         }
         pub struct SelectEverythingArrayNullStmt(cornucopia_async::private::Stmt);
@@ -3600,14 +3828,15 @@ pub mod queries {
                         uuid_: row.get(24),
                         inet_: row.get(25),
                         macaddr_: row.get(26),
+                        numeric_: row.get(27),
                     },
                     mapper: |it| <EverythingArrayNull>::from(it),
                 }
             }
         }
         pub fn insert_everything_array() -> InsertEverythingArrayStmt {
-            InsertEverythingArrayStmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO EverythingArray (bool_, boolean_, char_, smallint_, int2_, int_, int4_, bingint_, int8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)" ) )
+            InsertEverythingArrayStmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO EverythingArray (bool_, boolean_, char_, smallint_, int2_, int_, int4_, bingint_, int8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_, numeric_)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)" ) )
         }
         pub struct InsertEverythingArrayStmt(cornucopia_async::private::Stmt);
         impl InsertEverythingArrayStmt {
@@ -3646,6 +3875,7 @@ pub mod queries {
                 T30: cornucopia_async::ArraySql<Item = uuid::Uuid>,
                 T31: cornucopia_async::ArraySql<Item = std::net::IpAddr>,
                 T32: cornucopia_async::ArraySql<Item = eui48::MacAddress>,
+                T33: cornucopia_async::ArraySql<Item = rust_decimal::Decimal>,
             >(
                 &'a mut self,
                 client: &'a C,
@@ -3676,44 +3906,44 @@ pub mod queries {
                 uuid_: &'a T30,
                 inet_: &'a T31,
                 macaddr_: &'a T32,
+                numeric_: &'a T33,
             ) -> Result<u64, tokio_postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client).await?;
-                    client
-                        .execute(
-                            stmt,
-                            &[
-                                bool_,
-                                boolean_,
-                                char_,
-                                smallint_,
-                                int2_,
-                                int_,
-                                int4_,
-                                bingint_,
-                                int8_,
-                                float4_,
-                                real_,
-                                float8_,
-                                double_precision_,
-                                text_,
-                                varchar_,
-                                bytea_,
-                                timestamp_,
-                                timestamp_without_time_zone_,
-                                timestamptz_,
-                                timestamp_with_time_zone_,
-                                date_,
-                                time_,
-                                json_,
-                                jsonb_,
-                                uuid_,
-                                inet_,
-                                macaddr_,
-                            ],
-                        )
-                        .await
-                }
+                let stmt = self.0.prepare(client).await?;
+                client
+                    .execute(
+                        stmt,
+                        &[
+                            bool_,
+                            boolean_,
+                            char_,
+                            smallint_,
+                            int2_,
+                            int_,
+                            int4_,
+                            bingint_,
+                            int8_,
+                            float4_,
+                            real_,
+                            float8_,
+                            double_precision_,
+                            text_,
+                            varchar_,
+                            bytea_,
+                            timestamp_,
+                            timestamp_without_time_zone_,
+                            timestamptz_,
+                            timestamp_with_time_zone_,
+                            date_,
+                            time_,
+                            json_,
+                            jsonb_,
+                            uuid_,
+                            inet_,
+                            macaddr_,
+                            numeric_,
+                        ],
+                    )
+                    .await
             }
         }
         impl<
@@ -3751,6 +3981,7 @@ pub mod queries {
                 T30: cornucopia_async::ArraySql<Item = uuid::Uuid>,
                 T31: cornucopia_async::ArraySql<Item = std::net::IpAddr>,
                 T32: cornucopia_async::ArraySql<Item = eui48::MacAddress>,
+                T33: cornucopia_async::ArraySql<Item = rust_decimal::Decimal>,
             >
             cornucopia_async::Params<
                 'a,
@@ -3787,6 +4018,7 @@ pub mod queries {
                     T30,
                     T31,
                     T32,
+                    T33,
                 >,
                 std::pin::Pin<
                     Box<
@@ -3834,6 +4066,7 @@ pub mod queries {
                     T30,
                     T31,
                     T32,
+                    T33,
                 >,
             ) -> std::pin::Pin<
                 Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
@@ -3867,12 +4100,16 @@ pub mod queries {
                     &params.uuid_,
                     &params.inet_,
                     &params.macaddr_,
+                    &params.numeric_,
                 ))
             }
         }
         pub fn select_nightmare() -> SelectNightmareStmt {
             SelectNightmareStmt(cornucopia_async::private::Stmt::new(
-                "SELECT * FROM nightmare",
+                "SELECT
+    *
+FROM
+    nightmare",
             ))
         }
         pub struct SelectNightmareStmt(cornucopia_async::private::Stmt);
@@ -3897,7 +4134,8 @@ pub mod queries {
         }
         pub fn insert_nightmare() -> InsertNightmareStmt {
             InsertNightmareStmt(cornucopia_async::private::Stmt::new(
-                "INSERT INTO nightmare (composite) VALUES ($1)",
+                "INSERT INTO nightmare (composite)
+    VALUES ($1)",
             ))
         }
         pub struct InsertNightmareStmt(cornucopia_async::private::Stmt);
@@ -3907,10 +4145,8 @@ pub mod queries {
                 client: &'a C,
                 composite: &'a super::super::types::public::NightmareCompositeParams<'a>,
             ) -> Result<u64, tokio_postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client).await?;
-                    client.execute(stmt, &[composite]).await
-                }
+                let stmt = self.0.prepare(client).await?;
+                client.execute(stmt, &[composite]).await
             }
         }
     }
@@ -3937,6 +4173,56 @@ pub mod queries {
         pub struct ParamsSpace<T1: cornucopia_async::StringSql> {
             pub name: T1,
             pub price: f64,
+        }
+        #[derive(Clone, Copy, Debug)]
+        pub struct TrickySqlParams {
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
+        }
+        #[derive(Clone, Copy, Debug)]
+        pub struct TrickySql1Params {
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
+        }
+        #[derive(Clone, Copy, Debug)]
+        pub struct TrickySql2Params {
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
+        }
+        #[derive(Clone, Copy, Debug)]
+        pub struct TrickySql3Params {
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
+        }
+        #[derive(Clone, Copy, Debug)]
+        pub struct TrickySql4Params {
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
+        }
+        #[derive(Clone, Copy, Debug)]
+        pub struct TrickySql6Params {
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
+        }
+        #[derive(Clone, Copy, Debug)]
+        pub struct TrickySql7Params {
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
+        }
+        #[derive(Clone, Copy, Debug)]
+        pub struct TrickySql8Params {
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
+        }
+        #[derive(Clone, Copy, Debug)]
+        pub struct TrickySql9Params {
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
+        }
+        #[derive(Clone, Copy, Debug)]
+        pub struct TrickySql10Params {
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
         }
         pub struct SuperSuperTypesPublicCloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
@@ -4159,35 +4445,44 @@ pub mod queries {
             }
         }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
-        pub struct Syntax {
+        pub struct Typeof {
             pub trick_y: String,
-            pub price: f64,
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
         }
-        pub struct SyntaxBorrowed<'a> {
+        pub struct TypeofBorrowed<'a> {
             pub trick_y: &'a str,
-            pub price: f64,
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
         }
-        impl<'a> From<SyntaxBorrowed<'a>> for Syntax {
-            fn from(SyntaxBorrowed { trick_y, price }: SyntaxBorrowed<'a>) -> Self {
+        impl<'a> From<TypeofBorrowed<'a>> for Typeof {
+            fn from(
+                TypeofBorrowed {
+                    trick_y,
+                    r#async,
+                    r#enum,
+                }: TypeofBorrowed<'a>,
+            ) -> Self {
                 Self {
                     trick_y: trick_y.into(),
-                    price,
+                    r#async,
+                    r#enum,
                 }
             }
         }
-        pub struct SyntaxQuery<'a, C: GenericClient, T, const N: usize> {
+        pub struct TypeofQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_async::private::Stmt,
-            extractor: fn(&tokio_postgres::Row) -> SyntaxBorrowed,
-            mapper: fn(SyntaxBorrowed) -> T,
+            extractor: fn(&tokio_postgres::Row) -> TypeofBorrowed,
+            mapper: fn(TypeofBorrowed) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> SyntaxQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> TypeofQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
-            pub fn map<R>(self, mapper: fn(SyntaxBorrowed) -> R) -> SyntaxQuery<'a, C, R, N> {
-                SyntaxQuery {
+            pub fn map<R>(self, mapper: fn(TypeofBorrowed) -> R) -> TypeofQuery<'a, C, R, N> {
+                TypeofQuery {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -4420,189 +4715,414 @@ pub mod queries {
             }
         }
         pub fn tricky_sql() -> TrickySqlStmt {
-            TrickySqlStmt(cornucopia_async::private::Stmt::new(
-                "INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a bind_param\', $1)",
-            ))
+            TrickySqlStmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a bind_param\', $1, $2)" ) )
         }
         pub struct TrickySqlStmt(cornucopia_async::private::Stmt);
         impl TrickySqlStmt {
             pub async fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                price: &'a f64,
+                r#async: &'a super::super::types::public::SyntaxComposite,
+                r#enum: &'a super::super::types::public::SyntaxEnum,
             ) -> Result<u64, tokio_postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client).await?;
-                    client.execute(stmt, &[price]).await
-                }
+                let stmt = self.0.prepare(client).await?;
+                client.execute(stmt, &[r#async, r#enum]).await
+            }
+        }
+        impl<'a, C: GenericClient + Send + Sync>
+            cornucopia_async::Params<
+                'a,
+                TrickySqlParams,
+                std::pin::Pin<
+                    Box<
+                        dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>
+                            + Send
+                            + 'a,
+                    >,
+                >,
+                C,
+            > for TrickySqlStmt
+        {
+            fn params(
+                &'a mut self,
+                client: &'a C,
+                params: &'a TrickySqlParams,
+            ) -> std::pin::Pin<
+                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
+            > {
+                Box::pin(self.bind(client, &params.r#async, &params.r#enum))
             }
         }
         pub fn tricky_sql1() -> TrickySql1Stmt {
-            TrickySql1Stmt(cornucopia_async::private::Stmt::new(
-                "INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a :bind_param', $1)",
-            ))
+            TrickySql1Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a :bind_param', $1, $2)" ) )
         }
         pub struct TrickySql1Stmt(cornucopia_async::private::Stmt);
         impl TrickySql1Stmt {
             pub async fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                price: &'a f64,
+                r#async: &'a super::super::types::public::SyntaxComposite,
+                r#enum: &'a super::super::types::public::SyntaxEnum,
             ) -> Result<u64, tokio_postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client).await?;
-                    client.execute(stmt, &[price]).await
-                }
+                let stmt = self.0.prepare(client).await?;
+                client.execute(stmt, &[r#async, r#enum]).await
+            }
+        }
+        impl<'a, C: GenericClient + Send + Sync>
+            cornucopia_async::Params<
+                'a,
+                TrickySql1Params,
+                std::pin::Pin<
+                    Box<
+                        dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>
+                            + Send
+                            + 'a,
+                    >,
+                >,
+                C,
+            > for TrickySql1Stmt
+        {
+            fn params(
+                &'a mut self,
+                client: &'a C,
+                params: &'a TrickySql1Params,
+            ) -> std::pin::Pin<
+                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
+            > {
+                Box::pin(self.bind(client, &params.r#async, &params.r#enum))
             }
         }
         pub fn tricky_sql2() -> TrickySql2Stmt {
-            TrickySql2Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", price) VALUES ('this is not a '':bind_param''', $1)" ) )
+            TrickySql2Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a '':bind_param''', $1, $2)" ) )
         }
         pub struct TrickySql2Stmt(cornucopia_async::private::Stmt);
         impl TrickySql2Stmt {
             pub async fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                price: &'a f64,
+                r#async: &'a super::super::types::public::SyntaxComposite,
+                r#enum: &'a super::super::types::public::SyntaxEnum,
             ) -> Result<u64, tokio_postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client).await?;
-                    client.execute(stmt, &[price]).await
-                }
+                let stmt = self.0.prepare(client).await?;
+                client.execute(stmt, &[r#async, r#enum]).await
+            }
+        }
+        impl<'a, C: GenericClient + Send + Sync>
+            cornucopia_async::Params<
+                'a,
+                TrickySql2Params,
+                std::pin::Pin<
+                    Box<
+                        dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>
+                            + Send
+                            + 'a,
+                    >,
+                >,
+                C,
+            > for TrickySql2Stmt
+        {
+            fn params(
+                &'a mut self,
+                client: &'a C,
+                params: &'a TrickySql2Params,
+            ) -> std::pin::Pin<
+                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
+            > {
+                Box::pin(self.bind(client, &params.r#async, &params.r#enum))
             }
         }
         pub fn tricky_sql3() -> TrickySql3Stmt {
-            TrickySql3Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", price)  VALUES ($$this is not a :bind_param$$, $1)" ) )
+            TrickySql3Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", async, enum)  VALUES ($$this is not a :bind_param$$, $1, $2)" ) )
         }
         pub struct TrickySql3Stmt(cornucopia_async::private::Stmt);
         impl TrickySql3Stmt {
             pub async fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                price: &'a f64,
+                r#async: &'a super::super::types::public::SyntaxComposite,
+                r#enum: &'a super::super::types::public::SyntaxEnum,
             ) -> Result<u64, tokio_postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client).await?;
-                    client.execute(stmt, &[price]).await
-                }
+                let stmt = self.0.prepare(client).await?;
+                client.execute(stmt, &[r#async, r#enum]).await
+            }
+        }
+        impl<'a, C: GenericClient + Send + Sync>
+            cornucopia_async::Params<
+                'a,
+                TrickySql3Params,
+                std::pin::Pin<
+                    Box<
+                        dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>
+                            + Send
+                            + 'a,
+                    >,
+                >,
+                C,
+            > for TrickySql3Stmt
+        {
+            fn params(
+                &'a mut self,
+                client: &'a C,
+                params: &'a TrickySql3Params,
+            ) -> std::pin::Pin<
+                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
+            > {
+                Box::pin(self.bind(client, &params.r#async, &params.r#enum))
             }
         }
         pub fn tricky_sql4() -> TrickySql4Stmt {
-            TrickySql4Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", price) VALUES ($tag$this is not a :bind_param$tag$, $1)" ) )
+            TrickySql4Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", async, enum) VALUES ($tag$this is not a :bind_param$tag$, $1, $2)" ) )
         }
         pub struct TrickySql4Stmt(cornucopia_async::private::Stmt);
         impl TrickySql4Stmt {
             pub async fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                price: &'a f64,
+                r#async: &'a super::super::types::public::SyntaxComposite,
+                r#enum: &'a super::super::types::public::SyntaxEnum,
             ) -> Result<u64, tokio_postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client).await?;
-                    client.execute(stmt, &[price]).await
-                }
+                let stmt = self.0.prepare(client).await?;
+                client.execute(stmt, &[r#async, r#enum]).await
+            }
+        }
+        impl<'a, C: GenericClient + Send + Sync>
+            cornucopia_async::Params<
+                'a,
+                TrickySql4Params,
+                std::pin::Pin<
+                    Box<
+                        dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>
+                            + Send
+                            + 'a,
+                    >,
+                >,
+                C,
+            > for TrickySql4Stmt
+        {
+            fn params(
+                &'a mut self,
+                client: &'a C,
+                params: &'a TrickySql4Params,
+            ) -> std::pin::Pin<
+                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
+            > {
+                Box::pin(self.bind(client, &params.r#async, &params.r#enum))
             }
         }
         pub fn tricky_sql6() -> TrickySql6Stmt {
-            TrickySql6Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", price) VALUES (e'this is not a '':bind_param''', $1)" ) )
+            TrickySql6Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", async, enum) VALUES (e'this is not a '':bind_param''', $1, $2)" ) )
         }
         pub struct TrickySql6Stmt(cornucopia_async::private::Stmt);
         impl TrickySql6Stmt {
             pub async fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                price: &'a f64,
+                r#async: &'a super::super::types::public::SyntaxComposite,
+                r#enum: &'a super::super::types::public::SyntaxEnum,
             ) -> Result<u64, tokio_postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client).await?;
-                    client.execute(stmt, &[price]).await
-                }
+                let stmt = self.0.prepare(client).await?;
+                client.execute(stmt, &[r#async, r#enum]).await
+            }
+        }
+        impl<'a, C: GenericClient + Send + Sync>
+            cornucopia_async::Params<
+                'a,
+                TrickySql6Params,
+                std::pin::Pin<
+                    Box<
+                        dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>
+                            + Send
+                            + 'a,
+                    >,
+                >,
+                C,
+            > for TrickySql6Stmt
+        {
+            fn params(
+                &'a mut self,
+                client: &'a C,
+                params: &'a TrickySql6Params,
+            ) -> std::pin::Pin<
+                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
+            > {
+                Box::pin(self.bind(client, &params.r#async, &params.r#enum))
             }
         }
         pub fn tricky_sql7() -> TrickySql7Stmt {
-            TrickySql7Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", price) VALUES (E'this is not a \':bind_param\'', $1)" ) )
+            TrickySql7Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", async, enum) VALUES (E'this is not a \':bind_param\'', $1, $2)" ) )
         }
         pub struct TrickySql7Stmt(cornucopia_async::private::Stmt);
         impl TrickySql7Stmt {
             pub async fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                price: &'a f64,
+                r#async: &'a super::super::types::public::SyntaxComposite,
+                r#enum: &'a super::super::types::public::SyntaxEnum,
             ) -> Result<u64, tokio_postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client).await?;
-                    client.execute(stmt, &[price]).await
-                }
+                let stmt = self.0.prepare(client).await?;
+                client.execute(stmt, &[r#async, r#enum]).await
+            }
+        }
+        impl<'a, C: GenericClient + Send + Sync>
+            cornucopia_async::Params<
+                'a,
+                TrickySql7Params,
+                std::pin::Pin<
+                    Box<
+                        dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>
+                            + Send
+                            + 'a,
+                    >,
+                >,
+                C,
+            > for TrickySql7Stmt
+        {
+            fn params(
+                &'a mut self,
+                client: &'a C,
+                params: &'a TrickySql7Params,
+            ) -> std::pin::Pin<
+                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
+            > {
+                Box::pin(self.bind(client, &params.r#async, &params.r#enum))
             }
         }
         pub fn tricky_sql8() -> TrickySql8Stmt {
-            TrickySql8Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", price) VALUES (e'this is ''not'' a \':bind_param\'', $1)" ) )
+            TrickySql8Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", async, enum) VALUES (e'this is ''not'' a \':bind_param\'', $1, $2)" ) )
         }
         pub struct TrickySql8Stmt(cornucopia_async::private::Stmt);
         impl TrickySql8Stmt {
             pub async fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                price: &'a f64,
+                r#async: &'a super::super::types::public::SyntaxComposite,
+                r#enum: &'a super::super::types::public::SyntaxEnum,
             ) -> Result<u64, tokio_postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client).await?;
-                    client.execute(stmt, &[price]).await
-                }
+                let stmt = self.0.prepare(client).await?;
+                client.execute(stmt, &[r#async, r#enum]).await
+            }
+        }
+        impl<'a, C: GenericClient + Send + Sync>
+            cornucopia_async::Params<
+                'a,
+                TrickySql8Params,
+                std::pin::Pin<
+                    Box<
+                        dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>
+                            + Send
+                            + 'a,
+                    >,
+                >,
+                C,
+            > for TrickySql8Stmt
+        {
+            fn params(
+                &'a mut self,
+                client: &'a C,
+                params: &'a TrickySql8Params,
+            ) -> std::pin::Pin<
+                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
+            > {
+                Box::pin(self.bind(client, &params.r#async, &params.r#enum))
             }
         }
         pub fn tricky_sql9() -> TrickySql9Stmt {
-            TrickySql9Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", price) VALUES (E'this is \'not\' a \':bind_param\'', $1)" ) )
+            TrickySql9Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", async, enum) VALUES (E'this is \'not\' a \':bind_param\'', $1, $2)" ) )
         }
         pub struct TrickySql9Stmt(cornucopia_async::private::Stmt);
         impl TrickySql9Stmt {
             pub async fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                price: &'a f64,
+                r#async: &'a super::super::types::public::SyntaxComposite,
+                r#enum: &'a super::super::types::public::SyntaxEnum,
             ) -> Result<u64, tokio_postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client).await?;
-                    client.execute(stmt, &[price]).await
-                }
+                let stmt = self.0.prepare(client).await?;
+                client.execute(stmt, &[r#async, r#enum]).await
+            }
+        }
+        impl<'a, C: GenericClient + Send + Sync>
+            cornucopia_async::Params<
+                'a,
+                TrickySql9Params,
+                std::pin::Pin<
+                    Box<
+                        dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>
+                            + Send
+                            + 'a,
+                    >,
+                >,
+                C,
+            > for TrickySql9Stmt
+        {
+            fn params(
+                &'a mut self,
+                client: &'a C,
+                params: &'a TrickySql9Params,
+            ) -> std::pin::Pin<
+                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
+            > {
+                Box::pin(self.bind(client, &params.r#async, &params.r#enum))
             }
         }
         pub fn tricky_sql10() -> TrickySql10Stmt {
-            TrickySql10Stmt(cornucopia_async::private::Stmt::new(
-                "INSERT INTO syntax (\"trick:y\", price) VALUES ('this is just a cast'::text, $1)",
-            ))
+            TrickySql10Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is just a cast'::text, $1, $2)" ) )
         }
         pub struct TrickySql10Stmt(cornucopia_async::private::Stmt);
         impl TrickySql10Stmt {
             pub async fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-                price: &'a f64,
+                r#async: &'a super::super::types::public::SyntaxComposite,
+                r#enum: &'a super::super::types::public::SyntaxEnum,
             ) -> Result<u64, tokio_postgres::Error> {
-                {
-                    let stmt = self.0.prepare(client).await?;
-                    client.execute(stmt, &[price]).await
-                }
+                let stmt = self.0.prepare(client).await?;
+                client.execute(stmt, &[r#async, r#enum]).await
             }
         }
-        pub fn syntax() -> SyntaxStmt {
-            SyntaxStmt(cornucopia_async::private::Stmt::new("SELECT * FROM syntax"))
+        impl<'a, C: GenericClient + Send + Sync>
+            cornucopia_async::Params<
+                'a,
+                TrickySql10Params,
+                std::pin::Pin<
+                    Box<
+                        dyn futures::Future<Output = Result<u64, tokio_postgres::Error>>
+                            + Send
+                            + 'a,
+                    >,
+                >,
+                C,
+            > for TrickySql10Stmt
+        {
+            fn params(
+                &'a mut self,
+                client: &'a C,
+                params: &'a TrickySql10Params,
+            ) -> std::pin::Pin<
+                Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
+            > {
+                Box::pin(self.bind(client, &params.r#async, &params.r#enum))
+            }
         }
-        pub struct SyntaxStmt(cornucopia_async::private::Stmt);
-        impl SyntaxStmt {
+        pub fn r#typeof() -> TypeofStmt {
+            TypeofStmt(cornucopia_async::private::Stmt::new("SELECT * FROM syntax"))
+        }
+        pub struct TypeofStmt(cornucopia_async::private::Stmt);
+        impl TypeofStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-            ) -> SyntaxQuery<'a, C, Syntax, 0> {
-                SyntaxQuery {
+            ) -> TypeofQuery<'a, C, Typeof, 0> {
+                TypeofQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
-                    extractor: |row| SyntaxBorrowed {
+                    extractor: |row| TypeofBorrowed {
                         trick_y: row.get(0),
-                        price: row.get(1),
+                        r#async: row.get(1),
+                        r#enum: row.get(2),
                     },
-                    mapper: |it| <Syntax>::from(it),
+                    mapper: |it| <Typeof>::from(it),
                 }
             }
         }
