@@ -17,7 +17,6 @@ pub mod queries {
             pub name: T1,
             pub hair_color: Option<T2>,
         }
-
         #[derive(Debug, Clone, PartialEq)]
         pub struct User {
             pub id: i32,
@@ -64,17 +63,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -82,7 +78,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -146,17 +141,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -164,7 +156,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -218,17 +209,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -236,7 +224,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -315,17 +302,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -333,7 +317,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -387,8 +370,10 @@ pub mod queries {
                 name: &'a T1,
                 hair_color: &'a Option<T2>,
             ) -> Result<u64, postgres::Error> {
-                let stmt = self.0.prepare(client)?;
-                client.execute(stmt, &[name, hair_color])
+                {
+                    let stmt = self.0.prepare(client)?;
+                    client.execute(stmt, &[name, hair_color])
+                }
             }
         }
         impl<
@@ -408,7 +393,6 @@ pub mod queries {
                 self.bind(client, &params.name, &params.hair_color)
             }
         }
-
         pub fn posts() -> PostsStmt {
             PostsStmt(cornucopia_sync::private::Stmt::new("SELECT * FROM posts"))
         }
@@ -508,7 +492,7 @@ pub mod queries {
             }
         }
         pub fn select_complex() -> SelectComplexStmt {
-            SelectComplexStmt(cornucopia_sync::private::Stmt::new("SELECT u.id as myuser_id, u.name, u.hair_color, p.id as post_id, p.user_id, p.title, p.body FROM users as u LEFT JOIN posts as p on u.id = p.user_id"))
+            SelectComplexStmt ( cornucopia_sync :: private :: Stmt :: new ( "SELECT u.id as myuser_id, u.name, u.hair_color, p.id as post_id, p.user_id, p.title, p.body FROM users as u LEFT JOIN posts as p on u.id = p.user_id" ) )
         }
         pub struct SelectComplexStmt(cornucopia_sync::private::Stmt);
         impl SelectComplexStmt {

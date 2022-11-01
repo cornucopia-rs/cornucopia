@@ -34,17 +34,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt.prepare(self.client).await?;
                 let row = self.client.query_one(stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.iter().await?.try_collect().await
             }
-
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt.prepare(self.client).await?;
                 Ok(self
@@ -53,7 +50,6 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub async fn iter(
                 self,
             ) -> Result<

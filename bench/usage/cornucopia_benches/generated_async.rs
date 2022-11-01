@@ -22,7 +22,6 @@ pub mod queries {
             pub name: T1,
             pub hair_color: Option<T2>,
         }
-
         #[derive(Debug, Clone, PartialEq)]
         pub struct User {
             pub id: i32,
@@ -69,17 +68,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt.prepare(self.client).await?;
                 let row = self.client.query_one(stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.iter().await?.try_collect().await
             }
-
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt.prepare(self.client).await?;
                 Ok(self
@@ -88,7 +84,6 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub async fn iter(
                 self,
             ) -> Result<
@@ -155,17 +150,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt.prepare(self.client).await?;
                 let row = self.client.query_one(stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.iter().await?.try_collect().await
             }
-
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt.prepare(self.client).await?;
                 Ok(self
@@ -174,7 +166,6 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub async fn iter(
                 self,
             ) -> Result<
@@ -231,17 +222,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt.prepare(self.client).await?;
                 let row = self.client.query_one(stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.iter().await?.try_collect().await
             }
-
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt.prepare(self.client).await?;
                 Ok(self
@@ -250,7 +238,6 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub async fn iter(
                 self,
             ) -> Result<
@@ -332,17 +319,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt.prepare(self.client).await?;
                 let row = self.client.query_one(stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.iter().await?.try_collect().await
             }
-
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt.prepare(self.client).await?;
                 Ok(self
@@ -351,7 +335,6 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub async fn iter(
                 self,
             ) -> Result<
@@ -408,8 +391,10 @@ pub mod queries {
                 name: &'a T1,
                 hair_color: &'a Option<T2>,
             ) -> Result<u64, tokio_postgres::Error> {
-                let stmt = self.0.prepare(client).await?;
-                client.execute(stmt, &[name, hair_color]).await
+                {
+                    let stmt = self.0.prepare(client).await?;
+                    client.execute(stmt, &[name, hair_color]).await
+                }
             }
         }
         impl<
@@ -441,7 +426,6 @@ pub mod queries {
                 Box::pin(self.bind(client, &params.name, &params.hair_color))
             }
         }
-
         pub fn posts() -> PostsStmt {
             PostsStmt(cornucopia_async::private::Stmt::new("SELECT * FROM posts"))
         }
@@ -541,7 +525,7 @@ pub mod queries {
             }
         }
         pub fn select_complex() -> SelectComplexStmt {
-            SelectComplexStmt(cornucopia_async::private::Stmt::new("SELECT u.id as myuser_id, u.name, u.hair_color, p.id as post_id, p.user_id, p.title, p.body FROM users as u LEFT JOIN posts as p on u.id = p.user_id"))
+            SelectComplexStmt ( cornucopia_async :: private :: Stmt :: new ( "SELECT u.id as myuser_id, u.name, u.hair_color, p.id as post_id, p.user_id, p.title, p.body FROM users as u LEFT JOIN posts as p on u.id = p.user_id" ) )
         }
         pub struct SelectComplexStmt(cornucopia_async::private::Stmt);
         impl SelectComplexStmt {

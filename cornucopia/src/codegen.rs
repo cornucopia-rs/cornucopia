@@ -1,25 +1,18 @@
 use core::str;
-use std::fmt::Write;
+use std::fmt::{Formatter, Write};
 
 use heck::ToUpperCamelCase;
 use indexmap::IndexMap;
+use quote::quote;
 
 use crate::{
     prepare_queries::{
         Preparation, PreparedContent, PreparedField, PreparedItem, PreparedModule, PreparedQuery,
         PreparedType,
     },
-    utils::{join_comma, join_ln},
+    utils::Lazy,
     CodegenSettings,
 };
-
-// write! without errors
-// Maybe something fancier later
-macro_rules! gen {
-    ($($t:tt)*) => {{
-        write!($($t)*).unwrap();
-    }};
-}
 
 impl PreparedField {
     pub fn own_struct(&self) -> String {
@@ -89,97 +82,85 @@ fn struct_tosql(
     is_params: bool,
     is_async: bool,
 ) {
-    let (post, lifetime) = if is_borrow {
+    let (struct_name, lifetime) = if is_borrow {
         if is_params {
-            ("Borrowed", "<'a>")
+            (format!("{struct_name}Borrowed"), "<'a>")
         } else {
-            ("Params", "<'a>")
+            (format!("{struct_name}Params"), "<'a>")
         }
     } else {
-        ("", "")
+        (struct_name.to_string(), "")
     };
-    let nb_fields = fields.len();
-    let field_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
-    let write_fields = join_ln(fields.iter(), |w, f| {
-        let name = &f.name;
-        gen!(
-            w,
-            "\"{name}\" => postgres_types::ToSql::to_sql({},field.type_(), out),",
-            f.ty.sql_wrapped(name, is_async)
-        );
-    });
-    let accept_fields = join_ln(fields.iter(), |w, f| {
-        gen!(
-            w,
-            "\"{}\" => <{} as postgres_types::ToSql>::accepts(f.type_()),",
-            f.name,
-            f.ty.accept_to_sql(is_async)
-        );
-    });
+    let field_names = fields.iter().map(|p| &p.name);
+    let write_names = fields.iter().map(|p| format!("\"{}\"", &p.name));
+    let write_ty = fields.iter().map(|p| p.ty.sql_wrapped(&p.name, is_async));
+    let accept_names = write_names.clone();
+    let accept_ty = fields.iter().map(|p| p.ty.accept_to_sql(is_async));
+    let name = format!("\"{name}\"");
+    let nb_fields = format!("{}usize", fields.len());
 
-    gen!(
-        w,
-        r#"impl<'a> postgres_types::ToSql for {struct_name}{post}{lifetime} {{
+    quote!(w =>
+        impl<'a> postgres_types::ToSql for #struct_name #lifetime {
             fn to_sql(
                 &self,
                 ty: &postgres_types::Type,
                 out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>,> {{
-                let {struct_name}{post} {{
-                    {field_names}
-                }} = self;
-                let fields = match *ty.kind() {{
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>,> {
+                let #struct_name {
+                    #(#field_names),*
+                } = self;
+                let fields = match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
-                }};
+                };
                 out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
-                for field in fields {{
+                for field in fields {
                     out.extend_from_slice(&field.type_().oid().to_be_bytes());
                     let base = out.len();
                     out.extend_from_slice(&[0; 4]);
-                    let r = match field.name() {{
-                        {write_fields}
+                    let r = match field.name() {
+                        #(#write_names => postgres_types::ToSql::to_sql(#write_ty,field.type_(), out),)*
                         _ => unreachable!()
-                    }};
-                    let count = match r? {{
+                    };
+                    let count = match r? {
                         postgres_types::IsNull::Yes => -1,
-                        postgres_types::IsNull::No => {{
+                        postgres_types::IsNull::No => {
                             let len = out.len() - base - 4;
-                            if len > i32::max_value() as usize {{
+                            if len > i32::max_value() as usize {
                                 return Err(Into::into("value too large to transmit"));
-                            }}
+                            }
                             len as i32
-                        }}
-                    }};
+                        }
+                    };
                     out[base..base + 4].copy_from_slice(&count.to_be_bytes());
-                }}
+                }
                 Ok(postgres_types::IsNull::No)
-            }}
-            fn accepts(ty: &postgres_types::Type) -> bool {{
-                if ty.name() != "{name}" {{
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != #name {
                     return false;
-                }}
-                match *ty.kind() {{
-                    postgres_types::Kind::Composite(ref fields) => {{
-                        if fields.len() != {nb_fields}usize {{
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != #nb_fields {
                             return false;
-                        }}
-                        fields.iter().all(|f| match f.name() {{
-                            {accept_fields}
+                        }
+                        fields.iter().all(|f| match f.name() {
+                            #(#accept_names => <#accept_ty as postgres_types::ToSql>::accepts(f.type_()),)*
                             _ => false,
-                        }})
-                    }}
+                        })
+                    }
                     _ => false,
-                }}
-            }}
+                }
+            }
             fn to_sql_checked(
                 &self,
                 ty: &postgres_types::Type,
                 out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {{
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {
                 postgres_types::__to_sql_checked(self, ty, out)
-            }}
-        }}"#
+            }
+        }
     );
 }
 
@@ -190,36 +171,39 @@ fn composite_fromsql(
     name: &str,
     schema: &str,
 ) {
-    let field_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
-    let read_fields = join_ln(fields.iter().enumerate(), |w, (index, f)| {
-        gen!(
-            w,
-            "let _oid = postgres_types::private::read_be_i32(&mut out)?;
-            let {} = postgres_types::private::read_value(fields[{index}].type_(), &mut out)?;",
-            f.name,
-        );
-    });
+    let field_names = fields.iter().map(|p| &p.name);
+    let read_names = field_names.clone();
+    let read_idx = 0..fields.len();
+    let struct_name = format!("{struct_name}Borrowed");
+    let name = format!("\"{name}\"");
+    let schema = format!("\"{schema}\"");
 
-    gen!(
-        w,
-        r#"impl<'a> postgres_types::FromSql<'a> for {struct_name}Borrowed<'a> {{
-            fn from_sql(ty: &postgres_types::Type, out: &'a [u8]) -> 
-                Result<{struct_name}Borrowed<'a>, Box<dyn std::error::Error + Sync + Send>> 
-            {{
-                let fields = match *ty.kind() {{
+    quote!(w =>
+        impl<'a> postgres_types::FromSql<'a> for #struct_name<'a> {
+            fn from_sql(ty: &postgres_types::Type, out: &'a [u8]) ->
+                Result<#struct_name<'a>, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let fields = match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => fields,
                     _ => unreachable!(),
-                }};
+                };
                 let mut out = out;
                 let num_fields = postgres_types::private::read_be_i32(&mut out)?;
-                {read_fields}
-                Ok({struct_name}Borrowed {{ {field_names} }})
-            }}
+                if num_fields as usize != fields.len() {
+                    return std::result::Result::Err(
+                        std::convert::Into::into(format!("invalid field count: {} vs {}", num_fields, fields.len())));
+                }
+                #(
+                    let _oid = postgres_types::private::read_be_i32(&mut out)?;
+                    let #read_names = postgres_types::private::read_value(fields[#read_idx].type_(), &mut out)?;
+                )*
+                Ok(#struct_name { #(#field_names),* })
+            }
 
-            fn accepts(ty: &postgres_types::Type) -> bool {{
-                ty.name() == "{name}" && ty.schema() == "{schema}"
-            }}
-        }}"#
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                ty.name() == #name && ty.schema() == #schema
+            }
+        }
     );
 }
 
@@ -233,26 +217,22 @@ fn gen_params_struct(w: &mut impl Write, params: &PreparedItem, settings: Codege
     } = params;
     let is_async = settings.is_async;
     if *is_named {
+        let name = name.to_string();
         let traits = &mut Vec::new();
-        let struct_fields = fields
-            .iter()
-            .map(|p| {
-                let brw = p.param_ergo_ty(is_async, traits);
-                format!("pub {} : {brw}", p.name,)
-            })
-            .collect::<Vec<String>>();
 
         let copy = if *is_copy { "Clone,Copy," } else { "" };
         let lifetime = if *is_ref { "'a," } else { "" };
-        let struct_fields = join_comma(&struct_fields, |w, s| gen!(w, "{s}"));
-        let generic = join_comma(traits.iter().enumerate(), |w, (idx, p)| {
-            gen!(w, "{}: {p}", idx_char(idx + 1));
-        });
-
-        gen!(
-            w,
-            "#[derive({copy}Debug)]
-            pub struct {name}<{lifetime}{generic}> {{ {struct_fields} }}"
+        let fields_ty = fields
+            .iter()
+            .map(|p| p.param_ergo_ty(is_async, traits))
+            .collect::<Vec<_>>();
+        let fields_name = fields.iter().map(|p| &p.name);
+        let traits_idx = (1..=traits.len()).into_iter().map(idx_char);
+        quote!(w =>
+            #[derive(#copy Debug)]
+            pub struct #name<#lifetime #(#traits_idx: #traits),*> {
+                #(pub #fields_name: #fields_ty),*
+            }
         );
     }
 }
@@ -274,130 +254,126 @@ fn gen_row_structs(
     } = row;
     if *is_named {
         // Generate row struct
-        let struct_fields = join_comma(fields, |w, col| {
-            gen!(w, "pub {} : {}", col.name, col.own_struct());
-        });
+        let fields_name = fields.iter().map(|p| &p.name);
+        let fields_ty = fields.iter().map(|p| p.own_struct());
         let copy = if *is_copy { "Copy" } else { "" };
         let ser_str = if derive_ser { "serde::Serialize," } else { "" };
-        gen!(
-            w,
-            "#[derive({ser_str} Debug, Clone, PartialEq,{copy})] pub struct {name} {{ {struct_fields} }}",
+        quote!(w =>
+            #[derive(#ser_str Debug, Clone, PartialEq,#copy)]
+            pub struct #name {
+                #(pub #fields_name : #fields_ty),*
+            }
         );
 
         if !is_copy {
-            let struct_fields = join_comma(fields, |w, col| {
-                gen!(w, "pub {} : {}", col.name, col.brw_ty(true, is_async));
-            });
-            let fields_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
-            let fields_owning = join_comma(fields, |w, f| gen!(w, "{}", f.owning_assign()));
-            gen!(
-                w,
-                "pub struct {name}Borrowed<'a> {{ {struct_fields} }}
-                impl<'a> From<{name}Borrowed<'a>> for {name} {{
-                    fn from({name}Borrowed {{ {fields_names} }}: {name}Borrowed<'a>) -> Self {{
-                        Self {{ {fields_owning} }}
-                    }}
-                }}"
+            let fields_name = fields.iter().map(|p| &p.name);
+            let fields_ty = fields.iter().map(|p| p.brw_ty(true, is_async));
+            let from_name = fields_name.clone();
+            let from_own_assign = fields.iter().map(|f| f.owning_assign());
+            let brw_name = format!("{name}Borrowed");
+            quote!(w =>
+                pub struct #brw_name<'a> {
+                    #(pub #fields_name : #fields_ty),*
+                }
+                impl<'a> From<#brw_name<'a>> for #name {
+                    fn from(#brw_name { #(#from_name),* }: #brw_name<'a>) -> Self {
+                        Self {
+                            #(#from_own_assign),*
+                        }
+                    }
+                }
             );
         };
     }
     {
         // Generate query struct
         let borrowed_str = if *is_copy { "" } else { "Borrowed" };
-        let (
-            client_mut,
-            fn_async,
-            fn_await,
-            backend,
-            collect,
-            raw_type,
-            raw_pre,
-            raw_post,
-            client_name,
-        ) = if is_async {
-            (
-                "",
-                "async",
-                ".await",
-                "tokio_postgres",
-                "try_collect().await",
-                "futures::Stream",
-                "",
-                ".into_stream()",
-                "async",
-            )
-        } else {
-            (
-                "mut",
-                "",
-                "",
-                "postgres",
-                "collect()",
-                "Iterator",
-                ".iterator()",
-                "",
-                "sync",
-            )
-        };
+        let (client_mut, fn_async, fn_await, backend, collect, raw_type, raw_pre, raw_post, client) =
+            if is_async {
+                (
+                    "",
+                    "async",
+                    ".await",
+                    "tokio_postgres",
+                    "try_collect().await",
+                    "futures::Stream",
+                    "",
+                    ".into_stream()",
+                    "cornucopia_async",
+                )
+            } else {
+                (
+                    "mut",
+                    "",
+                    "",
+                    "postgres",
+                    "collect()",
+                    "Iterator",
+                    ".iterator()",
+                    "",
+                    "cornucopia_sync",
+                )
+            };
 
         let row_struct = if *is_named {
             format!("{name}{borrowed_str}")
         } else {
             fields[0].brw_ty(false, is_async)
         };
+        let name = format!("{name}Query");
 
-        gen!(w,"
-            pub struct {name}Query<'a, C: GenericClient, T, const N: usize> {{
-                client: &'a {client_mut} C,
-                params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut cornucopia_{client_name}::private::Stmt,
-                extractor: fn(&{backend}::Row) -> {row_struct},
-                mapper: fn({row_struct}) -> T,
-            }}
-            impl<'a, C, T:'a, const N: usize> {name}Query<'a, C, T, N> where C: GenericClient {{
-                pub fn map<R>(self, mapper: fn({row_struct}) -> R) -> {name}Query<'a,C,R,N> {{
-                    {name}Query {{
-                        client: self.client,
-                        params: self.params,
-                        stmt: self.stmt,
-                        extractor: self.extractor,
-                        mapper,
-                    }}
-                }}
-            
-                pub {fn_async} fn one(self) -> Result<T, {backend}::Error> {{
-                    let stmt = self.stmt.prepare(self.client){fn_await}?;
-                    let row = self.client.query_one(stmt, &self.params){fn_await}?;
-                    Ok((self.mapper)((self.extractor)(&row)))
-                }}
-            
-                pub {fn_async} fn all(self) -> Result<Vec<T>, {backend}::Error> {{
-                    self.iter(){fn_await}?.{collect}
-                }}
-            
-                pub {fn_async} fn opt(self) -> Result<Option<T>, {backend}::Error> {{
-                    let stmt = self.stmt.prepare(self.client){fn_await}?;
-                    Ok(self
-                        .client
-                        .query_opt(stmt, &self.params)
-                        {fn_await}?
-                        .map(|row| (self.mapper)((self.extractor)(&row))))
-                }}
-            
-                pub {fn_async} fn iter(
-                    self,
-                ) -> Result<impl {raw_type}<Item = Result<T, {backend}::Error>> + 'a, {backend}::Error> {{
-                    let stmt = self.stmt.prepare(self.client){fn_await}?;
-                    let it = self
-                        .client
-                        .query_raw(stmt, cornucopia_{client_name}::private::slice_iter(&self.params))
-                        {fn_await}?
-                        {raw_pre}
-                        .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
-                        {raw_post};
-                    Ok(it)
-                }}
-            }}");
+        quote!(w =>
+        pub struct #name<'a, C: GenericClient, T, const N: usize> {
+            client: &'a #client_mut C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            stmt: &'a mut #client::private::Stmt,
+            extractor: fn(&#backend::Row) -> #row_struct,
+            mapper: fn(#row_struct) -> T,
+        }
+        impl<'a, C, T:'a, const N: usize> #name<'a, C, T, N> where C: GenericClient {
+            pub fn map<R>(self, mapper: fn(#row_struct) -> R) -> #name<'a,C,R,N> {
+                #name {
+                    client: self.client,
+                    params: self.params,
+                    stmt: self.stmt,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+
+            pub #fn_async fn one(self) -> Result<T, #backend::Error> {
+                let stmt = self.stmt.prepare(self.client)#fn_await?;
+                let row = self.client.query_one(stmt, &self.params)#fn_await?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+
+            pub #fn_async fn all(self) -> Result<Vec<T>, #backend::Error> {
+                self.iter()#fn_await?.#collect
+            }
+
+            pub #fn_async fn opt(self) -> Result<Option<T>, #backend::Error> {
+                let stmt = self.stmt.prepare(self.client)#fn_await?;
+                Ok(self
+                    .client
+                    .query_opt(stmt, &self.params)
+                    #fn_await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+
+            pub #fn_async fn iter(
+                self,
+            ) -> Result<impl #raw_type<Item = Result<T, #backend::Error>> + 'a, #backend::Error> {
+                let stmt = self.stmt.prepare(self.client)#fn_await?;
+                let it = self
+                    .client
+                    .query_raw(stmt, #client::private::slice_iter(&self.params))
+                    #fn_await?
+                    #raw_pre
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                    #raw_post;
+                Ok(it)
+            }
+        });
     }
 }
 
@@ -418,25 +394,14 @@ fn gen_query_fn(
         param,
     } = query;
 
-    let (client_mut, fn_async, fn_await, backend, client_name) = if is_async {
-        ("", "async", ".await", "tokio_postgres", "async")
+    let (client_mut, fn_async, fn_await, backend, client) = if is_async {
+        ("", "async", ".await", "tokio_postgres", "cornucopia_async")
     } else {
-        ("mut", "", "", "postgres", "sync")
+        ("mut", "", "", "postgres", "cornucopia_sync")
     };
 
-    // Gen statement struct
     let struct_name = name.to_upper_camel_case();
-    {
-        let sql = sql.replace('"', "\\\""); // Rust string format escaping
-        gen!(
-            w,
-            "pub fn {name}() -> {struct_name}Stmt {{
-                {struct_name}Stmt(cornucopia_{client_name}::private::Stmt::new(\"{sql}\"))
-            }}
-            pub struct {struct_name}Stmt(cornucopia_{client_name}::private::Stmt);
-            impl {struct_name}Stmt {{"
-        );
-    }
+    let stmt_name = format!("{struct_name}Stmt");
     let (param, param_field, order) = match param {
         Some((idx, order)) => {
             let it = module.params.get_index(*idx).unwrap().1;
@@ -445,91 +410,106 @@ fn gen_query_fn(
         None => (None, [].as_slice(), [].as_slice()),
     };
     let traits = &mut Vec::new();
-    let param_list = order
+    let params_ty: Vec<_> = order
         .iter()
-        .map(|idx| &param_field[*idx])
-        .map(|p| format!("{} : &'a {}", p.name, p.param_ergo_ty(is_async, traits)))
-        .collect::<Vec<String>>();
-    let param_list = join_comma(&param_list, |w, s| gen!(w, "{s}"));
-    let generic = join_comma(traits.iter().enumerate(), |w, (idx, p)| {
-        gen!(w, "{}: {p}", idx_char(idx + 1));
-    });
+        .map(|idx| param_field[*idx].param_ergo_ty(is_async, traits))
+        .collect();
+    let params_name = order.iter().map(|idx| &param_field[*idx].name);
+    let traits_idx = (1..=traits.len()).into_iter().map(idx_char);
+    let lazy_impl = Lazy::new(|w| {
+        if let Some((idx, index)) = row {
+            let PreparedItem {
+                name: row_name,
+                fields,
+                is_copy,
+                is_named,
+                ..
+            } = &module.rows.get_index(*idx).unwrap().1;
+            // Query fn
+            let params_name = params_name.clone();
+            let params_name2 = params_name.clone();
+            let nb_params = param_field.len();
+            let traits_idx = traits_idx.clone();
 
-    if let Some((idx, index)) = row {
-        let PreparedItem {
-            name: row_name,
-            fields,
-            is_copy,
-            is_named,
-            ..
-        } = &module.rows.get_index(*idx).unwrap().1;
-        let borrowed_str = if *is_copy { "" } else { "Borrowed" };
-        // Query fn
-        let get_fields = join_comma(fields.iter().enumerate(), |w, (i, f)| {
-            gen!(w, "{}: row.get({})", f.name, index[i]);
-        });
-        let param_names = join_comma(order.iter().map(|idx| &param_field[*idx]), |w, p| {
-            gen!(w, "{}", p.name);
-        });
-        let nb_params = param_field.len();
-        let (row_struct_name, extractor, mapper) = if *is_named {
-            (
-                row_name.value.clone(),
-                format!("{row_name}{borrowed_str} {{{get_fields}}}"),
-                format!("<{row_name}>::from(it)"),
-            )
+            // TODO find a way to clean this mess
+            let (row_struct_name, extractor, mapper): (
+                String,
+                Lazy<Box<dyn Fn(&mut Formatter)>>,
+                String,
+            ) = if *is_named {
+                (
+                    row_name.value.clone(),
+                    Lazy::new(Box::new(|w: &mut Formatter| {
+                        let name = if *is_copy {
+                            row_name.to_string()
+                        } else {
+                            format!("{row_name}Borrowed")
+                        };
+                        let fields_name = fields.iter().map(|p| &p.name);
+                        let fields_idx = (0..fields.len()).map(|i| index[i]);
+                        quote!(w => #name {
+                            #(#fields_name: row.get(#fields_idx)),*
+                        })
+                    })),
+                    format!("<{row_name}>::from(it)"),
+                )
+            } else {
+                let field = &fields[0];
+                (
+                    field.own_struct(),
+                    Lazy::new(Box::new(|w: &mut Formatter| quote!(w => row.get(0)))),
+                    field.owning_call(Some("it")),
+                )
+            };
+            let query_name = format!("{row_name}Query");
+            quote!(w =>
+                pub fn bind<'a, C: GenericClient,#(#traits_idx: #traits),*>(&'a mut self, client: &'a #client_mut C, #(#params_name: &'a #params_ty),* ) -> #query_name<'a,C, #row_struct_name, #nb_params> {
+                    #query_name {
+                        client,
+                        params: [#(#params_name2),*],
+                        stmt: &mut self.0,
+                        extractor: |row| { #extractor },
+                        mapper: |it| { #mapper },
+                    }
+                }
+            );
         } else {
-            let field = &fields[0];
-            (
-                field.own_struct(),
-                String::from("row.get(0)"),
-                field.owning_call(Some("it")),
-            )
-        };
-        gen!(w,
-            "pub fn bind<'a, C: GenericClient,{generic}>(&'a mut self, client: &'a {client_mut} C, {param_list}) -> {row_name}Query<'a,C, {row_struct_name}, {nb_params}> {{
-                {row_name}Query {{
-                    client,
-                    params: [{param_names}],
-                    stmt: &mut self.0,
-                    extractor: |row| {{ {extractor} }},
-                    mapper: |it| {{ {mapper} }},
+            // Execute fn
+            let params_wrap = order.iter().map(|idx| {
+                let p = &param_field[*idx];
+                p.ty.sql_wrapped(&p.name, is_async)
+            });
+            let traits_idx = traits_idx.clone();
+            let params_name = params_name.clone();
+            quote!(w =>
+                pub #fn_async fn bind<'a, C: GenericClient,#(#traits_idx: #traits),*>(&'a mut self, client: &'a #client_mut C, #(#params_name: &'a #params_ty),*) -> Result<u64, #backend::Error> {{
+                    let stmt = self.0.prepare(client)#fn_await?;
+                    client.execute(stmt, &[ #(#params_wrap),* ])#fn_await
                 }}
-            }}
-        }}",
-        );
-    } else {
-        // Execute fn
-        let param_names = join_comma(order.iter().map(|idx| &param_field[*idx]), |w, p| {
-            gen!(w, "{}", p.ty.sql_wrapped(&p.name, is_async));
-        });
-        gen!(w,
-            "pub {fn_async} fn bind<'a, C: GenericClient,{generic}>(&'a mut self, client: &'a {client_mut} C, {param_list}) -> Result<u64, {backend}::Error> {{
-                let stmt = self.0.prepare(client){fn_await}?;
-                client.execute(stmt, &[{param_names}]){fn_await}
-            }}
-        }}"
+            );
+        }
+    });
+    // Gen statement struct
+    {
+        let sql = sql.replace('"', "\\\""); // Rust string format escaping
+        let sql = format!("\"{sql}\"");
+        quote!(w =>
+            pub fn #name() -> #stmt_name {
+                #stmt_name(#client::private::Stmt::new(#sql))
+            }
+            pub struct #stmt_name(#client::private::Stmt);
+            impl #stmt_name {
+                #lazy_impl
+            }
         );
     }
 
     // Param impl
     if let Some(param) = param {
-        let traits = &mut Vec::new();
-        for p in &param.fields {
-            p.param_ergo_ty(is_async, traits);
-        }
-        let generic = join_comma(traits.iter().enumerate(), |w, (idx, p)| {
-            gen!(w, "{}: {p}", idx_char(idx + 1));
-        });
-        let traits = join_comma(traits.iter().enumerate(), |w, (idx, _)| {
-            gen!(w, "{}", idx_char(idx + 1));
-        })
-        .to_string();
+        let traits_idx2 = traits_idx.clone();
+        let traits_idx3 = traits_idx.clone();
 
         if param.is_named {
-            let param_values = join_comma(order.iter().map(|idx| &param_field[*idx]), |w, p| {
-                gen!(w, "&params.{}", p.name)
-            });
             let param_name = &param.name;
             let lifetime = if param.is_copy || !param.is_ref {
                 ""
@@ -546,32 +526,32 @@ fn gen_query_fn(
                 };
                 let name = &module.rows.get_index(*idx).unwrap().1.name;
                 let nb_params = param_field.len();
-                gen!(w,"impl <'a, C: GenericClient,{generic}> cornucopia_{client_name}::Params<'a, {param_name}<{lifetime}{traits}>, {name}Query<'a, C, {query_row_struct}, {nb_params}>, C> for {struct_name}Stmt {{ 
-                    fn params(&'a mut self, client: &'a {client_mut} C, params: &'a {param_name}<{lifetime}{traits}>) -> {name}Query<'a, C, {query_row_struct}, {nb_params}> {{
-                        self.bind(client, {param_values})
-                    }}
-                }}"
+                let query_name = format!("{name}Query");
+                quote!(w =>
+                    impl <'a, C: GenericClient,#(#traits_idx: #traits),*> #client::Params<'a, #param_name<#lifetime #(#traits_idx2),*>, #query_name<'a, C, #query_row_struct, #nb_params>, C> for #stmt_name {
+                        fn params(&'a mut self, client: &'a #client_mut C, params: &'a #param_name<#lifetime #(#traits_idx3),*>) -> #query_name<'a, C, #query_row_struct, #nb_params> {
+                            self.bind(client, #(&params.#params_name),*)
+                        }
+                    }
                 );
             } else {
                 let (send_sync, pre_ty, post_ty_lf, pre, post) = if is_async {
                     (
                         "+ Send + Sync",
-                        "std::pin::Pin<Box<dyn futures::Future<Output = ",
+                        "std::pin::Pin<Box<dyn futures::Future<Output = Result",
                         "> + Send + 'a>>",
-                        "Box::pin(",
+                        "Box::pin(self",
                         ")",
                     )
                 } else {
-                    ("", "", "", "", "")
+                    ("", "Result", "", "self", "")
                 };
-                gen!(
-                    w,
-                    "impl <'a, C: GenericClient {send_sync},{generic}> cornucopia_{client_name}::Params<'a, {param_name}<{lifetime}{traits}>, {pre_ty}Result<u64, {backend}::Error>{post_ty_lf}, C> for {struct_name}Stmt {{ 
-                        fn params(&'a mut self, client: &'a {client_mut} C, params: &'a {param_name}<{lifetime}{traits}>) -> {pre_ty}Result<u64, {backend}::Error>{post_ty_lf} {{
-                            {pre}self.bind(client, {param_values}){post}
-                        }}
-                    }}
-                    "
+                quote!(w =>
+                    impl <'a, C: GenericClient #send_sync, #(#traits_idx: #traits),*> #client::Params<'a, #param_name<#lifetime #(#traits_idx2),*>, #pre_ty<u64, #backend::Error>#post_ty_lf, C> for #stmt_name {
+                        fn params(&'a mut self, client: &'a #client_mut C, params: &'a #param_name<#lifetime #(#traits_idx3),*>) -> #pre_ty<u64, #backend::Error>#post_ty_lf {
+                            #pre.bind(client, #(&params.#params_name),*)#post
+                        }
+                    }
                 );
             }
         }
@@ -598,56 +578,65 @@ fn gen_custom_type(
     } = prepared;
     let copy = if *is_copy { "Copy," } else { "" };
     let ser_str = if derive_ser { "serde::Serialize," } else { "" };
+    let name_str = format!("\"{name}\"");
     match content {
         PreparedContent::Enum(variants) => {
-            let variants_str = variants.join(",");
-            gen!(w,
-                        "#[derive({ser_str} Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, Copy, PartialEq, Eq)]
-                        #[postgres(name = \"{name}\")]
-                        pub enum {struct_name} {{ {variants_str} }}",
-                    );
+            quote!(w =>
+                #[derive(#ser_str Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, Copy, PartialEq, Eq)]
+                #[postgres(name = #name_str)]
+                pub enum #struct_name {
+                    #(#variants),*
+                }
+            );
         }
         PreparedContent::Composite(fields) => {
-            let fields_str = join_comma(fields, |w, f| {
-                gen!(w, "pub {} : {}", f.name, f.own_struct());
-            });
-
-            gen!(
-                w,
-                "#[derive({ser_str} Debug,postgres_types::FromSql,{copy} Clone, PartialEq)]
-                #[postgres(name = \"{name}\")]
-                pub struct {struct_name} {{ {fields_str} }}"
-            );
+            let fields_name = fields.iter().map(|p| &p.name);
+            {
+                let fields_name = fields_name.clone();
+                let fields_ty = fields.iter().map(|p| p.own_struct());
+                quote!(w =>
+                    #[derive(#ser_str Debug,postgres_types::FromSql,#copy Clone, PartialEq)]
+                    #[postgres(name = #name_str)]
+                    pub struct #struct_name {
+                        #(pub #fields_name: #fields_ty),*
+                    }
+                );
+            }
             if *is_copy {
                 struct_tosql(w, struct_name, fields, name, false, *is_params, is_async);
             } else {
-                let brw_fields = join_comma(fields, |w, f| {
-                    gen!(w, "pub {} : {}", f.name, f.brw_ty(true, is_async));
-                });
-                let field_names = join_comma(fields, |w, f| gen!(w, "{}", f.name));
-                let fields_owning = join_comma(fields, |w, f| gen!(w, "{}", f.owning_assign()));
-                gen!(
-                    w,
-                    "#[derive(Debug)]
-                    pub struct {struct_name}Borrowed<'a> {{ {brw_fields} }}
-                    impl<'a> From<{struct_name}Borrowed<'a>> for {struct_name} {{
+                let fields_owning = fields.iter().map(|p| p.owning_assign());
+                let fields_name2 = fields_name.clone();
+                let fields_name3 = fields_name.clone();
+                let fields_brw = fields.iter().map(|p| p.brw_ty(true, is_async));
+                let brw_name = format!("{struct_name}Borrowed");
+                quote!(w =>
+                    #[derive(Debug)]
+                    pub struct #brw_name<'a> {
+                        #(pub #fields_name2: #fields_brw),*
+                    }
+                    impl<'a> From<#brw_name<'a>> for #struct_name {
                         fn from(
-                            {struct_name}Borrowed {{
-                            {field_names}
-                            }}: {struct_name}Borrowed<'a>,
-                        ) -> Self {{ Self {{ {fields_owning} }} }}
-                    }}",
+                            #brw_name {
+                            #(#fields_name3),*
+                            }: #brw_name<'a>,
+                        ) -> Self {
+                            Self {
+                                #(#fields_owning),*
+                            }
+                        }
+                    }
                 );
                 composite_fromsql(w, struct_name, fields, name, schema);
                 if !is_params {
-                    let fields = join_comma(fields, |w, f| {
-                        gen!(w, "pub {} : {}", f.name, f.param_ty(is_async));
-                    });
+                    let param_name = format!("{struct_name}Params");
+                    let fields_ty = fields.iter().map(|p| p.param_ty(is_async));
                     let derive = if *is_copy { ",Copy,Clone" } else { "" };
-                    gen!(
-                        w,
-                        "#[derive(Debug{derive})]
-                        pub struct {struct_name}Params<'a> {{ {fields} }}",
+                    quote!(w =>
+                        #[derive(Debug #derive)]
+                        pub struct #param_name<'a> {
+                            #(pub #fields_name: #fields_ty),*
+                        }
                     );
                 }
                 struct_tosql(w, struct_name, fields, name, true, *is_params, is_async);
@@ -661,19 +650,28 @@ fn gen_type_modules(
     prepared: &IndexMap<String, Vec<PreparedType>>,
     settings: CodegenSettings,
 ) {
-    // Generate each module
-    let modules_str = join_ln(prepared, |w, (schema, types)| {
-        let tys_str = join_ln(types, |w, ty| gen_custom_type(w, schema, ty, settings));
-        gen!(w, "pub mod {schema} {{ {tys_str} }}");
-    });
+    let modules = prepared.iter().map(|(schema, types)| {
+        Lazy::new(move |w| {
+            let lazy = Lazy::new(|w| {
+                for ty in types {
+                    gen_custom_type(w, schema, ty, settings)
+                }
+            });
 
-    gen!(
-        w,
-        "#[allow(clippy::all, clippy::pedantic)]
-    #[allow(unused_variables)]
-    #[allow(unused_imports)]
-    #[allow(dead_code)]
-    pub mod types {{ {modules_str} }}"
+            quote!(w =>
+            pub mod #schema {
+                #lazy
+            });
+        })
+    });
+    quote!(w =>
+        #[allow(clippy::all, clippy::pedantic)]
+        #[allow(unused_variables)]
+        #[allow(unused_imports)]
+        #[allow(dead_code)]
+        pub mod types {
+            #(#modules)*
+        }
     );
 }
 
@@ -684,33 +682,43 @@ pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> S
         "use postgres::{{fallible_iterator::FallibleIterator,GenericClient}};"
     };
     let mut buff = "// This file was generated with `cornucopia`. Do not modify.\n\n".to_string();
+    let w = &mut buff;
     // Generate database type
-    gen_type_modules(&mut buff, &preparation.types, settings);
+    gen_type_modules(w, &preparation.types, settings);
     // Generate queries
-    let query_modules = join_ln(preparation.modules, |w, module| {
-        let queries_string = join_ln(module.queries.values(), |w, query| {
-            gen_query_fn(w, &module, query, settings);
-        });
-        let params_string = join_ln(module.params.values(), |w, params| {
-            gen_params_struct(w, params, settings);
-        });
-        let rows_string = join_ln(module.rows.values(), |w, row| {
-            gen_row_structs(w, row, settings);
-        });
-        gen!(
-            w,
-            "pub mod {} {{ {import} {params_string} {rows_string} {queries_string} }}",
-            module.info.name
-        );
+    let query_modules = preparation.modules.iter().map(|module| {
+        Lazy::new(move |w| {
+            let name = &module.info.name;
+            let params_string = module
+                .params
+                .values()
+                .map(|params| Lazy::new(|w| gen_params_struct(w, params, settings)));
+            let rows_string = module
+                .rows
+                .values()
+                .map(|row| Lazy::new(|w| gen_row_structs(w, row, settings)));
+            let queries_string = module
+                .queries
+                .values()
+                .map(|query| Lazy::new(|w| gen_query_fn(w, &module, query, settings)));
+            quote!(w =>
+                pub mod #name {
+                    #import
+                    #(#params_string)*
+                    #(#rows_string)*
+                    #(#queries_string)*
+                }
+            );
+        })
     });
-    gen!(
-        &mut buff,
-        "#[allow(clippy::all, clippy::pedantic)]
-    #[allow(unused_variables)]
-    #[allow(unused_imports)]
-    #[allow(dead_code)]
-    pub mod queries {{ {} }}",
-        query_modules
+    quote!(w =>
+        #[allow(clippy::all, clippy::pedantic)]
+        #[allow(unused_variables)]
+        #[allow(unused_imports)]
+        #[allow(dead_code)]
+        pub mod queries {
+            #(#query_modules)*
+        }
     );
     buff
 }

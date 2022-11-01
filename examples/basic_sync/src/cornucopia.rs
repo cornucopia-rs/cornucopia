@@ -7,7 +7,7 @@
 pub mod types {
     pub mod public {
         #[derive(
-            Debug, postgres_types::ToSql, postgres_types::FromSql, Clone, Copy, PartialEq, Eq,
+            Debug, postgres_types :: ToSql, postgres_types :: FromSql, Clone, Copy, PartialEq, Eq,
         )]
         #[postgres(name = "spongebob_character")]
         pub enum SpongebobCharacter {
@@ -37,8 +37,10 @@ pub mod queries {
                 client: &'a mut C,
                 title: &'a T1,
             ) -> Result<u64, postgres::Error> {
-                let stmt = self.0.prepare(client)?;
-                client.execute(stmt, &[title])
+                {
+                    let stmt = self.0.prepare(client)?;
+                    client.execute(stmt, &[title])
+                }
             }
         }
     }
@@ -88,17 +90,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -106,7 +105,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -120,7 +118,6 @@ pub mod queries {
                 Ok(it)
             }
         }
-
         pub struct StringQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -141,17 +138,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -159,7 +153,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -226,17 +219,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -244,7 +234,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -258,7 +247,6 @@ pub mod queries {
                 Ok(it)
             }
         }
-
         pub struct SuperSuperTypesPublicSpongebobCharacterQuery<
             'a,
             C: GenericClient,
@@ -287,17 +275,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -305,7 +290,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -364,17 +348,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -382,7 +363,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
