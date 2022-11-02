@@ -5,4 +5,7 @@ edition = "2021"
 publish = false
 
 [lib]
-#proc-macro = true
+proc-macro = true
+
+[dependencies]
+unscanny = "0.1.0"

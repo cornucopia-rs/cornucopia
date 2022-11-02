@@ -323,7 +323,14 @@ pub mod types {
                         if fields.len() != 4usize {
                             return false;
                         }
-                        fields . iter ( ) . all ( | f | match f . name ( ) { "txt" => < cornucopia_async::private::Domain::<&'a str> as postgres_types :: ToSql > :: accepts ( f . type_ ( ) ) , "json" => < cornucopia_async::private::Domain::<&'a serde_json::value::Value> as postgres_types :: ToSql > :: accepts ( f . type_ ( ) ) , "nb" => < cornucopia_async::private::Domain::<i32> as postgres_types :: ToSql > :: accepts ( f . type_ ( ) ) , "arr" => < cornucopia_async::private::Domain::<cornucopia_async::private::DomainArray::<&'a serde_json::value::Value, &[&'a serde_json::value::Value]>> as postgres_types :: ToSql > :: accepts ( f . type_ ( ) ) , _ => false , } )
+                        fields.iter().all(| f | match f.name()
+                {
+                    "txt" => < cornucopia_async::private::Domain::<&'a str> as postgres_types :: ToSql
+                    > :: accepts(f.type_()),"json" => < cornucopia_async::private::Domain::<&'a serde_json::value::Value> as postgres_types :: ToSql
+                    > :: accepts(f.type_()),"nb" => < cornucopia_async::private::Domain::<i32> as postgres_types :: ToSql
+                    > :: accepts(f.type_()),"arr" => < cornucopia_async::private::Domain::<cornucopia_async::private::DomainArray::<&'a serde_json::value::Value, &[&'a serde_json::value::Value]>> as postgres_types :: ToSql
+                    > :: accepts(f.type_()), _ => false,
+                })
                     }
                     _ => false,
                 }
@@ -554,7 +561,14 @@ pub mod types {
                         if fields.len() != 2usize {
                             return false;
                         }
-                        fields . iter ( ) . all ( | f | match f . name ( ) { "jsons" => < &'a [&'a serde_json::value::Value] as postgres_types :: ToSql > :: accepts ( f . type_ ( ) ) , "id" => < i32 as postgres_types :: ToSql > :: accepts ( f . type_ ( ) ) , _ => false , } )
+                        fields.iter().all(|f| {
+                            match f.name()
+                {
+                    "jsons" => < &'a [&'a serde_json::value::Value] as postgres_types :: ToSql
+                    > :: accepts(f.type_()),"id" => < i32 as postgres_types :: ToSql
+                    > :: accepts(f.type_()), _ => false,
+                }
+                        })
                     }
                     _ => false,
                 }
@@ -763,7 +777,13 @@ pub mod types {
                         if fields.len() != 3usize {
                             return false;
                         }
-                        fields . iter ( ) . all ( | f | match f . name ( ) { "wow" => < &'a str as postgres_types :: ToSql > :: accepts ( f . type_ ( ) ) , "such_cool" => < i32 as postgres_types :: ToSql > :: accepts ( f . type_ ( ) ) , "nice" => < super::super::types::public::SpongebobCharacter as postgres_types :: ToSql > :: accepts ( f . type_ ( ) ) , _ => false , } )
+                        fields.iter().all(| f | match f.name()
+                {
+                    "wow" => < &'a str as postgres_types :: ToSql
+                    > :: accepts(f.type_()),"such_cool" => < i32 as postgres_types :: ToSql
+                    > :: accepts(f.type_()),"nice" => < super::super::types::public::SpongebobCharacter as postgres_types :: ToSql
+                    > :: accepts(f.type_()), _ => false,
+                })
                     }
                     _ => false,
                 }
@@ -906,7 +926,13 @@ pub mod types {
                         if fields.len() != 3usize {
                             return false;
                         }
-                        fields . iter ( ) . all ( | f | match f . name ( ) { "custom" => < &'a [super::super::types::public::CustomCompositeBorrowed<'a>] as postgres_types :: ToSql > :: accepts ( f . type_ ( ) ) , "spongebob" => < &'a [super::super::types::public::SpongebobCharacter] as postgres_types :: ToSql > :: accepts ( f . type_ ( ) ) , "domain" => < cornucopia_async::private::Domain::<&'a str> as postgres_types :: ToSql > :: accepts ( f . type_ ( ) ) , _ => false , } )
+                        fields.iter().all(| f | match f.name()
+                {
+                    "custom" => < &'a [super::super::types::public::CustomCompositeBorrowed<'a>] as postgres_types :: ToSql
+                    > :: accepts(f.type_()),"spongebob" => < &'a [super::super::types::public::SpongebobCharacter] as postgres_types :: ToSql
+                    > :: accepts(f.type_()),"domain" => < cornucopia_async::private::Domain::<&'a str> as postgres_types :: ToSql
+                    > :: accepts(f.type_()), _ => false,
+                })
                     }
                     _ => false,
                 }
@@ -1492,7 +1518,7 @@ pub mod queries {
             }
         }
         pub fn insert_nightmare_domain() -> InsertNightmareDomainStmt {
-            InsertNightmareDomainStmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO nightmare_domain (txt, json, nb, arr, composite) VALUES ($1, $2, $3, $4, $5)" ) )
+            InsertNightmareDomainStmt(cornucopia_async :: private :: Stmt :: new("INSERT INTO nightmare_domain (txt, json, nb, arr, composite) VALUES ($1, $2, $3, $4, $5)"))
         }
         pub struct InsertNightmareDomainStmt(cornucopia_async::private::Stmt);
         impl InsertNightmareDomainStmt {
@@ -3567,8 +3593,8 @@ FROM
             }
         }
         pub fn insert_everything() -> InsertEverythingStmt {
-            InsertEverythingStmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO Everything (bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_, numeric_)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34)" ) )
+            InsertEverythingStmt(cornucopia_async :: private :: Stmt :: new("INSERT INTO Everything (bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_, numeric_)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34)"))
         }
         pub struct InsertEverythingStmt(cornucopia_async::private::Stmt);
         impl InsertEverythingStmt {
@@ -3835,8 +3861,8 @@ FROM
             }
         }
         pub fn insert_everything_array() -> InsertEverythingArrayStmt {
-            InsertEverythingArrayStmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO EverythingArray (bool_, boolean_, char_, smallint_, int2_, int_, int4_, bingint_, int8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_, numeric_)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)" ) )
+            InsertEverythingArrayStmt(cornucopia_async :: private :: Stmt :: new("INSERT INTO EverythingArray (bool_, boolean_, char_, smallint_, int2_, int_, int4_, bingint_, int8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_, numeric_)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)"))
         }
         pub struct InsertEverythingArrayStmt(cornucopia_async::private::Stmt);
         impl InsertEverythingArrayStmt {
@@ -4715,7 +4741,7 @@ FROM
             }
         }
         pub fn tricky_sql() -> TrickySqlStmt {
-            TrickySqlStmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a bind_param\', $1, $2)" ) )
+            TrickySqlStmt(cornucopia_async :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a bind_param\', $1, $2)"))
         }
         pub struct TrickySqlStmt(cornucopia_async::private::Stmt);
         impl TrickySqlStmt {
@@ -4754,7 +4780,7 @@ FROM
             }
         }
         pub fn tricky_sql1() -> TrickySql1Stmt {
-            TrickySql1Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a :bind_param', $1, $2)" ) )
+            TrickySql1Stmt(cornucopia_async :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a :bind_param', $1, $2)"))
         }
         pub struct TrickySql1Stmt(cornucopia_async::private::Stmt);
         impl TrickySql1Stmt {
@@ -4793,7 +4819,7 @@ FROM
             }
         }
         pub fn tricky_sql2() -> TrickySql2Stmt {
-            TrickySql2Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a '':bind_param''', $1, $2)" ) )
+            TrickySql2Stmt(cornucopia_async :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a '':bind_param''', $1, $2)"))
         }
         pub struct TrickySql2Stmt(cornucopia_async::private::Stmt);
         impl TrickySql2Stmt {
@@ -4832,7 +4858,7 @@ FROM
             }
         }
         pub fn tricky_sql3() -> TrickySql3Stmt {
-            TrickySql3Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", async, enum)  VALUES ($$this is not a :bind_param$$, $1, $2)" ) )
+            TrickySql3Stmt(cornucopia_async :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum)  VALUES ($$this is not a :bind_param$$, $1, $2)"))
         }
         pub struct TrickySql3Stmt(cornucopia_async::private::Stmt);
         impl TrickySql3Stmt {
@@ -4871,7 +4897,7 @@ FROM
             }
         }
         pub fn tricky_sql4() -> TrickySql4Stmt {
-            TrickySql4Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", async, enum) VALUES ($tag$this is not a :bind_param$tag$, $1, $2)" ) )
+            TrickySql4Stmt(cornucopia_async :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ($tag$this is not a :bind_param$tag$, $1, $2)"))
         }
         pub struct TrickySql4Stmt(cornucopia_async::private::Stmt);
         impl TrickySql4Stmt {
@@ -4910,7 +4936,7 @@ FROM
             }
         }
         pub fn tricky_sql6() -> TrickySql6Stmt {
-            TrickySql6Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", async, enum) VALUES (e'this is not a '':bind_param''', $1, $2)" ) )
+            TrickySql6Stmt(cornucopia_async :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (e'this is not a '':bind_param''', $1, $2)"))
         }
         pub struct TrickySql6Stmt(cornucopia_async::private::Stmt);
         impl TrickySql6Stmt {
@@ -4949,7 +4975,7 @@ FROM
             }
         }
         pub fn tricky_sql7() -> TrickySql7Stmt {
-            TrickySql7Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", async, enum) VALUES (E'this is not a \':bind_param\'', $1, $2)" ) )
+            TrickySql7Stmt(cornucopia_async :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (E'this is not a \':bind_param\'', $1, $2)"))
         }
         pub struct TrickySql7Stmt(cornucopia_async::private::Stmt);
         impl TrickySql7Stmt {
@@ -4988,7 +5014,7 @@ FROM
             }
         }
         pub fn tricky_sql8() -> TrickySql8Stmt {
-            TrickySql8Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", async, enum) VALUES (e'this is ''not'' a \':bind_param\'', $1, $2)" ) )
+            TrickySql8Stmt(cornucopia_async :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (e'this is ''not'' a \':bind_param\'', $1, $2)"))
         }
         pub struct TrickySql8Stmt(cornucopia_async::private::Stmt);
         impl TrickySql8Stmt {
@@ -5027,7 +5053,7 @@ FROM
             }
         }
         pub fn tricky_sql9() -> TrickySql9Stmt {
-            TrickySql9Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", async, enum) VALUES (E'this is \'not\' a \':bind_param\'', $1, $2)" ) )
+            TrickySql9Stmt(cornucopia_async :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (E'this is \'not\' a \':bind_param\'', $1, $2)"))
         }
         pub struct TrickySql9Stmt(cornucopia_async::private::Stmt);
         impl TrickySql9Stmt {
@@ -5066,7 +5092,7 @@ FROM
             }
         }
         pub fn tricky_sql10() -> TrickySql10Stmt {
-            TrickySql10Stmt ( cornucopia_async :: private :: Stmt :: new ( "INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is just a cast'::text, $1, $2)" ) )
+            TrickySql10Stmt(cornucopia_async :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is just a cast'::text, $1, $2)"))
         }
         pub struct TrickySql10Stmt(cornucopia_async::private::Stmt);
         impl TrickySql10Stmt {

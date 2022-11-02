@@ -1150,6 +1150,9 @@ dependencies = [
 [[package]]
 name = "quote"
 version = "0.1.0"
+dependencies = [
+ "unscanny",
+]
 
 [[package]]
 name = "quote"
@@ -1701,6 +1704,12 @@ name = "unicode-width"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3ed742d4ea2bd1176e236172c8429aaf54486e7ac098db29ffe6529e0ce50973"
+
+[[package]]
+name = "unscanny"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9df2af067a7953e9c3831320f35c1cc0600c30d44d9f7a12b01db1cd88d6b47"
 
 [[package]]
 name = "uuid"

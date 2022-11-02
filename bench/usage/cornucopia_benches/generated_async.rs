@@ -523,7 +523,7 @@ pub mod queries {
             }
         }
         pub fn select_complex() -> SelectComplexStmt {
-            SelectComplexStmt ( cornucopia_async :: private :: Stmt :: new ( "SELECT u.id as myuser_id, u.name, u.hair_color, p.id as post_id, p.user_id, p.title, p.body FROM users as u LEFT JOIN posts as p on u.id = p.user_id" ) )
+            SelectComplexStmt(cornucopia_async :: private :: Stmt :: new("SELECT u.id as myuser_id, u.name, u.hair_color, p.id as post_id, p.user_id, p.title, p.body FROM users as u LEFT JOIN posts as p on u.id = p.user_id"))
         }
         pub struct SelectComplexStmt(cornucopia_async::private::Stmt);
         impl SelectComplexStmt {

@@ -80,6 +80,7 @@ fn enum_sql(w: &mut impl Write, name: &str, enum_name: &str, variants: &[String]
         .iter()
         .map(|v| format!("\"{}\"", unescape_keyword(v)))
         .collect();
+    let unescaped_variants_str_iter = unescaped_variants_str.iter();
     let name = format!("\"{name}\"");
     let nb_variants = format!("{}usize", variants.len());
     quote!(w =>
@@ -90,7 +91,7 @@ fn enum_sql(w: &mut impl Write, name: &str, enum_name: &str, variants: &[String]
                 buf: &mut postgres_types::private::BytesMut,
             ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>,> {
                 let s = match *self {
-                    #(#enum_names::#variants => #unescaped_variants_str,)*
+                    #(#enum_names::#variants => #unescaped_variants_str_iter,)*
                 };
                 buf.extend_from_slice(s.as_bytes());
                 std::result::Result::Ok(postgres_types::IsNull::No)
@@ -105,7 +106,7 @@ fn enum_sql(w: &mut impl Write, name: &str, enum_name: &str, variants: &[String]
                             return false;
                         }
                         variants.iter().all(|v| match &**v {
-                            #(#unescaped_variants_str => true,)*
+                            #(#unescaped_variants_str_iter => true,)*
                             _ => false,
                         })
                     }
@@ -126,7 +127,7 @@ fn enum_sql(w: &mut impl Write, name: &str, enum_name: &str, variants: &[String]
                 buf: &'a [u8],
             ) -> Result<#enum_name, Box<dyn std::error::Error + Sync + Send>,> {
                 match std::str::from_utf8(buf)? {
-                    #(#unescaped_variants_str => Ok(#enum_names2::#variants),)*
+                    #(#unescaped_variants_str_iter => Ok(#enum_names2::#variants),)*
                     s => Result::Err(Into::into(format!(
                         "invalid variant `{}`",
                         s
@@ -143,7 +144,7 @@ fn enum_sql(w: &mut impl Write, name: &str, enum_name: &str, variants: &[String]
                             return false;
                         }
                         variants.iter().all(|v| match &**v {
-                            #(#unescaped_variants_str => true,)*
+                            #(#unescaped_variants_str_iter => true,)*
                             _ => false,
                         })
                     }
@@ -190,7 +191,7 @@ fn struct_tosql(
                 out: &mut postgres_types::private::BytesMut,
             ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>,> {
                 let #struct_name {
-                    #(#field_names),*
+                    #(#field_names,)*
                 } = self;
                 let fields = match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => fields,
@@ -280,7 +281,7 @@ fn composite_fromsql(
                     let _oid = postgres_types::private::read_be_i32(&mut out)?;
                     let #read_names = postgres_types::private::read_value(fields[#read_idx].type_(), &mut out)?;
                 )*
-                Ok(#struct_name { #(#field_names),* })
+                Ok(#struct_name { #(#field_names,)* })
             }
 
             fn accepts(ty: &postgres_types::Type) -> bool {
@@ -313,8 +314,8 @@ fn gen_params_struct(w: &mut impl Write, params: &PreparedItem, settings: Codege
         let traits_idx = (1..=traits.len()).into_iter().map(idx_char);
         quote!(w =>
             #[derive(#copy Debug)]
-            pub struct #name<#lifetime #(#traits_idx: #traits),*> {
-                #(pub #fields_name: #fields_ty),*
+            pub struct #name<#lifetime #(#traits_idx: #traits,)*> {
+                #(pub #fields_name: #fields_ty,)*
             }
         );
     }
@@ -344,7 +345,7 @@ fn gen_row_structs(
         quote!(w =>
             #[derive(#ser_str Debug, Clone, PartialEq,#copy)]
             pub struct #name {
-                #(pub #fields_name : #fields_ty),*
+                #(pub #fields_name : #fields_ty,)*
             }
         );
 
@@ -356,12 +357,12 @@ fn gen_row_structs(
             let brw_name = format!("{name}Borrowed");
             quote!(w =>
                 pub struct #brw_name<'a> {
-                    #(pub #fields_name : #fields_ty),*
+                    #(pub #fields_name : #fields_ty,)*
                 }
                 impl<'a> From<#brw_name<'a>> for #name {
-                    fn from(#brw_name { #(#from_name),* }: #brw_name<'a>) -> Self {
+                    fn from(#brw_name { #(#from_name,)* }: #brw_name<'a>) -> Self {
                         Self {
-                            #(#from_own_assign),*
+                            #(#from_own_assign,)*
                         }
                     }
                 }
@@ -531,7 +532,7 @@ fn gen_query_fn(
                         let fields_name = fields.iter().map(|p| &p.name);
                         let fields_idx = (0..fields.len()).map(|i| index[i]);
                         quote!(w => #name {
-                            #(#fields_name: row.get(#fields_idx)),*
+                            #(#fields_name: row.get(#fields_idx),)*
                         })
                     })),
                     format!("<{row_name}>::from(it)"),
@@ -546,10 +547,10 @@ fn gen_query_fn(
             };
             let query_name = format!("{row_name}Query");
             quote!(w =>
-                pub fn bind<'a, C: GenericClient,#(#traits_idx: #traits),*>(&'a mut self, client: &'a #client_mut C, #(#params_name: &'a #params_ty),* ) -> #query_name<'a,C, #row_struct_name, #nb_params> {
+                pub fn bind<'a, C: GenericClient,#(#traits_idx: #traits,)*>(&'a mut self, client: &'a #client_mut C, #(#params_name: &'a #params_ty,)* ) -> #query_name<'a,C, #row_struct_name, #nb_params> {
                     #query_name {
                         client,
-                        params: [#(#params_name2),*],
+                        params: [#(#params_name2,)*],
                         stmt: &mut self.0,
                         extractor: |row| { #extractor },
                         mapper: |it| { #mapper },
@@ -565,9 +566,9 @@ fn gen_query_fn(
             let traits_idx = traits_idx.clone();
             let params_name = params_name.clone();
             quote!(w =>
-                pub #fn_async fn bind<'a, C: GenericClient,#(#traits_idx: #traits),*>(&'a mut self, client: &'a #client_mut C, #(#params_name: &'a #params_ty),*) -> Result<u64, #backend::Error> {
+                pub #fn_async fn bind<'a, C: GenericClient,#(#traits_idx: #traits,)*>(&'a mut self, client: &'a #client_mut C, #(#params_name: &'a #params_ty,)*) -> Result<u64, #backend::Error> {
                     let stmt = self.0.prepare(client)#fn_await?;
-                    client.execute(stmt, &[ #(#params_wrap),* ])#fn_await
+                    client.execute(stmt, &[ #(#params_wrap,)* ])#fn_await
                 }
             );
         }
@@ -612,9 +613,9 @@ fn gen_query_fn(
                 let nb_params = param_field.len();
                 let query_name = format!("{name}Query");
                 quote!(w =>
-                    impl <'a, C: GenericClient,#(#traits_idx: #traits),*> #client::Params<'a, #param_name<#lifetime #(#traits_idx2),*>, #query_name<'a, C, #query_row_struct, #nb_params>, C> for #stmt_name {
-                        fn params(&'a mut self, client: &'a #client_mut C, params: &'a #param_name<#lifetime #(#traits_idx3),*>) -> #query_name<'a, C, #query_row_struct, #nb_params> {
-                            self.bind(client, #(&params.#params_name),*)
+                    impl <'a, C: GenericClient,#(#traits_idx: #traits,)*> #client::Params<'a, #param_name<#lifetime #(#traits_idx2,)*>, #query_name<'a, C, #query_row_struct, #nb_params>, C> for #stmt_name {
+                        fn params(&'a mut self, client: &'a #client_mut C, params: &'a #param_name<#lifetime #(#traits_idx3,)*>) -> #query_name<'a, C, #query_row_struct, #nb_params> {
+                            self.bind(client, #(&params.#params_name,)*)
                         }
                     }
                 );
@@ -631,9 +632,9 @@ fn gen_query_fn(
                     ("", "Result", "", "self", "")
                 };
                 quote!(w =>
-                    impl <'a, C: GenericClient #send_sync, #(#traits_idx: #traits),*> #client::Params<'a, #param_name<#lifetime #(#traits_idx2),*>, #pre_ty<u64, #backend::Error>#post_ty_lf, C> for #stmt_name {
-                        fn params(&'a mut self, client: &'a #client_mut C, params: &'a #param_name<#lifetime #(#traits_idx3),*>) -> #pre_ty<u64, #backend::Error>#post_ty_lf {
-                            #pre.bind(client, #(&params.#params_name),*)#post
+                    impl <'a, C: GenericClient #send_sync, #(#traits_idx: #traits,)*> #client::Params<'a, #param_name<#lifetime #(#traits_idx2,)*>, #pre_ty<u64, #backend::Error>#post_ty_lf, C> for #stmt_name {
+                        fn params(&'a mut self, client: &'a #client_mut C, params: &'a #param_name<#lifetime #(#traits_idx3,)*>) -> #pre_ty<u64, #backend::Error>#post_ty_lf {
+                            #pre.bind(client, #(&params.#params_name,)*)#post
                         }
                     }
                 );
@@ -669,7 +670,7 @@ fn gen_custom_type(
                 #[derive(#ser_str Debug, Clone, Copy, PartialEq, Eq)]
                 #[allow(non_camel_case_types)]
                 pub enum #struct_name {
-                    #(#variants),*
+                    #(#variants,)*
                 }
             );
             enum_sql(w, name, struct_name, variants);
@@ -683,7 +684,7 @@ fn gen_custom_type(
                     #[derive(#ser_str Debug,postgres_types::FromSql,#copy Clone, PartialEq)]
                     #[postgres(name = #name_str)]
                     pub struct #struct_name {
-                        #(pub #fields_name: #fields_ty),*
+                        #(pub #fields_name: #fields_ty,)*
                     }
                 );
             }
@@ -698,16 +699,16 @@ fn gen_custom_type(
                 quote!(w =>
                     #[derive(Debug)]
                     pub struct #brw_name<'a> {
-                        #(pub #fields_name2: #fields_brw),*
+                        #(pub #fields_name2: #fields_brw,)*
                     }
                     impl<'a> From<#brw_name<'a>> for #struct_name {
                         fn from(
                             #brw_name {
-                            #(#fields_name3),*
+                            #(#fields_name3,)*
                             }: #brw_name<'a>,
                         ) -> Self {
                             Self {
-                                #(#fields_owning),*
+                                #(#fields_owning,)*
                             }
                         }
                     }
@@ -720,7 +721,7 @@ fn gen_custom_type(
                     quote!(w =>
                         #[derive(Debug #derive)]
                         pub struct #param_name<'a> {
-                            #(pub #fields_name: #fields_ty),*
+                            #(pub #fields_name: #fields_ty,)*
                         }
                     );
                 }

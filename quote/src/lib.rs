@@ -1,216 +1,181 @@
-// Not public API.
-#[doc(hidden)]
-#[path = "runtime.rs"]
-pub mod __private;
+use proc_macro::TokenStream;
+use unscanny::Scanner;
 
-/// The whole point.
-///
-/// Performs variable interpolation against the input and produces it as
-/// [`TokenStream`].
-///
-/// # Interpolation
-///
-/// Variable interpolation is done with `#var` (similar to `$var` in
-/// `macro_rules!` macros). This grabs the `var` variable that is currently in
-/// scope and inserts it in that location in the output tokens. Any type
-/// implementing the [`ToTokens`] trait can be interpolated. This includes most
-/// Rust primitive types.
-///
-/// [`ToTokens`]: trait.ToTokens.html
-///
-/// Repetition is done using `#(...)*` or `#(...),*` again similar to
-/// `macro_rules!`. This iterates through the elements of any variable
-/// interpolated within the repetition and inserts a copy of the repetition body
-/// for each one. The variables in an interpolation may be a `Vec`, slice,
-/// `BTreeSet`, or any `Iterator`.
-///
-/// - `#(#var)*` — no separators
-/// - `#(#var),*` — the character before the asterisk is used as a separator
-/// - `#( struct #var; )*` — the repetition can contain other tokens
-/// - `#( #k => println!("{}", #v), )*` — even multiple interpolations
-#[macro_export]
-macro_rules! quote {
-    ($tokens:ident => $($tt:tt)*) => {{
-        $crate::quote_each_token!($tokens $($tt)*);
-    }};
+enum Pattern<'a> {
+    Display(&'a str),
+    Iterator(&'a str),
+    Unknown(&'a str),
 }
 
-// Extract the names of all #metavariables and pass them to the $call macro.
-//
-// in:   pounded_var_names!(then!(...) a #b c #( #d )* #e)
-// out:  then!(... b);
-//       then!(... d);
-//       then!(... e);
-#[macro_export]
-#[doc(hidden)]
-macro_rules! pounded_var_names {
-    ($call:ident! $extra:tt $($tts:tt)*) => {
-        $crate::pounded_var_names_with_context!($call! $extra
-            (@ $($tts)*)
-            ($($tts)* @)
-        )
-    };
+const PATTERN: char = '#';
+
+fn ident(c: char) -> bool {
+    c.is_alphanumeric() || c == '_'
 }
 
-#[macro_export]
-#[doc(hidden)]
-macro_rules! pounded_var_names_with_context {
-    ($call:ident! $extra:tt ($($b1:tt)*) ($($curr:tt)*)) => {
-        $(
-            $crate::pounded_var_with_context!($call! $extra $b1 $curr);
-        )*
-    };
-}
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! pounded_var_with_context {
-    ($call:ident! $extra:tt $b1:tt ( $($inner:tt)* )) => {
-        $crate::pounded_var_names!($call! $extra $($inner)*);
-    };
-
-    ($call:ident! $extra:tt $b1:tt [ $($inner:tt)* ]) => {
-        $crate::pounded_var_names!($call! $extra $($inner)*);
-    };
-
-    ($call:ident! $extra:tt $b1:tt { $($inner:tt)* }) => {
-        $crate::pounded_var_names!($call! $extra $($inner)*);
-    };
-
-    ($call:ident!($($extra:tt)*) # $var:ident) => {
-        $crate::$call!($($extra)* $var);
-    };
-
-    ($call:ident! $extra:tt $b1:tt $curr:tt) => {};
-}
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! quote_bind_into_iter {
-    ($has_iter:ident $var:ident) => {
-        // `mut` may be unused if $var occurs multiple times in the list.
-        #[allow(unused_mut)]
-        let (mut $var, i) = $var.quote_into_iter();
-        let $has_iter = $has_iter | i;
-    };
-}
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! quote_bind_next_or_break {
-    ($var:ident) => {
-        let $var = match $var.next() {
-            Some(_x) => $crate::__private::RepInterp(_x),
-            None => break,
-        };
-    };
-}
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! quote_each_token {
-    ($tokens:ident $($tts:tt)*) => {
-        $crate::quote_tokens_with_context!($tokens
-            (@ @ @ @ @ @ $($tts)*)
-            (@ @ @ @ @ $($tts)* @)
-            (@ @ @ @ $($tts)* @ @)
-            (@ @ @ $(($tts))* @ @ @)
-            (@ @ $($tts)* @ @ @ @)
-            (@ $($tts)* @ @ @ @ @)
-            ($($tts)* @ @ @ @ @ @)
-        );
-    };
-}
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! quote_tokens_with_context {
-    ($tokens:ident
-        ($($b3:tt)*) ($($b2:tt)*) ($($b1:tt)*)
-        ($($curr:tt)*)
-        ($($a1:tt)*) ($($a2:tt)*) ($($a3:tt)*)
-    ) => {
-        $(
-            $crate::quote_token_with_context!($tokens $b3 $b2 $b1 $curr $a1 $a2 $a3);
-        )*
-    };
-}
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! quote_token_with_context {
-    ($tokens:ident $b3:tt $b2:tt $b1:tt @ $a1:tt $a2:tt $a3:tt) => {};
-
-    ($tokens:ident $b3:tt $b2:tt $b1:tt (#) ( $($inner:tt)* ) * $a3:tt) => {{
-        use $crate::__private::ext::*;
-        let has_iter = $crate::__private::ThereIsNoIteratorInRepetition;
-        $crate::pounded_var_names!(quote_bind_into_iter!(has_iter) () $($inner)*);
-        let _: $crate::__private::HasIterator = has_iter;
-        // This is `while true` instead of `loop` because if there are no
-        // iterators used inside of this repetition then the body would not
-        // contain any `break`, so the compiler would emit unreachable code
-        // warnings on anything below the loop. We use has_iter to detect and
-        // fail to compile when there are no iterators, so here we just work
-        // around the unneeded extra warning.
-        while true {
-            $crate::pounded_var_names!(quote_bind_next_or_break!() () $($inner)*);
-            $crate::quote_each_token!($tokens $($inner)*);
-        }
-    }};
-    ($tokens:ident $b3:tt $b2:tt # (( $($inner:tt)* )) * $a2:tt $a3:tt) => {};
-    ($tokens:ident $b3:tt # ( $($inner:tt)* ) (*) $a1:tt $a2:tt $a3:tt) => {};
-
-    ($tokens:ident $b3:tt $b2:tt $b1:tt (#) ( $($inner:tt)* ) $sep:tt *) => {{
-        use $crate::__private::ext::*;
-        let mut _i = 0usize;
-        let has_iter = $crate::__private::ThereIsNoIteratorInRepetition;
-        $crate::pounded_var_names!(quote_bind_into_iter!(has_iter) () $($inner)*);
-        let _: $crate::__private::HasIterator = has_iter;
-        while true {
-            $crate::pounded_var_names!(quote_bind_next_or_break!() () $($inner)*);
-            if _i > 0 {
-                $crate::quote_token!($tokens $sep);
+fn parse_raw<'a>(scan: &mut Scanner<'a>) -> &'a str {
+    let start = scan.cursor();
+    loop {
+        scan.eat_until(PATTERN);
+        let before_pat = scan.cursor();
+        // Check if is pattern
+        if scan.eat_if(PATTERN) {
+            scan.eat_whitespace();
+            match scan.peek() {
+                Some('[') => continue,
+                Some(_) => {
+                    scan.jump(before_pat);
+                    return scan.from(start);
+                }
+                None => return scan.from(start),
             }
-            _i += 1;
-            $crate::quote_each_token!($tokens $($inner)*);
+        } else {
+            return scan.from(start);
         }
-    }};
-    ($tokens:ident $b3:tt $b2:tt # (( $($inner:tt)* )) $sep:tt * $a3:tt) => {};
-    ($tokens:ident $b3:tt # ( $($inner:tt)* ) ($sep:tt) * $a2:tt $a3:tt) => {};
-    ($tokens:ident # ( $($inner:tt)* ) * (*) $a1:tt $a2:tt $a3:tt) => {
-        // https://github.com/dtolnay/quote/issues/130
-        $crate::quote_token!($tokens *);
-    };
-    ($tokens:ident # ( $($inner:tt)* ) $sep:tt (*) $a1:tt $a2:tt $a3:tt) => {};
-
-    ($tokens:ident $b3:tt $b2:tt $b1:tt (#) $var:ident $a2:tt $a3:tt) => {
-        write!($tokens, " {}", $var).unwrap();
-    };
-    ($tokens:ident $b3:tt $b2:tt # ($var:ident) $a1:tt $a2:tt $a3:tt) => {};
-    ($tokens:ident $b3:tt $b2:tt $b1:tt ($curr:tt) $a1:tt $a2:tt $a3:tt) => {
-        $crate::quote_token!($tokens $curr);
-    };
+    }
 }
 
-#[macro_export]
-#[doc(hidden)]
-macro_rules! quote_token {
-    ($tokens:ident ( $($inner:tt)* )) => {
-        write!($tokens, " (").unwrap();
-        $crate::quote_each_token!($tokens $($inner)*);
-        write!($tokens, " )").unwrap();
-    };
-    ($tokens:ident [ $($inner:tt)* ]) => {
-        write!($tokens, " [").unwrap();
-        $crate::quote_each_token!($tokens $($inner)*);
-        write!($tokens, " ]").unwrap();
-    };
-    ($tokens:ident { $($inner:tt)* }) => {
-        write!($tokens, " {{").unwrap();
-        $crate::quote_each_token!($tokens $($inner)*);
-        write!($tokens, " }}").unwrap();
-    };
-    ($tokens:ident $other:tt) => {
-        write!($tokens, " {}", stringify!($other)).unwrap();
-    };
+fn parse_next<'a>(scan: &mut Scanner<'a>) -> (&'a str, Option<Pattern<'a>>) {
+    let raw = parse_raw(scan);
+
+    if scan.eat_if(PATTERN) {
+        scan.eat_whitespace();
+        let pattern = if scan.at(char::is_alphabetic) {
+            Some(Pattern::Display(scan.eat_while(ident)))
+        } else if scan.eat_if('(') {
+            let start = scan.cursor();
+            let mut count_delim = 0;
+            while let Some(c) = scan.peek() {
+                match c {
+                    ')' if count_delim == 0 => break,
+                    ')' => count_delim -= 1,
+                    '(' => count_delim += 1,
+                    _ => {}
+                }
+                scan.eat();
+            }
+            let inner = scan.from(start);
+            scan.expect(')');
+            scan.eat_whitespace();
+            let mut sep = scan.eat();
+            if sep != Some('*') {
+                scan.eat_whitespace();
+                scan.expect("*");
+            } else {
+                sep.take();
+            }
+            Some(Pattern::Iterator(inner))
+        } else {
+            Some(Pattern::Unknown(scan.eat_while(|_| true)))
+        };
+        (raw, pattern)
+    } else {
+        (raw, None)
+    }
+}
+
+fn ident_in_iterator<'a>(scan: &'a mut Scanner) -> Vec<&'a str> {
+    let start = scan.cursor();
+    let mut idents = Vec::new();
+    loop {
+        parse_raw(scan);
+        if scan.eat_if(PATTERN) {
+            scan.eat_whitespace();
+            if scan.at(char::is_alphabetic) {
+                idents.push(scan.eat_while(ident))
+            } else {
+                //panic!("Expected ident");
+            }
+        } else {
+            break;
+        }
+    }
+    scan.jump(start);
+    idents
+}
+
+fn gen_str(s: &mut String, out: &str, str: &str) {
+    if !str.is_empty() {
+        s.push_str(out);
+        s.push_str(".write_str(\"");
+        for c in str.chars() {
+            if c == '"' {
+                s.push_str("\\\"")
+            } else {
+                s.push(c)
+            }
+        }
+        s.push_str("\").unwrap();\n");
+    }
+}
+
+fn gen_disp(s: &mut String, out: &str, ident: &str) {
+    s.push_str(out);
+    s.push_str(".write_fmt(format_args!(\"{}\",");
+    s.push_str(ident);
+    s.push_str(")).unwrap();\n");
+}
+
+fn gen_recursive<'a>(scan: &'a mut Scanner, s: &mut String, out: &str) {
+    s.push('{');
+    loop {
+        let (raw, pattern) = parse_next(scan);
+        if raw.is_empty() && pattern.is_none() {
+            break;
+        }
+        gen_str(s, out, raw);
+        if let Some(pattern) = pattern {
+            match pattern {
+                Pattern::Display(pat) => gen_disp(s, out, pat),
+                Pattern::Iterator(inner) => {
+                    let mut scan = Scanner::new(inner);
+                    let idents = ident_in_iterator(&mut scan);
+                    let mut iter = idents.iter();
+                    s.push_str("{\nlet iter = ");
+                    s.push_str(iter.next().unwrap());
+                    s.push_str(".clone()");
+                    for item in iter {
+                        s.push_str(".zip(");
+                        s.push_str(item);
+                        s.push_str(".clone())");
+                    }
+                    s.push_str(";\n");
+                    s.push_str("for ");
+                    for _ in 1..idents.len() {
+                        s.push('(');
+                    }
+                    let mut iter = idents.iter();
+                    s.push_str(iter.next().unwrap());
+                    for item in iter {
+                        s.push(',');
+                        s.push_str(item);
+                        s.push(')');
+                    }
+                    s.push_str(" in iter {\n");
+                    gen_recursive(&mut scan, s, out);
+                    s.push_str("}\n}\n");
+                }
+                Pattern::Unknown(it) => {
+                    panic!("unknown: '{}'", it);
+                    //writeln!(s, "// \"unknown: '{}'\";", it.replace('"', "\\\"")).unwrap()
+                }
+            }
+        }
+    }
+    s.push('}');
+}
+
+#[proc_macro]
+pub fn quote(pattern: TokenStream) -> TokenStream {
+    let pattern = pattern.to_string();
+    let mut scan = unscanny::Scanner::new(&pattern);
+    scan.eat_whitespace();
+    let out = scan.eat_while(ident);
+    scan.eat_whitespace();
+    scan.expect("=>");
+    scan.eat_whitespace();
+
+    let mut s = String::new();
+    gen_recursive(&mut scan, &mut s, out);
+    s.parse().unwrap()
 }
