@@ -34,7 +34,7 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Enum(ref variants) => {
-                        if variants.len() != 3usize {
+                        if variants.len() != 3 {
                             return false;
                         }
                         variants.iter().all(|v| match &**v {
@@ -74,7 +74,7 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Enum(ref variants) => {
-                        if variants.len() != 3usize {
+                        if variants.len() != 3 {
                             return false;
                         }
                         variants.iter().all(|v| match &**v {

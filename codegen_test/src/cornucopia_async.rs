@@ -96,7 +96,7 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 2usize {
+                        if fields.len() != 2 {
                             return false;
                         }
                         fields.iter().all(|f| match f.name() {
@@ -165,7 +165,7 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 2usize {
+                        if fields.len() != 2 {
                             return false;
                         }
                         fields.iter().all(|f| match f.name() {
@@ -320,16 +320,16 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 4usize {
+                        if fields.len() != 4 {
                             return false;
                         }
                         fields.iter().all(| f | match f.name()
                 {
-                    "txt" => < cornucopia_async::private::Domain::<&'a str> as postgres_types :: ToSql
-                    > :: accepts(f.type_()),"json" => < cornucopia_async::private::Domain::<&'a serde_json::value::Value> as postgres_types :: ToSql
-                    > :: accepts(f.type_()),"nb" => < cornucopia_async::private::Domain::<i32> as postgres_types :: ToSql
-                    > :: accepts(f.type_()),"arr" => < cornucopia_async::private::Domain::<cornucopia_async::private::DomainArray::<&'a serde_json::value::Value, &[&'a serde_json::value::Value]>> as postgres_types :: ToSql
-                    > :: accepts(f.type_()), _ => false,
+                    "txt" => < cornucopia_async::private::Domain::<&'a str> as postgres_types :: ToSql >
+                    :: accepts(f.type_()),"json" => < cornucopia_async::private::Domain::<&'a serde_json::value::Value> as postgres_types :: ToSql >
+                    :: accepts(f.type_()),"nb" => < cornucopia_async::private::Domain::<i32> as postgres_types :: ToSql >
+                    :: accepts(f.type_()),"arr" => < cornucopia_async::private::Domain::<cornucopia_async::private::DomainArray::<&'a serde_json::value::Value, &[&'a serde_json::value::Value]>> as postgres_types :: ToSql >
+                    :: accepts(f.type_()), _ => false,
                 })
                     }
                     _ => false,
@@ -434,7 +434,7 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 2usize {
+                        if fields.len() != 2 {
                             return false;
                         }
                         fields.iter().all(|f| match f.name() {
@@ -558,15 +558,15 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 2usize {
+                        if fields.len() != 2 {
                             return false;
                         }
                         fields.iter().all(|f| {
                             match f.name()
                 {
-                    "jsons" => < &'a [&'a serde_json::value::Value] as postgres_types :: ToSql
-                    > :: accepts(f.type_()),"id" => < i32 as postgres_types :: ToSql
-                    > :: accepts(f.type_()), _ => false,
+                    "jsons" => < &'a [&'a serde_json::value::Value] as postgres_types :: ToSql >
+                    :: accepts(f.type_()),"id" => < i32 as postgres_types :: ToSql >
+                    :: accepts(f.type_()), _ => false,
                 }
                         })
                     }
@@ -610,7 +610,7 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Enum(ref variants) => {
-                        if variants.len() != 3usize {
+                        if variants.len() != 3 {
                             return false;
                         }
                         variants.iter().all(|v| match &**v {
@@ -650,7 +650,7 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Enum(ref variants) => {
-                        if variants.len() != 3usize {
+                        if variants.len() != 3 {
                             return false;
                         }
                         variants.iter().all(|v| match &**v {
@@ -774,15 +774,15 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 3usize {
+                        if fields.len() != 3 {
                             return false;
                         }
                         fields.iter().all(| f | match f.name()
                 {
-                    "wow" => < &'a str as postgres_types :: ToSql
-                    > :: accepts(f.type_()),"such_cool" => < i32 as postgres_types :: ToSql
-                    > :: accepts(f.type_()),"nice" => < super::super::types::public::SpongebobCharacter as postgres_types :: ToSql
-                    > :: accepts(f.type_()), _ => false,
+                    "wow" => < &'a str as postgres_types :: ToSql >
+                    :: accepts(f.type_()),"such_cool" => < i32 as postgres_types :: ToSql >
+                    :: accepts(f.type_()),"nice" => < super::super::types::public::SpongebobCharacter as postgres_types :: ToSql >
+                    :: accepts(f.type_()), _ => false,
                 })
                     }
                     _ => false,
@@ -923,15 +923,15 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 3usize {
+                        if fields.len() != 3 {
                             return false;
                         }
                         fields.iter().all(| f | match f.name()
                 {
-                    "custom" => < &'a [super::super::types::public::CustomCompositeBorrowed<'a>] as postgres_types :: ToSql
-                    > :: accepts(f.type_()),"spongebob" => < &'a [super::super::types::public::SpongebobCharacter] as postgres_types :: ToSql
-                    > :: accepts(f.type_()),"domain" => < cornucopia_async::private::Domain::<&'a str> as postgres_types :: ToSql
-                    > :: accepts(f.type_()), _ => false,
+                    "custom" => < &'a [super::super::types::public::CustomCompositeBorrowed<'a>] as postgres_types :: ToSql >
+                    :: accepts(f.type_()),"spongebob" => < &'a [super::super::types::public::SpongebobCharacter] as postgres_types :: ToSql >
+                    :: accepts(f.type_()),"domain" => < cornucopia_async::private::Domain::<&'a str> as postgres_types :: ToSql >
+                    :: accepts(f.type_()), _ => false,
                 })
                     }
                     _ => false,
@@ -992,7 +992,7 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 1usize {
+                        if fields.len() != 1 {
                             return false;
                         }
                         fields.iter().all(|f| match f.name() {
@@ -1038,7 +1038,7 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Enum(ref variants) => {
-                        if variants.len() != 2usize {
+                        if variants.len() != 2 {
                             return false;
                         }
                         variants.iter().all(|v| match &**v {
@@ -1076,7 +1076,7 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Enum(ref variants) => {
-                        if variants.len() != 2usize {
+                        if variants.len() != 2 {
                             return false;
                         }
                         variants.iter().all(|v| match &**v {
