@@ -494,32 +494,32 @@ fn gen_query_fn<W: Write>(
             let nb_params = param_field.len();
 
             // TODO find a way to clean this mess
-            let (row_struct_name, extractor, mapper): (String, Box<dyn Fn(&mut W)>, String) =
-                if *is_named {
-                    (
-                        row_name.value.clone(),
-                        Box::new(|w: _| {
-                            let name = if *is_copy {
-                                row_name.to_string()
-                            } else {
-                                format!("{row_name}Borrowed")
-                            };
-                            let fields_name = fields.iter().map(|p| &p.name);
-                            let fields_idx = (0..fields.len()).map(|i| index[i]);
-                            quote!(w => $name {
-                                $($fields_name: row.get($fields_idx),)*
-                            })
-                        }),
-                        format!("<{row_name}>::from(it)"),
-                    )
-                } else {
-                    let field = &fields[0];
-                    (
-                        field.own_struct(),
-                        Box::new(|w: _| quote!(w => row.get(0))),
-                        field.owning_call(Some("it")),
-                    )
-                };
+            #[allow(clippy::type_complexity)]
+            let (row_struct_name, extractor, mapper): (_, Box<dyn Fn(&mut W)>, _) = if *is_named {
+                (
+                    row_name.value.clone(),
+                    Box::new(|w: _| {
+                        let name = if *is_copy {
+                            row_name.to_string()
+                        } else {
+                            format!("{row_name}Borrowed")
+                        };
+                        let fields_name = fields.iter().map(|p| &p.name);
+                        let fields_idx = (0..fields.len()).map(|i| index[i]);
+                        quote!(w => $name {
+                            $($fields_name: row.get($fields_idx),)*
+                        })
+                    }),
+                    format!("<{row_name}>::from(it)"),
+                )
+            } else {
+                let field = &fields[0];
+                (
+                    field.own_struct(),
+                    Box::new(|w: _| quote!(w => row.get(0))),
+                    field.owning_call(Some("it")),
+                )
+            };
             quote!(w =>
                 pub fn bind<'a, C: GenericClient,$($traits_idx: $traits,)*>(&'a mut self, client: &'a $client_mut C, $($params_name: &'a $params_ty,)* ) -> ${row_name}Query<'a,C, $row_struct_name, $nb_params> {
                     ${row_name}Query {
