@@ -1,5 +1,5 @@
 use core::str;
-use std::fmt::{Formatter, Write};
+use std::fmt::Write;
 
 use heck::ToUpperCamelCase;
 use indexmap::IndexMap;
@@ -10,7 +10,7 @@ use crate::{
         Preparation, PreparedContent, PreparedField, PreparedItem, PreparedModule, PreparedQuery,
         PreparedType,
     },
-    utils::{escape_keyword, unescape_keyword, Lazy},
+    utils::{escape_keyword, unescape_keyword},
     CodegenSettings,
 };
 
@@ -447,8 +447,8 @@ pub fn idx_char(idx: usize) -> String {
     format!("T{idx}")
 }
 
-fn gen_query_fn(
-    w: &mut impl Write,
+fn gen_query_fn<W: Write>(
+    w: &mut W,
     module: &PreparedModule,
     query: &PreparedQuery,
     CodegenSettings { is_async, .. }: CodegenSettings,
@@ -481,7 +481,7 @@ fn gen_query_fn(
         .collect();
     let params_name = order.iter().map(|idx| &param_field[*idx].name);
     let traits_idx = (1..=traits.len()).into_iter().map(idx_char);
-    let lazy_impl = Lazy::new(|w| {
+    let lazy_impl = |w: &mut W| {
         if let Some((idx, index)) = row {
             let PreparedItem {
                 name: row_name,
@@ -494,42 +494,39 @@ fn gen_query_fn(
             let nb_params = param_field.len();
 
             // TODO find a way to clean this mess
-            let (row_struct_name, extractor, mapper): (
-                String,
-                Lazy<Box<dyn Fn(&mut Formatter)>>,
-                String,
-            ) = if *is_named {
-                (
-                    row_name.value.clone(),
-                    Lazy::new(Box::new(|w: &mut Formatter| {
-                        let name = if *is_copy {
-                            row_name.to_string()
-                        } else {
-                            format!("{row_name}Borrowed")
-                        };
-                        let fields_name = fields.iter().map(|p| &p.name);
-                        let fields_idx = (0..fields.len()).map(|i| index[i]);
-                        quote!(w => $name {
-                            $($fields_name: row.get($fields_idx),)*
-                        })
-                    })),
-                    format!("<{row_name}>::from(it)"),
-                )
-            } else {
-                let field = &fields[0];
-                (
-                    field.own_struct(),
-                    Lazy::new(Box::new(|w: &mut Formatter| quote!(w => row.get(0)))),
-                    field.owning_call(Some("it")),
-                )
-            };
+            let (row_struct_name, extractor, mapper): (String, Box<dyn Fn(&mut W)>, String) =
+                if *is_named {
+                    (
+                        row_name.value.clone(),
+                        Box::new(|w: _| {
+                            let name = if *is_copy {
+                                row_name.to_string()
+                            } else {
+                                format!("{row_name}Borrowed")
+                            };
+                            let fields_name = fields.iter().map(|p| &p.name);
+                            let fields_idx = (0..fields.len()).map(|i| index[i]);
+                            quote!(w => $name {
+                                $($fields_name: row.get($fields_idx),)*
+                            })
+                        }),
+                        format!("<{row_name}>::from(it)"),
+                    )
+                } else {
+                    let field = &fields[0];
+                    (
+                        field.own_struct(),
+                        Box::new(|w: _| quote!(w => row.get(0))),
+                        field.owning_call(Some("it")),
+                    )
+                };
             quote!(w =>
                 pub fn bind<'a, C: GenericClient,$($traits_idx: $traits,)*>(&'a mut self, client: &'a $client_mut C, $($params_name: &'a $params_ty,)* ) -> ${row_name}Query<'a,C, $row_struct_name, $nb_params> {
                     ${row_name}Query {
                         client,
                         params: [$($params_name,)*],
                         stmt: &mut self.0,
-                        extractor: |row| { $extractor },
+                        extractor: |row| { $!extractor },
                         mapper: |it| { $mapper },
                     }
                 }
@@ -547,7 +544,7 @@ fn gen_query_fn(
                 }
             );
         }
-    });
+    };
     // Gen statement struct
     {
         let sql = sql.replace('"', "\\\""); // Rust string format escaping
@@ -558,7 +555,7 @@ fn gen_query_fn(
             }
             pub struct ${struct_name}Stmt($client::private::Stmt);
             impl ${struct_name}Stmt {
-                $lazy_impl
+                $!lazy_impl
             }
         );
     }
@@ -695,24 +692,24 @@ fn gen_custom_type(
     }
 }
 
-fn gen_type_modules(
-    w: &mut impl Write,
+fn gen_type_modules<W: Write>(
+    w: &mut W,
     prepared: &IndexMap<String, Vec<PreparedType>>,
     settings: CodegenSettings,
 ) {
     let modules = prepared.iter().map(|(schema, types)| {
-        Lazy::new(move |w| {
-            let lazy = Lazy::new(|w| {
+        move |w: &mut W| {
+            let lazy = |w: &mut W| {
                 for ty in types {
                     gen_custom_type(w, schema, ty, settings)
                 }
-            });
+            };
 
             quote!(w =>
             pub mod $schema {
-                $lazy
+                $!lazy
             });
-        })
+        }
     });
     quote!(w =>
         #[allow(clippy::all, clippy::pedantic)]
@@ -720,7 +717,7 @@ fn gen_type_modules(
         #[allow(unused_imports)]
         #[allow(dead_code)]
         pub mod types {
-            $($modules)*
+            $($!modules)*
         }
     );
 }
@@ -737,29 +734,30 @@ pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> S
     gen_type_modules(w, &preparation.types, settings);
     // Generate queries
     let query_modules = preparation.modules.iter().map(|module| {
-        Lazy::new(move |w| {
+        move |w: &mut String| {
             let name = &module.info.name;
             let params_string = module
                 .params
                 .values()
-                .map(|params| Lazy::new(|w| gen_params_struct(w, params, settings)));
+                .map(|params| |w: &mut String| gen_params_struct(w, params, settings));
             let rows_string = module
                 .rows
                 .values()
-                .map(|row| Lazy::new(|w| gen_row_structs(w, row, settings)));
+                .map(|row| |w: &mut String| gen_row_structs(w, row, settings));
             let queries_string = module
                 .queries
                 .values()
-                .map(|query| Lazy::new(|w| gen_query_fn(w, module, query, settings)));
+                .map(|query| |w: &mut String| gen_query_fn(w, module, query, settings));
+
             quote!(w =>
                 pub mod $name {
                     $import
-                    $($params_string)*
-                    $($rows_string)*
-                    $($queries_string)*
+                    $($!params_string)*
+                    $($!rows_string)*
+                    $($!queries_string)*
                 }
             );
-        })
+        }
     });
     quote!(w =>
         #[allow(clippy::all, clippy::pedantic)]
@@ -767,7 +765,7 @@ pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> S
         #[allow(unused_imports)]
         #[allow(dead_code)]
         pub mod queries {
-            $($query_modules)*
+            $($!query_modules)*
         }
     );
     buff

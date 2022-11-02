@@ -4,13 +4,34 @@ use unscanny::Scanner;
 enum Pattern<'a> {
     Display(&'a str),
     Iterator(&'a str),
-    Unknown(&'a str),
+    Call(&'a str),
 }
 
 const PATTERN: char = '$';
 
-fn ident(c: char) -> bool {
+fn ident_start(c: char) -> bool {
+    c.is_alphabetic() || c == '_'
+}
+
+fn ident_body(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
+}
+
+fn parse_ident<'a>(scan: &mut Scanner<'a>) -> Option<&'a str> {
+    if scan.at(ident_start) {
+        Some(scan.eat_while(ident_body))
+    } else if scan.eat_if('{') {
+        scan.eat_whitespace();
+        let start = scan.cursor();
+        scan.eat_while(ident_body);
+        let ident = scan.from(start);
+        scan.eat_whitespace();
+        scan.expect('}');
+        scan.eat_whitespace();
+        Some(ident)
+    } else {
+        None
+    }
 }
 
 fn parse_next<'a>(scan: &mut Scanner<'a>) -> (&'a str, Option<Pattern<'a>>) {
@@ -18,17 +39,15 @@ fn parse_next<'a>(scan: &mut Scanner<'a>) -> (&'a str, Option<Pattern<'a>>) {
 
     if scan.eat_if(PATTERN) {
         scan.eat_whitespace();
-        let pattern = if scan.at(char::is_alphabetic) {
-            Some(Pattern::Display(scan.eat_while(ident)))
-        } else if scan.eat_if('{') {
-            scan.eat_whitespace();
-            let start = scan.cursor();
-            scan.eat_while(ident);
-            let ident = scan.from(start);
-            scan.eat_whitespace();
-            scan.expect('}');
-            scan.eat_whitespace();
+        let pattern = if let Some(ident) = parse_ident(scan) {
             Some(Pattern::Display(ident))
+        } else if scan.eat_if('!') {
+            scan.eat_whitespace();
+            if let Some(ident) = parse_ident(scan) {
+                Some(Pattern::Call(ident))
+            } else {
+                panic!("Unknown pattern $!{}", scan.eat_while(|_| true))
+            }
         } else if scan.eat_if('(') {
             let start = scan.cursor();
             let mut count_delim = 0;
@@ -53,7 +72,7 @@ fn parse_next<'a>(scan: &mut Scanner<'a>) -> (&'a str, Option<Pattern<'a>>) {
             }
             Some(Pattern::Iterator(inner))
         } else {
-            Some(Pattern::Unknown(scan.eat_while(|_| true)))
+            panic!("Unknown pattern ${}", scan.eat_while(|_| true))
         };
         (raw, pattern)
     } else {
@@ -64,17 +83,10 @@ fn parse_next<'a>(scan: &mut Scanner<'a>) -> (&'a str, Option<Pattern<'a>>) {
 fn ident_in_iterator<'a>(scan: &'a mut Scanner) -> Vec<&'a str> {
     let start = scan.cursor();
     let mut idents = Vec::new();
-    loop {
-        scan.eat_until(PATTERN);
-        if scan.eat_if(PATTERN) {
-            scan.eat_whitespace();
-            if scan.at(char::is_alphabetic) {
-                idents.push(scan.eat_while(ident))
-            } else {
-                //panic!("Expected ident");
-            }
-        } else {
-            break;
+    while let (_, Some(pat)) = parse_next(scan) {
+        match pat {
+            Pattern::Display(ident) | Pattern::Call(ident) => idents.push(ident),
+            Pattern::Iterator(_) => unreachable!(),
         }
     }
     scan.jump(start);
@@ -104,7 +116,6 @@ fn gen_disp(s: &mut String, out: &str, ident: &str) {
 }
 
 fn gen_recursive<'a>(scan: &'a mut Scanner, s: &mut String, out: &str) {
-    s.push('{');
     loop {
         let (raw, pattern) = parse_next(scan);
         if raw.is_empty() && pattern.is_none() {
@@ -113,7 +124,14 @@ fn gen_recursive<'a>(scan: &'a mut Scanner, s: &mut String, out: &str) {
         gen_str(s, out, raw);
         if let Some(pattern) = pattern {
             match pattern {
-                Pattern::Display(pat) => gen_disp(s, out, pat),
+                Pattern::Display(ident) => gen_disp(s, out, ident),
+                Pattern::Call(ident) => {
+                    s.push_str("let w = &mut*w;");
+                    s.push_str(ident);
+                    s.push_str("(&mut *");
+                    s.push_str(out);
+                    s.push_str(");\n");
+                }
                 Pattern::Iterator(inner) => {
                     let mut scan = Scanner::new(inner);
                     let idents = ident_in_iterator(&mut scan);
@@ -142,14 +160,9 @@ fn gen_recursive<'a>(scan: &'a mut Scanner, s: &mut String, out: &str) {
                     gen_recursive(&mut scan, s, out);
                     s.push_str("}\n}\n");
                 }
-                Pattern::Unknown(it) => {
-                    panic!("unknown: '{}'", it);
-                    //writeln!(s, "// \"unknown: '{}'\";", it.replace('"', "\\\"")).unwrap()
-                }
             }
         }
     }
-    s.push('}');
 }
 
 #[proc_macro]
@@ -157,12 +170,14 @@ pub fn quote(pattern: TokenStream) -> TokenStream {
     let pattern = pattern.to_string();
     let mut scan = unscanny::Scanner::new(&pattern);
     scan.eat_whitespace();
-    let out = scan.eat_while(ident);
+    let out = scan.eat_while(ident_body);
     scan.eat_whitespace();
     scan.expect("=>");
     scan.eat_whitespace();
 
     let mut s = String::new();
+    s.push('{');
     gen_recursive(&mut scan, &mut s, out);
+    s.push('}');
     s.parse().unwrap()
 }

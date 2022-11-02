@@ -1,32 +1,6 @@
-use std::{
-    cell::RefCell,
-    fmt::{Display, Formatter},
-};
-
 use indexmap::Equivalent;
 use postgres::error::ErrorPosition;
 use postgres_types::Type;
-
-pub struct Lazy<F: Fn(&mut Formatter)> {
-    f: RefCell<Option<F>>,
-}
-
-impl<F: Fn(&mut Formatter)> Lazy<F> {
-    pub fn new(f: F) -> Self {
-        Self {
-            f: RefCell::new(Some(f)),
-        }
-    }
-}
-
-impl<F: Fn(&mut Formatter)> Display for Lazy<F> {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> std::fmt::Result {
-        if let Some(f) = self.f.take() {
-            f(fmt);
-        }
-        Ok(())
-    }
-}
 
 /// Allows us to query a map using type schema as key without having to own the key strings
 #[derive(PartialEq, Eq, Hash)]
