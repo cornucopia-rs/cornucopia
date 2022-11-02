@@ -7,41 +7,28 @@ enum Pattern<'a> {
     Unknown(&'a str),
 }
 
-const PATTERN: char = '#';
+const PATTERN: char = '$';
 
 fn ident(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
 }
 
-fn parse_raw<'a>(scan: &mut Scanner<'a>) -> &'a str {
-    let start = scan.cursor();
-    loop {
-        scan.eat_until(PATTERN);
-        let before_pat = scan.cursor();
-        // Check if is pattern
-        if scan.eat_if(PATTERN) {
-            scan.eat_whitespace();
-            match scan.peek() {
-                Some('[') => continue,
-                Some(_) => {
-                    scan.jump(before_pat);
-                    return scan.from(start);
-                }
-                None => return scan.from(start),
-            }
-        } else {
-            return scan.from(start);
-        }
-    }
-}
-
 fn parse_next<'a>(scan: &mut Scanner<'a>) -> (&'a str, Option<Pattern<'a>>) {
-    let raw = parse_raw(scan);
+    let raw = scan.eat_until(PATTERN);
 
     if scan.eat_if(PATTERN) {
         scan.eat_whitespace();
         let pattern = if scan.at(char::is_alphabetic) {
             Some(Pattern::Display(scan.eat_while(ident)))
+        } else if scan.eat_if('{') {
+            scan.eat_whitespace();
+            let start = scan.cursor();
+            scan.eat_while(ident);
+            let ident = scan.from(start);
+            scan.eat_whitespace();
+            scan.expect('}');
+            scan.eat_whitespace();
+            Some(Pattern::Display(ident))
         } else if scan.eat_if('(') {
             let start = scan.cursor();
             let mut count_delim = 0;
@@ -78,7 +65,7 @@ fn ident_in_iterator<'a>(scan: &'a mut Scanner) -> Vec<&'a str> {
     let start = scan.cursor();
     let mut idents = Vec::new();
     loop {
-        parse_raw(scan);
+        scan.eat_until(PATTERN);
         if scan.eat_if(PATTERN) {
             scan.eat_whitespace();
             if scan.at(char::is_alphabetic) {
