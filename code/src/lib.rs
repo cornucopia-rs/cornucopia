@@ -1,22 +1,24 @@
 use proc_macro::TokenStream;
 use unscanny::Scanner;
 
+/// Interpolation kind
 enum Pattern<'a> {
     Display(&'a str),
     Iterator(&'a str),
     Call(&'a str),
 }
 
-const PATTERN: char = '$';
-
+/// Match allowed character at the beginning of a Rust identifier
 fn ident_start(c: char) -> bool {
     c.is_alphabetic() || c == '_'
 }
 
+/// Match allowed character after the beginning of a Rust identifier
 fn ident_body(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
 }
 
+/// Try to parse a Rust identifier from `scan`
 fn parse_ident<'a>(scan: &mut Scanner<'a>) -> Option<&'a str> {
     if scan.at(ident_start) {
         Some(scan.eat_while(ident_body))
@@ -34,10 +36,12 @@ fn parse_ident<'a>(scan: &mut Scanner<'a>) -> Option<&'a str> {
     }
 }
 
+/// Parse the next raw string and optional pattern pair from `scan`
+/// Return ("", None) when reach EOF
 fn parse_next<'a>(scan: &mut Scanner<'a>) -> (&'a str, Option<Pattern<'a>>) {
-    let raw = scan.eat_until(PATTERN);
+    let raw = scan.eat_until('$');
 
-    if scan.eat_if(PATTERN) {
+    if scan.eat_if('$') {
         scan.eat_whitespace();
         let pattern = if let Some(ident) = parse_ident(scan) {
             Some(Pattern::Display(ident))
@@ -63,13 +67,6 @@ fn parse_next<'a>(scan: &mut Scanner<'a>) -> (&'a str, Option<Pattern<'a>>) {
             let inner = scan.from(start);
             scan.expect(')');
             scan.eat_whitespace();
-            let mut sep = scan.eat();
-            if sep != Some('*') {
-                scan.eat_whitespace();
-                scan.expect("*");
-            } else {
-                sep.take();
-            }
             Some(Pattern::Iterator(inner))
         } else {
             panic!("Unknown pattern ${}", scan.eat_while(|_| true))
@@ -80,6 +77,7 @@ fn parse_next<'a>(scan: &mut Scanner<'a>) -> (&'a str, Option<Pattern<'a>>) {
     }
 }
 
+/// Find all non iterator interpolated identifier in `scan`
 fn ident_in_iterator<'a>(scan: &'a mut Scanner) -> Vec<&'a str> {
     let start = scan.cursor();
     let mut idents = Vec::new();
@@ -93,6 +91,7 @@ fn ident_in_iterator<'a>(scan: &'a mut Scanner) -> Vec<&'a str> {
     idents
 }
 
+/// Generate code to write raw `str` into `out`
 fn gen_str(s: &mut String, out: &str, str: &str) {
     if !str.is_empty() {
         s.push_str(out);
@@ -108,6 +107,7 @@ fn gen_str(s: &mut String, out: &str, str: &str) {
     }
 }
 
+/// Generate code to write displayable `ident` into `out`
 fn gen_disp(s: &mut String, out: &str, ident: &str) {
     s.push_str(out);
     s.push_str(".write_fmt(format_args!(\"{}\",");
@@ -115,6 +115,7 @@ fn gen_disp(s: &mut String, out: &str, ident: &str) {
     s.push_str(")).unwrap();\n");
 }
 
+/// Generate code to write interpolation patterns in `scan` into `out`
 fn gen_recursive<'a>(scan: &'a mut Scanner, s: &mut String, out: &str) {
     loop {
         let (raw, pattern) = parse_next(scan);
@@ -165,8 +166,33 @@ fn gen_recursive<'a>(scan: &'a mut Scanner, s: &mut String, out: &str) {
     }
 }
 
+/// Performs variable interpolation against the input and store the result into
+/// a writable output.
+///
+/// # Display
+///
+/// You can interpolate any type implementing the [`Display`](std::fmt::Display) trait using `$var`
+/// or `${var}`. This grabs the `var` variable that is currently in scope and
+/// format it into the output.
+///
+/// # Lazy
+///
+/// You can interpolate formatting closure implementing the [`Fn(&mut W)`] trait
+/// using `$!lazy` or `$!{lazy}`. This grabs the `lazy` variable that is currently
+/// in scope and call it with th output as arg in the right time.
+///
+/// # Repetition
+///
+/// Repetition is done using `$(...)`. This iterates through the elements of any variable
+/// interpolated within the repetition and inserts a copy of the repetition body
+/// for each one. The variables in an interpolation must implement the [`Iterator`] and the
+/// [`Clone`] traits.
+///
+/// - `$($var)` — simple repetition
+/// - `$( struct ${var}; )` — the repetition can contain other tokens
+/// - `$( $k => println!("{}", $!v), )` — even multiple interpolations
 #[proc_macro]
-pub fn quote(pattern: TokenStream) -> TokenStream {
+pub fn code(pattern: TokenStream) -> TokenStream {
     let pattern = pattern.to_string();
     let mut scan = unscanny::Scanner::new(&pattern);
     scan.eat_whitespace();

@@ -6,5 +6,5 @@ members = [
   "codegen_test",
   "bench",
   "cornucopia",
-  "quote"
+  "code",
 ]

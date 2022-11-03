@@ -329,7 +329,7 @@ pub mod types {
                     :: accepts(f.type_()),"json" => < cornucopia_sync::private::Domain::<&'a serde_json::value::Value> as postgres_types :: ToSql >
                     :: accepts(f.type_()),"nb" => < cornucopia_sync::private::Domain::<i32> as postgres_types :: ToSql >
                     :: accepts(f.type_()),"arr" => < cornucopia_sync::private::Domain::<cornucopia_sync::private::DomainArray::<&'a serde_json::value::Value, &[&'a serde_json::value::Value]>> as postgres_types :: ToSql >
-                    :: accepts(f.type_()), _ => false,
+                    :: accepts(f.type_()),_ => false,
                 })
                     }
                     _ => false,
@@ -566,7 +566,7 @@ pub mod types {
                 {
                     "jsons" => < &'a [&'a serde_json::value::Value] as postgres_types :: ToSql >
                     :: accepts(f.type_()),"id" => < i32 as postgres_types :: ToSql >
-                    :: accepts(f.type_()), _ => false,
+                    :: accepts(f.type_()),_ => false,
                 }
                         })
                     }
@@ -782,7 +782,7 @@ pub mod types {
                     "wow" => < &'a str as postgres_types :: ToSql >
                     :: accepts(f.type_()),"such_cool" => < i32 as postgres_types :: ToSql >
                     :: accepts(f.type_()),"nice" => < super::super::types::public::SpongebobCharacter as postgres_types :: ToSql >
-                    :: accepts(f.type_()), _ => false,
+                    :: accepts(f.type_()),_ => false,
                 })
                     }
                     _ => false,
@@ -929,7 +929,7 @@ pub mod types {
                     "custom" => < &'a [super::super::types::public::CustomCompositeBorrowed<'a>] as postgres_types :: ToSql >
                     :: accepts(f.type_()),"spongebob" => < &'a [super::super::types::public::SpongebobCharacter] as postgres_types :: ToSql >
                     :: accepts(f.type_()),"domain" => < cornucopia_sync::private::Domain::<&'a str> as postgres_types :: ToSql >
-                    :: accepts(f.type_()), _ => false,
+                    :: accepts(f.type_()),_ => false,
                 })
                     }
                     _ => false,
