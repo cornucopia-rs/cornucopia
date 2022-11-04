@@ -9,3 +9,4 @@ proc-macro = true
 
 [dependencies]
 unscanny = "0.1.0"
+unicode-xid = "0.2.4"

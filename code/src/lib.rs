@@ -2,30 +2,30 @@ use proc_macro::TokenStream;
 use unscanny::Scanner;
 
 /// Interpolation kind
-enum Pattern<'a> {
+enum Kind<'a> {
     Display(&'a str),
     Iterator(&'a str),
     Call(&'a str),
 }
 
 /// Match allowed character at the beginning of a Rust identifier
-fn ident_start(c: char) -> bool {
-    c.is_alphabetic() || c == '_'
+fn id_start(c: char) -> bool {
+    unicode_xid::UnicodeXID::is_xid_start(c) || c == '_'
 }
 
 /// Match allowed character after the beginning of a Rust identifier
-fn ident_body(c: char) -> bool {
-    c.is_alphanumeric() || c == '_'
+fn id_continue(c: char) -> bool {
+    unicode_xid::UnicodeXID::is_xid_continue(c)
 }
 
 /// Try to parse a Rust identifier from `scan`
 fn parse_ident<'a>(scan: &mut Scanner<'a>) -> Option<&'a str> {
-    if scan.at(ident_start) {
-        Some(scan.eat_while(ident_body))
+    if scan.at(id_start) {
+        Some(scan.eat_while(id_continue))
     } else if scan.eat_if('{') {
         scan.eat_whitespace();
         let start = scan.cursor();
-        scan.eat_while(ident_body);
+        scan.eat_while(id_continue);
         let ident = scan.from(start);
         scan.eat_whitespace();
         scan.expect('}');
@@ -38,17 +38,17 @@ fn parse_ident<'a>(scan: &mut Scanner<'a>) -> Option<&'a str> {
 
 /// Parse the next raw string and optional pattern pair from `scan`
 /// Return ("", None) when reach EOF
-fn parse_next<'a>(scan: &mut Scanner<'a>) -> (&'a str, Option<Pattern<'a>>) {
+fn parse_next<'a>(scan: &mut Scanner<'a>) -> (&'a str, Option<Kind<'a>>) {
     let raw = scan.eat_until('$');
 
     if scan.eat_if('$') {
         scan.eat_whitespace();
         let pattern = if let Some(ident) = parse_ident(scan) {
-            Some(Pattern::Display(ident))
+            Some(Kind::Display(ident))
         } else if scan.eat_if('!') {
             scan.eat_whitespace();
             if let Some(ident) = parse_ident(scan) {
-                Some(Pattern::Call(ident))
+                Some(Kind::Call(ident))
             } else {
                 panic!("Unknown pattern $!{}", scan.eat_while(|_| true))
             }
@@ -67,7 +67,7 @@ fn parse_next<'a>(scan: &mut Scanner<'a>) -> (&'a str, Option<Pattern<'a>>) {
             let inner = scan.from(start);
             scan.expect(')');
             scan.eat_whitespace();
-            Some(Pattern::Iterator(inner))
+            Some(Kind::Iterator(inner))
         } else {
             panic!("Unknown pattern ${}", scan.eat_while(|_| true))
         };
@@ -83,8 +83,8 @@ fn ident_in_iterator<'a>(scan: &'a mut Scanner) -> Vec<&'a str> {
     let mut idents = Vec::new();
     while let (_, Some(pat)) = parse_next(scan) {
         match pat {
-            Pattern::Display(ident) | Pattern::Call(ident) => idents.push(ident),
-            Pattern::Iterator(_) => unreachable!(),
+            Kind::Display(ident) | Kind::Call(ident) => idents.push(ident),
+            Kind::Iterator(_) => unreachable!(),
         }
     }
     scan.jump(start);
@@ -125,15 +125,15 @@ fn gen_recursive<'a>(scan: &'a mut Scanner, s: &mut String, out: &str) {
         gen_str(s, out, raw);
         if let Some(pattern) = pattern {
             match pattern {
-                Pattern::Display(ident) => gen_disp(s, out, ident),
-                Pattern::Call(ident) => {
+                Kind::Display(ident) => gen_disp(s, out, ident),
+                Kind::Call(ident) => {
                     s.push_str("let w = &mut*w;");
                     s.push_str(ident);
                     s.push_str("(&mut *");
                     s.push_str(out);
                     s.push_str(");\n");
                 }
-                Pattern::Iterator(inner) => {
+                Kind::Iterator(inner) => {
                     let mut scan = Scanner::new(inner);
                     let idents = ident_in_iterator(&mut scan);
                     let mut iter = idents.iter();
@@ -196,7 +196,7 @@ pub fn code(pattern: TokenStream) -> TokenStream {
     let pattern = pattern.to_string();
     let mut scan = unscanny::Scanner::new(&pattern);
     scan.eat_whitespace();
-    let out = scan.eat_while(ident_body);
+    let out = scan.eat_while(id_continue);
     scan.eat_whitespace();
     scan.expect("=>");
     scan.eat_whitespace();
