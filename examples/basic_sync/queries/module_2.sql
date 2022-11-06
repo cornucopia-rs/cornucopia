@@ -9,7 +9,7 @@ SELECT
     Title
 FROM
     Book;
-    
+
 --! author_name_by_id
 SELECT
     Author.Name
@@ -31,12 +31,13 @@ FROM
 WHERE
     Author.Name LIKE CONCAT(:start_str::text, '%');
 
---! select_where_custom_type
+--! select_voice_actor_with_character
 SELECT
-    col2
+    voice_actor
 FROM
-    CustomTable
-WHERE (col1).persona = :spongebob_character;
+    SpongeBobVoiceActor
+WHERE
+    character = :spongebob_character;
 
 --! select_translations
 SELECT

@@ -1,77 +1,78 @@
 // Take a look at the generated `cornucopia.rs` file if you want to
 // see what it looks like under the hood.
 mod cornucopia;
-
 use crate::cornucopia::{
     queries::{
         module_1::insert_book,
         module_2::{
             author_name_by_id, author_name_starting_with, authors, books, select_translations,
-            select_where_custom_type, AuthorNameStartingWithParams,
+            select_voice_actor_with_character, AuthorNameStartingWithParams,
         },
     },
-    types::public::SpongebobCharacter,
+    types::public::SpongeBobCharacter,
 };
 use cornucopia_async::Params;
-use deadpool_postgres::{Config, Runtime};
-use tokio_postgres::NoTls;
 
 #[tokio::main]
 pub async fn main() {
-    // Connection pool configuration
-    // Please look at `tokio_postgres` and `deadpool_postgres` for details.
-    let mut cfg = Config::new();
-    cfg.user = Some(String::from("postgres"));
-    cfg.password = Some(String::from("postgres"));
-    cfg.host = Some(String::from("127.0.0.1"));
-    cfg.port = Some(5435);
-    cfg.dbname = Some(String::from("postgres"));
-    let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
+    // You can learn which database connection types are compatible with Cornucopia in the book
+    // https://cornucopia-rs.netlify.app/book/using_queries/db_connections.html
+    let pool = create_pool().await.unwrap();
     let mut client = pool.get().await.unwrap();
 
-    // Queries accept regular clients.
-    // The `all` method returns all rows in a `Vec`
-    println!("{:?}", authors().bind(&client).all().await.unwrap());
+    // The `all` method returns queried rows collected into a `Vec`
+    let authors = authors().bind(&client).all().await.unwrap();
+    dbg!(authors);
 
+    // Queries also accept transactions. Let's see how that works.
     {
-        // Queries also accept transactions
+        // Once you've created a transaction, you can pass it to your queries
+        // just like you would with a regular query. Nothing special to do.
         let transaction = client.transaction().await.unwrap();
 
-        // Insert a book
-        // Note that queries with a void return type (such as regular inserts)
-        // don't need to call `all`, they are executed as soon as you `bind` them.
+        // Insertions work just like any other query.
+        // Note that queries with a void return type (such as regular insertions)
+        // are executed as soon as you `bind` their parameters.
         insert_book()
             .bind(&transaction, &"The Great Gatsby")
             .await
             .unwrap();
 
-        // You can use a map to transform rows ergonomically.
+        // Bind parameters are "smart". A query that expects a `&str` will also accept other
+        // "string-like" types like `String`. See https://cornucopia-rs.netlify.app/book/using_queries/ergonomic_parameters.html
+        // for more details.
+        insert_book()
+            .bind(&transaction, &String::from("Moby Dick"))
+            .await
+            .unwrap();
+
+        // You can use a `map` to transform query results ergonomically.
         let uppercase_books = books()
             .bind(&transaction)
-            .map(|b| b.to_uppercase())
+            .map(|book_title| book_title.to_uppercase())
             .all()
             .await
             .unwrap();
-        println!("{uppercase_books:?}");
+        dbg!(uppercase_books);
 
-        // Don't forget to `.commit()` the transaction when you're done!
+        // Don't forget to `commit` when you're done with the transaction!
         // Otherwise, it will be rolled back without further effect.
         transaction.commit().await.unwrap();
     }
 
     // Using `opt` returns an optional row (zero or one).
     // Any other number of rows will return an error.
-    println!(
-        "{:?}",
-        author_name_by_id().bind(&client, &0).opt().await.unwrap()
-    );
+    let author_name = author_name_by_id().bind(&client, &0).opt().await.unwrap();
+    dbg!(author_name);
 
     // Using named structs as parameters and rows can be more convenient
     // and less error-prone, for example when a query has a lot of parameters.
     // This query doesn't benefit much, but is still shown for demonstration purposes.
     // ! Note: To use this feature you need to:
-    // ! 1. Have a struct generated for your params (see the `type annotations` section of the book
-    // !    and the `queries/module_2.sql` file to see how this particular type was declared).
+    // ! 1. Have a struct generated for your parameters
+    // !    (see https://cornucopia-rs.netlify.app/book/writing_queries/type_annotations.html for
+    // !    general information and the `queries/module_2.sql` file to see how this particular
+    // !    parameter type was created).
     // ! 2. Import the `Params` trait.
     println!(
         "{:?}",
@@ -87,24 +88,37 @@ pub async fn main() {
     // They will be automatically generated by Cornucopia.
     // You can use them as bind parameters (as shown here)
     // or receive them in returned rows.
-    println!(
-        "{:?}",
-        select_where_custom_type()
-            .bind(&client, &SpongebobCharacter::Patrick)
-            .one()
-            .await
-            .unwrap()
-    );
+    let patrick_voice_actor = select_voice_actor_with_character()
+        .bind(&client, &SpongeBobCharacter::Patrick)
+        .one()
+        .await
+        .unwrap();
+    dbg!(patrick_voice_actor);
 
     // Cornucopia also supports PostgreSQL arrays, which you
     // can use as bind parameters or in returned rows.
-    println!(
-        "{:?}",
-        select_translations()
-            .bind(&client)
-            .map(|row| format!("{}: {:?}", row.title, row.translations))
-            .all()
-            .await
-            .unwrap()
-    );
+    let translations = select_translations()
+        .bind(&client)
+        .map(|row| format!("{}: {:?}", row.title, row.translations))
+        .all()
+        .await
+        .unwrap();
+    dbg!(translations);
+}
+
+/// Connection pool configuration.
+///
+/// This is just a simple example config, please look at
+/// `tokio_postgres` and `deadpool_postgres` for details.
+use deadpool_postgres::{Config, CreatePoolError, Pool, Runtime};
+use tokio_postgres::NoTls;
+
+async fn create_pool() -> Result<Pool, CreatePoolError> {
+    let mut cfg = Config::new();
+    cfg.user = Some(String::from("postgres"));
+    cfg.password = Some(String::from("postgres"));
+    cfg.host = Some(String::from("127.0.0.1"));
+    cfg.port = Some(5435);
+    cfg.dbname = Some(String::from("postgres"));
+    cfg.create_pool(Some(Runtime::Tokio1), NoTls)
 }
