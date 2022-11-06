@@ -19,9 +19,9 @@ tokio-postgres = { version = "0.7.7", features = [
     "with-eui48-1",
 ] }
 postgres-types = { version = "0.2.4", features = ["derive"] }
-serde = { version = "1.0.147", features = ["derive"] }
-serde_json = { version = "1.0.87", features = ["raw_value"] }
-time = { version = "0.3.16", features = ["parsing", "serde"] }
+serde = { version = "1.0.147", features = ["derive"], package = "serde" }
+serde_json = { version = "1.0.87", features = ["raw_value"], package = "serde_json" }
+time = { version = "0.3.17", features = ["parsing", "serde"] }
 uuid = { version = "1.2.1", features = ["serde"] }
 eui48 = { version = "1.1.0", features = ["serde"] }
 rust_decimal = { version = "1.26.1", features = ["db-postgres"] }
