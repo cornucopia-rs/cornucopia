@@ -16,7 +16,9 @@ impl<T: BytesSql> BytesSql for &T {}
 impl BytesSql for Vec<u8> {}
 impl BytesSql for &[u8] {}
 
+#[cfg(feature = "with-serde_json-1")]
 pub trait JsonSql: std::fmt::Debug + ToSql + Sync + Send {}
+#[cfg(feature = "with-serde_json-1")]
 impl<T: JsonSql> JsonSql for &T {}
 #[cfg(feature = "with-serde_json-1")]
 impl JsonSql for serde_json_1::value::Value {}
