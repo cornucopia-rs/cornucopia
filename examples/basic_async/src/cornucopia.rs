@@ -34,7 +34,7 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Enum(ref variants) => {
-                        if variants.len() != 3usize {
+                        if variants.len() != 3 {
                             return false;
                         }
                         variants.iter().all(|v| match &**v {
@@ -74,7 +74,7 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Enum(ref variants) => {
-                        if variants.len() != 3usize {
+                        if variants.len() != 3 {
                             return false;
                         }
                         variants.iter().all(|v| match &**v {
@@ -165,17 +165,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt.prepare(self.client).await?;
                 let row = self.client.query_one(stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.iter().await?.try_collect().await
             }
-
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt.prepare(self.client).await?;
                 Ok(self
@@ -184,7 +181,6 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub async fn iter(
                 self,
             ) -> Result<
@@ -201,7 +197,6 @@ pub mod queries {
                 Ok(it)
             }
         }
-
         pub struct StringQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -222,17 +217,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt.prepare(self.client).await?;
                 let row = self.client.query_one(stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.iter().await?.try_collect().await
             }
-
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt.prepare(self.client).await?;
                 Ok(self
@@ -241,7 +233,6 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub async fn iter(
                 self,
             ) -> Result<
@@ -311,17 +302,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt.prepare(self.client).await?;
                 let row = self.client.query_one(stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.iter().await?.try_collect().await
             }
-
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt.prepare(self.client).await?;
                 Ok(self
@@ -330,7 +318,6 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub async fn iter(
                 self,
             ) -> Result<
@@ -347,7 +334,6 @@ pub mod queries {
                 Ok(it)
             }
         }
-
         pub struct SuperSuperTypesPublicSpongebobCharacterQuery<
             'a,
             C: GenericClient,
@@ -376,17 +362,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt.prepare(self.client).await?;
                 let row = self.client.query_one(stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.iter().await?.try_collect().await
             }
-
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt.prepare(self.client).await?;
                 Ok(self
@@ -395,7 +378,6 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub async fn iter(
                 self,
             ) -> Result<
@@ -457,17 +439,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
                 let stmt = self.stmt.prepare(self.client).await?;
                 let row = self.client.query_one(stmt, &self.params).await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.iter().await?.try_collect().await
             }
-
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
                 let stmt = self.stmt.prepare(self.client).await?;
                 Ok(self
@@ -476,7 +455,6 @@ pub mod queries {
                     .await?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub async fn iter(
                 self,
             ) -> Result<

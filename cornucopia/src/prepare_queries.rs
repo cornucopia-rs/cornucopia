@@ -432,7 +432,7 @@ pub(crate) mod error {
         PostgresType(#[from] PostgresTypeError),
         #[error(transparent)]
         #[diagnostic(transparent)]
-        Validation(#[from] ValidationError),
+        Validation(#[from] Box<ValidationError>),
     }
 
     impl Error {

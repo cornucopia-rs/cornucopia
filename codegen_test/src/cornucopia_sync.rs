@@ -6,7 +6,7 @@
 #[allow(dead_code)]
 pub mod types {
     pub mod public {
-        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Clone, PartialEq)]
         #[postgres(name = "clone_composite")]
         pub struct CloneComposite {
             pub first: i32,
@@ -37,13 +37,19 @@ pub mod types {
                 };
                 let mut out = out;
                 let num_fields = postgres_types::private::read_be_i32(&mut out)?;
+                if num_fields as usize != fields.len() {
+                    return std::result::Result::Err(std::convert::Into::into(format!(
+                        "invalid field count: {} vs {}",
+                        num_fields,
+                        fields.len()
+                    )));
+                }
                 let _oid = postgres_types::private::read_be_i32(&mut out)?;
                 let first = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
                 let _oid = postgres_types::private::read_be_i32(&mut out)?;
                 let second = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
                 Ok(CloneCompositeBorrowed { first, second })
             }
-
             fn accepts(ty: &postgres_types::Type) -> bool {
                 ty.name() == "clone_composite" && ty.schema() == "public"
             }
@@ -90,7 +96,7 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 2usize {
+                        if fields.len() != 2 {
                             return false;
                         }
                         fields.iter().all(|f| match f.name() {
@@ -111,7 +117,7 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Copy, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Copy, Clone, PartialEq)]
         #[postgres(name = "copy_composite")]
         pub struct CopyComposite {
             pub first: i32,
@@ -159,7 +165,7 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 2usize {
+                        if fields.len() != 2 {
                             return false;
                         }
                         fields.iter().all(|f| match f.name() {
@@ -180,7 +186,7 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Clone, PartialEq)]
         #[postgres(name = "domain_composite")]
         pub struct DomainComposite {
             pub txt: String,
@@ -224,6 +230,13 @@ pub mod types {
                 };
                 let mut out = out;
                 let num_fields = postgres_types::private::read_be_i32(&mut out)?;
+                if num_fields as usize != fields.len() {
+                    return std::result::Result::Err(std::convert::Into::into(format!(
+                        "invalid field count: {} vs {}",
+                        num_fields,
+                        fields.len()
+                    )));
+                }
                 let _oid = postgres_types::private::read_be_i32(&mut out)?;
                 let txt = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
                 let _oid = postgres_types::private::read_be_i32(&mut out)?;
@@ -234,7 +247,6 @@ pub mod types {
                 let arr = postgres_types::private::read_value(fields[3].type_(), &mut out)?;
                 Ok(DomainCompositeBorrowed { txt, json, nb, arr })
             }
-
             fn accepts(ty: &postgres_types::Type) -> bool {
                 ty.name() == "domain_composite" && ty.schema() == "public"
             }
@@ -308,16 +320,17 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 4usize {
+                        if fields.len() != 4 {
                             return false;
                         }
-                        fields.iter().all(|f| match f.name() {
-                            "txt" => <cornucopia_sync::private::Domain::<&'a str> as postgres_types::ToSql>::accepts(f.type_()),
-"json" => <cornucopia_sync::private::Domain::<&'a serde_json::value::Value> as postgres_types::ToSql>::accepts(f.type_()),
-"nb" => <cornucopia_sync::private::Domain::<i32> as postgres_types::ToSql>::accepts(f.type_()),
-"arr" => <cornucopia_sync::private::Domain::<cornucopia_sync::private::DomainArray::<&'a serde_json::value::Value, &[&'a serde_json::value::Value]>> as postgres_types::ToSql>::accepts(f.type_()),
-                            _ => false,
-                        })
+                        fields.iter().all(| f | match f.name()
+                {
+                    "txt" => < cornucopia_sync::private::Domain::<&'a str> as postgres_types :: ToSql >
+                    :: accepts(f.type_()),"json" => < cornucopia_sync::private::Domain::<&'a serde_json::value::Value> as postgres_types :: ToSql >
+                    :: accepts(f.type_()),"nb" => < cornucopia_sync::private::Domain::<i32> as postgres_types :: ToSql >
+                    :: accepts(f.type_()),"arr" => < cornucopia_sync::private::Domain::<cornucopia_sync::private::DomainArray::<&'a serde_json::value::Value, &[&'a serde_json::value::Value]>> as postgres_types :: ToSql >
+                    :: accepts(f.type_()),_ => false,
+                })
                     }
                     _ => false,
                 }
@@ -331,7 +344,7 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Clone, PartialEq)]
         #[postgres(name = "named_composite")]
         pub struct NamedComposite {
             pub wow: Option<String>,
@@ -362,13 +375,19 @@ pub mod types {
                 };
                 let mut out = out;
                 let num_fields = postgres_types::private::read_be_i32(&mut out)?;
+                if num_fields as usize != fields.len() {
+                    return std::result::Result::Err(std::convert::Into::into(format!(
+                        "invalid field count: {} vs {}",
+                        num_fields,
+                        fields.len()
+                    )));
+                }
                 let _oid = postgres_types::private::read_be_i32(&mut out)?;
                 let wow = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
                 let _oid = postgres_types::private::read_be_i32(&mut out)?;
                 let such_cool = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
                 Ok(NamedCompositeBorrowed { wow, such_cool })
             }
-
             fn accepts(ty: &postgres_types::Type) -> bool {
                 ty.name() == "named_composite" && ty.schema() == "public"
             }
@@ -415,7 +434,7 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 2usize {
+                        if fields.len() != 2 {
                             return false;
                         }
                         fields.iter().all(|f| match f.name() {
@@ -436,7 +455,7 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Clone, PartialEq)]
         #[postgres(name = "nullity_composite")]
         pub struct NullityComposite {
             pub jsons: Option<Vec<Option<serde_json::Value>>>,
@@ -475,13 +494,19 @@ pub mod types {
                 };
                 let mut out = out;
                 let num_fields = postgres_types::private::read_be_i32(&mut out)?;
+                if num_fields as usize != fields.len() {
+                    return std::result::Result::Err(std::convert::Into::into(format!(
+                        "invalid field count: {} vs {}",
+                        num_fields,
+                        fields.len()
+                    )));
+                }
                 let _oid = postgres_types::private::read_be_i32(&mut out)?;
                 let jsons = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
                 let _oid = postgres_types::private::read_be_i32(&mut out)?;
                 let id = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
                 Ok(NullityCompositeBorrowed { jsons, id })
             }
-
             fn accepts(ty: &postgres_types::Type) -> bool {
                 ty.name() == "nullity_composite" && ty.schema() == "public"
             }
@@ -533,13 +558,16 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 2usize {
+                        if fields.len() != 2 {
                             return false;
                         }
-                        fields.iter().all(|f| match f.name() {
-                            "jsons" => <&'a [&'a serde_json::value::Value] as postgres_types::ToSql>::accepts(f.type_()),
-"id" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
-                            _ => false,
+                        fields.iter().all(|f| {
+                            match f.name()
+                {
+                    "jsons" => < &'a [&'a serde_json::value::Value] as postgres_types :: ToSql >
+                    :: accepts(f.type_()),"id" => < i32 as postgres_types :: ToSql >
+                    :: accepts(f.type_()),_ => false,
+                }
                         })
                     }
                     _ => false,
@@ -582,7 +610,7 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Enum(ref variants) => {
-                        if variants.len() != 3usize {
+                        if variants.len() != 3 {
                             return false;
                         }
                         variants.iter().all(|v| match &**v {
@@ -622,7 +650,7 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Enum(ref variants) => {
-                        if variants.len() != 3usize {
+                        if variants.len() != 3 {
                             return false;
                         }
                         variants.iter().all(|v| match &**v {
@@ -636,7 +664,7 @@ pub mod types {
                 }
             }
         }
-        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Clone, PartialEq)]
         #[postgres(name = "custom_composite")]
         pub struct CustomComposite {
             pub wow: String,
@@ -676,6 +704,13 @@ pub mod types {
                 };
                 let mut out = out;
                 let num_fields = postgres_types::private::read_be_i32(&mut out)?;
+                if num_fields as usize != fields.len() {
+                    return std::result::Result::Err(std::convert::Into::into(format!(
+                        "invalid field count: {} vs {}",
+                        num_fields,
+                        fields.len()
+                    )));
+                }
                 let _oid = postgres_types::private::read_be_i32(&mut out)?;
                 let wow = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
                 let _oid = postgres_types::private::read_be_i32(&mut out)?;
@@ -688,7 +723,6 @@ pub mod types {
                     nice,
                 })
             }
-
             fn accepts(ty: &postgres_types::Type) -> bool {
                 ty.name() == "custom_composite" && ty.schema() == "public"
             }
@@ -740,15 +774,16 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 3usize {
+                        if fields.len() != 3 {
                             return false;
                         }
-                        fields.iter().all(|f| match f.name() {
-                            "wow" => <&'a str as postgres_types::ToSql>::accepts(f.type_()),
-"such_cool" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
-"nice" => <super::super::types::public::SpongebobCharacter as postgres_types::ToSql>::accepts(f.type_()),
-                            _ => false,
-                        })
+                        fields.iter().all(| f | match f.name()
+                {
+                    "wow" => < &'a str as postgres_types :: ToSql >
+                    :: accepts(f.type_()),"such_cool" => < i32 as postgres_types :: ToSql >
+                    :: accepts(f.type_()),"nice" => < super::super::types::public::SpongebobCharacter as postgres_types :: ToSql >
+                    :: accepts(f.type_()),_ => false,
+                })
                     }
                     _ => false,
                 }
@@ -762,7 +797,7 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Clone, PartialEq)]
         #[postgres(name = "nightmare_composite")]
         pub struct NightmareComposite {
             pub custom: Vec<super::super::types::public::CustomComposite>,
@@ -806,6 +841,13 @@ pub mod types {
                 };
                 let mut out = out;
                 let num_fields = postgres_types::private::read_be_i32(&mut out)?;
+                if num_fields as usize != fields.len() {
+                    return std::result::Result::Err(std::convert::Into::into(format!(
+                        "invalid field count: {} vs {}",
+                        num_fields,
+                        fields.len()
+                    )));
+                }
                 let _oid = postgres_types::private::read_be_i32(&mut out)?;
                 let custom = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
                 let _oid = postgres_types::private::read_be_i32(&mut out)?;
@@ -818,7 +860,6 @@ pub mod types {
                     domain,
                 })
             }
-
             fn accepts(ty: &postgres_types::Type) -> bool {
                 ty.name() == "nightmare_composite" && ty.schema() == "public"
             }
@@ -880,15 +921,16 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 3usize {
+                        if fields.len() != 3 {
                             return false;
                         }
-                        fields.iter().all(|f| match f.name() {
-                            "custom" => <&'a [super::super::types::public::CustomCompositeBorrowed<'a>] as postgres_types::ToSql>::accepts(f.type_()),
-"spongebob" => <&'a [super::super::types::public::SpongebobCharacter] as postgres_types::ToSql>::accepts(f.type_()),
-"domain" => <cornucopia_sync::private::Domain::<&'a str> as postgres_types::ToSql>::accepts(f.type_()),
-                            _ => false,
-                        })
+                        fields.iter().all(| f | match f.name()
+                {
+                    "custom" => < &'a [super::super::types::public::CustomCompositeBorrowed<'a>] as postgres_types :: ToSql >
+                    :: accepts(f.type_()),"spongebob" => < &'a [super::super::types::public::SpongebobCharacter] as postgres_types :: ToSql >
+                    :: accepts(f.type_()),"domain" => < cornucopia_sync::private::Domain::<&'a str> as postgres_types :: ToSql >
+                    :: accepts(f.type_()),_ => false,
+                })
                     }
                     _ => false,
                 }
@@ -902,7 +944,7 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(serde::Serialize, Debug, postgres_types::FromSql, Copy, Clone, PartialEq)]
+        #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Copy, Clone, PartialEq)]
         #[postgres(name = "syntax_composite")]
         pub struct SyntaxComposite {
             pub r#async: i32,
@@ -948,7 +990,7 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != 1usize {
+                        if fields.len() != 1 {
                             return false;
                         }
                         fields.iter().all(|f| match f.name() {
@@ -994,7 +1036,7 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Enum(ref variants) => {
-                        if variants.len() != 2usize {
+                        if variants.len() != 2 {
                             return false;
                         }
                         variants.iter().all(|v| match &**v {
@@ -1032,7 +1074,7 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Enum(ref variants) => {
-                        if variants.len() != 2usize {
+                        if variants.len() != 2 {
                             return false;
                         }
                         variants.iter().all(|v| match &**v {
@@ -1054,7 +1096,6 @@ pub mod types {
 pub mod queries {
     pub mod copy {
         use postgres::{fallible_iterator::FallibleIterator, GenericClient};
-
         pub struct SuperSuperTypesPublicCloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -1078,17 +1119,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -1096,7 +1134,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -1110,7 +1147,6 @@ pub mod queries {
                 Ok(it)
             }
         }
-
         pub struct SuperSuperTypesPublicCopyCompositeQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -1134,17 +1170,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -1152,7 +1185,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -1316,17 +1348,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -1334,7 +1363,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -1413,17 +1441,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -1431,7 +1456,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -1471,7 +1495,7 @@ pub mod queries {
             }
         }
         pub fn insert_nightmare_domain() -> InsertNightmareDomainStmt {
-            InsertNightmareDomainStmt(cornucopia_sync::private::Stmt::new("INSERT INTO nightmare_domain (txt, json, nb, arr, composite) VALUES ($1, $2, $3, $4, $5)"))
+            InsertNightmareDomainStmt(cornucopia_sync :: private :: Stmt :: new("INSERT INTO nightmare_domain (txt, json, nb, arr, composite) VALUES ($1, $2, $3, $4, $5)"))
         }
         pub struct InsertNightmareDomainStmt(cornucopia_sync::private::Stmt);
         impl InsertNightmareDomainStmt {
@@ -1536,7 +1560,6 @@ pub mod queries {
                 )
             }
         }
-
         pub fn select_nightmare_domain_null() -> SelectNightmareDomainNullStmt {
             SelectNightmareDomainNullStmt(cornucopia_sync::private::Stmt::new(
                 "SELECT * FROM nightmare_domain",
@@ -1571,7 +1594,6 @@ pub mod queries {
             pub name: T1,
             pub price: Option<f64>,
         }
-
         #[derive(Debug)]
         pub struct NamedComplexParams<'a> {
             pub named: super::super::types::public::NamedCompositeBorrowed<'a>,
@@ -1600,17 +1622,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -1618,7 +1637,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -1682,17 +1700,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -1700,7 +1715,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -1714,7 +1728,6 @@ pub mod queries {
                 Ok(it)
             }
         }
-
         pub struct SuperSuperTypesPublicNamedCompositeQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -1738,17 +1751,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -1756,7 +1766,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -1915,7 +1924,6 @@ pub mod queries {
                 self.bind(client, &params.named)
             }
         }
-
         pub fn named_complex() -> NamedComplexStmt {
             NamedComplexStmt(cornucopia_sync::private::Stmt::new(
                 "SELECT * FROM named_complex",
@@ -2001,17 +2009,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -2019,7 +2024,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -2079,7 +2083,6 @@ pub mod queries {
                 self.bind(client, &params.texts, &params.name, &params.composite)
             }
         }
-
         pub fn nullity() -> NullityStmt {
             NullityStmt(cornucopia_sync::private::Stmt::new("SELECT * FROM nullity"))
         }
@@ -2110,7 +2113,6 @@ pub mod queries {
             pub author: Option<T1>,
             pub name: T2,
         }
-
         #[derive(Clone, Copy, Debug)]
         pub struct ParamsOrderParams {
             pub c: i32,
@@ -2156,17 +2158,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -2174,7 +2173,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -2225,17 +2223,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -2243,7 +2238,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -2296,7 +2290,6 @@ pub mod queries {
                 self.bind(client, &params.author, &params.name)
             }
         }
-
         pub fn select_book() -> SelectBookStmt {
             SelectBookStmt(cornucopia_sync::private::Stmt::new("SELECT * FROM book"))
         }
@@ -2676,17 +2669,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -2694,7 +2684,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -2881,17 +2870,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -2899,7 +2885,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -3073,17 +3058,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -3091,7 +3073,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -3274,17 +3255,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -3292,7 +3270,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -3306,7 +3283,6 @@ pub mod queries {
                 Ok(it)
             }
         }
-
         pub struct SuperSuperTypesPublicNightmareCompositeQuery<
             'a,
             C: GenericClient,
@@ -3336,17 +3312,14 @@ pub mod queries {
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -3354,7 +3327,6 @@ pub mod queries {
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -3485,7 +3457,7 @@ FROM
             }
         }
         pub fn insert_everything() -> InsertEverythingStmt {
-            InsertEverythingStmt(cornucopia_sync::private::Stmt::new("INSERT INTO Everything (bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_, numeric_)
+            InsertEverythingStmt(cornucopia_sync :: private :: Stmt :: new("INSERT INTO Everything (bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_, numeric_)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34)"))
         }
         pub struct InsertEverythingStmt(cornucopia_sync::private::Stmt);
@@ -3638,7 +3610,6 @@ FROM
                 )
             }
         }
-
         pub fn select_everything_array() -> SelectEverythingArrayStmt {
             SelectEverythingArrayStmt(cornucopia_sync::private::Stmt::new(
                 "SELECT
@@ -3744,7 +3715,7 @@ FROM
             }
         }
         pub fn insert_everything_array() -> InsertEverythingArrayStmt {
-            InsertEverythingArrayStmt(cornucopia_sync::private::Stmt::new("INSERT INTO EverythingArray (bool_, boolean_, char_, smallint_, int2_, int_, int4_, bingint_, int8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_, numeric_)
+            InsertEverythingArrayStmt(cornucopia_sync :: private :: Stmt :: new("INSERT INTO EverythingArray (bool_, boolean_, char_, smallint_, int2_, int_, int4_, bingint_, int8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_, numeric_)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)"))
         }
         pub struct InsertEverythingArrayStmt(cornucopia_sync::private::Stmt);
@@ -4003,7 +3974,6 @@ FROM
                 )
             }
         }
-
         pub fn select_nightmare() -> SelectNightmareStmt {
             SelectNightmareStmt(cornucopia_sync::private::Stmt::new(
                 "SELECT
@@ -4145,17 +4115,14 @@ FROM
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -4163,7 +4130,6 @@ FROM
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -4177,7 +4143,6 @@ FROM
                 Ok(it)
             }
         }
-
         pub struct Optioni32Query<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -4198,17 +4163,14 @@ FROM
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -4216,7 +4178,6 @@ FROM
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -4254,17 +4215,14 @@ FROM
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -4272,7 +4230,6 @@ FROM
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -4310,17 +4267,14 @@ FROM
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -4328,7 +4282,6 @@ FROM
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -4388,17 +4341,14 @@ FROM
                     mapper,
                 }
             }
-
             pub fn one(self) -> Result<T, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 let row = self.client.query_one(stmt, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
-
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
-
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
                 let stmt = self.stmt.prepare(self.client)?;
                 Ok(self
@@ -4406,7 +4356,6 @@ FROM
                     .query_opt(stmt, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
-
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
@@ -4613,7 +4562,7 @@ FROM
             }
         }
         pub fn tricky_sql() -> TrickySqlStmt {
-            TrickySqlStmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a bind_param\', $1, $2)"))
+            TrickySqlStmt(cornucopia_sync :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a bind_param\', $1, $2)"))
         }
         pub struct TrickySqlStmt(cornucopia_sync::private::Stmt);
         impl TrickySqlStmt {
@@ -4639,9 +4588,8 @@ FROM
                 self.bind(client, &params.r#async, &params.r#enum)
             }
         }
-
         pub fn tricky_sql1() -> TrickySql1Stmt {
-            TrickySql1Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a :bind_param', $1, $2)"))
+            TrickySql1Stmt(cornucopia_sync :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a :bind_param', $1, $2)"))
         }
         pub struct TrickySql1Stmt(cornucopia_sync::private::Stmt);
         impl TrickySql1Stmt {
@@ -4667,9 +4615,8 @@ FROM
                 self.bind(client, &params.r#async, &params.r#enum)
             }
         }
-
         pub fn tricky_sql2() -> TrickySql2Stmt {
-            TrickySql2Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a '':bind_param''', $1, $2)"))
+            TrickySql2Stmt(cornucopia_sync :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a '':bind_param''', $1, $2)"))
         }
         pub struct TrickySql2Stmt(cornucopia_sync::private::Stmt);
         impl TrickySql2Stmt {
@@ -4695,9 +4642,8 @@ FROM
                 self.bind(client, &params.r#async, &params.r#enum)
             }
         }
-
         pub fn tricky_sql3() -> TrickySql3Stmt {
-            TrickySql3Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", async, enum)  VALUES ($$this is not a :bind_param$$, $1, $2)"))
+            TrickySql3Stmt(cornucopia_sync :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum)  VALUES ($$this is not a :bind_param$$, $1, $2)"))
         }
         pub struct TrickySql3Stmt(cornucopia_sync::private::Stmt);
         impl TrickySql3Stmt {
@@ -4723,9 +4669,8 @@ FROM
                 self.bind(client, &params.r#async, &params.r#enum)
             }
         }
-
         pub fn tricky_sql4() -> TrickySql4Stmt {
-            TrickySql4Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ($tag$this is not a :bind_param$tag$, $1, $2)"))
+            TrickySql4Stmt(cornucopia_sync :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ($tag$this is not a :bind_param$tag$, $1, $2)"))
         }
         pub struct TrickySql4Stmt(cornucopia_sync::private::Stmt);
         impl TrickySql4Stmt {
@@ -4751,9 +4696,8 @@ FROM
                 self.bind(client, &params.r#async, &params.r#enum)
             }
         }
-
         pub fn tricky_sql6() -> TrickySql6Stmt {
-            TrickySql6Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (e'this is not a '':bind_param''', $1, $2)"))
+            TrickySql6Stmt(cornucopia_sync :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (e'this is not a '':bind_param''', $1, $2)"))
         }
         pub struct TrickySql6Stmt(cornucopia_sync::private::Stmt);
         impl TrickySql6Stmt {
@@ -4779,9 +4723,8 @@ FROM
                 self.bind(client, &params.r#async, &params.r#enum)
             }
         }
-
         pub fn tricky_sql7() -> TrickySql7Stmt {
-            TrickySql7Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (E'this is not a \':bind_param\'', $1, $2)"))
+            TrickySql7Stmt(cornucopia_sync :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (E'this is not a \':bind_param\'', $1, $2)"))
         }
         pub struct TrickySql7Stmt(cornucopia_sync::private::Stmt);
         impl TrickySql7Stmt {
@@ -4807,9 +4750,8 @@ FROM
                 self.bind(client, &params.r#async, &params.r#enum)
             }
         }
-
         pub fn tricky_sql8() -> TrickySql8Stmt {
-            TrickySql8Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (e'this is ''not'' a \':bind_param\'', $1, $2)"))
+            TrickySql8Stmt(cornucopia_sync :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (e'this is ''not'' a \':bind_param\'', $1, $2)"))
         }
         pub struct TrickySql8Stmt(cornucopia_sync::private::Stmt);
         impl TrickySql8Stmt {
@@ -4835,9 +4777,8 @@ FROM
                 self.bind(client, &params.r#async, &params.r#enum)
             }
         }
-
         pub fn tricky_sql9() -> TrickySql9Stmt {
-            TrickySql9Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (E'this is \'not\' a \':bind_param\'', $1, $2)"))
+            TrickySql9Stmt(cornucopia_sync :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (E'this is \'not\' a \':bind_param\'', $1, $2)"))
         }
         pub struct TrickySql9Stmt(cornucopia_sync::private::Stmt);
         impl TrickySql9Stmt {
@@ -4863,9 +4804,8 @@ FROM
                 self.bind(client, &params.r#async, &params.r#enum)
             }
         }
-
         pub fn tricky_sql10() -> TrickySql10Stmt {
-            TrickySql10Stmt(cornucopia_sync::private::Stmt::new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is just a cast'::text, $1, $2)"))
+            TrickySql10Stmt(cornucopia_sync :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is just a cast'::text, $1, $2)"))
         }
         pub struct TrickySql10Stmt(cornucopia_sync::private::Stmt);
         impl TrickySql10Stmt {
@@ -4891,7 +4831,6 @@ FROM
                 self.bind(client, &params.r#async, &params.r#enum)
             }
         }
-
         pub fn r#typeof() -> TypeofStmt {
             TypeofStmt(cornucopia_sync::private::Stmt::new("SELECT * FROM syntax"))
         }
