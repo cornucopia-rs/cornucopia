@@ -18,26 +18,6 @@ CREATE TABLE Book (
 INSERT INTO Book (Title)
     VALUES ('Murder on the Orient Express'), ('Death on the Nile'), ('The Hobbit'), ('The Silmarillion');
 
-CREATE TYPE spongebob_character AS enum (
-    'Bob',
-    'Patrick',
-    'Squidward'
-);
-
-CREATE TYPE custom_composite AS (
-    name text,
-    age integer,
-    persona spongebob_character
-);
-
-CREATE TABLE CustomTable (
-    col1 custom_composite,
-    col2 spongebob_character
-);
-
-INSERT INTO CustomTable (col1, col2)
-    VALUES (ROW ('incredible', 42, 'Patrick'), 'Bob');
-
 CREATE TABLE BookAuthor (
     AuthorId int NOT NULL,
     BookId int NOT NULL,
@@ -47,4 +27,23 @@ CREATE TABLE BookAuthor (
 
 INSERT INTO BookAuthor (AuthorId, BookId)
     VALUES (1, 1), (1, 2), (2, 3), (2, 4);
+
+CREATE TYPE Sponge_Bob_Character AS enum (
+    'Bob',
+    'Patrick',
+    'Squidward'
+);
+
+CREATE TYPE VoiceActor AS (
+    name text,
+    age integer
+);
+
+CREATE TABLE SpongeBobVoiceActor (
+    voice_actor VoiceActor,
+    character Sponge_Bob_Character
+);
+
+INSERT INTO SpongeBobVoiceActor (voice_actor, character)
+    VALUES (ROW ('Bill Fagerbakke', 65), 'Patrick');
 
