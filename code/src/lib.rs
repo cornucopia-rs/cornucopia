@@ -84,7 +84,7 @@ fn ident_in_iterator<'a>(scan: &'a mut Scanner) -> Vec<&'a str> {
     while let (_, Some(pat)) = parse_next(scan) {
         match pat {
             Kind::Display(ident) | Kind::Call(ident) => idents.push(ident),
-            Kind::Iterator(_) => unreachable!(),
+            Kind::Iterator(_) => panic!("nested repetitions are not supported"),
         }
     }
     scan.jump(start);
