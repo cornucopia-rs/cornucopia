@@ -26,10 +26,7 @@ serde_json = { version = "1.0.85", features = [
 time = { version = "0.3.14", features = ["parsing", "serde"] }
 uuid = { version = "1.1.2", features = ["serde"] }
 eui48 = { version = "1.1.0", features = ["serde"] }
-rust_decimal = { version = "1.26.1", features = [
-    "db-tokio-postgres",
-    "db-postgres",
-] }
+rust_decimal = { version = "1.26.1", features = ["db-postgres"] }
 futures = "0.3.24"
 
 cornucopia_sync = { path = "../clients/sync", features = ["with-serde_json-1"] }
