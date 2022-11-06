@@ -13,7 +13,7 @@ pub enum Error {
     /// An error while trying to parse PostgreSQL query files.
     ParseQueries(#[from] crate::parser::error::Error),
     /// An error while trying to validate PostgreSQL query files.
-    ValidateQueries(#[from] crate::validation::error::Error),
+    ValidateQueries(#[from] Box<crate::validation::error::Error>),
     /// An error while manipulating a container managed by Cornucopia.
     Container(#[from] crate::container::error::Error),
     /// An error while trying to prepare PostgreSQL queries.

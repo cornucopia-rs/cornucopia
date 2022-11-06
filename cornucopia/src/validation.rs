@@ -16,14 +16,14 @@ use postgres_types::Type;
 pub(crate) fn duplicate_nullable_ident(
     info: &ModuleInfo,
     idents: &[NullableIdent],
-) -> Result<(), Error> {
+) -> Result<(), Box<Error>> {
     find_duplicate(idents, |a, b| a.name == b.name).map_or(Ok(()), |(first, second)| {
-        Err(Error::DuplicateFieldNullity {
+        Err(Box::new(Error::DuplicateFieldNullity {
             src: info.into(),
             name: first.name.value.clone(),
             first: first.name.span,
             second: second.name.span,
-        })
+        }))
     })
 }
 
@@ -31,40 +31,43 @@ pub(crate) fn duplicate_sql_col_name(
     info: &ModuleInfo,
     query_name: &Span<String>,
     cols: &[Column],
-) -> Result<(), Error> {
+) -> Result<(), Box<Error>> {
     find_duplicate(cols, |a, b| a.name() == b.name()).map_or(Ok(()), |(_, second)| {
-        Err(Error::DuplicateSqlColName {
+        Err(Box::new(Error::DuplicateSqlColName {
             src: info.clone().into(),
             name: second.name().to_string(),
             pos: query_name.span,
-        })
+        }))
     })
 }
 
-pub(crate) fn query_name_already_used(info: &ModuleInfo, queries: &[Query]) -> Result<(), Error> {
+pub(crate) fn query_name_already_used(
+    info: &ModuleInfo,
+    queries: &[Query],
+) -> Result<(), Box<Error>> {
     find_duplicate(queries, |a, b| a.name == b.name).map_or(Ok(()), |(first, second)| {
-        Err(Error::DuplicateType {
+        Err(Box::new(Error::DuplicateType {
             src: info.into(),
             ty: "query",
             name: first.name.value.clone(),
             first: first.name.span,
             second: second.name.span,
-        })
+        }))
     })
 }
 
 pub(crate) fn named_type_already_used(
     info: &ModuleInfo,
     types: &[TypeAnnotation],
-) -> Result<(), Error> {
+) -> Result<(), Box<Error>> {
     find_duplicate(types, |a, b| a.name == b.name).map_or(Ok(()), |(first, second)| {
-        Err(Error::DuplicateType {
+        Err(Box::new(Error::DuplicateType {
             src: info.into(),
             ty: "type",
             name: first.name.value.clone(),
             first: first.name.span,
             second: second.name.span,
-        })
+        }))
     })
 }
 
@@ -73,15 +76,15 @@ pub(crate) fn inline_conflict_declared(
     name: &Span<String>,
     types: &[TypeAnnotation],
     ty: &'static str,
-) -> Result<(), Error> {
+) -> Result<(), Box<Error>> {
     if let Some(declared) = types.iter().find(|it| it.name == *name) {
-        return Err(Error::DuplicateType {
+        return Err(Box::new(Error::DuplicateType {
             src: info.into(),
             ty,
             name: declared.name.value.clone(),
             first: declared.name.span,
             second: name.span,
-        });
+        }));
     }
     Ok(())
 }
@@ -91,14 +94,14 @@ pub(crate) fn reference_unknown_type(
     name: &Span<String>,
     types: &[TypeAnnotation],
     ty: &'static str,
-) -> Result<(), Error> {
+) -> Result<(), Box<Error>> {
     if types.iter().all(|it| it.name != *name) {
-        return Err(Error::UnknownNamedType {
+        return Err(Box::new(Error::UnknownNamedType {
             src: info.into(),
             ty,
             name: name.value.clone(),
             pos: name.span,
-        });
+        }));
     }
     Ok(())
 }
@@ -107,13 +110,13 @@ pub(crate) fn nullable_column_name(
     info: &ModuleInfo,
     nullable_col: &NullableIdent,
     stmt_cols: &[Column],
-) -> Result<(), Error> {
+) -> Result<(), Box<Error>> {
     // If none of the row's columns match the nullable column
     if stmt_cols
         .iter()
         .all(|row_col| row_col.name() != nullable_col.name.value)
     {
-        return Err(Error::UnknownFieldName {
+        return Err(Box::new(Error::UnknownFieldName {
             src: info.into(),
             pos: nullable_col.name.span,
             known: stmt_cols
@@ -121,7 +124,7 @@ pub(crate) fn nullable_column_name(
                 .map(|it| it.name().to_string())
                 .collect::<Vec<_>>()
                 .join(", "),
-        });
+        }));
     }
     Ok(())
 }
@@ -130,13 +133,13 @@ pub(crate) fn nullable_param_name(
     info: &ModuleInfo,
     nullable_col: &NullableIdent,
     params: &[(Span<String>, Type)],
-) -> Result<(), Error> {
+) -> Result<(), Box<Error>> {
     // If none of the row's columns match the nullable column
     if params
         .iter()
         .all(|(name, _)| name.value != nullable_col.name.value)
     {
-        return Err(Error::UnknownFieldName {
+        return Err(Box::new(Error::UnknownFieldName {
             src: info.into(),
             pos: nullable_col.name.span,
             known: params
@@ -144,7 +147,7 @@ pub(crate) fn nullable_param_name(
                 .map(|it| it.0.value.to_string())
                 .collect::<Vec<_>>()
                 .join(", "),
-        });
+        }));
     }
     Ok(())
 }
@@ -155,14 +158,14 @@ pub(crate) fn row_on_execute(
     query: &SourceSpan,
     row: &QueryDataStruct,
     columns: &[Column],
-) -> Result<(), Error> {
+) -> Result<(), Box<Error>> {
     if columns.is_empty() && !row.is_empty() {
-        return Err(Error::RowOnExecute {
+        return Err(Box::new(Error::RowOnExecute {
             src: info.into(),
             name: name.value.clone(),
             row: row.span,
             query: *query,
-        });
+        }));
     }
     Ok(())
 }
@@ -173,25 +176,25 @@ pub(crate) fn param_on_simple_query(
     query: &SourceSpan,
     param: &QueryDataStruct,
     fields: &[(Span<String>, Type)],
-) -> Result<(), Error> {
+) -> Result<(), Box<Error>> {
     if fields.is_empty() && !param.is_empty() {
-        return Err(Error::ParamsOnSimpleQuery {
+        return Err(Box::new(Error::ParamsOnSimpleQuery {
             src: info.into(),
             name: name.value.clone(),
             param: param.span,
             query: *query,
-        });
+        }));
     }
     Ok(())
 }
 
-fn reserved_type_keyword(info: &ModuleInfo, s: &Span<String>) -> Result<(), Error> {
+fn reserved_type_keyword(info: &ModuleInfo, s: &Span<String>) -> Result<(), Box<Error>> {
     if let Ok(it) = STRICT_KEYWORD.binary_search(&s.value.as_str()) {
-        return Err(Error::TypeRustKeyword {
+        return Err(Box::new(Error::TypeRustKeyword {
             src: info.into(),
             name: STRICT_KEYWORD[it],
             pos: s.span,
-        });
+        }));
     }
     Ok(())
 }
@@ -201,14 +204,14 @@ fn reserved_name_keyword(
     name: &str,
     pos: &SourceSpan,
     ty: &'static str,
-) -> Result<(), Error> {
+) -> Result<(), Box<Error>> {
     if let Ok(it) = STRICT_KEYWORD.binary_search(&unescape_keyword(name)) {
-        return Err(Error::NameRustKeyword {
+        return Err(Box::new(Error::NameRustKeyword {
             src: info.into(),
             name: STRICT_KEYWORD[it],
             pos: *pos,
             ty,
-        });
+        }));
     }
     Ok(())
 }
@@ -219,13 +222,13 @@ pub(crate) fn named_struct_field(
     fields: &[PreparedField],
     prev_name: &Span<String>,
     prev_fields: &[PreparedField],
-) -> Result<(), Error> {
+) -> Result<(), Box<Error>> {
     if let Some((field, prev_field)) = fields.iter().find_map(|f| {
         prev_fields
             .iter()
             .find_map(|prev_f| (f.name == prev_f.name && f.ty != prev_f.ty).then_some((f, prev_f)))
     }) {
-        return Err(Error::IncompatibleNamedType {
+        return Err(Box::new(Error::IncompatibleNamedType {
             src: info.into(),
             name: name.value.clone(),
             first_label: format!(
@@ -236,35 +239,35 @@ pub(crate) fn named_struct_field(
             second: prev_name.span,
             second_label: format!("but here it has type `{}`", prev_field.ty.pg_ty()),
             first: name.span,
-        });
+        }));
     }
 
     if let Some(field) = fields.iter().find(|f| !prev_fields.contains(f)) {
-        return Err(Error::IncompatibleNamedType {
+        return Err(Box::new(Error::IncompatibleNamedType {
             src: info.into(),
             name: name.value.clone(),
             second_label: format!("column `{}` expected here", &field.name),
             second: name.span,
             first_label: format!("column `{}` not found", &field.name),
             first: prev_name.span,
-        });
+        }));
     }
 
     if let Some(prev_field) = prev_fields.iter().find(|f| !fields.contains(f)) {
-        return Err(Error::IncompatibleNamedType {
+        return Err(Box::new(Error::IncompatibleNamedType {
             src: info.into(),
             name: name.value.clone(),
             second_label: format!("column `{}` expected here", &prev_field.name),
             second: prev_name.span,
             first_label: format!("column `{}` not found", &prev_field.name),
             first: name.span,
-        });
+        }));
     }
 
     Ok(())
 }
 
-pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Error> {
+pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Box<Error>> {
     // Check generated name clash
     let mut name_registrar = BTreeMap::new();
 
@@ -329,7 +332,7 @@ pub(crate) fn validate_module(
         types,
         queries,
     }: &Module,
-) -> Result<(), Error> {
+) -> Result<(), Box<Error>> {
     query_name_already_used(info, queries)?;
     named_type_already_used(info, types)?;
     for ty in types {
