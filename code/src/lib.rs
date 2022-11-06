@@ -71,6 +71,14 @@ fn parse_next<'a>(scan: &mut Scanner<'a>) -> (&'a str, Option<Kind<'a>>) {
         } else {
             panic!("Unknown pattern ${}", scan.eat_while(|_| true))
         };
+
+        // Remove whitespace until next pattern
+        let start = scan.cursor();
+        scan.eat_whitespace();
+        if !scan.at("$") {
+            scan.jump(start);
+        }
+
         (raw, pattern)
     } else {
         (raw, None)

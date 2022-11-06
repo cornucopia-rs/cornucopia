@@ -158,14 +158,14 @@ fn struct_tosql(
     is_params: bool,
     is_async: bool,
 ) {
-    let (struct_name, lifetime) = if is_borrow {
+    let (post, lifetime) = if is_borrow {
         if is_params {
-            (format!("{struct_name}Borrowed"), "<'a>")
+            ("Borrowed", "<'a>")
         } else {
-            (format!("{struct_name}Params"), "<'a>")
+            ("Params", "<'a>")
         }
     } else {
-        (struct_name.to_string(), "")
+        ("", "")
     };
     let field_names = fields.iter().map(|p| &p.name);
     let unescaped = fields.iter().map(|p| unescape_keyword(&p.name));
@@ -174,13 +174,13 @@ fn struct_tosql(
     let nb_fields = fields.len();
 
     code!(w =>
-        impl<'a> postgres_types::ToSql for $struct_name $lifetime {
+        impl<'a> postgres_types::ToSql for $struct_name$post $lifetime {
             fn to_sql(
                 &self,
                 ty: &postgres_types::Type,
                 out: &mut postgres_types::private::BytesMut,
             ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>,> {
-                let $struct_name {
+                let $struct_name$post {
                     $($field_names,)
                 } = self;
                 let fields = match *ty.kind() {
@@ -286,7 +286,6 @@ fn gen_params_struct(w: &mut impl Write, params: &PreparedItem, settings: Codege
     } = params;
     let is_async = settings.is_async;
     if *is_named {
-        let name = name.to_string();
         let traits = &mut Vec::new();
 
         let copy = if *is_copy { "Clone,Copy," } else { "" };
@@ -499,14 +498,10 @@ fn gen_query_fn<W: Write>(
                 (
                     row_name.value.clone(),
                     Box::new(|w: _| {
-                        let name = if *is_copy {
-                            row_name.to_string()
-                        } else {
-                            format!("{row_name}Borrowed")
-                        };
+                        let post = if *is_copy { "" } else { "Borrowed" };
                         let fields_name = fields.iter().map(|p| &p.name);
                         let fields_idx = (0..fields.len()).map(|i| index[i]);
-                        code!(w => $name {
+                        code!(w => $row_name$post {
                             $($fields_name: row.get($fields_idx),)
                         })
                     }),
