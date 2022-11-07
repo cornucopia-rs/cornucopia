@@ -1,6 +1,6 @@
 [package]
 name = "cornucopia_async"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2021"
 license = "MIT/Apache-2.0"
 description = "Asynchronous client library for Cornucopia users."
@@ -22,4 +22,4 @@ tokio-postgres = "0.7.7"
 async-trait = "0.1.58"
 deadpool-postgres = { version = "0.10.3", optional = true }
 
-cornucopia_client_core = { path = "../core", version = "0.3.1"  }
+cornucopia_client_core = { path = "../core", version = "0.4.0" }

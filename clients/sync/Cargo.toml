@@ -1,6 +1,6 @@
 [package]
 name = "cornucopia_sync"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2021"
 license = "MIT/Apache-2.0"
 description = "Synchronous client library for Cornucopia users."
@@ -15,7 +15,7 @@ keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 [dependencies]
 postgres = "0.19.4"
 
-cornucopia_client_core = { path = "../core", version = "0.3.1" }
+cornucopia_client_core = { path = "../core", version = "0.4.0" }
 
 [features]
 with-serde_json-1 = ["cornucopia_client_core/with-serde_json-1"]
