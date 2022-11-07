@@ -9,7 +9,7 @@ edition = "2021"
 tempfile = "3.3.0"
 toml = "0.5.9"
 owo-colors = "3.5.0"
-serde = { version = "1.0.144", features = ["derive"], package = "serde" }
-clap = { version = "3.2.21", features = ["derive"] }
+serde = { version = "1.0.147", features = ["derive"], package = "serde" }
+clap = { version = "4.0.19", features = ["derive"] }
 cornucopia = { path = "../cornucopia" }
 postgres = "0.19.4"
