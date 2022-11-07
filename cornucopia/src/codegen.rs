@@ -1,7 +1,7 @@
 use core::str;
 use std::fmt::Write;
 
-use code::code;
+use codegen_template::code;
 use heck::ToUpperCamelCase;
 use indexmap::IndexMap;
 

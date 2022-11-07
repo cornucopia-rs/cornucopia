@@ -11,7 +11,7 @@ categories = ["database"]
 keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 
 [dependencies]
-code = { path = "../code" }
+codegen_template = { path = "../codegen_template", version = "0.1.0" }
 
 postgres = "0.19.4"
 postgres-types = "0.2.4"
