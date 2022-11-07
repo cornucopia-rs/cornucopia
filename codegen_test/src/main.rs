@@ -125,13 +125,13 @@ pub fn test_trait_sql(client: &mut Client) {
         HashMap::from_iter([("one", "1"), ("two", "2"), ("three", "3")].into_iter());
 
     // Old way with allocation
-    let vec: Vec<_> = map.values().copied().collect();
+    let vec: Vec<_> = map.values().collect();
     find_books().bind(client, &vec.as_slice()).all().unwrap();
     // A little more ergonomic
     find_books().bind(client, &vec).all().unwrap();
     // Zero allocation
     find_books()
-        .bind(client, &IterSql(|| map.values().copied()))
+        .bind(client, &IterSql(|| map.values()))
         .all()
         .unwrap();
 }

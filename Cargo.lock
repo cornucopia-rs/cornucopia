@@ -1271,7 +1271,6 @@ dependencies = [
  "num-traits",
  "postgres",
  "serde",
- "tokio-postgres",
 ]
 
 [[package]]
