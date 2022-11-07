@@ -123,7 +123,7 @@ for author in all_authors {
 You can customize pretty much every aspect of your queries easily with Cornucopia (custom parameters and row structs, renaming, nullity control, etc.), so please head over to the [book](https://cornucopia-rs.netlify.app/book/index.html) if you're interested to learn more.
 
 ## MSRV
-This crate uses Rust 2021 edition, which requires at least version 1.56.
+This crate uses Rust 2021 edition, which requires at least version 1.62.1.
 
 ## License
 
