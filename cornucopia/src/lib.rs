@@ -75,6 +75,18 @@ pub fn generate_managed(
     podman: bool,
     settings: CodegenSettings,
 ) -> Result<String, Error> {
+    let result = generate(queries_path, podman, schema_files, settings, destination);
+    container::cleanup(podman).ok();
+    result
+}
+
+fn generate(
+    queries_path: &str,
+    podman: bool,
+    schema_files: Vec<String>,
+    settings: CodegenSettings,
+    destination: Option<&str>,
+) -> Result<String, Error> {
     // Read
     let modules = read_query_modules(queries_path)?
         .into_iter()
@@ -85,7 +97,6 @@ pub fn generate_managed(
     load_schema(&mut client, schema_files)?;
     let prepared_modules = prepare(&mut client, modules)?;
     let generated_code = generate_internal(prepared_modules, settings);
-    container::cleanup(podman)?;
 
     if let Some(destination) = destination {
         write_generated_code(destination, &generated_code)?;

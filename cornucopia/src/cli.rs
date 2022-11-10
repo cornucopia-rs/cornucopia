@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 
-use crate::{conn, container, error::Error, generate_live, generate_managed, CodegenSettings};
+use crate::{conn, error::Error, generate_live, generate_managed, CodegenSettings};
 
 /// Command line interface to interact with Cornucopia SQL.
 #[derive(Parser, Debug)]
@@ -65,7 +65,7 @@ pub fn run() -> Result<(), Error> {
         }
         Action::Schema { schema_files } => {
             // Run the generate command. If the command is unsuccessful, cleanup Cornucopia's container
-            if let Err(e) = generate_managed(
+            generate_managed(
                 &queries_path,
                 schema_files,
                 Some(&destination),
@@ -74,10 +74,7 @@ pub fn run() -> Result<(), Error> {
                     is_async: !sync,
                     derive_ser: serialize,
                 },
-            ) {
-                container::cleanup(podman).ok();
-                return Err(e);
-            }
+            )?;
         }
     };
     Ok(())
