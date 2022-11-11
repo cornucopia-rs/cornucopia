@@ -88,9 +88,8 @@ You can learn more about using Cornucopia by reading our [book](https://cornucop
 The [book](https://cornucopia-rs.netlify.app/book/index.html) is the place to go to get more in-depth explanations, but here is the simplest of tasters to give you an idea.
 
 Let's say you have the following PostgreSQL queries
+**/queries/some_query_file.sql**
 ```sql
--- queries/some_query_file.sql
-
 --! authors
 SELECT first_name, last_name, country FROM Authors;
 
@@ -99,6 +98,12 @@ INSERT INTO Authors(first_name, last_name, country)
 VALUES (:first_name, :last_name, :country)
 ```
 Notice the query annotations (`--! authors`, `--! insert_authors`) and the named bind parameters (`:first_name`, etc.).
+
+1. First of all, you can organize that queries into folder /queries/ as mentioned or pass the folder when running the CLI
+2. You can generate the Rust Code with CLI, for example using a local database 
+```shell
+$ cornucopia live postgres://{usr}:{psw}@localhost:5432/{database}"
+```
 
 Then, after generating the Rust code with Cornucopia's CLI, you can import it into your project like so:
 ```rust
