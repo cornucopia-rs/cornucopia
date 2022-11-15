@@ -24,10 +24,10 @@ impl PreparedField {
         }
     }
 
-    pub fn param_ergo_ty(&self, is_async: bool, traits: &mut Vec<String>) -> String {
+    pub fn param_ergo_ty(&self, client_name: &'static str, traits: &mut Vec<String>) -> String {
         let it = self
             .ty
-            .param_ergo_ty(self.is_inner_nullable, is_async, traits);
+            .param_ergo_ty(self.is_inner_nullable, client_name, traits);
         if self.is_nullable {
             format!("Option<{}>", it)
         } else {
@@ -35,8 +35,8 @@ impl PreparedField {
         }
     }
 
-    pub fn param_ty(&self, is_async: bool) -> String {
-        let it = self.ty.param_ty(self.is_inner_nullable, is_async);
+    pub fn param_ty(&self, client_name: &'static str) -> String {
+        let it = self.ty.param_ty(self.is_inner_nullable, client_name);
         if self.is_nullable {
             format!("Option<{}>", it)
         } else {
@@ -44,10 +44,10 @@ impl PreparedField {
         }
     }
 
-    pub fn brw_ty(&self, has_lifetime: bool, is_async: bool) -> String {
+    pub fn brw_ty(&self, has_lifetime: bool, client_name: &'static str) -> String {
         let it = self
             .ty
-            .brw_ty(self.is_inner_nullable, has_lifetime, is_async);
+            .brw_ty(self.is_inner_nullable, has_lifetime, client_name);
         if self.is_nullable {
             format!("Option<{}>", it)
         } else {
@@ -156,7 +156,7 @@ fn struct_tosql(
     name: &str,
     is_borrow: bool,
     is_params: bool,
-    is_async: bool,
+    client_name: &'static str,
 ) {
     let (post, lifetime) = if is_borrow {
         if is_params {
@@ -169,8 +169,10 @@ fn struct_tosql(
     };
     let field_names = fields.iter().map(|p| &p.name);
     let unescaped = fields.iter().map(|p| unescape_keyword(&p.name));
-    let write_ty = fields.iter().map(|p| p.ty.sql_wrapped(&p.name, is_async));
-    let accept_ty = fields.iter().map(|p| p.ty.accept_to_sql(is_async));
+    let write_ty = fields
+        .iter()
+        .map(|p| p.ty.sql_wrapped(&p.name, client_name));
+    let accept_ty = fields.iter().map(|p| p.ty.accept_to_sql(client_name));
     let nb_fields = fields.len();
 
     code!(w =>
@@ -284,7 +286,6 @@ fn gen_params_struct(w: &mut impl Write, params: &PreparedItem, settings: Codege
         is_named,
         is_ref,
     } = params;
-    let is_async = settings.is_async;
     if *is_named {
         let traits = &mut Vec::new();
 
@@ -292,7 +293,7 @@ fn gen_params_struct(w: &mut impl Write, params: &PreparedItem, settings: Codege
         let lifetime = if *is_ref { "'a," } else { "" };
         let fields_ty = fields
             .iter()
-            .map(|p| p.param_ergo_ty(is_async, traits))
+            .map(|p| p.param_ergo_ty(settings.client_name(), traits))
             .collect::<Vec<_>>();
         let fields_name = fields.iter().map(|p| &p.name);
         let traits_idx = (1..=traits.len()).into_iter().map(idx_char);
@@ -308,10 +309,8 @@ fn gen_params_struct(w: &mut impl Write, params: &PreparedItem, settings: Codege
 fn gen_row_structs(
     w: &mut impl Write,
     row: &PreparedItem,
-    CodegenSettings {
-        is_async,
-        derive_ser,
-    }: CodegenSettings,
+    is_async: bool,
+    settings: CodegenSettings,
 ) {
     let PreparedItem {
         name,
@@ -325,7 +324,11 @@ fn gen_row_structs(
         let fields_name = fields.iter().map(|p| &p.name);
         let fields_ty = fields.iter().map(|p| p.own_struct());
         let copy = if *is_copy { "Copy" } else { "" };
-        let ser_str = if derive_ser { "serde::Serialize," } else { "" };
+        let ser_str = if settings.derive_ser {
+            "serde::Serialize,"
+        } else {
+            ""
+        };
         code!(w =>
             #[derive($ser_str Debug, Clone, PartialEq,$copy)]
             pub struct $name {
@@ -335,7 +338,9 @@ fn gen_row_structs(
 
         if !is_copy {
             let fields_name = fields.iter().map(|p| &p.name);
-            let fields_ty = fields.iter().map(|p| p.brw_ty(true, is_async));
+            let fields_ty = fields
+                .iter()
+                .map(|p| p.brw_ty(true, settings.client_name()));
             let from_own_assign = fields.iter().map(|f| f.owning_assign());
             code!(w =>
                 pub struct ${name}Borrowed<'a> {
@@ -384,7 +389,7 @@ fn gen_row_structs(
         let row_struct = if *is_named {
             format!("{name}{borrowed_str}")
         } else {
-            fields[0].brw_ty(false, is_async)
+            fields[0].brw_ty(false, settings.client_name())
         };
 
         code!(w =>
@@ -450,7 +455,8 @@ fn gen_query_fn<W: Write>(
     w: &mut W,
     module: &PreparedModule,
     query: &PreparedQuery,
-    CodegenSettings { is_async, .. }: CodegenSettings,
+    is_async: bool,
+    settings: CodegenSettings,
 ) {
     let PreparedQuery {
         name,
@@ -476,7 +482,7 @@ fn gen_query_fn<W: Write>(
     let traits = &mut Vec::new();
     let params_ty: Vec<_> = order
         .iter()
-        .map(|idx| param_field[*idx].param_ergo_ty(is_async, traits))
+        .map(|idx| param_field[*idx].param_ergo_ty(settings.client_name(), traits))
         .collect();
     let params_name = order.iter().map(|idx| &param_field[*idx].name);
     let traits_idx = (1..=traits.len()).into_iter().map(idx_char);
@@ -530,7 +536,7 @@ fn gen_query_fn<W: Write>(
             // Execute fn
             let params_wrap = order.iter().map(|idx| {
                 let p = &param_field[*idx];
-                p.ty.sql_wrapped(&p.name, is_async)
+                p.ty.sql_wrapped(&p.name, settings.client_name())
             });
             code!(w =>
                 pub $fn_async fn bind<'a, C: GenericClient,$($traits_idx: $traits,)>(&'a mut self, client: &'a $client_mut C, $($params_name: &'a $params_ty,)) -> Result<u64, $backend::Error> {
@@ -611,10 +617,7 @@ fn gen_custom_type(
     w: &mut impl Write,
     schema: &str,
     prepared: &PreparedType,
-    CodegenSettings {
-        derive_ser,
-        is_async,
-    }: CodegenSettings,
+    settings: CodegenSettings,
 ) {
     let PreparedType {
         struct_name,
@@ -624,7 +627,11 @@ fn gen_custom_type(
         name,
     } = prepared;
     let copy = if *is_copy { "Copy," } else { "" };
-    let ser_str = if derive_ser { "serde::Serialize," } else { "" };
+    let ser_str = if settings.derive_ser {
+        "serde::Serialize,"
+    } else {
+        ""
+    };
     match content {
         PreparedContent::Enum(variants) => {
             code!(w =>
@@ -649,10 +656,20 @@ fn gen_custom_type(
                 );
             }
             if *is_copy {
-                struct_tosql(w, struct_name, fields, name, false, *is_params, is_async);
+                struct_tosql(
+                    w,
+                    struct_name,
+                    fields,
+                    name,
+                    false,
+                    *is_params,
+                    settings.client_name(),
+                );
             } else {
                 let fields_owning = fields.iter().map(|p| p.owning_assign());
-                let fields_brw = fields.iter().map(|p| p.brw_ty(true, is_async));
+                let fields_brw = fields
+                    .iter()
+                    .map(|p| p.brw_ty(true, settings.client_name()));
                 code!(w =>
                     #[derive(Debug)]
                     pub struct ${struct_name}Borrowed<'a> {
@@ -672,7 +689,7 @@ fn gen_custom_type(
                 );
                 composite_fromsql(w, struct_name, fields, name, schema);
                 if !is_params {
-                    let fields_ty = fields.iter().map(|p| p.param_ty(is_async));
+                    let fields_ty = fields.iter().map(|p| p.param_ty(settings.client_name()));
                     let derive = if *is_copy { ",Copy,Clone" } else { "" };
                     code!(w =>
                         #[derive(Debug $derive)]
@@ -681,7 +698,15 @@ fn gen_custom_type(
                         }
                     );
                 }
-                struct_tosql(w, struct_name, fields, name, true, *is_params, is_async);
+                struct_tosql(
+                    w,
+                    struct_name,
+                    fields,
+                    name,
+                    true,
+                    *is_params,
+                    settings.client_name(),
+                );
             }
         }
     }
@@ -718,11 +743,6 @@ fn gen_type_modules<W: Write>(
 }
 
 pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> String {
-    let import = if settings.is_async {
-        "use futures::{{StreamExt, TryStreamExt}};use futures; use cornucopia_async::GenericClient;"
-    } else {
-        "use postgres::{{fallible_iterator::FallibleIterator,GenericClient}};"
-    };
     let mut buff = "// This file was generated with `cornucopia`. Do not modify.\n\n".to_string();
     let w = &mut buff;
     // Generate database type
@@ -738,11 +758,15 @@ pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> S
             let rows_string = module
                 .rows
                 .values()
-                .map(|row| |w: &mut String| gen_row_structs(w, row, settings));
-            let queries_string = module
-                .queries
-                .values()
-                .map(|query| |w: &mut String| gen_query_fn(w, module, query, settings));
+                .map(|row| |w: &mut String| gen_row_structs(w, row, settings.gen_async, settings));
+            let queries_string = module.queries.values().map(|query| {
+                |w: &mut String| gen_query_fn(w, module, query, settings.gen_async, settings)
+            });
+            let import = if settings.gen_async {
+                "use futures::{{StreamExt, TryStreamExt}};use futures; use cornucopia_async::GenericClient;"
+            } else {
+                "use postgres::{{fallible_iterator::FallibleIterator,GenericClient}};"
+            };
 
             code!(w =>
                 pub mod $name {

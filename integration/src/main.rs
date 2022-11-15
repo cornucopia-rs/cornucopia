@@ -159,7 +159,8 @@ fn run_errors_test(
                     "queries",
                     None,
                     CodegenSettings {
-                        is_async: false,
+                        gen_sync: true,
+                        gen_async: false,
                         derive_ser: false,
                     },
                 )?;
@@ -233,7 +234,8 @@ fn run_codegen_test(
                     queries_path,
                     Some(destination),
                     CodegenSettings {
-                        is_async,
+                        gen_async: is_async,
+                        gen_sync: !is_async,
                         derive_ser,
                     },
                 )
@@ -252,7 +254,8 @@ fn run_codegen_test(
                     queries_path,
                     None,
                     CodegenSettings {
-                        is_async,
+                        gen_async: is_async,
+                        gen_sync: !is_async,
                         derive_ser,
                     },
                 )

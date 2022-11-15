@@ -31,8 +31,21 @@ pub use load_schema::load_schema;
 /// Struct containing the settings for code generation.
 #[derive(Clone, Copy)]
 pub struct CodegenSettings {
-    pub is_async: bool,
+    pub gen_async: bool,
+    pub gen_sync: bool,
     pub derive_ser: bool,
+}
+
+impl CodegenSettings {
+    pub fn client_name(&self) -> &'static str {
+        if self.gen_sync {
+            "cornucopia_sync"
+        } else if self.gen_async {
+            "cornucopia_async"
+        } else {
+            unreachable!()
+        }
+    }
 }
 
 /// Generates Rust queries from PostgreSQL queries located at `queries_path`,

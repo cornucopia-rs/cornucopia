@@ -69,20 +69,19 @@ impl CornucopiaType {
     }
 
     /// Wrap type to escape domains in parameters
-    pub(crate) fn sql_wrapped(&self, name: &str, is_async: bool) -> String {
-        let client_name = if is_async { "async" } else { "sync" };
+    pub(crate) fn sql_wrapped(&self, name: &str, client_name: &'static str) -> String {
         match self {
             CornucopiaType::Domain { inner, .. } => {
                 format!(
-                    "&cornucopia_{client_name}::private::Domain({})",
-                    inner.sql_wrapped(name, is_async)
+                    "&{client_name}::private::Domain({})",
+                    inner.sql_wrapped(name, client_name)
                 )
             }
             CornucopiaType::Array { inner } => match inner.as_ref() {
                 CornucopiaType::Domain { inner, .. } => {
                     format!(
-                        "&cornucopia_{client_name}::private::DomainArray({})",
-                        inner.sql_wrapped(name, is_async)
+                        "&{client_name}::private::DomainArray({})",
+                        inner.sql_wrapped(name, client_name)
                     )
                 }
                 _ => name.to_string(),
@@ -92,24 +91,20 @@ impl CornucopiaType {
     }
 
     /// Wrap type to escape domains when writing to sql
-    pub(crate) fn accept_to_sql(&self, is_async: bool) -> String {
-        let client_name = if is_async { "async" } else { "sync" };
+    pub(crate) fn accept_to_sql(&self, client_name: &'static str) -> String {
         match self {
             CornucopiaType::Domain { inner, .. } => format!(
-                "cornucopia_{client_name}::private::Domain::<{}>",
-                inner.accept_to_sql(is_async)
+                "{client_name}::private::Domain::<{}>",
+                inner.accept_to_sql(client_name)
             ),
             CornucopiaType::Array { inner } => match inner.as_ref() {
                 CornucopiaType::Domain { inner, .. } => {
-                    let ty = inner.accept_to_sql(is_async);
-                    format!(
-                        "cornucopia_{client_name}::private::DomainArray::<{}, &[{ty}]>",
-                        ty
-                    )
+                    let ty = inner.accept_to_sql(client_name);
+                    format!("{client_name}::private::DomainArray::<{}, &[{ty}]>", ty)
                 }
-                _ => self.param_ty(false, is_async),
+                _ => self.param_ty(false, client_name),
             },
-            _ => self.param_ty(false, is_async),
+            _ => self.param_ty(false, client_name),
         }
     }
 
@@ -175,54 +170,51 @@ impl CornucopiaType {
     pub(crate) fn param_ergo_ty(
         &self,
         is_inner_nullable: bool,
-        is_async: bool,
+        client_name: &'static str,
         traits: &mut Vec<String>,
     ) -> String {
-        let client_name = if is_async { "async" } else { "sync" };
         match self {
             CornucopiaType::Simple { pg_ty, .. } => match *pg_ty {
                 Type::BYTEA => {
-                    traits.push(format!("cornucopia_{client_name}::BytesSql"));
+                    traits.push(format!("{client_name}::BytesSql"));
                     idx_char(traits.len())
                 }
                 Type::TEXT | Type::VARCHAR => {
-                    traits.push(format!("cornucopia_{client_name}::StringSql"));
+                    traits.push(format!("{client_name}::StringSql"));
                     idx_char(traits.len())
                 }
                 Type::JSON | Type::JSONB => {
-                    traits.push(format!("cornucopia_{client_name}::JsonSql"));
+                    traits.push(format!("{client_name}::JsonSql"));
                     idx_char(traits.len())
                 }
-                _ => self.param_ty(is_inner_nullable, is_async),
+                _ => self.param_ty(is_inner_nullable, client_name),
             },
             CornucopiaType::Array { inner, .. } => {
-                let inner = inner.param_ergo_ty(is_inner_nullable, is_async, traits);
+                let inner = inner.param_ergo_ty(is_inner_nullable, client_name, traits);
                 let inner = if is_inner_nullable {
                     format!("Option<{inner}>")
                 } else {
                     inner
                 };
-                traits.push(format!(
-                    "cornucopia_{client_name}::ArraySql<Item = {inner}>"
-                ));
+                traits.push(format!("{client_name}::ArraySql<Item = {inner}>"));
                 idx_char(traits.len())
             }
             CornucopiaType::Domain { inner, .. } => {
-                inner.param_ergo_ty(is_inner_nullable, is_async, traits)
+                inner.param_ergo_ty(is_inner_nullable, client_name, traits)
             }
-            CornucopiaType::Custom { .. } => self.param_ty(is_inner_nullable, is_async),
+            CornucopiaType::Custom { .. } => self.param_ty(is_inner_nullable, client_name),
         }
     }
 
     /// Corresponding borrowed parameter type
-    pub(crate) fn param_ty(&self, is_inner_nullable: bool, is_async: bool) -> String {
+    pub(crate) fn param_ty(&self, is_inner_nullable: bool, client_name: &'static str) -> String {
         match self {
             CornucopiaType::Simple { pg_ty, .. } => match *pg_ty {
                 Type::JSON | Type::JSONB => "&'a serde_json::value::Value".to_string(),
-                _ => self.brw_ty(is_inner_nullable, true, is_async),
+                _ => self.brw_ty(is_inner_nullable, true, client_name),
             },
             CornucopiaType::Array { inner, .. } => {
-                let inner = inner.param_ty(is_inner_nullable, is_async);
+                let inner = inner.param_ty(is_inner_nullable, client_name);
                 let inner = if is_inner_nullable {
                     format!("Option<{inner}>")
                 } else {
@@ -231,7 +223,7 @@ impl CornucopiaType {
                 // Its more practical for users to use a slice
                 format!("&'a [{inner}]")
             }
-            CornucopiaType::Domain { inner, .. } => inner.param_ty(false, is_async),
+            CornucopiaType::Domain { inner, .. } => inner.param_ty(false, client_name),
             CornucopiaType::Custom {
                 struct_path,
                 is_params,
@@ -241,7 +233,7 @@ impl CornucopiaType {
                 if !is_copy && !is_params {
                     format!("{}Params<'a>", struct_path)
                 } else {
-                    self.brw_ty(is_inner_nullable, true, is_async)
+                    self.brw_ty(is_inner_nullable, true, client_name)
                 }
             }
         }
@@ -253,9 +245,8 @@ impl CornucopiaType {
         &self,
         is_inner_nullable: bool,
         has_lifetime: bool,
-        is_async: bool,
+        client_name: &'static str,
     ) -> String {
-        let client_name = if is_async { "async" } else { "sync" };
         let lifetime = if has_lifetime { "'a" } else { "" };
         match self {
             CornucopiaType::Simple {
@@ -269,7 +260,7 @@ impl CornucopiaType {
                 _ => (*rust_name).to_string(),
             },
             CornucopiaType::Array { inner, .. } => {
-                let inner = inner.brw_ty(is_inner_nullable, has_lifetime, is_async);
+                let inner = inner.brw_ty(is_inner_nullable, has_lifetime, client_name);
                 let inner = if is_inner_nullable {
                     format!("Option<{inner}>")
                 } else {
@@ -277,9 +268,9 @@ impl CornucopiaType {
                 };
                 // Its more practical for users to use a slice
                 let lifetime = if has_lifetime { lifetime } else { "'_" };
-                format!("cornucopia_{client_name}::ArrayIterator<{lifetime}, {inner}>")
+                format!("{client_name}::ArrayIterator<{lifetime}, {inner}>")
             }
-            CornucopiaType::Domain { inner, .. } => inner.brw_ty(false, has_lifetime, is_async),
+            CornucopiaType::Domain { inner, .. } => inner.brw_ty(false, has_lifetime, client_name),
             CornucopiaType::Custom {
                 struct_path,
                 is_copy,
