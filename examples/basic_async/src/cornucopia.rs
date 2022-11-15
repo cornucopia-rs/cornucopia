@@ -256,6 +256,58 @@ pub mod queries {
                 }
             }
         }
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct AuthorNameStartingWith {
+            pub authorid: i32,
+            pub name: String,
+            pub bookid: i32,
+            pub title: String,
+        }
+        pub struct AuthorNameStartingWithBorrowed<'a> {
+            pub authorid: i32,
+            pub name: &'a str,
+            pub bookid: i32,
+            pub title: &'a str,
+        }
+        impl<'a> From<AuthorNameStartingWithBorrowed<'a>> for AuthorNameStartingWith {
+            fn from(
+                AuthorNameStartingWithBorrowed {
+                    authorid,
+                    name,
+                    bookid,
+                    title,
+                }: AuthorNameStartingWithBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    authorid,
+                    name: name.into(),
+                    bookid,
+                    title: title.into(),
+                }
+            }
+        }
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct SelectTranslations {
+            pub title: String,
+            pub translations: Vec<String>,
+        }
+        pub struct SelectTranslationsBorrowed<'a> {
+            pub title: &'a str,
+            pub translations: cornucopia_async::ArrayIterator<'a, &'a str>,
+        }
+        impl<'a> From<SelectTranslationsBorrowed<'a>> for SelectTranslations {
+            fn from(
+                SelectTranslationsBorrowed {
+                    title,
+                    translations,
+                }: SelectTranslationsBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    title: title.into(),
+                    translations: translations.map(|v| v.into()).collect(),
+                }
+            }
+        }
         pub struct AuthorsQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -358,36 +410,6 @@ pub mod queries {
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
                 Ok(it)
-            }
-        }
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct AuthorNameStartingWith {
-            pub authorid: i32,
-            pub name: String,
-            pub bookid: i32,
-            pub title: String,
-        }
-        pub struct AuthorNameStartingWithBorrowed<'a> {
-            pub authorid: i32,
-            pub name: &'a str,
-            pub bookid: i32,
-            pub title: &'a str,
-        }
-        impl<'a> From<AuthorNameStartingWithBorrowed<'a>> for AuthorNameStartingWith {
-            fn from(
-                AuthorNameStartingWithBorrowed {
-                    authorid,
-                    name,
-                    bookid,
-                    title,
-                }: AuthorNameStartingWithBorrowed<'a>,
-            ) -> Self {
-                Self {
-                    authorid,
-                    name: name.into(),
-                    bookid,
-                    title: title.into(),
-                }
             }
         }
         pub struct AuthorNameStartingWithQuery<'a, C: GenericClient, T, const N: usize> {
@@ -498,28 +520,6 @@ pub mod queries {
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
                 Ok(it)
-            }
-        }
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct SelectTranslations {
-            pub title: String,
-            pub translations: Vec<String>,
-        }
-        pub struct SelectTranslationsBorrowed<'a> {
-            pub title: &'a str,
-            pub translations: cornucopia_async::ArrayIterator<'a, &'a str>,
-        }
-        impl<'a> From<SelectTranslationsBorrowed<'a>> for SelectTranslations {
-            fn from(
-                SelectTranslationsBorrowed {
-                    title,
-                    translations,
-                }: SelectTranslationsBorrowed<'a>,
-            ) -> Self {
-                Self {
-                    title: title.into(),
-                    translations: translations.map(|v| v.into()).collect(),
-                }
             }
         }
         pub struct SelectTranslationsQuery<'a, C: GenericClient, T, const N: usize> {

@@ -1340,6 +1340,48 @@ pub mod queries {
                 }
             }
         }
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
+        pub struct SelectNightmareDomainNull {
+            pub txt: Option<String>,
+            pub json: Option<serde_json::Value>,
+            pub nb: Option<i32>,
+            pub arr: Option<Vec<Option<serde_json::Value>>>,
+            pub composite: Option<super::super::types::public::DomainComposite>,
+        }
+        pub struct SelectNightmareDomainNullBorrowed<'a> {
+            pub txt: Option<&'a str>,
+            pub json: Option<postgres_types::Json<&'a serde_json::value::RawValue>>,
+            pub nb: Option<i32>,
+            pub arr: Option<
+                cornucopia_async::ArrayIterator<
+                    'a,
+                    Option<postgres_types::Json<&'a serde_json::value::RawValue>>,
+                >,
+            >,
+            pub composite: Option<super::super::types::public::DomainCompositeBorrowed<'a>>,
+        }
+        impl<'a> From<SelectNightmareDomainNullBorrowed<'a>> for SelectNightmareDomainNull {
+            fn from(
+                SelectNightmareDomainNullBorrowed {
+                    txt,
+                    json,
+                    nb,
+                    arr,
+                    composite,
+                }: SelectNightmareDomainNullBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    txt: txt.map(|v| v.into()),
+                    json: json.map(|v| serde_json::from_str(v.0.get()).unwrap()),
+                    nb,
+                    arr: arr.map(|v| {
+                        v.map(|v| v.map(|v| serde_json::from_str(v.0.get()).unwrap()))
+                            .collect()
+                    }),
+                    composite: composite.map(|v| v.into()),
+                }
+            }
+        }
         pub struct SelectNightmareDomainQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -1393,48 +1435,6 @@ pub mod queries {
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
                 Ok(it)
-            }
-        }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
-        pub struct SelectNightmareDomainNull {
-            pub txt: Option<String>,
-            pub json: Option<serde_json::Value>,
-            pub nb: Option<i32>,
-            pub arr: Option<Vec<Option<serde_json::Value>>>,
-            pub composite: Option<super::super::types::public::DomainComposite>,
-        }
-        pub struct SelectNightmareDomainNullBorrowed<'a> {
-            pub txt: Option<&'a str>,
-            pub json: Option<postgres_types::Json<&'a serde_json::value::RawValue>>,
-            pub nb: Option<i32>,
-            pub arr: Option<
-                cornucopia_async::ArrayIterator<
-                    'a,
-                    Option<postgres_types::Json<&'a serde_json::value::RawValue>>,
-                >,
-            >,
-            pub composite: Option<super::super::types::public::DomainCompositeBorrowed<'a>>,
-        }
-        impl<'a> From<SelectNightmareDomainNullBorrowed<'a>> for SelectNightmareDomainNull {
-            fn from(
-                SelectNightmareDomainNullBorrowed {
-                    txt,
-                    json,
-                    nb,
-                    arr,
-                    composite,
-                }: SelectNightmareDomainNullBorrowed<'a>,
-            ) -> Self {
-                Self {
-                    txt: txt.map(|v| v.into()),
-                    json: json.map(|v| serde_json::from_str(v.0.get()).unwrap()),
-                    nb,
-                    arr: arr.map(|v| {
-                        v.map(|v| v.map(|v| serde_json::from_str(v.0.get()).unwrap()))
-                            .collect()
-                    }),
-                    composite: composite.map(|v| v.into()),
-                }
             }
         }
         pub struct SelectNightmareDomainNullQuery<'a, C: GenericClient, T, const N: usize> {
@@ -1637,6 +1637,36 @@ pub mod queries {
         pub struct Id {
             pub id: i32,
         }
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
+        pub struct Named {
+            pub id: i32,
+            pub name: String,
+            pub price: Option<f64>,
+            pub show: bool,
+        }
+        pub struct NamedBorrowed<'a> {
+            pub id: i32,
+            pub name: &'a str,
+            pub price: Option<f64>,
+            pub show: bool,
+        }
+        impl<'a> From<NamedBorrowed<'a>> for Named {
+            fn from(
+                NamedBorrowed {
+                    id,
+                    name,
+                    price,
+                    show,
+                }: NamedBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    id,
+                    name: name.into(),
+                    price,
+                    show,
+                }
+            }
+        }
         pub struct IdQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -1687,36 +1717,6 @@ pub mod queries {
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
                 Ok(it)
-            }
-        }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
-        pub struct Named {
-            pub id: i32,
-            pub name: String,
-            pub price: Option<f64>,
-            pub show: bool,
-        }
-        pub struct NamedBorrowed<'a> {
-            pub id: i32,
-            pub name: &'a str,
-            pub price: Option<f64>,
-            pub show: bool,
-        }
-        impl<'a> From<NamedBorrowed<'a>> for Named {
-            fn from(
-                NamedBorrowed {
-                    id,
-                    name,
-                    price,
-                    show,
-                }: NamedBorrowed<'a>,
-            ) -> Self {
-                Self {
-                    id,
-                    name: name.into(),
-                    price,
-                    show,
-                }
             }
         }
         pub struct NamedQuery<'a, C: GenericClient, T, const N: usize> {
@@ -2216,6 +2216,23 @@ pub mod queries {
                 }
             }
         }
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
+        pub struct FindBooks {
+            pub name: String,
+            pub author: Option<String>,
+        }
+        pub struct FindBooksBorrowed<'a> {
+            pub name: &'a str,
+            pub author: Option<&'a str>,
+        }
+        impl<'a> From<FindBooksBorrowed<'a>> for FindBooks {
+            fn from(FindBooksBorrowed { name, author }: FindBooksBorrowed<'a>) -> Self {
+                Self {
+                    name: name.into(),
+                    author: author.map(|v| v.into()),
+                }
+            }
+        }
         pub struct SelectBookQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -2269,23 +2286,6 @@ pub mod queries {
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
                 Ok(it)
-            }
-        }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
-        pub struct FindBooks {
-            pub name: String,
-            pub author: Option<String>,
-        }
-        pub struct FindBooksBorrowed<'a> {
-            pub name: &'a str,
-            pub author: Option<&'a str>,
-        }
-        impl<'a> From<FindBooksBorrowed<'a>> for FindBooks {
-            fn from(FindBooksBorrowed { name, author }: FindBooksBorrowed<'a>) -> Self {
-                Self {
-                    name: name.into(),
-                    author: author.map(|v| v.into()),
-                }
             }
         }
         pub struct FindBooksQuery<'a, C: GenericClient, T, const N: usize> {
@@ -2761,61 +2761,6 @@ pub mod queries {
                 }
             }
         }
-        pub struct EverythingQuery<'a, C: GenericClient, T, const N: usize> {
-            client: &'a C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut cornucopia_async::private::Stmt,
-            extractor: fn(&tokio_postgres::Row) -> EverythingBorrowed,
-            mapper: fn(EverythingBorrowed) -> T,
-        }
-        impl<'a, C, T: 'a, const N: usize> EverythingQuery<'a, C, T, N>
-        where
-            C: GenericClient,
-        {
-            pub fn map<R>(
-                self,
-                mapper: fn(EverythingBorrowed) -> R,
-            ) -> EverythingQuery<'a, C, R, N> {
-                EverythingQuery {
-                    client: self.client,
-                    params: self.params,
-                    stmt: self.stmt,
-                    extractor: self.extractor,
-                    mapper,
-                }
-            }
-            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                let stmt = self.stmt.prepare(self.client).await?;
-                let row = self.client.query_one(stmt, &self.params).await?;
-                Ok((self.mapper)((self.extractor)(&row)))
-            }
-            pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
-                self.iter().await?.try_collect().await
-            }
-            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                let stmt = self.stmt.prepare(self.client).await?;
-                Ok(self
-                    .client
-                    .query_opt(stmt, &self.params)
-                    .await?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
-            }
-            pub async fn iter(
-                self,
-            ) -> Result<
-                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
-                tokio_postgres::Error,
-            > {
-                let stmt = self.stmt.prepare(self.client).await?;
-                let it = self
-                    .client
-                    .query_raw(stmt, cornucopia_async::private::slice_iter(&self.params))
-                    .await?
-                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
-                    .into_stream();
-                Ok(it)
-            }
-        }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct EverythingNull {
             pub bool_: Option<bool>,
@@ -2966,61 +2911,6 @@ pub mod queries {
                 }
             }
         }
-        pub struct EverythingNullQuery<'a, C: GenericClient, T, const N: usize> {
-            client: &'a C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut cornucopia_async::private::Stmt,
-            extractor: fn(&tokio_postgres::Row) -> EverythingNullBorrowed,
-            mapper: fn(EverythingNullBorrowed) -> T,
-        }
-        impl<'a, C, T: 'a, const N: usize> EverythingNullQuery<'a, C, T, N>
-        where
-            C: GenericClient,
-        {
-            pub fn map<R>(
-                self,
-                mapper: fn(EverythingNullBorrowed) -> R,
-            ) -> EverythingNullQuery<'a, C, R, N> {
-                EverythingNullQuery {
-                    client: self.client,
-                    params: self.params,
-                    stmt: self.stmt,
-                    extractor: self.extractor,
-                    mapper,
-                }
-            }
-            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                let stmt = self.stmt.prepare(self.client).await?;
-                let row = self.client.query_one(stmt, &self.params).await?;
-                Ok((self.mapper)((self.extractor)(&row)))
-            }
-            pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
-                self.iter().await?.try_collect().await
-            }
-            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                let stmt = self.stmt.prepare(self.client).await?;
-                Ok(self
-                    .client
-                    .query_opt(stmt, &self.params)
-                    .await?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
-            }
-            pub async fn iter(
-                self,
-            ) -> Result<
-                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
-                tokio_postgres::Error,
-            > {
-                let stmt = self.stmt.prepare(self.client).await?;
-                let it = self
-                    .client
-                    .query_raw(stmt, cornucopia_async::private::slice_iter(&self.params))
-                    .await?
-                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
-                    .into_stream();
-                Ok(it)
-            }
-        }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
         pub struct EverythingArray {
             pub bool_: Vec<bool>,
@@ -3157,61 +3047,6 @@ pub mod queries {
                     macaddr_: macaddr_.map(|v| v).collect(),
                     numeric_: numeric_.map(|v| v).collect(),
                 }
-            }
-        }
-        pub struct EverythingArrayQuery<'a, C: GenericClient, T, const N: usize> {
-            client: &'a C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut cornucopia_async::private::Stmt,
-            extractor: fn(&tokio_postgres::Row) -> EverythingArrayBorrowed,
-            mapper: fn(EverythingArrayBorrowed) -> T,
-        }
-        impl<'a, C, T: 'a, const N: usize> EverythingArrayQuery<'a, C, T, N>
-        where
-            C: GenericClient,
-        {
-            pub fn map<R>(
-                self,
-                mapper: fn(EverythingArrayBorrowed) -> R,
-            ) -> EverythingArrayQuery<'a, C, R, N> {
-                EverythingArrayQuery {
-                    client: self.client,
-                    params: self.params,
-                    stmt: self.stmt,
-                    extractor: self.extractor,
-                    mapper,
-                }
-            }
-            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                let stmt = self.stmt.prepare(self.client).await?;
-                let row = self.client.query_one(stmt, &self.params).await?;
-                Ok((self.mapper)((self.extractor)(&row)))
-            }
-            pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
-                self.iter().await?.try_collect().await
-            }
-            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                let stmt = self.stmt.prepare(self.client).await?;
-                Ok(self
-                    .client
-                    .query_opt(stmt, &self.params)
-                    .await?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
-            }
-            pub async fn iter(
-                self,
-            ) -> Result<
-                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
-                tokio_postgres::Error,
-            > {
-                let stmt = self.stmt.prepare(self.client).await?;
-                let it = self
-                    .client
-                    .query_raw(stmt, cornucopia_async::private::slice_iter(&self.params))
-                    .await?
-                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
-                    .into_stream();
-                Ok(it)
             }
         }
         #[derive(serde::Serialize, Debug, Clone, PartialEq)]
@@ -3358,6 +3193,171 @@ pub mod queries {
                     macaddr_: macaddr_.map(|v| v.map(|v| v).collect()),
                     numeric_: numeric_.map(|v| v.map(|v| v).collect()),
                 }
+            }
+        }
+        pub struct EverythingQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            stmt: &'a mut cornucopia_async::private::Stmt,
+            extractor: fn(&tokio_postgres::Row) -> EverythingBorrowed,
+            mapper: fn(EverythingBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> EverythingQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(
+                self,
+                mapper: fn(EverythingBorrowed) -> R,
+            ) -> EverythingQuery<'a, C, R, N> {
+                EverythingQuery {
+                    client: self.client,
+                    params: self.params,
+                    stmt: self.stmt,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+                let stmt = self.stmt.prepare(self.client).await?;
+                let row = self.client.query_one(stmt, &self.params).await?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.iter().await?.try_collect().await
+            }
+            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+                let stmt = self.stmt.prepare(self.client).await?;
+                Ok(self
+                    .client
+                    .query_opt(stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub async fn iter(
+                self,
+            ) -> Result<
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
+                let stmt = self.stmt.prepare(self.client).await?;
+                let it = self
+                    .client
+                    .query_raw(stmt, cornucopia_async::private::slice_iter(&self.params))
+                    .await?
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                    .into_stream();
+                Ok(it)
+            }
+        }
+        pub struct EverythingNullQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            stmt: &'a mut cornucopia_async::private::Stmt,
+            extractor: fn(&tokio_postgres::Row) -> EverythingNullBorrowed,
+            mapper: fn(EverythingNullBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> EverythingNullQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(
+                self,
+                mapper: fn(EverythingNullBorrowed) -> R,
+            ) -> EverythingNullQuery<'a, C, R, N> {
+                EverythingNullQuery {
+                    client: self.client,
+                    params: self.params,
+                    stmt: self.stmt,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+                let stmt = self.stmt.prepare(self.client).await?;
+                let row = self.client.query_one(stmt, &self.params).await?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.iter().await?.try_collect().await
+            }
+            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+                let stmt = self.stmt.prepare(self.client).await?;
+                Ok(self
+                    .client
+                    .query_opt(stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub async fn iter(
+                self,
+            ) -> Result<
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
+                let stmt = self.stmt.prepare(self.client).await?;
+                let it = self
+                    .client
+                    .query_raw(stmt, cornucopia_async::private::slice_iter(&self.params))
+                    .await?
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                    .into_stream();
+                Ok(it)
+            }
+        }
+        pub struct EverythingArrayQuery<'a, C: GenericClient, T, const N: usize> {
+            client: &'a C,
+            params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            stmt: &'a mut cornucopia_async::private::Stmt,
+            extractor: fn(&tokio_postgres::Row) -> EverythingArrayBorrowed,
+            mapper: fn(EverythingArrayBorrowed) -> T,
+        }
+        impl<'a, C, T: 'a, const N: usize> EverythingArrayQuery<'a, C, T, N>
+        where
+            C: GenericClient,
+        {
+            pub fn map<R>(
+                self,
+                mapper: fn(EverythingArrayBorrowed) -> R,
+            ) -> EverythingArrayQuery<'a, C, R, N> {
+                EverythingArrayQuery {
+                    client: self.client,
+                    params: self.params,
+                    stmt: self.stmt,
+                    extractor: self.extractor,
+                    mapper,
+                }
+            }
+            pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+                let stmt = self.stmt.prepare(self.client).await?;
+                let row = self.client.query_one(stmt, &self.params).await?;
+                Ok((self.mapper)((self.extractor)(&row)))
+            }
+            pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
+                self.iter().await?.try_collect().await
+            }
+            pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+                let stmt = self.stmt.prepare(self.client).await?;
+                Ok(self
+                    .client
+                    .query_opt(stmt, &self.params)
+                    .await?
+                    .map(|row| (self.mapper)((self.extractor)(&row))))
+            }
+            pub async fn iter(
+                self,
+            ) -> Result<
+                impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+                tokio_postgres::Error,
+            > {
+                let stmt = self.stmt.prepare(self.client).await?;
+                let it = self
+                    .client
+                    .query_raw(stmt, cornucopia_async::private::slice_iter(&self.params))
+                    .await?
+                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                    .into_stream();
+                Ok(it)
             }
         }
         pub struct EverythingArrayNullQuery<'a, C: GenericClient, T, const N: usize> {
@@ -4250,6 +4250,40 @@ FROM
             pub r#async: super::super::types::public::SyntaxComposite,
             pub r#enum: super::super::types::public::SyntaxEnum,
         }
+        #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
+        pub struct Row {
+            pub id: i32,
+        }
+        #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
+        pub struct RowSpace {
+            pub id: i32,
+        }
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
+        pub struct Typeof {
+            pub trick_y: String,
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
+        }
+        pub struct TypeofBorrowed<'a> {
+            pub trick_y: &'a str,
+            pub r#async: super::super::types::public::SyntaxComposite,
+            pub r#enum: super::super::types::public::SyntaxEnum,
+        }
+        impl<'a> From<TypeofBorrowed<'a>> for Typeof {
+            fn from(
+                TypeofBorrowed {
+                    trick_y,
+                    r#async,
+                    r#enum,
+                }: TypeofBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    trick_y: trick_y.into(),
+                    r#async,
+                    r#enum,
+                }
+            }
+        }
         pub struct SuperSuperTypesPublicCloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -4358,10 +4392,6 @@ FROM
                 Ok(it)
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
-        pub struct Row {
-            pub id: i32,
-        }
         pub struct RowQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -4414,10 +4444,6 @@ FROM
                 Ok(it)
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
-        pub struct RowSpace {
-            pub id: i32,
-        }
         pub struct RowSpaceQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -4468,32 +4494,6 @@ FROM
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
                 Ok(it)
-            }
-        }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
-        pub struct Typeof {
-            pub trick_y: String,
-            pub r#async: super::super::types::public::SyntaxComposite,
-            pub r#enum: super::super::types::public::SyntaxEnum,
-        }
-        pub struct TypeofBorrowed<'a> {
-            pub trick_y: &'a str,
-            pub r#async: super::super::types::public::SyntaxComposite,
-            pub r#enum: super::super::types::public::SyntaxEnum,
-        }
-        impl<'a> From<TypeofBorrowed<'a>> for Typeof {
-            fn from(
-                TypeofBorrowed {
-                    trick_y,
-                    r#async,
-                    r#enum,
-                }: TypeofBorrowed<'a>,
-            ) -> Self {
-                Self {
-                    trick_y: trick_y.into(),
-                    r#async,
-                    r#enum,
-                }
             }
         }
         pub struct TypeofQuery<'a, C: GenericClient, T, const N: usize> {

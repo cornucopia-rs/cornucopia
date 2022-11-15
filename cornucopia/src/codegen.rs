@@ -306,12 +306,109 @@ fn gen_params_struct(w: &mut impl Write, params: &PreparedItem, settings: Codege
     }
 }
 
-fn gen_row_structs(
+fn gen_row_query(
     w: &mut impl Write,
     row: &PreparedItem,
     is_async: bool,
     settings: CodegenSettings,
 ) {
+    let PreparedItem {
+        name,
+        fields,
+        is_copy,
+        is_named,
+        ..
+    } = row;
+    // Generate query struct
+    let borrowed_str = if *is_copy { "" } else { "Borrowed" };
+    let (client_mut, fn_async, fn_await, backend, collect, raw_type, raw_pre, raw_post, client) =
+        if is_async {
+            (
+                "",
+                "async",
+                ".await",
+                "tokio_postgres",
+                "try_collect().await",
+                "futures::Stream",
+                "",
+                ".into_stream()",
+                "cornucopia_async",
+            )
+        } else {
+            (
+                "mut",
+                "",
+                "",
+                "postgres",
+                "collect()",
+                "Iterator",
+                ".iterator()",
+                "",
+                "cornucopia_sync",
+            )
+        };
+
+    let row_struct = if *is_named {
+        format!("{name}{borrowed_str}")
+    } else {
+        fields[0].brw_ty(false, settings.client_name())
+    };
+
+    code!(w =>
+    pub struct ${name}Query<'a, C: GenericClient, T, const N: usize> {
+        client: &'a $client_mut C,
+        params: [&'a (dyn postgres_types::ToSql + Sync); N],
+        stmt: &'a mut $client::private::Stmt,
+        extractor: fn(&$backend::Row) -> $row_struct,
+        mapper: fn($row_struct) -> T,
+    }
+    impl<'a, C, T:'a, const N: usize> ${name}Query<'a, C, T, N> where C: GenericClient {
+        pub fn map<R>(self, mapper: fn($row_struct) -> R) -> ${name}Query<'a,C,R,N> {
+            ${name}Query {
+                client: self.client,
+                params: self.params,
+                stmt: self.stmt,
+                extractor: self.extractor,
+                mapper,
+            }
+        }
+
+        pub $fn_async fn one(self) -> Result<T, $backend::Error> {
+            let stmt = self.stmt.prepare(self.client)$fn_await?;
+            let row = self.client.query_one(stmt, &self.params)$fn_await?;
+            Ok((self.mapper)((self.extractor)(&row)))
+        }
+
+        pub $fn_async fn all(self) -> Result<Vec<T>, $backend::Error> {
+            self.iter()$fn_await?.$collect
+        }
+
+        pub $fn_async fn opt(self) -> Result<Option<T>, $backend::Error> {
+            let stmt = self.stmt.prepare(self.client)$fn_await?;
+            Ok(self
+                .client
+                .query_opt(stmt, &self.params)
+                $fn_await?
+                .map(|row| (self.mapper)((self.extractor)(&row))))
+        }
+
+        pub $fn_async fn iter(
+            self,
+        ) -> Result<impl $raw_type<Item = Result<T, $backend::Error>> + 'a, $backend::Error> {
+            let stmt = self.stmt.prepare(self.client)$fn_await?;
+            let it = self
+                .client
+                .query_raw(stmt, $client::private::slice_iter(&self.params))
+                $fn_await?
+                $raw_pre
+                .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                $raw_post;
+            Ok(it)
+        }
+    });
+}
+
+fn gen_row_structs(w: &mut impl Write, row: &PreparedItem, settings: CodegenSettings) {
     let PreparedItem {
         name,
         fields,
@@ -355,95 +452,6 @@ fn gen_row_structs(
                 }
             );
         };
-    }
-    {
-        // Generate query struct
-        let borrowed_str = if *is_copy { "" } else { "Borrowed" };
-        let (client_mut, fn_async, fn_await, backend, collect, raw_type, raw_pre, raw_post, client) =
-            if is_async {
-                (
-                    "",
-                    "async",
-                    ".await",
-                    "tokio_postgres",
-                    "try_collect().await",
-                    "futures::Stream",
-                    "",
-                    ".into_stream()",
-                    "cornucopia_async",
-                )
-            } else {
-                (
-                    "mut",
-                    "",
-                    "",
-                    "postgres",
-                    "collect()",
-                    "Iterator",
-                    ".iterator()",
-                    "",
-                    "cornucopia_sync",
-                )
-            };
-
-        let row_struct = if *is_named {
-            format!("{name}{borrowed_str}")
-        } else {
-            fields[0].brw_ty(false, settings.client_name())
-        };
-
-        code!(w =>
-        pub struct ${name}Query<'a, C: GenericClient, T, const N: usize> {
-            client: &'a $client_mut C,
-            params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut $client::private::Stmt,
-            extractor: fn(&$backend::Row) -> $row_struct,
-            mapper: fn($row_struct) -> T,
-        }
-        impl<'a, C, T:'a, const N: usize> ${name}Query<'a, C, T, N> where C: GenericClient {
-            pub fn map<R>(self, mapper: fn($row_struct) -> R) -> ${name}Query<'a,C,R,N> {
-                ${name}Query {
-                    client: self.client,
-                    params: self.params,
-                    stmt: self.stmt,
-                    extractor: self.extractor,
-                    mapper,
-                }
-            }
-
-            pub $fn_async fn one(self) -> Result<T, $backend::Error> {
-                let stmt = self.stmt.prepare(self.client)$fn_await?;
-                let row = self.client.query_one(stmt, &self.params)$fn_await?;
-                Ok((self.mapper)((self.extractor)(&row)))
-            }
-
-            pub $fn_async fn all(self) -> Result<Vec<T>, $backend::Error> {
-                self.iter()$fn_await?.$collect
-            }
-
-            pub $fn_async fn opt(self) -> Result<Option<T>, $backend::Error> {
-                let stmt = self.stmt.prepare(self.client)$fn_await?;
-                Ok(self
-                    .client
-                    .query_opt(stmt, &self.params)
-                    $fn_await?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
-            }
-
-            pub $fn_async fn iter(
-                self,
-            ) -> Result<impl $raw_type<Item = Result<T, $backend::Error>> + 'a, $backend::Error> {
-                let stmt = self.stmt.prepare(self.client)$fn_await?;
-                let it = self
-                    .client
-                    .query_raw(stmt, $client::private::slice_iter(&self.params))
-                    $fn_await?
-                    $raw_pre
-                    .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
-                    $raw_post;
-                Ok(it)
-            }
-        });
     }
 }
 
@@ -755,10 +763,14 @@ pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> S
                 .params
                 .values()
                 .map(|params| |w: &mut String| gen_params_struct(w, params, settings));
-            let rows_string = module
+            let rows_struct_string = module
                 .rows
                 .values()
-                .map(|row| |w: &mut String| gen_row_structs(w, row, settings.gen_async, settings));
+                .map(|row| |w: &mut String| gen_row_structs(w, row,  settings));
+            let rows_query_string = module
+                .rows
+                .values()
+                .map(|row| |w: &mut String| gen_row_query(w, row, settings.gen_async, settings));
             let queries_string = module.queries.values().map(|query| {
                 |w: &mut String| gen_query_fn(w, module, query, settings.gen_async, settings)
             });
@@ -772,7 +784,8 @@ pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> S
                 pub mod $name {
                     $import
                     $($!params_string)
-                    $($!rows_string)
+                    $($!rows_struct_string)
+                    $($!rows_query_string)
                     $($!queries_string)
                 }
             );

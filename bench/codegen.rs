@@ -14,7 +14,8 @@ fn bench(c: &mut Criterion) {
                 "../codegen_test/queries",
                 None,
                 CodegenSettings {
-                    is_async: false,
+                    gen_sync: true,
+                    gen_async: false,
                     derive_ser: true,
                 },
             )
@@ -28,7 +29,8 @@ fn bench(c: &mut Criterion) {
                 "../codegen_test/queries",
                 None,
                 CodegenSettings {
-                    is_async: true,
+                    gen_sync: true,
+                    gen_async: false,
                     derive_ser: true,
                 },
             )

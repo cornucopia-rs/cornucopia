@@ -43,6 +43,98 @@ pub mod queries {
                 }
             }
         }
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct Post {
+            pub id: i32,
+            pub user_id: i32,
+            pub title: String,
+            pub body: Option<String>,
+        }
+        pub struct PostBorrowed<'a> {
+            pub id: i32,
+            pub user_id: i32,
+            pub title: &'a str,
+            pub body: Option<&'a str>,
+        }
+        impl<'a> From<PostBorrowed<'a>> for Post {
+            fn from(
+                PostBorrowed {
+                    id,
+                    user_id,
+                    title,
+                    body,
+                }: PostBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    id,
+                    user_id,
+                    title: title.into(),
+                    body: body.map(|v| v.into()),
+                }
+            }
+        }
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct Comment {
+            pub id: i32,
+            pub post_id: i32,
+            pub text: String,
+        }
+        pub struct CommentBorrowed<'a> {
+            pub id: i32,
+            pub post_id: i32,
+            pub text: &'a str,
+        }
+        impl<'a> From<CommentBorrowed<'a>> for Comment {
+            fn from(CommentBorrowed { id, post_id, text }: CommentBorrowed<'a>) -> Self {
+                Self {
+                    id,
+                    post_id,
+                    text: text.into(),
+                }
+            }
+        }
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct SelectComplex {
+            pub myuser_id: i32,
+            pub name: String,
+            pub hair_color: Option<String>,
+            pub post_id: Option<i32>,
+            pub user_id: Option<i32>,
+            pub title: Option<String>,
+            pub body: Option<String>,
+        }
+        pub struct SelectComplexBorrowed<'a> {
+            pub myuser_id: i32,
+            pub name: &'a str,
+            pub hair_color: Option<&'a str>,
+            pub post_id: Option<i32>,
+            pub user_id: Option<i32>,
+            pub title: Option<&'a str>,
+            pub body: Option<&'a str>,
+        }
+        impl<'a> From<SelectComplexBorrowed<'a>> for SelectComplex {
+            fn from(
+                SelectComplexBorrowed {
+                    myuser_id,
+                    name,
+                    hair_color,
+                    post_id,
+                    user_id,
+                    title,
+                    body,
+                }: SelectComplexBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    myuser_id,
+                    name: name.into(),
+                    hair_color: hair_color.map(|v| v.into()),
+                    post_id,
+                    user_id,
+                    title: title.map(|v| v.into()),
+                    body: body.map(|v| v.into()),
+                }
+            }
+        }
         pub struct UserQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -89,36 +181,6 @@ pub mod queries {
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(it)
-            }
-        }
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct Post {
-            pub id: i32,
-            pub user_id: i32,
-            pub title: String,
-            pub body: Option<String>,
-        }
-        pub struct PostBorrowed<'a> {
-            pub id: i32,
-            pub user_id: i32,
-            pub title: &'a str,
-            pub body: Option<&'a str>,
-        }
-        impl<'a> From<PostBorrowed<'a>> for Post {
-            fn from(
-                PostBorrowed {
-                    id,
-                    user_id,
-                    title,
-                    body,
-                }: PostBorrowed<'a>,
-            ) -> Self {
-                Self {
-                    id,
-                    user_id,
-                    title: title.into(),
-                    body: body.map(|v| v.into()),
-                }
             }
         }
         pub struct PostQuery<'a, C: GenericClient, T, const N: usize> {
@@ -169,26 +231,6 @@ pub mod queries {
                 Ok(it)
             }
         }
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct Comment {
-            pub id: i32,
-            pub post_id: i32,
-            pub text: String,
-        }
-        pub struct CommentBorrowed<'a> {
-            pub id: i32,
-            pub post_id: i32,
-            pub text: &'a str,
-        }
-        impl<'a> From<CommentBorrowed<'a>> for Comment {
-            fn from(CommentBorrowed { id, post_id, text }: CommentBorrowed<'a>) -> Self {
-                Self {
-                    id,
-                    post_id,
-                    text: text.into(),
-                }
-            }
-        }
         pub struct CommentQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -235,48 +277,6 @@ pub mod queries {
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(it)
-            }
-        }
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct SelectComplex {
-            pub myuser_id: i32,
-            pub name: String,
-            pub hair_color: Option<String>,
-            pub post_id: Option<i32>,
-            pub user_id: Option<i32>,
-            pub title: Option<String>,
-            pub body: Option<String>,
-        }
-        pub struct SelectComplexBorrowed<'a> {
-            pub myuser_id: i32,
-            pub name: &'a str,
-            pub hair_color: Option<&'a str>,
-            pub post_id: Option<i32>,
-            pub user_id: Option<i32>,
-            pub title: Option<&'a str>,
-            pub body: Option<&'a str>,
-        }
-        impl<'a> From<SelectComplexBorrowed<'a>> for SelectComplex {
-            fn from(
-                SelectComplexBorrowed {
-                    myuser_id,
-                    name,
-                    hair_color,
-                    post_id,
-                    user_id,
-                    title,
-                    body,
-                }: SelectComplexBorrowed<'a>,
-            ) -> Self {
-                Self {
-                    myuser_id,
-                    name: name.into(),
-                    hair_color: hair_color.map(|v| v.into()),
-                    post_id,
-                    user_id,
-                    title: title.map(|v| v.into()),
-                    body: body.map(|v| v.into()),
-                }
             }
         }
         pub struct SelectComplexQuery<'a, C: GenericClient, T, const N: usize> {
