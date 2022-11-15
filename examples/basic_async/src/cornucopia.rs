@@ -207,7 +207,7 @@ pub mod types {
 #[allow(dead_code)]
 pub mod queries {
     pub mod module_1 {
-        pub mod sync {
+        pub mod tokio {
             use cornucopia_async::GenericClient;
             use futures;
             use futures::{StreamExt, TryStreamExt};
@@ -307,7 +307,7 @@ pub mod queries {
                 }
             }
         }
-        pub mod sync {
+        pub mod tokio {
             use cornucopia_async::GenericClient;
             use futures;
             use futures::{StreamExt, TryStreamExt};

@@ -49,6 +49,7 @@ struct CodegenTest<'a> {
     queries: Option<&'a str>,
     destination: Option<&'a str>,
     sync: Option<bool>,
+    r#async: Option<bool>,
     derive_ser: Option<bool>,
     run: Option<Run>,
 }
@@ -218,8 +219,14 @@ fn run_codegen_test(
             let queries_path = codegen_test.queries.unwrap_or("queries");
             let schema_path = "schema.sql";
             let destination = codegen_test.destination.unwrap_or("src/cornucopia.rs");
-            let is_async = !codegen_test.sync.unwrap_or(false);
+            let gen_sync = codegen_test.sync.unwrap_or(false);
+            let gen_async = codegen_test.r#async.unwrap_or(false);
             let derive_ser = codegen_test.derive_ser.unwrap_or(false);
+            let settings = CodegenSettings {
+                gen_async,
+                gen_sync,
+                derive_ser,
+            };
 
             // Load schema
             reset_db(client)?;
@@ -229,17 +236,8 @@ fn run_codegen_test(
             // Otherwise, it is only checked.
             if apply {
                 // Generate
-                cornucopia::generate_live(
-                    client,
-                    queries_path,
-                    Some(destination),
-                    CodegenSettings {
-                        gen_async: is_async,
-                        gen_sync: !is_async,
-                        derive_ser,
-                    },
-                )
-                .map_err(Error::report)?;
+                cornucopia::generate_live(client, queries_path, Some(destination), settings)
+                    .map_err(Error::report)?;
                 // Format the generated file
                 Command::new("rustfmt")
                     .args(["--edition", "2021"])
@@ -249,17 +247,8 @@ fn run_codegen_test(
                 // Get currently checked-in generate file
                 let old_codegen = std::fs::read_to_string(destination).unwrap_or_default();
                 // Generate new file
-                let new_codegen = cornucopia::generate_live(
-                    client,
-                    queries_path,
-                    None,
-                    CodegenSettings {
-                        gen_async: is_async,
-                        gen_sync: !is_async,
-                        derive_ser,
-                    },
-                )
-                .map_err(Error::report)?;
+                let new_codegen = cornucopia::generate_live(client, queries_path, None, settings)
+                    .map_err(Error::report)?;
                 // Format the generated code string by piping to rustfmt
                 let mut rustfmt = Command::new("rustfmt")
                     .args(["--edition", "2021"])

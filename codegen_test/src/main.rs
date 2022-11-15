@@ -1,5 +1,4 @@
-mod cornucopia_async;
-mod cornucopia_sync;
+mod cornucopia;
 
 use ::cornucopia_async::IterSql;
 use eui48::MacAddress;
@@ -14,7 +13,7 @@ use std::{
 use time::{OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;
 
-use crate::cornucopia_sync::{
+use crate::cornucopia::{
     queries::{
         copy::sync::{insert_clone, insert_copy, select_copy},
         domain::{
@@ -56,7 +55,7 @@ use crate::cornucopia_sync::{
         SpongebobCharacter, SyntaxComposite, SyntaxEnum,
     },
 };
-use ::cornucopia_sync::Params;
+use cornucopia_sync::Params;
 
 pub fn main() {
     let client = &mut Config::new()

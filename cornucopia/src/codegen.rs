@@ -314,7 +314,6 @@ fn gen_params_struct(w: &mut impl Write, params: &PreparedItem, settings: Codege
     }
 }
 
-
 fn gen_row_structs(w: &mut impl Write, row: &PreparedItem, settings: CodegenSettings) {
     let PreparedItem {
         name,
@@ -779,28 +778,50 @@ pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> S
                 .rows
                 .values()
                 .map(|row| |w: &mut String| gen_row_structs(w, row,  settings));
-            let rows_query_string = module
-                .rows
-                .values()
-                .map(|row| |w: &mut String| gen_row_query(w, row, settings.gen_async, settings));
-            let queries_string = module.queries.values().map(|query| {
-                |w: &mut String| gen_query_fn(w, module, query, settings.gen_async, settings)
-            });
-            let import = if settings.gen_async {
-                "use futures::{{StreamExt, TryStreamExt}};use futures; use cornucopia_async::GenericClient;"
-            } else {
-                "use postgres::{{fallible_iterator::FallibleIterator,GenericClient}};"
+            let sync = |w: &mut String| {
+                if settings.gen_sync {
+                    let rows_query_string = module
+                        .rows
+                        .values()
+                        .map(|row| |w: &mut String| gen_row_query(w, row, false, settings));
+                    let queries_string = module.queries.values().map(|query| {
+                        |w: &mut String| gen_query_fn(w, module, query, false, settings)
+                    }); 
+                    code!(w =>
+                        pub mod sync {
+                            use postgres::{{fallible_iterator::FallibleIterator,GenericClient}};
+                            $($!rows_query_string)
+                            $($!queries_string)
+                        }
+                    )
+                }
+            };
+
+            let tokio = |w: &mut String| {
+                if settings.gen_async {
+                    let rows_query_string = module
+                        .rows
+                        .values()
+                        .map(|row| |w: &mut String| gen_row_query(w, row,true , settings));
+                    let queries_string = module.queries.values().map(|query| {
+                        |w: &mut String| gen_query_fn(w, module, query, true, settings)
+                    }); 
+                    code!(w =>
+                        pub mod tokio {
+                            use futures::{{StreamExt, TryStreamExt}};use futures; use cornucopia_async::GenericClient;
+                            $($!rows_query_string)
+                            $($!queries_string)
+                        }
+                    )
+                }
             };
 
             code!(w =>
                 pub mod $name {
                     $($!params_string)
                     $($!rows_struct_string)
-                    pub mod sync {
-                        $import
-                        $($!rows_query_string)
-                        $($!queries_string)
-                    }
+                    $!sync
+                    $!tokio
                 }
             );
         }

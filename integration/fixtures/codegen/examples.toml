@@ -2,6 +2,7 @@
 name = "Auto build"
 base_path = "examples/auto_build"
 run = true
+async = true
 
 [[codegen]]
 name = "Basic sync"
@@ -13,3 +14,4 @@ run = true
 name = "Basic async"
 base_path = "examples/basic_async"
 run = true
+async = true

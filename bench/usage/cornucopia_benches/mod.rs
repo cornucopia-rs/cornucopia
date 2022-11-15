@@ -4,13 +4,12 @@ use criterion::Bencher;
 use futures::executor::block_on;
 use tokio_postgres::Client;
 
-use self::generated_async::queries::bench::{
-    sync::{comments_by_post_id, insert_user, post_by_user_ids, select_complex, users},
-    types::{Comment, Post, User},
+use self::generated::queries::bench::{
+    tokio::{comments_by_post_id, insert_user, post_by_user_ids, select_complex, users},
+    Comment, Post, User,
 };
 
-mod generated_async;
-mod generated_sync;
+mod generated;
 
 pub fn bench_trivial_query(b: &mut Bencher, client: &Client) {
     let mut stmt = users();
@@ -119,9 +118,9 @@ pub mod sync {
     use criterion::Bencher;
     use postgres::Client;
 
-    use super::generated_sync::queries::bench::{
+    use super::generated::queries::bench::{
         sync::{comments_by_post_id, insert_user, post_by_user_ids, select_complex, users},
-        types::{Comment, Post, User},
+        Comment, Post, User,
     };
     pub fn bench_trivial_query(b: &mut Bencher, client: &mut Client) {
         let mut stmt = users();
