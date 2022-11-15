@@ -5,7 +5,8 @@ use futures::executor::block_on;
 use tokio_postgres::Client;
 
 use self::generated_async::queries::bench::{
-    comments_by_post_id, insert_user, post_by_user_ids, select_complex, users, Comment, Post, User,
+    sync::{comments_by_post_id, insert_user, post_by_user_ids, select_complex, users},
+    types::{Comment, Post, User},
 };
 
 mod generated_async;
@@ -119,8 +120,8 @@ pub mod sync {
     use postgres::Client;
 
     use super::generated_sync::queries::bench::{
-        comments_by_post_id, insert_user, post_by_user_ids, select_complex, users, Comment, Post,
-        User,
+        sync::{comments_by_post_id, insert_user, post_by_user_ids, select_complex, users},
+        types::{Comment, Post, User},
     };
     pub fn bench_trivial_query(b: &mut Bencher, client: &mut Client) {
         let mut stmt = users();

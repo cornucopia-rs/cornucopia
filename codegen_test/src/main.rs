@@ -16,25 +16,38 @@ use uuid::Uuid;
 
 use crate::cornucopia_sync::{
     queries::{
-        copy::{insert_clone, insert_copy, select_copy},
+        copy::sync::{insert_clone, insert_copy, select_copy},
         domain::{
-            insert_nightmare_domain, select_nightmare_domain, select_nightmare_domain_null,
+            sync::{
+                insert_nightmare_domain, select_nightmare_domain, select_nightmare_domain_null,
+            },
             InsertNightmareDomainParams, SelectNightmareDomain, SelectNightmareDomainNull,
         },
         named::{
-            named, named_by_id, named_complex, new_named_complex, new_named_hidden,
-            new_named_visible, Named, NamedComplexParams, NamedParams,
+            sync::{
+                named, named_by_id, named_complex, new_named_complex, new_named_hidden,
+                new_named_visible,
+            },
+            Named, NamedComplexParams, NamedParams,
         },
-        nullity::{new_nullity, nullity},
+        nullity::sync::{new_nullity, nullity},
         nullity::{Nullity, NullityParams},
-        params::insert_book,
-        params::{find_books, params_use_twice, select_book, SelectBook},
-        stress::{
-            insert_everything, insert_everything_array, insert_nightmare, select_everything,
-            select_everything_array, select_nightmare, Everything, EverythingArray,
-            EverythingArrayParams, EverythingParams,
+        params::sync::insert_book,
+        params::{
+            sync::{find_books, params_use_twice, select_book},
+            SelectBook,
         },
-        syntax::{r#typeof, tricky_sql10, TrickySql10Params},
+        stress::{
+            sync::{
+                insert_everything, insert_everything_array, insert_nightmare, select_everything,
+                select_everything_array, select_nightmare,
+            },
+            Everything, EverythingArray, EverythingArrayParams, EverythingParams,
+        },
+        syntax::{
+            sync::{r#typeof, tricky_sql10},
+            TrickySql10Params,
+        },
     },
     types::public::{
         CloneCompositeBorrowed, CopyComposite, CustomComposite, CustomCompositeBorrowed,

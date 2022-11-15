@@ -15,8 +15,8 @@ use crate::{
 };
 
 impl PreparedField {
-    pub fn own_struct(&self) -> String {
-        let it = self.ty.own_ty(self.is_inner_nullable);
+    pub fn own_struct(&self, depth_two: bool) -> String {
+        let it = self.ty.own_ty(self.is_inner_nullable, depth_two);
         if self.is_nullable {
             format!("Option<{}>", it)
         } else {
@@ -24,10 +24,15 @@ impl PreparedField {
         }
     }
 
-    pub fn param_ergo_ty(&self, client_name: &'static str, traits: &mut Vec<String>) -> String {
+    pub fn param_ergo_ty(
+        &self,
+        client_name: &'static str,
+        traits: &mut Vec<String>,
+        depth_two: bool,
+    ) -> String {
         let it = self
             .ty
-            .param_ergo_ty(self.is_inner_nullable, client_name, traits);
+            .param_ergo_ty(self.is_inner_nullable, client_name, depth_two, traits);
         if self.is_nullable {
             format!("Option<{}>", it)
         } else {
@@ -35,19 +40,21 @@ impl PreparedField {
         }
     }
 
-    pub fn param_ty(&self, client_name: &'static str) -> String {
-        let it = self.ty.param_ty(self.is_inner_nullable, client_name);
-        if self.is_nullable {
-            format!("Option<{}>", it)
-        } else {
-            it
-        }
-    }
-
-    pub fn brw_ty(&self, has_lifetime: bool, client_name: &'static str) -> String {
+    pub fn param_ty(&self, client_name: &'static str, depth_two: bool) -> String {
         let it = self
             .ty
-            .brw_ty(self.is_inner_nullable, has_lifetime, client_name);
+            .param_ty(self.is_inner_nullable, client_name, depth_two);
+        if self.is_nullable {
+            format!("Option<{}>", it)
+        } else {
+            it
+        }
+    }
+
+    pub fn brw_ty(&self, has_lifetime: bool, client_name: &'static str, depth_two: bool) -> String {
+        let it = self
+            .ty
+            .brw_ty(self.is_inner_nullable, has_lifetime, client_name, depth_two);
         if self.is_nullable {
             format!("Option<{}>", it)
         } else {
@@ -172,7 +179,7 @@ fn struct_tosql(
     let write_ty = fields
         .iter()
         .map(|p| p.ty.sql_wrapped(&p.name, client_name));
-    let accept_ty = fields.iter().map(|p| p.ty.accept_to_sql(client_name));
+    let accept_ty = fields.iter().map(|p| p.ty.accept_to_sql(client_name, true));
     let nb_fields = fields.len();
 
     code!(w =>
@@ -285,6 +292,7 @@ fn gen_params_struct(w: &mut impl Write, params: &PreparedItem, settings: Codege
         is_copy,
         is_named,
         is_ref,
+        ..
     } = params;
     if *is_named {
         let traits = &mut Vec::new();
@@ -293,7 +301,7 @@ fn gen_params_struct(w: &mut impl Write, params: &PreparedItem, settings: Codege
         let lifetime = if *is_ref { "'a," } else { "" };
         let fields_ty = fields
             .iter()
-            .map(|p| p.param_ergo_ty(settings.client_name(), traits))
+            .map(|p| p.param_ergo_ty(settings.client_name(), traits, true))
             .collect::<Vec<_>>();
         let fields_name = fields.iter().map(|p| &p.name);
         let traits_idx = (1..=traits.len()).into_iter().map(idx_char);
@@ -306,6 +314,54 @@ fn gen_params_struct(w: &mut impl Write, params: &PreparedItem, settings: Codege
     }
 }
 
+
+fn gen_row_structs(w: &mut impl Write, row: &PreparedItem, settings: CodegenSettings) {
+    let PreparedItem {
+        name,
+        fields,
+        is_copy,
+        is_named,
+        ..
+    } = row;
+    if *is_named {
+        // Generate row struct
+        let fields_name = fields.iter().map(|p| &p.name);
+        let fields_ty = fields.iter().map(|p| p.own_struct(true));
+        let copy = if *is_copy { "Copy" } else { "" };
+        let ser_str = if settings.derive_ser {
+            "serde::Serialize,"
+        } else {
+            ""
+        };
+        code!(w =>
+            #[derive($ser_str Debug, Clone, PartialEq,$copy)]
+            pub struct $name {
+                $(pub $fields_name : $fields_ty,)
+            }
+        );
+
+        if !is_copy {
+            let fields_name = fields.iter().map(|p| &p.name);
+            let fields_ty = fields
+                .iter()
+                .map(|p| p.brw_ty(true, settings.client_name(), true));
+            let from_own_assign = fields.iter().map(|f| f.owning_assign());
+            code!(w =>
+                pub struct ${name}Borrowed<'a> {
+                    $(pub $fields_name : $fields_ty,)
+                }
+                impl<'a> From<${name}Borrowed<'a>> for $name {
+                    fn from(${name}Borrowed { $($fields_name,) }: ${name}Borrowed<'a>) -> Self {
+                        Self {
+                            $($from_own_assign,)
+                        }
+                    }
+                }
+            );
+        };
+    }
+}
+
 fn gen_row_query(
     w: &mut impl Write,
     row: &PreparedItem,
@@ -314,6 +370,7 @@ fn gen_row_query(
 ) {
     let PreparedItem {
         name,
+        path,
         fields,
         is_copy,
         is_named,
@@ -349,9 +406,9 @@ fn gen_row_query(
         };
 
     let row_struct = if *is_named {
-        format!("{name}{borrowed_str}")
+        format!("{path}{borrowed_str}")
     } else {
-        fields[0].brw_ty(false, settings.client_name())
+        fields[0].brw_ty(false, settings.client_name(), false)
     };
 
     code!(w =>
@@ -408,53 +465,6 @@ fn gen_row_query(
     });
 }
 
-fn gen_row_structs(w: &mut impl Write, row: &PreparedItem, settings: CodegenSettings) {
-    let PreparedItem {
-        name,
-        fields,
-        is_copy,
-        is_named,
-        ..
-    } = row;
-    if *is_named {
-        // Generate row struct
-        let fields_name = fields.iter().map(|p| &p.name);
-        let fields_ty = fields.iter().map(|p| p.own_struct());
-        let copy = if *is_copy { "Copy" } else { "" };
-        let ser_str = if settings.derive_ser {
-            "serde::Serialize,"
-        } else {
-            ""
-        };
-        code!(w =>
-            #[derive($ser_str Debug, Clone, PartialEq,$copy)]
-            pub struct $name {
-                $(pub $fields_name : $fields_ty,)
-            }
-        );
-
-        if !is_copy {
-            let fields_name = fields.iter().map(|p| &p.name);
-            let fields_ty = fields
-                .iter()
-                .map(|p| p.brw_ty(true, settings.client_name()));
-            let from_own_assign = fields.iter().map(|f| f.owning_assign());
-            code!(w =>
-                pub struct ${name}Borrowed<'a> {
-                    $(pub $fields_name : $fields_ty,)
-                }
-                impl<'a> From<${name}Borrowed<'a>> for $name {
-                    fn from(${name}Borrowed { $($fields_name,) }: ${name}Borrowed<'a>) -> Self {
-                        Self {
-                            $($from_own_assign,)
-                        }
-                    }
-                }
-            );
-        };
-    }
-}
-
 pub fn idx_char(idx: usize) -> String {
     format!("T{idx}")
 }
@@ -490,7 +500,7 @@ fn gen_query_fn<W: Write>(
     let traits = &mut Vec::new();
     let params_ty: Vec<_> = order
         .iter()
-        .map(|idx| param_field[*idx].param_ergo_ty(settings.client_name(), traits))
+        .map(|idx| param_field[*idx].param_ergo_ty(settings.client_name(), traits, false))
         .collect();
     let params_name = order.iter().map(|idx| &param_field[*idx].name);
     let traits_idx = (1..=traits.len()).into_iter().map(idx_char);
@@ -498,6 +508,7 @@ fn gen_query_fn<W: Write>(
         if let Some((idx, index)) = row {
             let PreparedItem {
                 name: row_name,
+                path: row_path,
                 fields,
                 is_copy,
                 is_named,
@@ -510,21 +521,21 @@ fn gen_query_fn<W: Write>(
             #[allow(clippy::type_complexity)]
             let (row_struct_name, extractor, mapper): (_, Box<dyn Fn(&mut W)>, _) = if *is_named {
                 (
-                    row_name.value.clone(),
+                    row_path.clone(),
                     Box::new(|w: _| {
                         let post = if *is_copy { "" } else { "Borrowed" };
                         let fields_name = fields.iter().map(|p| &p.name);
                         let fields_idx = (0..fields.len()).map(|i| index[i]);
-                        code!(w => $row_name$post {
+                        code!(w => $row_path$post {
                             $($fields_name: row.get($fields_idx),)
                         })
                     }),
-                    format!("<{row_name}>::from(it)"),
+                    format!("<{row_path}>::from(it)"),
                 )
             } else {
                 let field = &fields[0];
                 (
-                    field.own_struct(),
+                    field.own_struct(false),
                     Box::new(|w: _| code!(w => row.get(0))),
                     field.owning_call(Some("it")),
                 )
@@ -572,7 +583,7 @@ fn gen_query_fn<W: Write>(
     // Param impl
     if let Some(param) = param {
         if param.is_named {
-            let param_name = &param.name;
+            let param_path = &param.path;
             let lifetime = if param.is_copy || !param.is_ref {
                 ""
             } else {
@@ -580,17 +591,16 @@ fn gen_query_fn<W: Write>(
             };
             if let Some((idx, _)) = row {
                 let prepared_row = &module.rows.get_index(*idx).unwrap().1;
-                let name = prepared_row.name.value.clone();
                 let query_row_struct = if prepared_row.is_named {
-                    name
+                    prepared_row.path.clone()
                 } else {
-                    prepared_row.fields[0].own_struct()
+                    prepared_row.fields[0].own_struct(false)
                 };
                 let name = &module.rows.get_index(*idx).unwrap().1.name;
                 let nb_params = param_field.len();
                 code!(w =>
-                    impl <'a, C: GenericClient,$($traits_idx: $traits,)> $client::Params<'a, $param_name<$lifetime $($traits_idx,)>, ${name}Query<'a, C, $query_row_struct, $nb_params>, C> for ${struct_name}Stmt {
-                        fn params(&'a mut self, client: &'a $client_mut C, params: &'a $param_name<$lifetime $($traits_idx,)>) -> ${name}Query<'a, C, $query_row_struct, $nb_params> {
+                    impl <'a, C: GenericClient,$($traits_idx: $traits,)> $client::Params<'a, $param_path<$lifetime $($traits_idx,)>, ${name}Query<'a, C, $query_row_struct, $nb_params>, C> for ${struct_name}Stmt {
+                        fn params(&'a mut self, client: &'a $client_mut C, params: &'a $param_path<$lifetime $($traits_idx,)>) -> ${name}Query<'a, C, $query_row_struct, $nb_params> {
                             self.bind(client, $(&params.$params_name,))
                         }
                     }
@@ -608,8 +618,8 @@ fn gen_query_fn<W: Write>(
                     ("", "Result", "", "self", "")
                 };
                 code!(w =>
-                    impl <'a, C: GenericClient $send_sync, $($traits_idx: $traits,)> $client::Params<'a, $param_name<$lifetime $($traits_idx,)>, $pre_ty<u64, $backend::Error>$post_ty_lf, C> for ${struct_name}Stmt {
-                        fn params(&'a mut self, client: &'a $client_mut C, params: &'a $param_name<$lifetime $($traits_idx,)>) -> $pre_ty<u64, $backend::Error>$post_ty_lf {
+                    impl <'a, C: GenericClient $send_sync, $($traits_idx: $traits,)> $client::Params<'a, $param_path<$lifetime $($traits_idx,)>, $pre_ty<u64, $backend::Error>$post_ty_lf, C> for ${struct_name}Stmt {
+                        fn params(&'a mut self, client: &'a $client_mut C, params: &'a $param_path<$lifetime $($traits_idx,)>) -> $pre_ty<u64, $backend::Error>$post_ty_lf {
                             $pre.bind(client, $(&params.$params_name,))$post
                         }
                     }
@@ -654,7 +664,7 @@ fn gen_custom_type(
         PreparedContent::Composite(fields) => {
             let fields_name = fields.iter().map(|p| &p.name);
             {
-                let fields_ty = fields.iter().map(|p| p.own_struct());
+                let fields_ty = fields.iter().map(|p| p.own_struct(true));
                 code!(w =>
                     #[derive($ser_str Debug,postgres_types::FromSql,$copy Clone, PartialEq)]
                     #[postgres(name = "$name")]
@@ -677,7 +687,7 @@ fn gen_custom_type(
                 let fields_owning = fields.iter().map(|p| p.owning_assign());
                 let fields_brw = fields
                     .iter()
-                    .map(|p| p.brw_ty(true, settings.client_name()));
+                    .map(|p| p.brw_ty(true, settings.client_name(), true));
                 code!(w =>
                     #[derive(Debug)]
                     pub struct ${struct_name}Borrowed<'a> {
@@ -697,7 +707,9 @@ fn gen_custom_type(
                 );
                 composite_fromsql(w, struct_name, fields, name, schema);
                 if !is_params {
-                    let fields_ty = fields.iter().map(|p| p.param_ty(settings.client_name()));
+                    let fields_ty = fields
+                        .iter()
+                        .map(|p| p.param_ty(settings.client_name(), true));
                     let derive = if *is_copy { ",Copy,Clone" } else { "" };
                     code!(w =>
                         #[derive(Debug $derive)]
@@ -782,11 +794,13 @@ pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> S
 
             code!(w =>
                 pub mod $name {
-                    $import
                     $($!params_string)
                     $($!rows_struct_string)
-                    $($!rows_query_string)
-                    $($!queries_string)
+                    pub mod sync {
+                        $import
+                        $($!rows_query_string)
+                        $($!queries_string)
+                    }
                 }
             );
         }

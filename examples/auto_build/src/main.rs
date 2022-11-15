@@ -3,7 +3,7 @@ use tokio_postgres::NoTls;
 
 // Take a look at the generated `cornucopia.rs` file if you want to
 // see what it looks like under the hood.
-use cornucopia::queries::module_1::example_query;
+use cornucopia::queries::module_1::sync::example_query;
 
 // Since we generated the cornucopia file inside our project, you can simply
 // import the modules as you usually would, but you could also use something

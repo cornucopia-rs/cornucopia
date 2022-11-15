@@ -26,7 +26,6 @@ pub(crate) enum CornucopiaType {
     Custom {
         pg_ty: Type,
         struct_name: String,
-        struct_path: String,
         is_copy: bool,
         is_params: bool,
     },
@@ -91,20 +90,20 @@ impl CornucopiaType {
     }
 
     /// Wrap type to escape domains when writing to sql
-    pub(crate) fn accept_to_sql(&self, client_name: &'static str) -> String {
+    pub(crate) fn accept_to_sql(&self, client_name: &'static str, depth_two: bool) -> String {
         match self {
             CornucopiaType::Domain { inner, .. } => format!(
                 "{client_name}::private::Domain::<{}>",
-                inner.accept_to_sql(client_name)
+                inner.accept_to_sql(client_name, depth_two)
             ),
             CornucopiaType::Array { inner } => match inner.as_ref() {
                 CornucopiaType::Domain { inner, .. } => {
-                    let ty = inner.accept_to_sql(client_name);
+                    let ty = inner.accept_to_sql(client_name, depth_two);
                     format!("{client_name}::private::DomainArray::<{}, &[{ty}]>", ty)
                 }
-                _ => self.param_ty(false, client_name),
+                _ => self.param_ty(false, client_name, depth_two),
             },
-            _ => self.param_ty(false, client_name),
+            _ => self.param_ty(false, client_name, depth_two),
         }
     }
 
@@ -150,19 +149,21 @@ impl CornucopiaType {
     }
 
     /// Corresponding owned type
-    pub(crate) fn own_ty(&self, is_inner_nullable: bool) -> String {
+    pub(crate) fn own_ty(&self, is_inner_nullable: bool, depth_two: bool) -> String {
         match self {
             CornucopiaType::Simple { rust_name, .. } => (*rust_name).to_string(),
             CornucopiaType::Array { inner, .. } => {
-                let own_inner = inner.own_ty(false);
+                let own_inner = inner.own_ty(false, depth_two);
                 if is_inner_nullable {
                     format!("Vec<Option<{own_inner}>>")
                 } else {
                     format!("Vec<{own_inner}>")
                 }
             }
-            CornucopiaType::Domain { inner, .. } => inner.own_ty(false),
-            CornucopiaType::Custom { struct_path, .. } => struct_path.to_string(),
+            CornucopiaType::Domain { inner, .. } => inner.own_ty(false, depth_two),
+            CornucopiaType::Custom {
+                struct_name, pg_ty, ..
+            } => custom_ty_path(pg_ty.schema(), &struct_name, depth_two),
         }
     }
 
@@ -171,6 +172,7 @@ impl CornucopiaType {
         &self,
         is_inner_nullable: bool,
         client_name: &'static str,
+        depth_two: bool,
         traits: &mut Vec<String>,
     ) -> String {
         match self {
@@ -187,10 +189,10 @@ impl CornucopiaType {
                     traits.push(format!("{client_name}::JsonSql"));
                     idx_char(traits.len())
                 }
-                _ => self.param_ty(is_inner_nullable, client_name),
+                _ => self.param_ty(is_inner_nullable, client_name, depth_two),
             },
             CornucopiaType::Array { inner, .. } => {
-                let inner = inner.param_ergo_ty(is_inner_nullable, client_name, traits);
+                let inner = inner.param_ergo_ty(is_inner_nullable, client_name, depth_two, traits);
                 let inner = if is_inner_nullable {
                     format!("Option<{inner}>")
                 } else {
@@ -200,21 +202,28 @@ impl CornucopiaType {
                 idx_char(traits.len())
             }
             CornucopiaType::Domain { inner, .. } => {
-                inner.param_ergo_ty(is_inner_nullable, client_name, traits)
+                inner.param_ergo_ty(is_inner_nullable, client_name, depth_two, traits)
             }
-            CornucopiaType::Custom { .. } => self.param_ty(is_inner_nullable, client_name),
+            CornucopiaType::Custom { .. } => {
+                self.param_ty(is_inner_nullable, client_name, depth_two)
+            }
         }
     }
 
     /// Corresponding borrowed parameter type
-    pub(crate) fn param_ty(&self, is_inner_nullable: bool, client_name: &'static str) -> String {
+    pub(crate) fn param_ty(
+        &self,
+        is_inner_nullable: bool,
+        client_name: &'static str,
+        depth_two: bool,
+    ) -> String {
         match self {
             CornucopiaType::Simple { pg_ty, .. } => match *pg_ty {
                 Type::JSON | Type::JSONB => "&'a serde_json::value::Value".to_string(),
-                _ => self.brw_ty(is_inner_nullable, true, client_name),
+                _ => self.brw_ty(is_inner_nullable, true, client_name, depth_two),
             },
             CornucopiaType::Array { inner, .. } => {
-                let inner = inner.param_ty(is_inner_nullable, client_name);
+                let inner = inner.param_ty(is_inner_nullable, client_name, depth_two);
                 let inner = if is_inner_nullable {
                     format!("Option<{inner}>")
                 } else {
@@ -223,17 +232,19 @@ impl CornucopiaType {
                 // Its more practical for users to use a slice
                 format!("&'a [{inner}]")
             }
-            CornucopiaType::Domain { inner, .. } => inner.param_ty(false, client_name),
+            CornucopiaType::Domain { inner, .. } => inner.param_ty(false, client_name, depth_two),
             CornucopiaType::Custom {
-                struct_path,
                 is_params,
                 is_copy,
+                pg_ty,
+                struct_name,
                 ..
             } => {
                 if !is_copy && !is_params {
-                    format!("{}Params<'a>", struct_path)
+                    let path = custom_ty_path(pg_ty.schema(), &struct_name, depth_two);
+                    format!("{}Params<'a>", path)
                 } else {
-                    self.brw_ty(is_inner_nullable, true, client_name)
+                    self.brw_ty(is_inner_nullable, true, client_name, depth_two)
                 }
             }
         }
@@ -246,6 +257,7 @@ impl CornucopiaType {
         is_inner_nullable: bool,
         has_lifetime: bool,
         client_name: &'static str,
+        depth_two: bool,
     ) -> String {
         let lifetime = if has_lifetime { "'a" } else { "" };
         match self {
@@ -260,7 +272,7 @@ impl CornucopiaType {
                 _ => (*rust_name).to_string(),
             },
             CornucopiaType::Array { inner, .. } => {
-                let inner = inner.brw_ty(is_inner_nullable, has_lifetime, client_name);
+                let inner = inner.brw_ty(is_inner_nullable, has_lifetime, client_name, depth_two);
                 let inner = if is_inner_nullable {
                     format!("Option<{inner}>")
                 } else {
@@ -270,19 +282,31 @@ impl CornucopiaType {
                 let lifetime = if has_lifetime { lifetime } else { "'_" };
                 format!("{client_name}::ArrayIterator<{lifetime}, {inner}>")
             }
-            CornucopiaType::Domain { inner, .. } => inner.brw_ty(false, has_lifetime, client_name),
+            CornucopiaType::Domain { inner, .. } => {
+                inner.brw_ty(false, has_lifetime, client_name, depth_two)
+            }
             CornucopiaType::Custom {
-                struct_path,
                 is_copy,
+                pg_ty,
+                struct_name,
                 ..
             } => {
+                let path = custom_ty_path(pg_ty.schema(), &struct_name, depth_two);
                 if *is_copy {
-                    struct_path.to_string()
+                    path
                 } else {
-                    format!("{}Borrowed<{lifetime}>", struct_path)
+                    format!("{}Borrowed<{lifetime}>", path)
                 }
             }
         }
+    }
+}
+
+pub fn custom_ty_path(schema: &str, struct_name: &str, depth_two: bool) -> String {
+    if depth_two {
+        format!("super::super::types::{}::{}", schema, struct_name)
+    } else {
+        format!("super::super::super::types::{}::{}", schema, struct_name)
     }
 }
 
@@ -304,7 +328,6 @@ impl TypeRegistrar {
             let rust_ty_name = ty.name().to_upper_camel_case();
             CornucopiaType::Custom {
                 pg_ty: ty.clone(),
-                struct_path: format!("super::super::types::{}::{}", ty.schema(), rust_ty_name),
                 struct_name: rust_ty_name,
                 is_copy,
                 is_params,

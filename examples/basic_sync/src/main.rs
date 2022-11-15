@@ -4,10 +4,13 @@ mod cornucopia;
 
 use crate::cornucopia::{
     queries::{
-        module_1::insert_book,
+        module_1::sync::insert_book,
         module_2::{
-            author_name_by_id, author_name_starting_with, authors, books, select_translations,
-            select_voice_actor_with_character, AuthorNameStartingWithParams,
+            sync::{
+                author_name_by_id, author_name_starting_with, authors, books, select_translations,
+                select_voice_actor_with_character,
+            },
+            AuthorNameStartingWithParams,
         },
     },
     types::public::SpongeBobCharacter,
