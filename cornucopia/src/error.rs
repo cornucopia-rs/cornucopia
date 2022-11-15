@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use miette::{Diagnostic, GraphicalReportHandler, GraphicalTheme};
 use thiserror::Error as ThisError;
 
@@ -39,6 +41,6 @@ impl Error {
 #[derive(Debug, ThisError, Diagnostic)]
 #[error("Could not write your queries to destination file `{file_path}`: ({err})")]
 pub struct WriteOutputError {
-    pub(crate) file_path: String,
+    pub(crate) file_path: PathBuf,
     pub(crate) err: std::io::Error,
 }

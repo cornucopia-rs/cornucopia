@@ -14,6 +14,8 @@ pub mod conn;
 /// High-level interfaces to work with Cornucopia's container manager.
 pub mod container;
 
+use std::path::{Path, PathBuf};
+
 use postgres::Client;
 
 use codegen::generate as generate_internal;
@@ -41,8 +43,8 @@ pub struct CodegenSettings {
 /// set using the `settings` parameter.
 pub fn generate_live(
     client: &mut Client,
-    queries_path: &str,
-    destination: Option<&str>,
+    queries_path: &Path,
+    destination: Option<&Path>,
     settings: CodegenSettings,
 ) -> Result<String, Error> {
     // Read
@@ -69,9 +71,9 @@ pub fn generate_live(
 /// By default, the container manager is Docker, but Podman can be used by setting the
 /// `podman` parameter to `true`.
 pub fn generate_managed(
-    queries_path: &str,
-    schema_files: Vec<String>,
-    destination: Option<&str>,
+    queries_path: &Path,
+    schema_files: &[PathBuf],
+    destination: Option<&Path>,
     podman: bool,
     settings: CodegenSettings,
 ) -> Result<String, Error> {
@@ -94,11 +96,11 @@ pub fn generate_managed(
     Ok(generated_code)
 }
 
-fn write_generated_code(destination: &str, generated_code: &str) -> Result<(), Error> {
+fn write_generated_code(destination: &Path, generated_code: &str) -> Result<(), Error> {
     Ok(
         std::fs::write(destination, generated_code).map_err(|err| WriteOutputError {
             err,
-            file_path: String::from(destination),
+            file_path: destination.to_owned(),
         })?,
     )
 }

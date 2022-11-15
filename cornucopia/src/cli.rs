@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::{Parser, Subcommand};
 
 use crate::{conn, container, error::Error, generate_live, generate_managed, CodegenSettings};
@@ -11,10 +13,10 @@ struct Args {
     podman: bool,
     /// Folder containing the queries
     #[clap(short, long, default_value = "queries/")]
-    queries_path: String,
+    queries_path: PathBuf,
     /// Destination folder for generated modules
     #[clap(short, long, default_value = "src/cornucopia.rs")]
-    destination: String,
+    destination: PathBuf,
     #[clap(subcommand)]
     action: Action,
     /// Generate synchronous rust code. Async otherwise.
@@ -35,7 +37,7 @@ enum Action {
     /// Generate your modules against schema files
     Schema {
         /// SQL files containing the database schema
-        schema_files: Vec<String>,
+        schema_files: Vec<PathBuf>,
     },
 }
 
@@ -67,7 +69,7 @@ pub fn run() -> Result<(), Error> {
             // Run the generate command. If the command is unsuccessful, cleanup Cornucopia's container
             if let Err(e) = generate_managed(
                 &queries_path,
-                schema_files,
+                &schema_files,
                 Some(&destination),
                 podman,
                 CodegenSettings {
