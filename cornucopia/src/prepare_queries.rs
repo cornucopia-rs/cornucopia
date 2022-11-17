@@ -6,6 +6,7 @@ use postgres::Client;
 use postgres_types::{Kind, Type};
 
 use crate::{
+    codegen::GenCtx,
     parser::{Module, NullableIdent, Query, Span, TypeAnnotation},
     read_queries::ModuleInfo,
     type_registrar::CornucopiaType,
@@ -52,7 +53,7 @@ impl PreparedField {
 
 impl PreparedField {
     pub fn unwrapped_name(&self) -> String {
-        self.own_struct(false)
+        self.own_struct(&GenCtx::new(0, false, false))
             .replace(['<', '>', '_'], "")
             .to_upper_camel_case()
     }
@@ -61,7 +62,6 @@ impl PreparedField {
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedItem {
     pub(crate) name: Span<String>,
-    pub(crate) path: String,
     pub(crate) fields: Vec<PreparedField>,
     pub(crate) is_copy: bool,
     pub(crate) is_named: bool,
@@ -69,20 +69,18 @@ pub(crate) struct PreparedItem {
 }
 
 impl PreparedItem {
-    pub fn new(
-        name: Span<String>,
-        path: String,
-        fields: Vec<PreparedField>,
-        is_implicit: bool,
-    ) -> Self {
+    pub fn new(name: Span<String>, fields: Vec<PreparedField>, is_implicit: bool) -> Self {
         Self {
             name,
-            path,
             is_copy: fields.iter().all(|f| f.ty.is_copy()),
             is_ref: fields.iter().any(|f| f.ty.is_ref()),
             is_named: !is_implicit || fields.len() > 1,
             fields,
         }
+    }
+
+    pub fn path(&self, ctx: &GenCtx) -> String {
+        ctx.path(1, &self.name)
     }
 }
 
@@ -144,12 +142,7 @@ impl PreparedModule {
                 Ok((o.index(), indexes))
             }
             Entry::Vacant(v) => {
-                v.insert(PreparedItem::new(
-                    name.clone(),
-                    format!("super::{name}"),
-                    fields.clone(),
-                    is_implicit,
-                ));
+                v.insert(PreparedItem::new(name.clone(), fields.clone(), is_implicit));
                 Self::add(info, map, name, fields, is_implicit)
             }
         }

@@ -36,18 +36,6 @@ pub struct CodegenSettings {
     pub derive_ser: bool,
 }
 
-impl CodegenSettings {
-    pub fn client_name(&self) -> &'static str {
-        if self.gen_sync {
-            "cornucopia_sync"
-        } else if self.gen_async {
-            "cornucopia_async"
-        } else {
-            unreachable!()
-        }
-    }
-}
-
 /// Generates Rust queries from PostgreSQL queries located at `queries_path`,
 /// using a live database managed by you. If some `destination` is given,
 /// the generated code will be written at that path. Code generation settings are

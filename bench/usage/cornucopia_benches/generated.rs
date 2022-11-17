@@ -12,7 +12,10 @@ pub mod types {}
 pub mod queries {
     pub mod bench {
         #[derive(Debug)]
-        pub struct InsertUserParams<T1: cornucopia_sync::StringSql, T2: cornucopia_sync::StringSql> {
+        pub struct InsertUserParams<
+            T1: cornucopia_async::StringSql,
+            T2: cornucopia_async::StringSql,
+        > {
             pub name: T1,
             pub hair_color: Option<T2>,
         }
@@ -786,8 +789,8 @@ pub mod queries {
                 pub async fn bind<
                     'a,
                     C: GenericClient,
-                    T1: cornucopia_sync::StringSql,
-                    T2: cornucopia_sync::StringSql,
+                    T1: cornucopia_async::StringSql,
+                    T2: cornucopia_async::StringSql,
                 >(
                     &'a mut self,
                     client: &'a C,
@@ -801,8 +804,8 @@ pub mod queries {
             impl<
                     'a,
                     C: GenericClient + Send + Sync,
-                    T1: cornucopia_sync::StringSql,
-                    T2: cornucopia_sync::StringSql,
+                    T1: cornucopia_async::StringSql,
+                    T2: cornucopia_async::StringSql,
                 >
                 cornucopia_async::Params<
                     'a,
@@ -861,7 +864,7 @@ pub mod queries {
             }
             pub struct PostByUserIdsStmt(cornucopia_async::private::Stmt);
             impl PostByUserIdsStmt {
-                pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::ArraySql<Item = i32>>(
+                pub fn bind<'a, C: GenericClient, T1: cornucopia_async::ArraySql<Item = i32>>(
                     &'a mut self,
                     client: &'a C,
                     ids: &'a T1,
@@ -911,7 +914,7 @@ pub mod queries {
             }
             pub struct CommentsByPostIdStmt(cornucopia_async::private::Stmt);
             impl CommentsByPostIdStmt {
-                pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::ArraySql<Item = i32>>(
+                pub fn bind<'a, C: GenericClient, T1: cornucopia_async::ArraySql<Item = i32>>(
                     &'a mut self,
                     client: &'a C,
                     ids: &'a T1,
