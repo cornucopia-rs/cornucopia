@@ -80,7 +80,7 @@ impl PreparedItem {
     }
 
     pub fn path(&self, ctx: &GenCtx) -> String {
-        ctx.path(1, &self.name)
+        ctx.path(ctx.depth - 2, &self.name)
     }
 }
 

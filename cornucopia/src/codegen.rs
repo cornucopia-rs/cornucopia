@@ -767,43 +767,51 @@ pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> S
                 .rows
                 .values()
                 .map(|row| |w: &mut String| gen_row_structs(w, row,  &ctx));
-            let sync = |w: &mut String| {
-                if settings.gen_sync {
-                    let ctx = GenCtx::new(3, false, settings.derive_ser);
-                    let rows_query_string = module
-                        .rows
-                        .values()
-                        .map(|row| |w: &mut String| gen_row_query(w, row, &ctx));
-                    let queries_string = module.queries.values().map(|query| {
-                        |w: &mut String| gen_query_fn(w, module, query, &ctx)
-                    });
+
+            let sync_specific = |w: &mut String| {
+                let gen_specific = |depth: u8, is_async: bool| {
+                    move |w: &mut String| {
+                        let ctx = GenCtx::new(depth, is_async, settings.derive_ser);
+                        let import = if is_async {
+                            "use futures::{StreamExt, TryStreamExt};use futures; use cornucopia_async::GenericClient;"
+                        } else {
+                            "use postgres::{fallible_iterator::FallibleIterator,GenericClient};"
+                        };
+                        let rows_query_string = module
+                            .rows
+                            .values()
+                            .map(|row| |w: &mut String| gen_row_query(w, row, &ctx));
+                        let queries_string = module.queries.values().map(|query| {
+                            |w: &mut String| gen_query_fn(w, module, query, &ctx)
+                        });
+                        code!(w =>
+                            $import
+                            $($!rows_query_string)
+                            $($!queries_string)
+                        )
+                    }
+                };
+
+                if settings.gen_async != settings.gen_sync {
+                    if settings.gen_async {
+                        let gen =  gen_specific(2, true);
+                        code!(w => $!gen)
+                    } else {
+                        let gen =  gen_specific(2, false);
+                        code!(w => $!gen)
+                    }
+                } else {
+                    let sync = gen_specific(3, false);
+                    let tokio = gen_specific(3, true);
                     code!(w =>
                         pub mod sync {
-                            use postgres::{{fallible_iterator::FallibleIterator,GenericClient}};
-                            $($!rows_query_string)
-                            $($!queries_string)
+                            $!sync
                         }
-                    )
-                }
-            };
-
-            let tokio = |w: &mut String| {
-                if settings.gen_async {
-                    let ctx = GenCtx::new(3, true, settings.derive_ser);
-                    let rows_query_string = module
-                        .rows
-                        .values()
-                        .map(|row| |w: &mut String| gen_row_query(w, row,&ctx));
-                    let queries_string = module.queries.values().map(|query| {
-                        |w: &mut String| gen_query_fn(w, module, query, &ctx)
-                    });
-                    code!(w =>
                         pub mod tokio {
-                            use futures::{{StreamExt, TryStreamExt}};use futures; use cornucopia_async::GenericClient;
-                            $($!rows_query_string)
-                            $($!queries_string)
+                            $!tokio
                         }
                     )
+
                 }
             };
 
@@ -811,8 +819,7 @@ pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> S
                 pub mod $name {
                     $($!params_string)
                     $($!rows_struct_string)
-                    $!sync
-                    $!tokio
+                    $!sync_specific
                 }
             );
         }
