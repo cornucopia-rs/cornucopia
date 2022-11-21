@@ -33,10 +33,8 @@ impl GenCtx {
     }
 
     pub fn path(&self, depth: u8, name: impl Display) -> String {
-        let mut buff = String::new();
         let depth = std::iter::repeat("super::").take(depth as usize);
-        code!(buff => $($depth)$name);
-        buff
+        code!($($depth)$name)
     }
 
     pub fn client_name(&self) -> &'static str {
@@ -98,7 +96,7 @@ impl PreparedField {
         if call == self.name {
             call
         } else {
-            format!("{}: {}", self.name, call)
+            format!("{}: {call}", self.name)
         }
     }
 }
@@ -538,7 +536,7 @@ fn gen_query_fn<W: Write>(w: &mut W, module: &PreparedModule, query: &PreparedQu
                             $($fields_name: row.get($fields_idx),)
                         })
                     }),
-                    format!("<{path}>::from(it)"),
+                    code!(<$path>::from(it)),
                 )
             } else {
                 let field = &fields[0];
