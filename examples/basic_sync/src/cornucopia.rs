@@ -451,22 +451,22 @@ pub mod queries {
                 Ok(it)
             }
         }
-        pub struct SuperPublicVoiceactorQuery<'a, C: GenericClient, T, const N: usize> {
+        pub struct PublicVoiceactorQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_sync::private::Stmt,
             extractor: fn(&postgres::Row) -> super::super::types::public::VoiceactorBorrowed,
             mapper: fn(super::super::types::public::VoiceactorBorrowed) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> SuperPublicVoiceactorQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> PublicVoiceactorQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
             pub fn map<R>(
                 self,
                 mapper: fn(super::super::types::public::VoiceactorBorrowed) -> R,
-            ) -> SuperPublicVoiceactorQuery<'a, C, R, N> {
-                SuperPublicVoiceactorQuery {
+            ) -> PublicVoiceactorQuery<'a, C, R, N> {
+                PublicVoiceactorQuery {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -697,9 +697,9 @@ WHERE
                 &'a mut self,
                 client: &'a mut C,
                 spongebob_character: &'a super::super::types::public::SpongeBobCharacter,
-            ) -> SuperPublicVoiceactorQuery<'a, C, super::super::types::public::Voiceactor, 1>
+            ) -> PublicVoiceactorQuery<'a, C, super::super::types::public::Voiceactor, 1>
             {
-                SuperPublicVoiceactorQuery {
+                PublicVoiceactorQuery {
                     client,
                     params: [spongebob_character],
                     stmt: &mut self.0,

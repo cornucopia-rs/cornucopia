@@ -752,7 +752,7 @@ pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> S
     gen_type_modules(
         w,
         &preparation.types,
-        &GenCtx::new(0, settings.gen_async, settings.derive_ser),
+        &GenCtx::new(1, settings.gen_async, settings.derive_ser),
     );
     // Generate queries
     let query_modules = preparation.modules.iter().map(|module| {

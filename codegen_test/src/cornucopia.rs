@@ -1094,7 +1094,7 @@ pub mod queries {
     pub mod copy {
         pub mod sync {
             use postgres::{fallible_iterator::FallibleIterator, GenericClient};
-            pub struct SuperPublicCloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
+            pub struct PublicCloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
                 stmt: &'a mut cornucopia_sync::private::Stmt,
@@ -1104,15 +1104,15 @@ pub mod queries {
                     -> super::super::super::types::public::CloneCompositeBorrowed,
                 mapper: fn(super::super::super::types::public::CloneCompositeBorrowed) -> T,
             }
-            impl<'a, C, T: 'a, const N: usize> SuperPublicCloneCompositeQuery<'a, C, T, N>
+            impl<'a, C, T: 'a, const N: usize> PublicCloneCompositeQuery<'a, C, T, N>
             where
                 C: GenericClient,
             {
                 pub fn map<R>(
                     self,
                     mapper: fn(super::super::super::types::public::CloneCompositeBorrowed) -> R,
-                ) -> SuperPublicCloneCompositeQuery<'a, C, R, N> {
-                    SuperPublicCloneCompositeQuery {
+                ) -> PublicCloneCompositeQuery<'a, C, R, N> {
+                    PublicCloneCompositeQuery {
                         client: self.client,
                         params: self.params,
                         stmt: self.stmt,
@@ -1148,22 +1148,22 @@ pub mod queries {
                     Ok(it)
                 }
             }
-            pub struct SuperPublicCopyCompositeQuery<'a, C: GenericClient, T, const N: usize> {
+            pub struct PublicCopyCompositeQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
                 stmt: &'a mut cornucopia_sync::private::Stmt,
                 extractor: fn(&postgres::Row) -> super::super::super::types::public::CopyComposite,
                 mapper: fn(super::super::super::types::public::CopyComposite) -> T,
             }
-            impl<'a, C, T: 'a, const N: usize> SuperPublicCopyCompositeQuery<'a, C, T, N>
+            impl<'a, C, T: 'a, const N: usize> PublicCopyCompositeQuery<'a, C, T, N>
             where
                 C: GenericClient,
             {
                 pub fn map<R>(
                     self,
                     mapper: fn(super::super::super::types::public::CopyComposite) -> R,
-                ) -> SuperPublicCopyCompositeQuery<'a, C, R, N> {
-                    SuperPublicCopyCompositeQuery {
+                ) -> PublicCopyCompositeQuery<'a, C, R, N> {
+                    PublicCopyCompositeQuery {
                         client: self.client,
                         params: self.params,
                         stmt: self.stmt,
@@ -1223,13 +1223,13 @@ pub mod queries {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
                     client: &'a mut C,
-                ) -> SuperPublicCloneCompositeQuery<
+                ) -> PublicCloneCompositeQuery<
                     'a,
                     C,
                     super::super::super::types::public::CloneComposite,
                     0,
                 > {
-                    SuperPublicCloneCompositeQuery {
+                    PublicCloneCompositeQuery {
                         client,
                         params: [],
                         stmt: &mut self.0,
@@ -1262,13 +1262,13 @@ pub mod queries {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
                     client: &'a mut C,
-                ) -> SuperPublicCopyCompositeQuery<
+                ) -> PublicCopyCompositeQuery<
                     'a,
                     C,
                     super::super::super::types::public::CopyComposite,
                     0,
                 > {
-                    SuperPublicCopyCompositeQuery {
+                    PublicCopyCompositeQuery {
                         client,
                         params: [],
                         stmt: &mut self.0,
@@ -1282,7 +1282,7 @@ pub mod queries {
             use cornucopia_async::GenericClient;
             use futures;
             use futures::{StreamExt, TryStreamExt};
-            pub struct SuperPublicCloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
+            pub struct PublicCloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
                 stmt: &'a mut cornucopia_async::private::Stmt,
@@ -1292,15 +1292,15 @@ pub mod queries {
                     -> super::super::super::types::public::CloneCompositeBorrowed,
                 mapper: fn(super::super::super::types::public::CloneCompositeBorrowed) -> T,
             }
-            impl<'a, C, T: 'a, const N: usize> SuperPublicCloneCompositeQuery<'a, C, T, N>
+            impl<'a, C, T: 'a, const N: usize> PublicCloneCompositeQuery<'a, C, T, N>
             where
                 C: GenericClient,
             {
                 pub fn map<R>(
                     self,
                     mapper: fn(super::super::super::types::public::CloneCompositeBorrowed) -> R,
-                ) -> SuperPublicCloneCompositeQuery<'a, C, R, N> {
-                    SuperPublicCloneCompositeQuery {
+                ) -> PublicCloneCompositeQuery<'a, C, R, N> {
+                    PublicCloneCompositeQuery {
                         client: self.client,
                         params: self.params,
                         stmt: self.stmt,
@@ -1340,7 +1340,7 @@ pub mod queries {
                     Ok(it)
                 }
             }
-            pub struct SuperPublicCopyCompositeQuery<'a, C: GenericClient, T, const N: usize> {
+            pub struct PublicCopyCompositeQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
                 stmt: &'a mut cornucopia_async::private::Stmt,
@@ -1348,15 +1348,15 @@ pub mod queries {
                     fn(&tokio_postgres::Row) -> super::super::super::types::public::CopyComposite,
                 mapper: fn(super::super::super::types::public::CopyComposite) -> T,
             }
-            impl<'a, C, T: 'a, const N: usize> SuperPublicCopyCompositeQuery<'a, C, T, N>
+            impl<'a, C, T: 'a, const N: usize> PublicCopyCompositeQuery<'a, C, T, N>
             where
                 C: GenericClient,
             {
                 pub fn map<R>(
                     self,
                     mapper: fn(super::super::super::types::public::CopyComposite) -> R,
-                ) -> SuperPublicCopyCompositeQuery<'a, C, R, N> {
-                    SuperPublicCopyCompositeQuery {
+                ) -> PublicCopyCompositeQuery<'a, C, R, N> {
+                    PublicCopyCompositeQuery {
                         client: self.client,
                         params: self.params,
                         stmt: self.stmt,
@@ -1420,13 +1420,13 @@ pub mod queries {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
                     client: &'a C,
-                ) -> SuperPublicCloneCompositeQuery<
+                ) -> PublicCloneCompositeQuery<
                     'a,
                     C,
                     super::super::super::types::public::CloneComposite,
                     0,
                 > {
-                    SuperPublicCloneCompositeQuery {
+                    PublicCloneCompositeQuery {
                         client,
                         params: [],
                         stmt: &mut self.0,
@@ -1459,13 +1459,13 @@ pub mod queries {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
                     client: &'a C,
-                ) -> SuperPublicCopyCompositeQuery<
+                ) -> PublicCopyCompositeQuery<
                     'a,
                     C,
                     super::super::super::types::public::CopyComposite,
                     0,
                 > {
-                    SuperPublicCopyCompositeQuery {
+                    PublicCopyCompositeQuery {
                         client,
                         params: [],
                         stmt: &mut self.0,
@@ -2187,7 +2187,7 @@ pub mod queries {
                     Ok(it)
                 }
             }
-            pub struct SuperPublicNamedCompositeQuery<'a, C: GenericClient, T, const N: usize> {
+            pub struct PublicNamedCompositeQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
                 stmt: &'a mut cornucopia_sync::private::Stmt,
@@ -2197,15 +2197,15 @@ pub mod queries {
                     -> super::super::super::types::public::NamedCompositeBorrowed,
                 mapper: fn(super::super::super::types::public::NamedCompositeBorrowed) -> T,
             }
-            impl<'a, C, T: 'a, const N: usize> SuperPublicNamedCompositeQuery<'a, C, T, N>
+            impl<'a, C, T: 'a, const N: usize> PublicNamedCompositeQuery<'a, C, T, N>
             where
                 C: GenericClient,
             {
                 pub fn map<R>(
                     self,
                     mapper: fn(super::super::super::types::public::NamedCompositeBorrowed) -> R,
-                ) -> SuperPublicNamedCompositeQuery<'a, C, R, N> {
-                    SuperPublicNamedCompositeQuery {
+                ) -> PublicNamedCompositeQuery<'a, C, R, N> {
+                    PublicNamedCompositeQuery {
                         client: self.client,
                         params: self.params,
                         stmt: self.stmt,
@@ -2400,13 +2400,13 @@ pub mod queries {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
                     client: &'a mut C,
-                ) -> SuperPublicNamedCompositeQuery<
+                ) -> PublicNamedCompositeQuery<
                     'a,
                     C,
                     super::super::super::types::public::NamedComposite,
                     0,
                 > {
-                    SuperPublicNamedCompositeQuery {
+                    PublicNamedCompositeQuery {
                         client,
                         params: [],
                         stmt: &mut self.0,
@@ -2527,7 +2527,7 @@ pub mod queries {
                     Ok(it)
                 }
             }
-            pub struct SuperPublicNamedCompositeQuery<'a, C: GenericClient, T, const N: usize> {
+            pub struct PublicNamedCompositeQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
                 stmt: &'a mut cornucopia_async::private::Stmt,
@@ -2537,15 +2537,15 @@ pub mod queries {
                     -> super::super::super::types::public::NamedCompositeBorrowed,
                 mapper: fn(super::super::super::types::public::NamedCompositeBorrowed) -> T,
             }
-            impl<'a, C, T: 'a, const N: usize> SuperPublicNamedCompositeQuery<'a, C, T, N>
+            impl<'a, C, T: 'a, const N: usize> PublicNamedCompositeQuery<'a, C, T, N>
             where
                 C: GenericClient,
             {
                 pub fn map<R>(
                     self,
                     mapper: fn(super::super::super::types::public::NamedCompositeBorrowed) -> R,
-                ) -> SuperPublicNamedCompositeQuery<'a, C, R, N> {
-                    SuperPublicNamedCompositeQuery {
+                ) -> PublicNamedCompositeQuery<'a, C, R, N> {
+                    PublicNamedCompositeQuery {
                         client: self.client,
                         params: self.params,
                         stmt: self.stmt,
@@ -2764,13 +2764,13 @@ pub mod queries {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
                     client: &'a C,
-                ) -> SuperPublicNamedCompositeQuery<
+                ) -> PublicNamedCompositeQuery<
                     'a,
                     C,
                     super::super::super::types::public::NamedComposite,
                     0,
                 > {
-                    SuperPublicNamedCompositeQuery {
+                    PublicNamedCompositeQuery {
                         client,
                         params: [],
                         stmt: &mut self.0,
@@ -4564,7 +4564,7 @@ pub mod queries {
                     Ok(it)
                 }
             }
-            pub struct SuperPublicNightmareCompositeQuery<'a, C: GenericClient, T, const N: usize> {
+            pub struct PublicNightmareCompositeQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
                 stmt: &'a mut cornucopia_sync::private::Stmt,
@@ -4574,15 +4574,15 @@ pub mod queries {
                     -> super::super::super::types::public::NightmareCompositeBorrowed,
                 mapper: fn(super::super::super::types::public::NightmareCompositeBorrowed) -> T,
             }
-            impl<'a, C, T: 'a, const N: usize> SuperPublicNightmareCompositeQuery<'a, C, T, N>
+            impl<'a, C, T: 'a, const N: usize> PublicNightmareCompositeQuery<'a, C, T, N>
             where
                 C: GenericClient,
             {
                 pub fn map<R>(
                     self,
                     mapper: fn(super::super::super::types::public::NightmareCompositeBorrowed) -> R,
-                ) -> SuperPublicNightmareCompositeQuery<'a, C, R, N> {
-                    SuperPublicNightmareCompositeQuery {
+                ) -> PublicNightmareCompositeQuery<'a, C, R, N> {
+                    PublicNightmareCompositeQuery {
                         client: self.client,
                         params: self.params,
                         stmt: self.stmt,
@@ -5266,13 +5266,13 @@ FROM
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
                     client: &'a mut C,
-                ) -> SuperPublicNightmareCompositeQuery<
+                ) -> PublicNightmareCompositeQuery<
                     'a,
                     C,
                     super::super::super::types::public::NightmareComposite,
                     0,
                 > {
-                    SuperPublicNightmareCompositeQuery {
+                    PublicNightmareCompositeQuery {
                         client,
                         params: [],
                         stmt: &mut self.0,
@@ -5523,7 +5523,7 @@ FROM
                     Ok(it)
                 }
             }
-            pub struct SuperPublicNightmareCompositeQuery<'a, C: GenericClient, T, const N: usize> {
+            pub struct PublicNightmareCompositeQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
                 stmt: &'a mut cornucopia_async::private::Stmt,
@@ -5533,15 +5533,15 @@ FROM
                     -> super::super::super::types::public::NightmareCompositeBorrowed,
                 mapper: fn(super::super::super::types::public::NightmareCompositeBorrowed) -> T,
             }
-            impl<'a, C, T: 'a, const N: usize> SuperPublicNightmareCompositeQuery<'a, C, T, N>
+            impl<'a, C, T: 'a, const N: usize> PublicNightmareCompositeQuery<'a, C, T, N>
             where
                 C: GenericClient,
             {
                 pub fn map<R>(
                     self,
                     mapper: fn(super::super::super::types::public::NightmareCompositeBorrowed) -> R,
-                ) -> SuperPublicNightmareCompositeQuery<'a, C, R, N> {
-                    SuperPublicNightmareCompositeQuery {
+                ) -> PublicNightmareCompositeQuery<'a, C, R, N> {
+                    PublicNightmareCompositeQuery {
                         client: self.client,
                         params: self.params,
                         stmt: self.stmt,
@@ -6257,13 +6257,13 @@ FROM
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
                     client: &'a C,
-                ) -> SuperPublicNightmareCompositeQuery<
+                ) -> PublicNightmareCompositeQuery<
                     'a,
                     C,
                     super::super::super::types::public::NightmareComposite,
                     0,
                 > {
-                    SuperPublicNightmareCompositeQuery {
+                    PublicNightmareCompositeQuery {
                         client,
                         params: [],
                         stmt: &mut self.0,
@@ -6398,7 +6398,7 @@ FROM
         }
         pub mod sync {
             use postgres::{fallible_iterator::FallibleIterator, GenericClient};
-            pub struct SuperPublicCloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
+            pub struct PublicCloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
                 stmt: &'a mut cornucopia_sync::private::Stmt,
@@ -6408,15 +6408,15 @@ FROM
                     -> super::super::super::types::public::CloneCompositeBorrowed,
                 mapper: fn(super::super::super::types::public::CloneCompositeBorrowed) -> T,
             }
-            impl<'a, C, T: 'a, const N: usize> SuperPublicCloneCompositeQuery<'a, C, T, N>
+            impl<'a, C, T: 'a, const N: usize> PublicCloneCompositeQuery<'a, C, T, N>
             where
                 C: GenericClient,
             {
                 pub fn map<R>(
                     self,
                     mapper: fn(super::super::super::types::public::CloneCompositeBorrowed) -> R,
-                ) -> SuperPublicCloneCompositeQuery<'a, C, R, N> {
-                    SuperPublicCloneCompositeQuery {
+                ) -> PublicCloneCompositeQuery<'a, C, R, N> {
+                    PublicCloneCompositeQuery {
                         client: self.client,
                         params: self.params,
                         stmt: self.stmt,
@@ -6658,13 +6658,13 @@ FROM
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
                     client: &'a mut C,
-                ) -> SuperPublicCloneCompositeQuery<
+                ) -> PublicCloneCompositeQuery<
                     'a,
                     C,
                     super::super::super::types::public::CloneComposite,
                     0,
                 > {
-                    SuperPublicCloneCompositeQuery {
+                    PublicCloneCompositeQuery {
                         client,
                         params: [],
                         stmt: &mut self.0,
@@ -6683,13 +6683,13 @@ FROM
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
                     client: &'a mut C,
-                ) -> SuperPublicCloneCompositeQuery<
+                ) -> PublicCloneCompositeQuery<
                     'a,
                     C,
                     super::super::super::types::public::CloneComposite,
                     0,
                 > {
-                    SuperPublicCloneCompositeQuery {
+                    PublicCloneCompositeQuery {
                         client,
                         params: [],
                         stmt: &mut self.0,
@@ -7179,7 +7179,7 @@ FROM
             use cornucopia_async::GenericClient;
             use futures;
             use futures::{StreamExt, TryStreamExt};
-            pub struct SuperPublicCloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
+            pub struct PublicCloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
                 stmt: &'a mut cornucopia_async::private::Stmt,
@@ -7189,15 +7189,15 @@ FROM
                     -> super::super::super::types::public::CloneCompositeBorrowed,
                 mapper: fn(super::super::super::types::public::CloneCompositeBorrowed) -> T,
             }
-            impl<'a, C, T: 'a, const N: usize> SuperPublicCloneCompositeQuery<'a, C, T, N>
+            impl<'a, C, T: 'a, const N: usize> PublicCloneCompositeQuery<'a, C, T, N>
             where
                 C: GenericClient,
             {
                 pub fn map<R>(
                     self,
                     mapper: fn(super::super::super::types::public::CloneCompositeBorrowed) -> R,
-                ) -> SuperPublicCloneCompositeQuery<'a, C, R, N> {
-                    SuperPublicCloneCompositeQuery {
+                ) -> PublicCloneCompositeQuery<'a, C, R, N> {
+                    PublicCloneCompositeQuery {
                         client: self.client,
                         params: self.params,
                         stmt: self.stmt,
@@ -7459,13 +7459,13 @@ FROM
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
                     client: &'a C,
-                ) -> SuperPublicCloneCompositeQuery<
+                ) -> PublicCloneCompositeQuery<
                     'a,
                     C,
                     super::super::super::types::public::CloneComposite,
                     0,
                 > {
-                    SuperPublicCloneCompositeQuery {
+                    PublicCloneCompositeQuery {
                         client,
                         params: [],
                         stmt: &mut self.0,
@@ -7484,13 +7484,13 @@ FROM
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
                     client: &'a C,
-                ) -> SuperPublicCloneCompositeQuery<
+                ) -> PublicCloneCompositeQuery<
                     'a,
                     C,
                     super::super::super::types::public::CloneComposite,
                     0,
                 > {
-                    SuperPublicCloneCompositeQuery {
+                    PublicCloneCompositeQuery {
                         client,
                         params: [],
                         stmt: &mut self.0,

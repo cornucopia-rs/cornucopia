@@ -302,6 +302,8 @@ impl CornucopiaType {
 
 pub fn custom_ty_path(schema: &str, struct_name: &str, ctx: &GenCtx) -> String {
     if ctx.depth == 0 {
+        format!("{}::{}", schema, struct_name)
+    } else if ctx.depth == 1 {
         format!("super::{}::{}", schema, struct_name)
     } else {
         ctx.path(
