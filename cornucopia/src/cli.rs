@@ -54,19 +54,16 @@ pub fn run() -> Result<(), Error> {
         serialize,
     } = Args::parse();
 
+    let settings = CodegenSettings {
+        gen_async: r#async || !sync,
+        gen_sync: sync,
+        derive_ser: serialize,
+    };
+
     match action {
         Action::Live { url } => {
             let mut client = conn::from_url(&url)?;
-            generate_live(
-                &mut client,
-                &queries_path,
-                Some(&destination),
-                CodegenSettings {
-                    gen_async: r#async,
-                    gen_sync: sync,
-                    derive_ser: serialize,
-                },
-            )?;
+            generate_live(&mut client, &queries_path, Some(&destination), settings)?;
         }
         Action::Schema { schema_files } => {
             // Run the generate command. If the command is unsuccessful, cleanup Cornucopia's container
@@ -75,11 +72,7 @@ pub fn run() -> Result<(), Error> {
                 schema_files,
                 Some(&destination),
                 podman,
-                CodegenSettings {
-                    gen_async: r#async,
-                    gen_sync: sync,
-                    derive_ser: serialize,
-                },
+                settings,
             ) {
                 container::cleanup(podman).ok();
                 return Err(e);

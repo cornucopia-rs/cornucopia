@@ -802,13 +802,13 @@ pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> S
                     }
                 } else {
                     let sync = gen_specific(3, false);
-                    let tokio = gen_specific(3, true);
+                    let async_ = gen_specific(3, true);
                     code!(w =>
                         pub mod sync {
                             $!sync
                         }
-                        pub mod tokio {
-                            $!tokio
+                        pub mod async_ {
+                            $!async_
                         }
                     )
 

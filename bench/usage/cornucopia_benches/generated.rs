@@ -533,7 +533,7 @@ pub mod queries {
                 }
             }
         }
-        pub mod tokio {
+        pub mod async_ {
             use cornucopia_async::GenericClient;
             use futures;
             use futures::{StreamExt, TryStreamExt};

@@ -5,7 +5,7 @@ use futures::executor::block_on;
 use tokio_postgres::Client;
 
 use self::generated::queries::bench::{
-    tokio::{comments_by_post_id, insert_user, post_by_user_ids, select_complex, users},
+    async_::{comments_by_post_id, insert_user, post_by_user_ids, select_complex, users},
     Comment, Post, User,
 };
 
