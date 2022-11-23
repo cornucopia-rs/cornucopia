@@ -1,7 +1,8 @@
 mod cornucopia_async;
 mod cornucopia_sync;
 
-use ::cornucopia_async::IterSql;
+use ::cornucopia_sync::IterSql;
+
 use eui48::MacAddress;
 use postgres::{Client, Config, NoTls};
 use rust_decimal::Decimal;
@@ -63,8 +64,6 @@ pub fn main() {
     test_trait_sql(client);
     test_keyword_escaping(client);
 }
-
-pub fn moving<T>(_item: T) {}
 
 pub fn test_params(client: &mut Client) {
     assert_eq!(
@@ -265,11 +264,11 @@ pub fn test_copy(client: &mut Client) {
         first: 42,
         second: 4.2,
     };
-    moving(copy_params); // Ignore if copied
+    drop(copy_params); // Ignore if copied
     insert_copy().bind(client, &copy_params).unwrap();
     let copy_row = select_copy().bind(client).one().unwrap();
-    moving(copy_row); // Ignore if copied
-    moving(copy_row);
+    drop(copy_row); // Ignore if copied
+    drop(copy_row);
 
     // Test clone
     let clone_params = CloneCompositeBorrowed {
