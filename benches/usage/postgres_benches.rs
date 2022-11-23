@@ -1,7 +1,6 @@
 use criterion::Bencher;
-use postgres::fallible_iterator::FallibleIterator;
 use postgres::types::ToSql;
-use postgres::Client;
+use postgres::{fallible_iterator::FallibleIterator, Client};
 use std::collections::HashMap;
 use std::fmt::Write;
 
