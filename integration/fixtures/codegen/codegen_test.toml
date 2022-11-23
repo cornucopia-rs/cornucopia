@@ -10,5 +10,4 @@ run = "codegen_test"
 name = "Async"
 base_path = "codegen_test"
 destination = "src/cornucopia_async.rs"
-run = "codegen_test"
 derive_ser = true
