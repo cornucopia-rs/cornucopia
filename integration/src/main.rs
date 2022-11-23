@@ -19,6 +19,9 @@ struct Args {
     /// Update the project's generated code
     #[clap(long)]
     apply_codegen: bool,
+    /// Use `podman` instead of `docker`
+    #[clap(short, long)]
+    podman: bool,
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -82,17 +85,18 @@ fn test(
     Args {
         apply_errors,
         apply_codegen,
+        podman,
     }: Args,
 ) -> bool {
     // Start by removing previous container if it was left open
-    container::cleanup(false).ok();
-    container::setup(false).unwrap();
+    container::cleanup(podman).ok();
+    container::setup(podman).unwrap();
     let successful = std::panic::catch_unwind(|| {
         let mut client = cornucopia::conn::cornucopia_conn().unwrap();
         display(run_errors_test(&mut client, apply_errors)).unwrap()
             && display(run_codegen_test(&mut client, apply_codegen)).unwrap()
     });
-    container::cleanup(false).unwrap();
+    container::cleanup(podman).unwrap();
     successful.unwrap()
 }
 
@@ -321,7 +325,8 @@ mod test {
     fn run() {
         assert!(test(crate::Args {
             apply_errors: false,
-            apply_codegen: false
+            apply_codegen: false,
+            podman: false
         }))
     }
 }
