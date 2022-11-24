@@ -21,12 +21,9 @@ pub trait JsonSql: std::fmt::Debug + ToSql + Sync + Send {}
 #[cfg(feature = "with-serde_json-1")]
 impl<T: JsonSql> JsonSql for &T {}
 #[cfg(feature = "with-serde_json-1")]
-impl JsonSql for serde_json_1::value::Value {}
+impl JsonSql for serde_json::value::Value {}
 #[cfg(feature = "with-serde_json-1")]
-impl<T: serde_1::ser::Serialize + std::fmt::Debug + Sync + Send> JsonSql
-    for postgres_types::Json<T>
-{
-}
+impl<T: serde::ser::Serialize + std::fmt::Debug + Sync + Send> JsonSql for postgres_types::Json<T> {}
 
 pub trait ArraySql: std::fmt::Debug + ToSql + Send + Sync {
     type Item;

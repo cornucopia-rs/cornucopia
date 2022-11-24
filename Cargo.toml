@@ -1,10 +1,2 @@
 [workspace]
-members = [
-  "examples/*",
-  "clients/*",
-  "integration",
-  "codegen_test",
-  "bench",
-  "cornucopia",
-  "codegen_template",
-]
+members = ["examples/*", "integration", "codegen_test", "benches", "crates/*"]

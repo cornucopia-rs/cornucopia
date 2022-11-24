@@ -11,13 +11,25 @@ categories = ["database"]
 keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 
 [dependencies]
+# Path dependencies
 codegen_template = { path = "../codegen_template", version = "0.1.0" }
 
+# Postgres interaction
 postgres = "0.19.4"
 postgres-types = "0.2.4"
+
+# Error handling and reporting
 thiserror = "1.0.37"
 miette = { version = "5.4.1", features = ["fancy"] }
-clap = { version = "4.0.19", features = ["derive"] }
-heck = "0.4.0"
-indexmap = "1.9.1"
+
+# Parser
 chumsky = "0.8.0"
+
+# CLI handling
+clap = { version = "4.0.19", features = ["derive"] }
+
+# Word case
+heck = "0.4.0"
+
+# Order-preserving map to work around borrowing issues
+indexmap = "1.9.1"

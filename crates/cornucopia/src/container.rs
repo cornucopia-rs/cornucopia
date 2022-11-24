@@ -29,7 +29,7 @@ fn spawn_container(podman: bool) -> Result<(), Error> {
             "5435:5432",
             "-e",
             "POSTGRES_PASSWORD=postgres",
-            "postgres",
+            "docker.io/library/postgres:latest",
         ],
         "spawn container",
     )

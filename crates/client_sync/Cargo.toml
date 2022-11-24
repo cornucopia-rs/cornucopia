@@ -12,10 +12,12 @@ keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
-postgres = "0.19.4"
-
-cornucopia_client_core = { path = "../core", version = "0.4.0" }
-
 [features]
 with-serde_json-1 = ["cornucopia_client_core/with-serde_json-1"]
+
+[dependencies]
+# Path dependencies
+cornucopia_client_core = { path = "../client_core", version = "0.4.0" }
+
+# postgres interaction
+postgres = "0.19.4"
