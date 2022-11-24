@@ -53,14 +53,7 @@ struct CodegenTest<'a> {
     destination: Option<&'a str>,
     sync: Option<bool>,
     derive_ser: Option<bool>,
-    run: Option<Run>,
-}
-
-#[derive(serde::Deserialize)]
-#[serde(untagged)]
-enum Run {
-    Bool(bool),
-    Path(String),
+    run: Option<bool>,
 }
 
 fn main() -> ExitCode {
@@ -278,22 +271,21 @@ fn run_codegen_test(
                 // If the newly generated file differs from
                 // the currently checked in one, return an error.
                 if old_codegen != formated_new_codegen {
-                    Err("\"{destination}\" is outdated")?;
+                    Err(format!("\"{destination}\" is outdated"))?;
                 }
             }
             println!("(generate) {} {}", codegen_test.name, "OK".green());
 
-            // Run code
-            let run = match codegen_test.run.unwrap_or(Run::Bool(false)) {
-                Run::Bool(bool) => bool,
-                Run::Path(path) => {
-                    // Switch directory
-                    std::env::set_current_dir(&original_pwd)?;
-                    std::env::set_current_dir(&format!("../{}", path))?;
-                    true
-                }
+            // Use the base path as run path if `run` `Some(true)`.
+            let run_path = match codegen_test.run {
+                Some(true) => Some(codegen_test.base_path),
+                _ => None,
             };
-            if run {
+            if let Some(path) = run_path {
+                // Change current directory
+                std::env::set_current_dir(&original_pwd)?;
+                std::env::set_current_dir(&format!("../{}", path))?;
+                // Run
                 let result = Command::new("cargo").arg("run").output()?;
                 if result.status.success() {
                     println!("(run) {} {}", codegen_test.name, "OK".green());
