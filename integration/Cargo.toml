@@ -6,10 +6,51 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+# Path dependencies
+cornucopia = { path = "../crates/cornucopia" }
+cornucopia_sync = { path = "../crates/client_sync", features = [
+    "with-serde_json-1",
+] }
+cornucopia_async = { path = "../crates/client_async", features = [
+    "with-serde_json-1",
+] }
+
+# Create temporary projects for error tests.
 tempfile = "3.3.0"
-toml = "0.5.9"
+
+# Colored output
 owo-colors = "3.5.0"
-serde = { version = "1.0.147", features = ["derive"], package = "serde" }
+
+# CLI handling
 clap = { version = "4.0.19", features = ["derive"] }
-cornucopia = { path = "../cornucopia" }
-postgres = "0.19.4"
+
+# async
+futures = "0.3.25"
+
+# rust-postgres interaction
+postgres = { version = "0.19.4", features = [
+    "with-serde_json-1",
+    "with-time-0_3",
+    "with-uuid-1",
+    "with-eui48-1",
+] }
+tokio-postgres = { version = "0.7.7", features = [
+    "with-serde_json-1",
+    "with-time-0_3",
+    "with-uuid-1",
+    "with-eui48-1",
+] }
+postgres-types = { version = "0.2.4", features = ["derive"] }
+
+# serde
+## Both for test helpers ser/de and codegen `Serialize` derives
+serde = { version = "1.0.147", features = ["derive"] }
+## Read fixture files
+toml = "0.5.9"
+
+# extra types
+serde_json = { version = "1.0.87", features = ["raw_value"] }
+time = { version = "0.3.17", features = ["parsing", "serde"] }
+uuid = { version = "1.2.1", features = ["serde"] }
+eui48 = { version = "1.1.0", features = ["serde"] }
+rust_decimal = { version = "1.26.1", features = ["db-postgres"] }
