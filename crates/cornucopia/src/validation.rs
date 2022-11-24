@@ -414,7 +414,7 @@ pub mod error {
             pos: SourceSpan,
             known: String,
         },
-        #[error("named type `{name}` as conflicting usage")]
+        #[error("conflicting uses of named type `{name}`")]
         #[diagnostic(help("use a different named type for each query"))]
         IncompatibleNamedType {
             #[source_code]

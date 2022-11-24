@@ -190,7 +190,7 @@ SELECT name FROM Author;
 SELECT id FROM Author;
 '''
 error = '''
-× named type `Row` as conflicting usage
+× conflicting uses of named type `Row`
    ╭─[queries/test.sql:1:1]
  1 │ --: Row()
  2 │ --! author_names: Row
@@ -214,7 +214,7 @@ SELECT name FROM Author;
 SELECT name, id FROM Author;
 '''
 error = '''
-× named type `Row` as conflicting usage
+× conflicting uses of named type `Row`
    ╭─[queries/test.sql:1:1]
  1 │ --: Row()
  2 │ --! author_names: Row
@@ -238,7 +238,7 @@ SELECT name FROM Author;
 SELECT id as name FROM Author;
 '''
 error = '''
-× named type `Row` as conflicting usage
+× conflicting uses of named type `Row`
    ╭─[queries/test.sql:1:1]
  1 │ --: Row()
  2 │ --! author_names: Row
