@@ -311,6 +311,7 @@ fn gen_row_structs(
     CodegenSettings {
         is_async,
         derive_ser,
+        ..
     }: CodegenSettings,
 ) {
     let PreparedItem {
@@ -614,6 +615,7 @@ fn gen_custom_type(
     CodegenSettings {
         derive_ser,
         is_async,
+        ..
     }: CodegenSettings,
 ) {
     let PreparedType {

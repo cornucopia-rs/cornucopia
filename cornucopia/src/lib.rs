@@ -20,7 +20,7 @@ use codegen::generate as generate_internal;
 use error::WriteOutputError;
 use parser::parse_query_module;
 use prepare_queries::prepare;
-use read_queries::read_query_modules;
+use read_queries::{read_query_modules, read_query_modules_recursive};
 
 #[doc(hidden)]
 pub use cli::run;
@@ -33,6 +33,7 @@ pub use load_schema::load_schema;
 pub struct CodegenSettings {
     pub is_async: bool,
     pub derive_ser: bool,
+    pub is_recursive: bool,
 }
 
 /// Generates Rust queries from PostgreSQL queries located at `queries_path`,
@@ -46,10 +47,17 @@ pub fn generate_live(
     settings: CodegenSettings,
 ) -> Result<String, Error> {
     // Read
-    let modules = read_query_modules(queries_path)?
-        .into_iter()
-        .map(parse_query_module)
-        .collect::<Result<_, parser::error::Error>>()?;
+    let modules = if settings.is_recursive {
+        read_query_modules_recursive(queries_path)?
+            .into_iter()
+            .map(parse_query_module)
+            .collect::<Result<_, parser::error::Error>>()?
+    } else {
+        read_query_modules(queries_path)?
+            .into_iter()
+            .map(parse_query_module)
+            .collect::<Result<_, parser::error::Error>>()?
+    };
     // Generate
     let prepared_modules = prepare(client, modules)?;
     let generated_code = generate_internal(prepared_modules, settings);

@@ -23,6 +23,9 @@ struct Args {
     /// Derive serde's `Serialize` trait for generated types.
     #[clap(long)]
     serialize: bool,
+    /// Recursive lookup
+    #[clap(long)]
+    recursive: bool,
 }
 
 #[derive(Debug, Subcommand)]
@@ -48,6 +51,7 @@ pub fn run() -> Result<(), Error> {
         action,
         sync,
         serialize,
+        recursive,
     } = Args::parse();
 
     match action {
@@ -60,6 +64,7 @@ pub fn run() -> Result<(), Error> {
                 CodegenSettings {
                     is_async: !sync,
                     derive_ser: serialize,
+                    is_recursive: recursive,
                 },
             )?;
         }
@@ -73,6 +78,7 @@ pub fn run() -> Result<(), Error> {
                 CodegenSettings {
                     is_async: !sync,
                     derive_ser: serialize,
+                    is_recursive: recursive,
                 },
             ) {
                 container::cleanup(podman).ok();
