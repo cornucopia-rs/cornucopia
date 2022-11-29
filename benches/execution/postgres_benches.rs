@@ -64,16 +64,13 @@ pub fn bench_medium_complex_query(b: &mut Bencher, client: &mut Client) {
                     name: row.get(1),
                     hair_color: row.get(2),
                 };
-                let post = if let Some(id) = row.get(3) {
-                    Some(Post {
-                        id,
-                        user_id: row.get(4),
-                        title: row.get(5),
-                        body: row.get(6),
-                    })
-                } else {
-                    None
-                };
+                let post = row.get::<_, Option<i32>>(3).map(|id| Post {
+                    id,
+                    user_id: row.get(4),
+                    title: row.get(5),
+                    body: row.get(6),
+                });
+
                 Ok((user, post))
             })
             .collect::<Vec<_>>()

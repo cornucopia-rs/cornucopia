@@ -47,15 +47,11 @@ pub fn bench_insert(b: &mut Bencher, client: &mut Client, size: usize) {
     let mut stmt = insert_user();
     b.iter(|| {
         block_on(async {
-            let mut tx = client.transaction().await.unwrap();
+            let tx = client.transaction().await.unwrap();
             for x in 0..size {
-                stmt.bind(
-                    &mut tx,
-                    &format!("User {}", x).as_str(),
-                    &Some("hair_color"),
-                )
-                .await
-                .unwrap();
+                stmt.bind(&tx, &format!("User {}", x).as_str(), &Some("hair_color"))
+                    .await
+                    .unwrap();
             }
             tx.commit().await.unwrap();
         })
