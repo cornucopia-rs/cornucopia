@@ -258,6 +258,7 @@ pub fn test_named(client: &mut Client) {
 }
 
 // Test we correctly implement borrowed version and copy derive
+#[allow(clippy::drop_copy)]
 pub fn test_copy(client: &mut Client) {
     // Test copy
     let copy_params = CopyComposite {
