@@ -91,7 +91,9 @@ pub mod types {
         #[derive(Debug, postgres_types :: FromSql, Clone, PartialEq)]
         #[postgres(name = "voiceactor")]
         pub struct Voiceactor {
+            #[postgres(name = "name")]
             pub name: String,
+            #[postgres(name = "age")]
             pub age: i32,
         }
         #[derive(Debug)]

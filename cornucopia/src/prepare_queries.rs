@@ -10,7 +10,7 @@ use crate::{
     read_queries::ModuleInfo,
     type_registrar::CornucopiaType,
     type_registrar::TypeRegistrar,
-    utils::escape_keyword,
+    utils::normalize_ident,
     validation,
 };
 
@@ -26,9 +26,26 @@ pub(crate) struct PreparedQuery {
     pub(crate) sql: String,
 }
 
+/// An enum variant
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PreparedVariant {
+    pub(crate) original_name: String,
+    pub(crate) name: String,
+}
+
+impl PreparedVariant {
+    pub(crate) fn new(name: String) -> Self {
+        Self {
+            original_name: name.clone(),
+            name: normalize_ident(name),
+        }
+    }
+}
+
 /// A row or params field
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PreparedField {
+    pub(crate) original_name: String,
     pub(crate) name: String,
     pub(crate) ty: Rc<CornucopiaType>,
     pub(crate) is_nullable: bool,
@@ -42,7 +59,8 @@ impl PreparedField {
         nullity: Option<&NullableIdent>,
     ) -> Self {
         Self {
-            name: escape_keyword(name),
+            original_name: name.clone(),
+            name: normalize_ident(name),
             ty,
             is_nullable: nullity.map_or(false, |it| it.nullable),
             is_inner_nullable: nullity.map_or(false, |it| it.inner_nullable),
@@ -90,7 +108,7 @@ pub(crate) struct PreparedType {
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub(crate) enum PreparedContent {
-    Enum(Vec<String>),
+    Enum(Vec<PreparedVariant>),
     Composite(Vec<PreparedField>),
 }
 
@@ -243,9 +261,13 @@ fn prepare_type(
             .find(|it| it.name.value == pg_ty.name())
             .map_or(&[] as &[NullableIdent], |it| it.fields.as_slice());
         let content = match pg_ty.kind() {
-            Kind::Enum(variants) => {
-                PreparedContent::Enum(variants.clone().into_iter().map(escape_keyword).collect())
-            }
+            Kind::Enum(variants) => PreparedContent::Enum(
+                variants
+                    .clone()
+                    .into_iter()
+                    .map(PreparedVariant::new)
+                    .collect(),
+            ),
 
             Kind::Domain(_) => return None,
             Kind::Composite(fields) => PreparedContent::Composite(

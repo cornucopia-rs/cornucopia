@@ -56,7 +56,7 @@ impl<T> Span<T> {
     }
 }
 
-fn ident() -> impl Parser<char, Span<String>, Error = Simple<char>> {
+fn plain_ident() -> impl Parser<char, Span<String>, Error = Simple<char>> {
     filter(char::is_ascii_alphabetic)
         .chain(filter(|c: &char| c.is_ascii_alphanumeric() || *c == '_').repeated())
         .collect()
@@ -64,6 +64,21 @@ fn ident() -> impl Parser<char, Span<String>, Error = Simple<char>> {
             value,
             span: span.into(),
         })
+}
+
+fn quoted_ident() -> impl Parser<char, Span<String>, Error = Simple<char>> {
+    just('"')
+        .ignore_then(take_until(just('"').ignored()))
+        .map(|(value, _)| value)
+        .collect()
+        .map_with_span(|value: String, span: Range<usize>| Span {
+            value,
+            span: span.into(),
+        })
+}
+
+fn ident() -> impl Parser<char, Span<String>, Error = Simple<char>> {
+    plain_ident().or(quoted_ident())
 }
 
 fn ln() -> impl Parser<char, (), Error = Simple<char>> {
@@ -187,7 +202,7 @@ impl Query {
     /// Parse all bind from an SQL query
     fn parse_bind() -> impl Parser<char, Vec<Span<String>>, Error = Simple<char>> {
         just(':')
-            .ignore_then(ident())
+            .ignore_then(plain_ident())
             .separated_by(Self::sql_escaping())
             .allow_leading()
             .allow_trailing()
@@ -227,7 +242,7 @@ impl Query {
     {
         just("--!")
             .ignore_then(space())
-            .ignore_then(ident())
+            .ignore_then(plain_ident())
             .then_ignore(space())
             .then(QueryDataStruct::parser())
             .then_ignore(space())
@@ -324,7 +339,7 @@ impl Default for QueryDataStruct {
 
 impl QueryDataStruct {
     fn parser() -> impl Parser<char, Self, Error = Simple<char>> {
-        ident()
+        plain_ident()
             .or_not()
             .then_ignore(space())
             .then(parse_nullable_ident().or_not())

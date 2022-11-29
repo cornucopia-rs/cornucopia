@@ -8,9 +8,9 @@ use indexmap::IndexMap;
 use crate::{
     prepare_queries::{
         Preparation, PreparedContent, PreparedField, PreparedItem, PreparedModule, PreparedQuery,
-        PreparedType,
+        PreparedType, PreparedVariant,
     },
-    utils::{escape_keyword, unescape_keyword},
+    utils::normalize_ident,
     CodegenSettings,
 };
 
@@ -73,9 +73,10 @@ impl PreparedField {
     }
 }
 
-fn enum_sql(w: &mut impl Write, name: &str, enum_name: &str, variants: &[String]) {
+fn enum_sql(w: &mut impl Write, name: &str, enum_name: &str, variants: &[PreparedVariant]) {
     let enum_names = std::iter::repeat(enum_name);
-    let unescaped = variants.iter().map(|v| unescape_keyword(v));
+    let original_variant_names = variants.iter().map(|v| &v.original_name);
+    let variant_names = variants.iter().map(|v| &v.name);
     let nb_variants = variants.len();
     code!(w =>
         impl<'a> postgres_types::ToSql for $enum_name {
@@ -85,7 +86,7 @@ fn enum_sql(w: &mut impl Write, name: &str, enum_name: &str, variants: &[String]
                 buf: &mut postgres_types::private::BytesMut,
             ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>,> {
                 let s = match *self {
-                    $($enum_names::$variants => "$unescaped",)
+                    $($enum_names::$variant_names => "$original_variant_names",)
                 };
                 buf.extend_from_slice(s.as_bytes());
                 std::result::Result::Ok(postgres_types::IsNull::No)
@@ -100,7 +101,7 @@ fn enum_sql(w: &mut impl Write, name: &str, enum_name: &str, variants: &[String]
                             return false;
                         }
                         variants.iter().all(|v| match &**v {
-                            $("$unescaped" => true,)
+                            $("$original_variant_names" => true,)
                             _ => false,
                         })
                     }
@@ -121,7 +122,7 @@ fn enum_sql(w: &mut impl Write, name: &str, enum_name: &str, variants: &[String]
                 buf: &'a [u8],
             ) -> Result<$enum_name, Box<dyn std::error::Error + Sync + Send>,> {
                 match std::str::from_utf8(buf)? {
-                    $("$unescaped" => Ok($enum_names::$variants),)
+                    $("$original_variant_names" => Ok($enum_names::$variant_names),)
                     s => Result::Err(Into::into(format!(
                         "invalid variant `{}`",
                         s
@@ -138,7 +139,7 @@ fn enum_sql(w: &mut impl Write, name: &str, enum_name: &str, variants: &[String]
                             return false;
                         }
                         variants.iter().all(|v| match &**v {
-                            $("$unescaped" => true,)
+                            $("$original_variant_names" => true,)
                             _ => false,
                         })
                     }
@@ -167,8 +168,8 @@ fn struct_tosql(
     } else {
         ("", "")
     };
+    let original_field_names = fields.iter().map(|p| &p.original_name);
     let field_names = fields.iter().map(|p| &p.name);
-    let unescaped = fields.iter().map(|p| unescape_keyword(&p.name));
     let write_ty = fields.iter().map(|p| p.ty.sql_wrapped(&p.name, is_async));
     let accept_ty = fields.iter().map(|p| p.ty.accept_to_sql(is_async));
     let nb_fields = fields.len();
@@ -193,7 +194,7 @@ fn struct_tosql(
                     let base = out.len();
                     out.extend_from_slice(&[0; 4]);
                     let r = match field.name() {
-                        $("$unescaped" => postgres_types::ToSql::to_sql($write_ty,field.type_(), out),)
+                        $("$original_field_names" => postgres_types::ToSql::to_sql($write_ty,field.type_(), out),)
                         _ => unreachable!()
                     };
                     let count = match r? {
@@ -220,7 +221,7 @@ fn struct_tosql(
                             return false;
                         }
                         fields.iter().all(|f| match f.name() {
-                            $("$unescaped" => <$accept_ty as postgres_types::ToSql>::accepts(f.type_()),)
+                            $("$original_field_names" => <$accept_ty as postgres_types::ToSql>::accepts(f.type_()),)
                             _ => false,
                         })
                     }
@@ -543,7 +544,7 @@ fn gen_query_fn<W: Write>(
     // Gen statement struct
     {
         let sql = sql.replace('"', "\\\""); // Rust string format escaping
-        let name = escape_keyword(name.clone());
+        let name = normalize_ident(name.clone());
         code!(w =>
             pub fn $name() -> ${struct_name}Stmt {
                 ${struct_name}Stmt($client::private::Stmt::new("$sql"))
@@ -627,16 +628,18 @@ fn gen_custom_type(
     let ser_str = if derive_ser { "serde::Serialize," } else { "" };
     match content {
         PreparedContent::Enum(variants) => {
+            let variants_name = variants.iter().map(|v| &v.name);
             code!(w =>
                 #[derive($ser_str Debug, Clone, Copy, PartialEq, Eq)]
                 #[allow(non_camel_case_types)]
                 pub enum $struct_name {
-                    $($variants,)
+                    $($variants_name,)
                 }
             );
             enum_sql(w, name, struct_name, variants);
         }
         PreparedContent::Composite(fields) => {
+            let fields_original_name = fields.iter().map(|p| &p.original_name);
             let fields_name = fields.iter().map(|p| &p.name);
             {
                 let fields_ty = fields.iter().map(|p| p.own_struct());
@@ -644,7 +647,10 @@ fn gen_custom_type(
                     #[derive($ser_str Debug,postgres_types::FromSql,$copy Clone, PartialEq)]
                     #[postgres(name = "$name")]
                     pub struct $struct_name {
-                        $(pub $fields_name: $fields_ty,)
+                        $(
+                            #[postgres(name = "$fields_original_name")]
+                            pub $fields_name: $fields_ty,
+                        )
                     }
                 );
             }

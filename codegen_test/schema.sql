@@ -55,8 +55,15 @@ CREATE TYPE named_composite AS (
     such_cool integer
 );
 
+CREATE TYPE "enum.with_dot" AS Enum('variant.with_dot');
+
+CREATE TYPE "named_composite.with_dot" AS (
+    "this.is.inconceivable" "enum.with_dot"
+);
+
 CREATE TABLE named_complex (
-    named named_composite
+    named named_composite,
+    "named.with_dot" "named_composite.with_dot"
 );
 
 -- Nullity

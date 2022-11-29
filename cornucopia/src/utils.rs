@@ -62,16 +62,14 @@ pub(crate) const KEYWORD: [&str; 53] = [
     "union", "unsafe", "unsized", "use", "virtual", "where", "while", "yield",
 ];
 
-/// Escape ident if clash with rust reserved keywords
-pub(crate) fn escape_keyword(ident: String) -> String {
+/// Normalize identifier by replacing all non-alphanumeric characters with an underscore (`_`) and
+/// escaping it with a raw identifier prefix (`r#`) if it clashes with a keyword reserved in Rust.
+pub(crate) fn normalize_ident(ident: String) -> String {
+    let ident = ident.replace(|c: char| !c.is_ascii_alphanumeric() && c != '_', "_");
+
     if KEYWORD.binary_search(&ident.as_str()).is_ok() {
         format!("r#{ident}")
     } else {
         ident
     }
-}
-
-/// Unescape ident
-pub(crate) fn unescape_keyword(ident: &str) -> &str {
-    ident.trim_start_matches("r#")
 }

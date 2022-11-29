@@ -9,7 +9,9 @@ pub mod types {
         #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Clone, PartialEq)]
         #[postgres(name = "clone_composite")]
         pub struct CloneComposite {
+            #[postgres(name = "first")]
             pub first: i32,
+            #[postgres(name = "second")]
             pub second: String,
         }
         #[derive(Debug)]
@@ -120,7 +122,9 @@ pub mod types {
         #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Copy, Clone, PartialEq)]
         #[postgres(name = "copy_composite")]
         pub struct CopyComposite {
+            #[postgres(name = "first")]
             pub first: i32,
+            #[postgres(name = "second")]
             pub second: f64,
         }
         impl<'a> postgres_types::ToSql for CopyComposite {
@@ -189,9 +193,13 @@ pub mod types {
         #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Clone, PartialEq)]
         #[postgres(name = "domain_composite")]
         pub struct DomainComposite {
+            #[postgres(name = "txt")]
             pub txt: String,
+            #[postgres(name = "json")]
             pub json: serde_json::Value,
+            #[postgres(name = "nb")]
             pub nb: i32,
+            #[postgres(name = "arr")]
             pub arr: Vec<serde_json::Value>,
         }
         #[derive(Debug)]
@@ -325,11 +333,11 @@ pub mod types {
                         }
                         fields.iter().all(| f | match f.name()
                 {
-                    "txt" => < cornucopia_async::private::Domain::<&'a str> as postgres_types :: ToSql >
-                    :: accepts(f.type_()),"json" => < cornucopia_async::private::Domain::<&'a serde_json::value::Value> as postgres_types :: ToSql >
-                    :: accepts(f.type_()),"nb" => < cornucopia_async::private::Domain::<i32> as postgres_types :: ToSql >
-                    :: accepts(f.type_()),"arr" => < cornucopia_async::private::Domain::<cornucopia_async::private::DomainArray::<&'a serde_json::value::Value, &[&'a serde_json::value::Value]>> as postgres_types :: ToSql >
-                    :: accepts(f.type_()),_ => false,
+                    "txt" => < cornucopia_async::private::Domain::<&'a str> as postgres_types
+                    :: ToSql > :: accepts(f.type_()),"json" => < cornucopia_async::private::Domain::<&'a serde_json::value::Value> as postgres_types
+                    :: ToSql > :: accepts(f.type_()),"nb" => < cornucopia_async::private::Domain::<i32> as postgres_types
+                    :: ToSql > :: accepts(f.type_()),"arr" => < cornucopia_async::private::Domain::<cornucopia_async::private::DomainArray::<&'a serde_json::value::Value, &[&'a serde_json::value::Value]>> as postgres_types
+                    :: ToSql > :: accepts(f.type_()),_ => false,
                 })
                     }
                     _ => false,
@@ -347,7 +355,9 @@ pub mod types {
         #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Clone, PartialEq)]
         #[postgres(name = "named_composite")]
         pub struct NamedComposite {
+            #[postgres(name = "wow")]
             pub wow: Option<String>,
+            #[postgres(name = "such_cool")]
             pub such_cool: Option<i32>,
         }
         #[derive(Debug)]
@@ -455,10 +465,156 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
+        #[derive(serde::Serialize, Debug, Clone, Copy, PartialEq, Eq)]
+        #[allow(non_camel_case_types)]
+        pub enum EnumWithDot {
+            variant_with_dot,
+        }
+        impl<'a> postgres_types::ToSql for EnumWithDot {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                buf: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let s = match *self {
+                    EnumWithDot::variant_with_dot => "variant.with_dot",
+                };
+                buf.extend_from_slice(s.as_bytes());
+                std::result::Result::Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "enum.with_dot" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Enum(ref variants) => {
+                        if variants.len() != 1 {
+                            return false;
+                        }
+                        variants.iter().all(|v| match &**v {
+                            "variant.with_dot" => true,
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        impl<'a> postgres_types::FromSql<'a> for EnumWithDot {
+            fn from_sql(
+                ty: &postgres_types::Type,
+                buf: &'a [u8],
+            ) -> Result<EnumWithDot, Box<dyn std::error::Error + Sync + Send>> {
+                match std::str::from_utf8(buf)? {
+                    "variant.with_dot" => Ok(EnumWithDot::variant_with_dot),
+                    s => Result::Err(Into::into(format!("invalid variant `{}`", s))),
+                }
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "enum.with_dot" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Enum(ref variants) => {
+                        if variants.len() != 1 {
+                            return false;
+                        }
+                        variants.iter().all(|v| match &**v {
+                            "variant.with_dot" => true,
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+        }
+        #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Copy, Clone, PartialEq)]
+        #[postgres(name = "named_composite.with_dot")]
+        pub struct NamedCompositeWithDot {
+            #[postgres(name = "this.is.inconceivable")]
+            pub this_is_inconceivable: Option<super::super::types::public::EnumWithDot>,
+        }
+        impl<'a> postgres_types::ToSql for NamedCompositeWithDot {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                let NamedCompositeWithDot {
+                    this_is_inconceivable,
+                } = self;
+                let fields = match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => fields,
+                    _ => unreachable!(),
+                };
+                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+                for field in fields {
+                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
+                    let base = out.len();
+                    out.extend_from_slice(&[0; 4]);
+                    let r = match field.name() {
+                        "this.is.inconceivable" => {
+                            postgres_types::ToSql::to_sql(this_is_inconceivable, field.type_(), out)
+                        }
+                        _ => unreachable!(),
+                    };
+                    let count = match r? {
+                        postgres_types::IsNull::Yes => -1,
+                        postgres_types::IsNull::No => {
+                            let len = out.len() - base - 4;
+                            if len > i32::max_value() as usize {
+                                return Err(Into::into("value too large to transmit"));
+                            }
+                            len as i32
+                        }
+                    };
+                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
+                }
+                Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "named_composite.with_dot" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Composite(ref fields) => {
+                        if fields.len() != 1 {
+                            return false;
+                        }
+                        fields.iter().all(| f | match f.name()
+                {
+                    "this.is.inconceivable" => < super::super::types::public::EnumWithDot as postgres_types
+                    :: ToSql > :: accepts(f.type_()),_ => false,
+                })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+            {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
         #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Clone, PartialEq)]
         #[postgres(name = "nullity_composite")]
         pub struct NullityComposite {
+            #[postgres(name = "jsons")]
             pub jsons: Option<Vec<Option<serde_json::Value>>>,
+            #[postgres(name = "id")]
             pub id: i32,
         }
         #[derive(Debug)]
@@ -564,9 +720,9 @@ pub mod types {
                         fields.iter().all(|f| {
                             match f.name()
                 {
-                    "jsons" => < &'a [&'a serde_json::value::Value] as postgres_types :: ToSql >
-                    :: accepts(f.type_()),"id" => < i32 as postgres_types :: ToSql >
-                    :: accepts(f.type_()),_ => false,
+                    "jsons" => < &'a [&'a serde_json::value::Value] as postgres_types
+                    :: ToSql > :: accepts(f.type_()),"id" => < i32 as postgres_types
+                    :: ToSql > :: accepts(f.type_()),_ => false,
                 }
                         })
                     }
@@ -667,8 +823,11 @@ pub mod types {
         #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Clone, PartialEq)]
         #[postgres(name = "custom_composite")]
         pub struct CustomComposite {
+            #[postgres(name = "wow")]
             pub wow: String,
+            #[postgres(name = "such_cool")]
             pub such_cool: i32,
+            #[postgres(name = "nice")]
             pub nice: super::super::types::public::SpongebobCharacter,
         }
         #[derive(Debug)]
@@ -779,10 +938,10 @@ pub mod types {
                         }
                         fields.iter().all(| f | match f.name()
                 {
-                    "wow" => < &'a str as postgres_types :: ToSql >
-                    :: accepts(f.type_()),"such_cool" => < i32 as postgres_types :: ToSql >
-                    :: accepts(f.type_()),"nice" => < super::super::types::public::SpongebobCharacter as postgres_types :: ToSql >
-                    :: accepts(f.type_()),_ => false,
+                    "wow" => < &'a str as postgres_types
+                    :: ToSql > :: accepts(f.type_()),"such_cool" => < i32 as postgres_types
+                    :: ToSql > :: accepts(f.type_()),"nice" => < super::super::types::public::SpongebobCharacter as postgres_types
+                    :: ToSql > :: accepts(f.type_()),_ => false,
                 })
                     }
                     _ => false,
@@ -800,8 +959,11 @@ pub mod types {
         #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Clone, PartialEq)]
         #[postgres(name = "nightmare_composite")]
         pub struct NightmareComposite {
+            #[postgres(name = "custom")]
             pub custom: Vec<super::super::types::public::CustomComposite>,
+            #[postgres(name = "spongebob")]
             pub spongebob: Vec<super::super::types::public::SpongebobCharacter>,
+            #[postgres(name = "domain")]
             pub domain: String,
         }
         #[derive(Debug)]
@@ -928,10 +1090,10 @@ pub mod types {
                         }
                         fields.iter().all(| f | match f.name()
                 {
-                    "custom" => < &'a [super::super::types::public::CustomCompositeBorrowed<'a>] as postgres_types :: ToSql >
-                    :: accepts(f.type_()),"spongebob" => < &'a [super::super::types::public::SpongebobCharacter] as postgres_types :: ToSql >
-                    :: accepts(f.type_()),"domain" => < cornucopia_async::private::Domain::<&'a str> as postgres_types :: ToSql >
-                    :: accepts(f.type_()),_ => false,
+                    "custom" => < &'a [super::super::types::public::CustomCompositeBorrowed<'a>] as postgres_types
+                    :: ToSql > :: accepts(f.type_()),"spongebob" => < &'a [super::super::types::public::SpongebobCharacter] as postgres_types
+                    :: ToSql > :: accepts(f.type_()),"domain" => < cornucopia_async::private::Domain::<&'a str> as postgres_types
+                    :: ToSql > :: accepts(f.type_()),_ => false,
                 })
                     }
                     _ => false,
@@ -949,6 +1111,7 @@ pub mod types {
         #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Copy, Clone, PartialEq)]
         #[postgres(name = "syntax_composite")]
         pub struct SyntaxComposite {
+            #[postgres(name = "async")]
             pub r#async: i32,
         }
         impl<'a> postgres_types::ToSql for SyntaxComposite {
@@ -1632,6 +1795,7 @@ pub mod queries {
         #[derive(Debug)]
         pub struct NamedComplexParams<'a> {
             pub named: super::super::types::public::NamedCompositeBorrowed<'a>,
+            pub named_with_dot: Option<super::super::types::public::NamedCompositeWithDot>,
         }
         #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
         pub struct Id {
@@ -1771,23 +1935,44 @@ pub mod queries {
                 Ok(it)
             }
         }
-        pub struct SuperSuperTypesPublicNamedCompositeQuery<'a, C: GenericClient, T, const N: usize> {
+        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
+        pub struct NamedComplex {
+            pub named: super::super::types::public::NamedComposite,
+            pub named_with_dot: Option<super::super::types::public::NamedCompositeWithDot>,
+        }
+        pub struct NamedComplexBorrowed<'a> {
+            pub named: super::super::types::public::NamedCompositeBorrowed<'a>,
+            pub named_with_dot: Option<super::super::types::public::NamedCompositeWithDot>,
+        }
+        impl<'a> From<NamedComplexBorrowed<'a>> for NamedComplex {
+            fn from(
+                NamedComplexBorrowed {
+                    named,
+                    named_with_dot,
+                }: NamedComplexBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    named: named.into(),
+                    named_with_dot,
+                }
+            }
+        }
+        pub struct NamedComplexQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_async::private::Stmt,
-            extractor:
-                fn(&tokio_postgres::Row) -> super::super::types::public::NamedCompositeBorrowed,
-            mapper: fn(super::super::types::public::NamedCompositeBorrowed) -> T,
+            extractor: fn(&tokio_postgres::Row) -> NamedComplexBorrowed,
+            mapper: fn(NamedComplexBorrowed) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> SuperSuperTypesPublicNamedCompositeQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> NamedComplexQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
             pub fn map<R>(
                 self,
-                mapper: fn(super::super::types::public::NamedCompositeBorrowed) -> R,
-            ) -> SuperSuperTypesPublicNamedCompositeQuery<'a, C, R, N> {
-                SuperSuperTypesPublicNamedCompositeQuery {
+                mapper: fn(NamedComplexBorrowed) -> R,
+            ) -> NamedComplexQuery<'a, C, R, N> {
+                NamedComplexQuery {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -1946,7 +2131,7 @@ pub mod queries {
         }
         pub fn new_named_complex() -> NewNamedComplexStmt {
             NewNamedComplexStmt(cornucopia_async::private::Stmt::new(
-                "INSERT INTO named_complex (named) VALUES ($1)",
+                "INSERT INTO named_complex (named, \"named.with_dot\") VALUES ($1, $2)",
             ))
         }
         pub struct NewNamedComplexStmt(cornucopia_async::private::Stmt);
@@ -1955,9 +2140,10 @@ pub mod queries {
                 &'a mut self,
                 client: &'a C,
                 named: &'a super::super::types::public::NamedCompositeBorrowed<'a>,
+                named_with_dot: &'a Option<super::super::types::public::NamedCompositeWithDot>,
             ) -> Result<u64, tokio_postgres::Error> {
                 let stmt = self.0.prepare(client).await?;
-                client.execute(stmt, &[named]).await
+                client.execute(stmt, &[named, named_with_dot]).await
             }
         }
         impl<'a, C: GenericClient + Send + Sync>
@@ -1981,7 +2167,7 @@ pub mod queries {
             ) -> std::pin::Pin<
                 Box<dyn futures::Future<Output = Result<u64, tokio_postgres::Error>> + Send + 'a>,
             > {
-                Box::pin(self.bind(client, &params.named))
+                Box::pin(self.bind(client, &params.named, &params.named_with_dot))
             }
         }
         pub fn named_complex() -> NamedComplexStmt {
@@ -1994,18 +2180,16 @@ pub mod queries {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a C,
-            ) -> SuperSuperTypesPublicNamedCompositeQuery<
-                'a,
-                C,
-                super::super::types::public::NamedComposite,
-                0,
-            > {
-                SuperSuperTypesPublicNamedCompositeQuery {
+            ) -> NamedComplexQuery<'a, C, NamedComplex, 0> {
+                NamedComplexQuery {
                     client,
                     params: [],
                     stmt: &mut self.0,
-                    extractor: |row| row.get(0),
-                    mapper: |it| it.into(),
+                    extractor: |row| NamedComplexBorrowed {
+                        named: row.get(0),
+                        named_with_dot: row.get(1),
+                    },
+                    mapper: |it| <NamedComplex>::from(it),
                 }
             }
         }

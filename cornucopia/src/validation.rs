@@ -4,7 +4,7 @@ use crate::{
     parser::{Module, NullableIdent, Query, QueryDataStruct, Span, TypeAnnotation},
     prepare_queries::{PreparedField, PreparedModule},
     read_queries::ModuleInfo,
-    utils::{find_duplicate, unescape_keyword, STRICT_KEYWORD},
+    utils::{find_duplicate, STRICT_KEYWORD},
 };
 
 use error::Error;
@@ -205,7 +205,7 @@ fn reserved_name_keyword(
     pos: &SourceSpan,
     ty: &'static str,
 ) -> Result<(), Box<Error>> {
-    if let Ok(it) = STRICT_KEYWORD.binary_search(&unescape_keyword(name)) {
+    if let Ok(it) = STRICT_KEYWORD.binary_search(&name) {
         return Err(Box::new(Error::NameRustKeyword {
             src: info.into(),
             name: STRICT_KEYWORD[it],
@@ -305,7 +305,7 @@ pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Box<Er
         if row.is_named {
             check_name(row.name.value.clone(), origin.span, "row")?;
             for field in &row.fields {
-                reserved_name_keyword(&module.info, &field.name, &origin.span, "row")?;
+                reserved_name_keyword(&module.info, &field.original_name, &origin.span, "row")?;
             }
 
             if !row.is_copy {
@@ -319,7 +319,7 @@ pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Box<Er
         if params.is_named {
             check_name(params.name.value.clone(), origin.span, "params")?;
             for field in &params.fields {
-                reserved_name_keyword(&module.info, &field.name, &origin.span, "param")?;
+                reserved_name_keyword(&module.info, &field.original_name, &origin.span, "param")?;
             }
         }
     }
