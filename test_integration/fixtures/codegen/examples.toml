@@ -1,15 +1,15 @@
-[[codegen]]
+[[test]]
 name = "Auto build"
 base_path = "examples/auto_build"
 run = true
 
-[[codegen]]
+[[test]]
 name = "Basic sync"
 base_path = "examples/basic_sync"
 sync = true
 run = true
 
-[[codegen]]
+[[test]]
 name = "Basic async"
 base_path = "examples/basic_async"
 run = true

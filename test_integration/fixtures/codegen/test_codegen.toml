@@ -1,4 +1,4 @@
-[[codegen]]
+[[test]]
 name = "Sync"
 base_path = "test_codegen"
 destination = "src/cornucopia_sync.rs"
@@ -6,7 +6,7 @@ derive_ser = true
 sync = true
 run = true
 
-[[codegen]]
+[[test]]
 name = "Async"
 base_path = "test_codegen"
 destination = "src/cornucopia_async.rs"
