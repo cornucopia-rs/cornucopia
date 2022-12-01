@@ -20,16 +20,16 @@ postgres-types = "0.2.4"
 
 # Error handling and reporting
 thiserror = "1.0.37"
-miette = { version = "5.4.1", features = ["fancy"] }
+miette = { version = "5.5.0", features = ["fancy"] }
 
 # Parser
 chumsky = "0.8.0"
 
 # CLI handling
-clap = { version = "4.0.19", features = ["derive"] }
+clap = { version = "4.0.29", features = ["derive"] }
 
 # Word case
 heck = "0.4.0"
 
 # Order-preserving map to work around borrowing issues
-indexmap = "1.9.1"
+indexmap = "1.9.2"

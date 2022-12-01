@@ -22,7 +22,7 @@ tempfile = "3.3.0"
 owo-colors = "3.5.0"
 
 # CLI handling
-clap = { version = "4.0.19", features = ["derive"] }
+clap = { version = "4.0.29", features = ["derive"] }
 
 # async
 futures = "0.3.25"
@@ -44,13 +44,13 @@ postgres-types = { version = "0.2.4", features = ["derive"] }
 
 # serde
 ## Both for test helpers ser/de and codegen `Serialize` derives
-serde = { version = "1.0.147", features = ["derive"] }
+serde = { version = "1.0.148", features = ["derive"] }
 ## Read fixture files
 toml = "0.5.9"
 
 # extra types
-serde_json = { version = "1.0.87", features = ["raw_value"] }
+serde_json = { version = "1.0.89", features = ["raw_value"] }
 time = { version = "0.3.17", features = ["parsing", "serde"] }
-uuid = { version = "1.2.1", features = ["serde"] }
+uuid = { version = "1.2.2", features = ["serde"] }
 eui48 = { version = "1.1.0", features = ["serde"] }
-rust_decimal = { version = "1.26.1", features = ["db-postgres"] }
+rust_decimal = { version = "1.27.0", features = ["db-postgres"] }
