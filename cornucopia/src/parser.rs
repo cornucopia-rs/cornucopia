@@ -57,8 +57,9 @@ impl<T> Span<T> {
 }
 
 fn plain_ident() -> impl Parser<char, Span<String>, Error = Simple<char>> {
-    filter(char::is_ascii_alphabetic)
-        .chain(filter(|c: &char| c.is_ascii_alphanumeric() || *c == '_').repeated())
+    filter(|c: &char| c.is_ascii_alphanumeric() || *c == '_')
+        .repeated()
+        .at_least(1)
         .collect()
         .map_with_span(|value: String, span: Range<usize>| Span {
             value,
@@ -67,9 +68,10 @@ fn plain_ident() -> impl Parser<char, Span<String>, Error = Simple<char>> {
 }
 
 fn quoted_ident() -> impl Parser<char, Span<String>, Error = Simple<char>> {
-    just('"')
-        .ignore_then(take_until(just('"').ignored()))
-        .map(|(value, _)| value)
+    none_of('"')
+        .repeated()
+        .at_least(1)
+        .delimited_by(just('"'), just('"'))
         .collect()
         .map_with_span(|value: String, span: Range<usize>| Span {
             value,
