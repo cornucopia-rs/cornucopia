@@ -8,7 +8,6 @@ use crate::{
 };
 
 use error::Error;
-use heck::ToUpperCamelCase;
 use miette::SourceSpan;
 use postgres::Column;
 use postgres_types::Type;
@@ -224,16 +223,16 @@ pub(crate) fn named_struct_field(
     prev_fields: &[PreparedField],
 ) -> Result<(), Box<Error>> {
     if let Some((field, prev_field)) = fields.iter().find_map(|f| {
-        prev_fields
-            .iter()
-            .find_map(|prev_f| (f.name == prev_f.name && f.ty != prev_f.ty).then_some((f, prev_f)))
+        prev_fields.iter().find_map(|prev_f| {
+            (f.ident == prev_f.ident && f.ty != prev_f.ty).then_some((f, prev_f))
+        })
     }) {
         return Err(Box::new(Error::IncompatibleNamedType {
             src: info.into(),
             name: name.value.clone(),
             first_label: format!(
                 "column `{}` has type `{}` here",
-                field.name,
+                field.ident.db,
                 field.ty.pg_ty()
             ),
             second: prev_name.span,
@@ -246,9 +245,9 @@ pub(crate) fn named_struct_field(
         return Err(Box::new(Error::IncompatibleNamedType {
             src: info.into(),
             name: name.value.clone(),
-            second_label: format!("column `{}` expected here", &field.name),
+            second_label: format!("column `{}` expected here", &field.ident.db),
             second: name.span,
-            first_label: format!("column `{}` not found", &field.name),
+            first_label: format!("column `{}` not found", &field.ident.db),
             first: prev_name.span,
         }));
     }
@@ -257,9 +256,9 @@ pub(crate) fn named_struct_field(
         return Err(Box::new(Error::IncompatibleNamedType {
             src: info.into(),
             name: name.value.clone(),
-            second_label: format!("column `{}` expected here", &prev_field.name),
+            second_label: format!("column `{}` expected here", &prev_field.ident.db),
             second: prev_name.span,
-            first_label: format!("column `{}` not found", &prev_field.name),
+            first_label: format!("column `{}` not found", &prev_field.ident.db),
             first: name.span,
         }));
     }
@@ -295,7 +294,7 @@ pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Box<Er
     for (origin, query) in &module.queries {
         reserved_type_keyword(&module.info, origin)?;
         check_name(
-            format!("{}Stmt", query.name.to_upper_camel_case()),
+            format!("{}Stmt", query.ident.type_ident()),
             origin.span,
             "statement",
         )?;
@@ -305,7 +304,7 @@ pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Box<Er
         if row.is_named {
             check_name(row.name.value.clone(), origin.span, "row")?;
             for field in &row.fields {
-                reserved_name_keyword(&module.info, &field.original_name, &origin.span, "row")?;
+                reserved_name_keyword(&module.info, &field.ident.db, &origin.span, "row")?;
             }
 
             if !row.is_copy {
@@ -319,7 +318,7 @@ pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Box<Er
         if params.is_named {
             check_name(params.name.value.clone(), origin.span, "params")?;
             for field in &params.fields {
-                reserved_name_keyword(&module.info, &field.original_name, &origin.span, "param")?;
+                reserved_name_keyword(&module.info, &field.ident.db, &origin.span, "param")?;
             }
         }
     }

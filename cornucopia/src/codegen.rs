@@ -2,15 +2,13 @@ use core::str;
 use std::fmt::Write;
 
 use codegen_template::code;
-use heck::ToUpperCamelCase;
 use indexmap::IndexMap;
 
 use crate::{
     prepare_queries::{
-        Preparation, PreparedContent, PreparedField, PreparedItem, PreparedModule, PreparedQuery,
-        PreparedType, PreparedVariant,
+        Ident, Preparation, PreparedContent, PreparedField, PreparedItem, PreparedModule,
+        PreparedQuery, PreparedType,
     },
-    utils::normalize_ident,
     CodegenSettings,
 };
 
@@ -57,7 +55,7 @@ impl PreparedField {
 
     pub fn owning_call(&self, name: Option<&str>) -> String {
         self.ty.owning_call(
-            name.unwrap_or(&self.name),
+            name.unwrap_or(&self.ident.rs),
             self.is_nullable,
             self.is_inner_nullable,
         )
@@ -65,18 +63,19 @@ impl PreparedField {
 
     pub fn owning_assign(&self) -> String {
         let call = self.owning_call(None);
-        if call == self.name {
+        if call == self.ident.rs {
             call
         } else {
-            format!("{}: {}", self.name, call)
+            format!("{}: {}", self.ident.rs, call)
         }
     }
 }
 
-fn enum_sql(w: &mut impl Write, name: &str, enum_name: &str, variants: &[PreparedVariant]) {
+fn enum_sql(w: &mut impl Write, name: &str, enum_name: &str, variants: &[Ident]) {
     let enum_names = std::iter::repeat(enum_name);
-    let original_variant_names = variants.iter().map(|v| &v.original_name);
-    let variant_names = variants.iter().map(|v| &v.name);
+    let db_variants_ident = variants.iter().map(|v| &v.db);
+    let rs_variants_ident = variants.iter().map(|v| &v.rs);
+
     let nb_variants = variants.len();
     code!(w =>
         impl<'a> postgres_types::ToSql for $enum_name {
@@ -86,7 +85,7 @@ fn enum_sql(w: &mut impl Write, name: &str, enum_name: &str, variants: &[Prepare
                 buf: &mut postgres_types::private::BytesMut,
             ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>,> {
                 let s = match *self {
-                    $($enum_names::$variant_names => "$original_variant_names",)
+                    $($enum_names::$rs_variants_ident => "$db_variants_ident",)
                 };
                 buf.extend_from_slice(s.as_bytes());
                 std::result::Result::Ok(postgres_types::IsNull::No)
@@ -101,7 +100,7 @@ fn enum_sql(w: &mut impl Write, name: &str, enum_name: &str, variants: &[Prepare
                             return false;
                         }
                         variants.iter().all(|v| match &**v {
-                            $("$original_variant_names" => true,)
+                            $("$db_variants_ident" => true,)
                             _ => false,
                         })
                     }
@@ -122,7 +121,7 @@ fn enum_sql(w: &mut impl Write, name: &str, enum_name: &str, variants: &[Prepare
                 buf: &'a [u8],
             ) -> Result<$enum_name, Box<dyn std::error::Error + Sync + Send>,> {
                 match std::str::from_utf8(buf)? {
-                    $("$original_variant_names" => Ok($enum_names::$variant_names),)
+                    $("$db_variants_ident" => Ok($enum_names::$rs_variants_ident),)
                     s => Result::Err(Into::into(format!(
                         "invalid variant `{}`",
                         s
@@ -139,7 +138,7 @@ fn enum_sql(w: &mut impl Write, name: &str, enum_name: &str, variants: &[Prepare
                             return false;
                         }
                         variants.iter().all(|v| match &**v {
-                            $("$original_variant_names" => true,)
+                            $("$db_variants_ident" => true,)
                             _ => false,
                         })
                     }
@@ -168,9 +167,11 @@ fn struct_tosql(
     } else {
         ("", "")
     };
-    let original_field_names = fields.iter().map(|p| &p.original_name);
-    let field_names = fields.iter().map(|p| &p.name);
-    let write_ty = fields.iter().map(|p| p.ty.sql_wrapped(&p.name, is_async));
+    let db_fields_ident = fields.iter().map(|p| &p.ident.db);
+    let rs_fields_ident = fields.iter().map(|p| &p.ident.rs);
+    let write_ty = fields
+        .iter()
+        .map(|p| p.ty.sql_wrapped(&p.ident.rs, is_async));
     let accept_ty = fields.iter().map(|p| p.ty.accept_to_sql(is_async));
     let nb_fields = fields.len();
 
@@ -182,7 +183,7 @@ fn struct_tosql(
                 out: &mut postgres_types::private::BytesMut,
             ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>,> {
                 let $struct_name$post {
-                    $($field_names,)
+                    $($rs_fields_ident,)
                 } = self;
                 let fields = match *ty.kind() {
                     postgres_types::Kind::Composite(ref fields) => fields,
@@ -194,7 +195,7 @@ fn struct_tosql(
                     let base = out.len();
                     out.extend_from_slice(&[0; 4]);
                     let r = match field.name() {
-                        $("$original_field_names" => postgres_types::ToSql::to_sql($write_ty,field.type_(), out),)
+                        $("$db_fields_ident" => postgres_types::ToSql::to_sql($write_ty,field.type_(), out),)
                         _ => unreachable!()
                     };
                     let count = match r? {
@@ -221,7 +222,7 @@ fn struct_tosql(
                             return false;
                         }
                         fields.iter().all(|f| match f.name() {
-                            $("$original_field_names" => <$accept_ty as postgres_types::ToSql>::accepts(f.type_()),)
+                            $("$db_fields_ident" => <$accept_ty as postgres_types::ToSql>::accepts(f.type_()),)
                             _ => false,
                         })
                     }
@@ -246,7 +247,7 @@ fn composite_fromsql(
     name: &str,
     schema: &str,
 ) {
-    let field_names = fields.iter().map(|p| &p.name);
+    let field_names = fields.iter().map(|p| &p.ident.rs);
     let read_idx = 0..fields.len();
     code!(w =>
         impl<'a> postgres_types::FromSql<'a> for ${struct_name}Borrowed<'a> {
@@ -295,7 +296,7 @@ fn gen_params_struct(w: &mut impl Write, params: &PreparedItem, settings: Codege
             .iter()
             .map(|p| p.param_ergo_ty(is_async, traits))
             .collect::<Vec<_>>();
-        let fields_name = fields.iter().map(|p| &p.name);
+        let fields_name = fields.iter().map(|p| &p.ident.rs);
         let traits_idx = (1..=traits.len()).into_iter().map(idx_char);
         code!(w =>
             #[derive($copy Debug)]
@@ -323,7 +324,7 @@ fn gen_row_structs(
     } = row;
     if *is_named {
         // Generate row struct
-        let fields_name = fields.iter().map(|p| &p.name);
+        let fields_name = fields.iter().map(|p| &p.ident.rs);
         let fields_ty = fields.iter().map(|p| p.own_struct());
         let copy = if *is_copy { "Copy" } else { "" };
         let ser_str = if derive_ser { "serde::Serialize," } else { "" };
@@ -335,7 +336,7 @@ fn gen_row_structs(
         );
 
         if !is_copy {
-            let fields_name = fields.iter().map(|p| &p.name);
+            let fields_name = fields.iter().map(|p| &p.ident.rs);
             let fields_ty = fields.iter().map(|p| p.brw_ty(true, is_async));
             let from_own_assign = fields.iter().map(|f| f.owning_assign());
             code!(w =>
@@ -454,7 +455,7 @@ fn gen_query_fn<W: Write>(
     CodegenSettings { is_async, .. }: CodegenSettings,
 ) {
     let PreparedQuery {
-        name,
+        ident,
         row,
         sql,
         param,
@@ -466,7 +467,7 @@ fn gen_query_fn<W: Write>(
         ("mut", "", "", "postgres", "cornucopia_sync")
     };
 
-    let struct_name = name.to_upper_camel_case();
+    let struct_name = ident.type_ident();
     let (param, param_field, order) = match param {
         Some((idx, order)) => {
             let it = module.params.get_index(*idx).unwrap().1;
@@ -479,7 +480,7 @@ fn gen_query_fn<W: Write>(
         .iter()
         .map(|idx| param_field[*idx].param_ergo_ty(is_async, traits))
         .collect();
-    let params_name = order.iter().map(|idx| &param_field[*idx].name);
+    let params_name = order.iter().map(|idx| &param_field[*idx].ident.rs);
     let traits_idx = (1..=traits.len()).into_iter().map(idx_char);
     let lazy_impl = |w: &mut W| {
         if let Some((idx, index)) = row {
@@ -500,7 +501,7 @@ fn gen_query_fn<W: Write>(
                     row_name.value.clone(),
                     Box::new(|w: _| {
                         let post = if *is_copy { "" } else { "Borrowed" };
-                        let fields_name = fields.iter().map(|p| &p.name);
+                        let fields_name = fields.iter().map(|p| &p.ident.rs);
                         let fields_idx = (0..fields.len()).map(|i| index[i]);
                         code!(w => $row_name$post {
                             $($fields_name: row.get($fields_idx),)
@@ -531,7 +532,7 @@ fn gen_query_fn<W: Write>(
             // Execute fn
             let params_wrap = order.iter().map(|idx| {
                 let p = &param_field[*idx];
-                p.ty.sql_wrapped(&p.name, is_async)
+                p.ty.sql_wrapped(&p.ident.rs, is_async)
             });
             code!(w =>
                 pub $fn_async fn bind<'a, C: GenericClient,$($traits_idx: $traits,)>(&'a mut self, client: &'a $client_mut C, $($params_name: &'a $params_ty,)) -> Result<u64, $backend::Error> {
@@ -544,7 +545,7 @@ fn gen_query_fn<W: Write>(
     // Gen statement struct
     {
         let sql = sql.replace('"', "\\\""); // Rust string format escaping
-        let name = normalize_ident(name.clone());
+        let name = &ident.rs;
         code!(w =>
             pub fn $name() -> ${struct_name}Stmt {
                 ${struct_name}Stmt($client::private::Stmt::new("$sql"))
@@ -628,19 +629,19 @@ fn gen_custom_type(
     let ser_str = if derive_ser { "serde::Serialize," } else { "" };
     match content {
         PreparedContent::Enum(variants) => {
-            let variants_name = variants.iter().map(|v| &v.name);
+            let variants_ident = variants.iter().map(|v| &v.rs);
             code!(w =>
                 #[derive($ser_str Debug, Clone, Copy, PartialEq, Eq)]
                 #[allow(non_camel_case_types)]
                 pub enum $struct_name {
-                    $($variants_name,)
+                    $($variants_ident,)
                 }
             );
             enum_sql(w, name, struct_name, variants);
         }
         PreparedContent::Composite(fields) => {
-            let fields_original_name = fields.iter().map(|p| &p.original_name);
-            let fields_name = fields.iter().map(|p| &p.name);
+            let fields_original_name = fields.iter().map(|p| &p.ident.db);
+            let fields_name = fields.iter().map(|p| &p.ident.rs);
             {
                 let fields_ty = fields.iter().map(|p| p.own_struct());
                 code!(w =>

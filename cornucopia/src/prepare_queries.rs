@@ -10,7 +10,7 @@ use crate::{
     read_queries::ModuleInfo,
     type_registrar::CornucopiaType,
     type_registrar::TypeRegistrar,
-    utils::normalize_ident,
+    utils::KEYWORD,
     validation,
 };
 
@@ -20,24 +20,43 @@ use self::error::Error;
 /// all constructs related to this particular query.
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedQuery {
-    pub(crate) name: String,
+    pub(crate) ident: Ident,
     pub(crate) param: Option<(usize, Vec<usize>)>,
     pub(crate) row: Option<(usize, Vec<usize>)>,
     pub(crate) sql: String,
 }
 
-/// An enum variant
+/// A normalized ident replacing all non-alphanumeric characters with an underscore (`_`)
+/// and escaping it with a raw identifier prefix (`r#`) if it clashes with a keyword reserved in Rust.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PreparedVariant {
-    pub(crate) original_name: String,
-    pub(crate) name: String,
+pub struct Ident {
+    /// Database original ident
+    pub(crate) db: String,
+    /// Normalized ident for rust code usage
+    pub(crate) rs: String,
 }
 
-impl PreparedVariant {
-    pub(crate) fn new(name: String) -> Self {
+impl Ident {
+    pub(crate) fn new(db: String) -> Self {
         Self {
-            original_name: name.clone(),
-            name: normalize_ident(name),
+            rs: Self::normalize_ident(&db),
+            db,
+        }
+    }
+
+    pub(crate) fn type_ident(&self) -> String {
+        self.rs.to_upper_camel_case()
+    }
+
+    /// Normalize identifier by replacing all non-alphanumeric characters with an underscore (`_`) and
+    /// escaping it with a raw identifier prefix (`r#`) if it clashes with a keyword reserved in Rust.
+    fn normalize_ident(ident: &str) -> String {
+        let ident = ident.replace(|c: char| !c.is_ascii_alphanumeric() && c != '_', "_");
+
+        if KEYWORD.binary_search(&ident.as_str()).is_ok() {
+            format!("r#{ident}")
+        } else {
+            ident
         }
     }
 }
@@ -45,8 +64,7 @@ impl PreparedVariant {
 /// A row or params field
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PreparedField {
-    pub(crate) original_name: String,
-    pub(crate) name: String,
+    pub(crate) ident: Ident,
     pub(crate) ty: Rc<CornucopiaType>,
     pub(crate) is_nullable: bool,
     pub(crate) is_inner_nullable: bool, // Vec only
@@ -54,13 +72,12 @@ pub struct PreparedField {
 
 impl PreparedField {
     pub(crate) fn new(
-        name: String,
+        db_ident: String,
         ty: Rc<CornucopiaType>,
         nullity: Option<&NullableIdent>,
     ) -> Self {
         Self {
-            original_name: name.clone(),
-            name: normalize_ident(name),
+            ident: Ident::new(db_ident),
             ty,
             is_nullable: nullity.map_or(false, |it| it.nullable),
             is_inner_nullable: nullity.map_or(false, |it| it.inner_nullable),
@@ -108,7 +125,7 @@ pub(crate) struct PreparedType {
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub(crate) enum PreparedContent {
-    Enum(Vec<PreparedVariant>),
+    Enum(Vec<Ident>),
     Composite(Vec<PreparedField>),
 }
 
@@ -194,7 +211,7 @@ impl PreparedModule {
         self.queries.insert(
             name.clone(),
             PreparedQuery {
-                name: name.value,
+                ident: Ident::new(name.value),
                 row: row_idx,
                 sql,
                 param: param_idx,
@@ -261,13 +278,9 @@ fn prepare_type(
             .find(|it| it.name.value == pg_ty.name())
             .map_or(&[] as &[NullableIdent], |it| it.fields.as_slice());
         let content = match pg_ty.kind() {
-            Kind::Enum(variants) => PreparedContent::Enum(
-                variants
-                    .clone()
-                    .into_iter()
-                    .map(PreparedVariant::new)
-                    .collect(),
-            ),
+            Kind::Enum(variants) => {
+                PreparedContent::Enum(variants.clone().into_iter().map(Ident::new).collect())
+            }
 
             Kind::Domain(_) => return None,
             Kind::Composite(fields) => PreparedContent::Composite(

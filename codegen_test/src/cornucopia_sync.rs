@@ -333,11 +333,11 @@ pub mod types {
                         }
                         fields.iter().all(| f | match f.name()
                 {
-                    "txt" => < cornucopia_sync::private::Domain::<&'a str> as postgres_types
-                    :: ToSql > :: accepts(f.type_()),"json" => < cornucopia_sync::private::Domain::<&'a serde_json::value::Value> as postgres_types
-                    :: ToSql > :: accepts(f.type_()),"nb" => < cornucopia_sync::private::Domain::<i32> as postgres_types
-                    :: ToSql > :: accepts(f.type_()),"arr" => < cornucopia_sync::private::Domain::<cornucopia_sync::private::DomainArray::<&'a serde_json::value::Value, &[&'a serde_json::value::Value]>> as postgres_types
-                    :: ToSql > :: accepts(f.type_()),_ => false,
+                    "txt" => < cornucopia_sync::private::Domain::<&'a str> as postgres_types ::
+                    ToSql > :: accepts(f.type_()),"json" => < cornucopia_sync::private::Domain::<&'a serde_json::value::Value> as postgres_types ::
+                    ToSql > :: accepts(f.type_()),"nb" => < cornucopia_sync::private::Domain::<i32> as postgres_types ::
+                    ToSql > :: accepts(f.type_()),"arr" => < cornucopia_sync::private::Domain::<cornucopia_sync::private::DomainArray::<&'a serde_json::value::Value, &[&'a serde_json::value::Value]>> as postgres_types ::
+                    ToSql > :: accepts(f.type_()),_ => false,
                 })
                     }
                     _ => false,
@@ -593,8 +593,8 @@ pub mod types {
                         }
                         fields.iter().all(| f | match f.name()
                 {
-                    "this.is.inconceivable" => < super::super::types::public::EnumWithDot as postgres_types
-                    :: ToSql > :: accepts(f.type_()),_ => false,
+                    "this.is.inconceivable" => < super::super::types::public::EnumWithDot as postgres_types ::
+                    ToSql > :: accepts(f.type_()),_ => false,
                 })
                     }
                     _ => false,
@@ -720,9 +720,9 @@ pub mod types {
                         fields.iter().all(|f| {
                             match f.name()
                 {
-                    "jsons" => < &'a [&'a serde_json::value::Value] as postgres_types
-                    :: ToSql > :: accepts(f.type_()),"id" => < i32 as postgres_types
-                    :: ToSql > :: accepts(f.type_()),_ => false,
+                    "jsons" => < &'a [&'a serde_json::value::Value] as postgres_types ::
+                    ToSql > :: accepts(f.type_()),"id" => < i32 as postgres_types ::
+                    ToSql > :: accepts(f.type_()),_ => false,
                 }
                         })
                     }
@@ -938,10 +938,10 @@ pub mod types {
                         }
                         fields.iter().all(| f | match f.name()
                 {
-                    "wow" => < &'a str as postgres_types
-                    :: ToSql > :: accepts(f.type_()),"such_cool" => < i32 as postgres_types
-                    :: ToSql > :: accepts(f.type_()),"nice" => < super::super::types::public::SpongebobCharacter as postgres_types
-                    :: ToSql > :: accepts(f.type_()),_ => false,
+                    "wow" => < &'a str as postgres_types ::
+                    ToSql > :: accepts(f.type_()),"such_cool" => < i32 as postgres_types ::
+                    ToSql > :: accepts(f.type_()),"nice" => < super::super::types::public::SpongebobCharacter as postgres_types ::
+                    ToSql > :: accepts(f.type_()),_ => false,
                 })
                     }
                     _ => false,
@@ -1088,10 +1088,10 @@ pub mod types {
                         }
                         fields.iter().all(| f | match f.name()
                 {
-                    "custom" => < &'a [super::super::types::public::CustomCompositeBorrowed<'a>] as postgres_types
-                    :: ToSql > :: accepts(f.type_()),"spongebob" => < &'a [super::super::types::public::SpongebobCharacter] as postgres_types
-                    :: ToSql > :: accepts(f.type_()),"domain" => < cornucopia_sync::private::Domain::<&'a str> as postgres_types
-                    :: ToSql > :: accepts(f.type_()),_ => false,
+                    "custom" => < &'a [super::super::types::public::CustomCompositeBorrowed<'a>] as postgres_types ::
+                    ToSql > :: accepts(f.type_()),"spongebob" => < &'a [super::super::types::public::SpongebobCharacter] as postgres_types ::
+                    ToSql > :: accepts(f.type_()),"domain" => < cornucopia_sync::private::Domain::<&'a str> as postgres_types ::
+                    ToSql > :: accepts(f.type_()),_ => false,
                 })
                     }
                     _ => false,
@@ -5016,11 +5016,11 @@ FROM
                 self.bind(client, &params.r#async, &params.r#enum)
             }
         }
-        pub fn r#typeof() -> TypeofStmt {
-            TypeofStmt(cornucopia_sync::private::Stmt::new("SELECT * FROM syntax"))
+        pub fn r#typeof() -> RTypeofStmt {
+            RTypeofStmt(cornucopia_sync::private::Stmt::new("SELECT * FROM syntax"))
         }
-        pub struct TypeofStmt(cornucopia_sync::private::Stmt);
-        impl TypeofStmt {
+        pub struct RTypeofStmt(cornucopia_sync::private::Stmt);
+        impl RTypeofStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
                 client: &'a mut C,
