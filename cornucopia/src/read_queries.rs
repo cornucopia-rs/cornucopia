@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use miette::NamedSource;
 
@@ -126,7 +126,7 @@ pub(crate) fn read_query_modules_recursive(dir_path: &str) -> Result<Vec<ModuleI
     Ok(modules_info)
 }
 
-fn find_queries(start: &PathBuf, mut queries: Vec<PathBuf>) -> Vec<PathBuf> {
+fn find_queries(start: &Path, mut queries: Vec<PathBuf>) -> Vec<PathBuf> {
     for entry in start.read_dir().unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
