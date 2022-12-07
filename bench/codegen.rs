@@ -16,6 +16,7 @@ fn bench(c: &mut Criterion) {
                 CodegenSettings {
                     is_async: false,
                     derive_ser: true,
+                    is_recursive: false,
                 },
             )
             .unwrap()
@@ -30,6 +31,7 @@ fn bench(c: &mut Criterion) {
                 CodegenSettings {
                     is_async: true,
                     derive_ser: true,
+                    is_recursive: false,
                 },
             )
             .unwrap()

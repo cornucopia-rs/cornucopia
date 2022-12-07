@@ -161,6 +161,7 @@ fn run_errors_test(
                     CodegenSettings {
                         is_async: false,
                         derive_ser: false,
+                        is_recursive: false,
                     },
                 )?;
                 Ok(())
@@ -235,6 +236,7 @@ fn run_codegen_test(
                     CodegenSettings {
                         is_async,
                         derive_ser,
+                        is_recursive: false,
                     },
                 )
                 .map_err(Error::report)?;
@@ -254,6 +256,7 @@ fn run_codegen_test(
                     CodegenSettings {
                         is_async,
                         derive_ser,
+                        is_recursive: false,
                     },
                 )
                 .map_err(Error::report)?;
