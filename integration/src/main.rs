@@ -153,7 +153,7 @@ fn run_errors_test(
 
             // Run codegen
             let result: Result<(), cornucopia::Error> = (|| {
-                cornucopia::load_schema(client, vec!["schema.sql".into()])?;
+                cornucopia::load_schema(client, &["schema.sql"])?;
                 cornucopia::generate_live(
                     client,
                     "queries",
@@ -222,7 +222,7 @@ fn run_codegen_test(
 
             // Load schema
             reset_db(client)?;
-            cornucopia::load_schema(client, vec![schema_path.to_string()])?;
+            cornucopia::load_schema(client, &[schema_path])?;
 
             // If `--apply`, then the code will be regenerated.
             // Otherwise, it is only checked.

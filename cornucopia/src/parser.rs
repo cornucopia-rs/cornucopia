@@ -375,7 +375,7 @@ pub(crate) fn parse_query_module(info: ModuleInfo) -> Result<Module, Error> {
             })
         }
         Err(e) => Err(Error {
-            src: info.into(),
+            src: (&info).into(),
             err_span: e[0].span().into(),
             help: e[0].to_string().replace('\n', "\\n"),
         }),
