@@ -14,7 +14,7 @@ pub mod conn;
 /// High-level interfaces to work with Cornucopia's container manager.
 pub mod container;
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use postgres::Client;
 
@@ -72,7 +72,7 @@ pub fn generate_live<P: AsRef<Path>>(
 /// `podman` parameter to `true`.
 pub fn generate_managed<P: AsRef<Path>>(
     queries_path: P,
-    schema_files: &[PathBuf],
+    schema_files: &[P],
     destination: Option<P>,
     podman: bool,
     settings: CodegenSettings,
