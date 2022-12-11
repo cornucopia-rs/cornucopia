@@ -1,23 +1,28 @@
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
+
 use miette::NamedSource;
 
 use self::error::Error;
 
 #[derive(Debug, Clone)]
 pub(crate) struct ModuleInfo {
-    pub(crate) path: String,
+    pub(crate) path: PathBuf,
     pub(crate) name: String,
-    pub(crate) content: String,
+    pub(crate) content: Arc<String>,
 }
 
 impl From<ModuleInfo> for NamedSource {
     fn from(m: ModuleInfo) -> Self {
-        Self::new(m.path, m.content)
+        Self::new(m.path.to_string_lossy(), m.content)
     }
 }
 
 impl From<&ModuleInfo> for NamedSource {
     fn from(m: &ModuleInfo) -> Self {
-        Self::new(&m.path, m.content.clone())
+        Self::new(&m.path.to_string_lossy(), m.content.clone())
     }
 }
 
@@ -25,11 +30,11 @@ impl From<&ModuleInfo> for NamedSource {
 ///
 /// # Error
 /// Returns an error if `dir_path` does not point to a valid directory or if a query file cannot be parsed.
-pub(crate) fn read_query_modules(dir_path: &str) -> Result<Vec<ModuleInfo>, Error> {
+pub(crate) fn read_query_modules(dir_path: &Path) -> Result<Vec<ModuleInfo>, Error> {
     let mut modules_info = Vec::new();
     for entry_result in std::fs::read_dir(dir_path).map_err(|err| Error {
         err,
-        path: String::from(dir_path),
+        path: dir_path.to_owned(),
     })? {
         // Directory entry
         let entry = entry_result.map_err(|err| Error {
@@ -57,9 +62,9 @@ pub(crate) fn read_query_modules(dir_path: &str) -> Result<Vec<ModuleInfo>, Erro
             })?;
 
             modules_info.push(ModuleInfo {
-                path: String::from(path_buf.to_string_lossy()),
+                path: path_buf,
                 name: module_name,
-                content: file_contents,
+                content: Arc::new(file_contents),
             });
         }
     }
@@ -69,6 +74,8 @@ pub(crate) fn read_query_modules(dir_path: &str) -> Result<Vec<ModuleInfo>, Erro
 }
 
 pub(crate) mod error {
+    use std::path::PathBuf;
+
     use miette::Diagnostic;
     use thiserror::Error as ThisError;
 
@@ -76,6 +83,6 @@ pub(crate) mod error {
     #[error("[{path}] : {err:#}")]
     pub struct Error {
         pub(crate) err: std::io::Error,
-        pub(crate) path: String,
+        pub(crate) path: PathBuf,
     }
 }
