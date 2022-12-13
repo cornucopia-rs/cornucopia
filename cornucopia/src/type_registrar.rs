@@ -102,10 +102,7 @@ impl CornucopiaType {
             CornucopiaType::Array { inner } => match inner.as_ref() {
                 CornucopiaType::Domain { inner, .. } => {
                     let ty = inner.accept_to_sql(is_async);
-                    format!(
-                        "cornucopia_{client_name}::private::DomainArray::<{}, &[{ty}]>",
-                        ty
-                    )
+                    format!("cornucopia_{client_name}::private::DomainArray::<{ty}, &[{ty}]>")
                 }
                 _ => self.param_ty(false, is_async),
             },
@@ -239,7 +236,7 @@ impl CornucopiaType {
                 ..
             } => {
                 if !is_copy && !is_params {
-                    format!("{}Params<'a>", struct_path)
+                    format!("{struct_path}Params<'a>")
                 } else {
                     self.brw_ty(is_inner_nullable, true, is_async)
                 }
@@ -288,7 +285,7 @@ impl CornucopiaType {
                 if *is_copy {
                     struct_path.to_string()
                 } else {
-                    format!("{}Borrowed<{lifetime}>", struct_path)
+                    format!("{struct_path}Borrowed<{lifetime}>")
                 }
             }
         }

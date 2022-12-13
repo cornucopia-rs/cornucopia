@@ -18,7 +18,7 @@ impl PreparedField {
     pub fn own_struct(&self) -> String {
         let it = self.ty.own_ty(self.is_inner_nullable);
         if self.is_nullable {
-            format!("Option<{}>", it)
+            format!("Option<{it}>")
         } else {
             it
         }
@@ -29,7 +29,7 @@ impl PreparedField {
             .ty
             .param_ergo_ty(self.is_inner_nullable, is_async, traits);
         if self.is_nullable {
-            format!("Option<{}>", it)
+            format!("Option<{it}>")
         } else {
             it
         }
@@ -38,7 +38,7 @@ impl PreparedField {
     pub fn param_ty(&self, is_async: bool) -> String {
         let it = self.ty.param_ty(self.is_inner_nullable, is_async);
         if self.is_nullable {
-            format!("Option<{}>", it)
+            format!("Option<{it}>")
         } else {
             it
         }
@@ -49,7 +49,7 @@ impl PreparedField {
             .ty
             .brw_ty(self.is_inner_nullable, has_lifetime, is_async);
         if self.is_nullable {
-            format!("Option<{}>", it)
+            format!("Option<{it}>")
         } else {
             it
         }

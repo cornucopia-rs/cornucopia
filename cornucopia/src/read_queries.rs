@@ -22,7 +22,7 @@ impl From<ModuleInfo> for NamedSource {
 
 impl From<&ModuleInfo> for NamedSource {
     fn from(m: &ModuleInfo) -> Self {
-        Self::new(&m.path.to_string_lossy(), m.content.clone())
+        Self::new(m.path.to_string_lossy(), m.content.clone())
     }
 }
 

@@ -42,7 +42,7 @@ impl<'a, T: FromSql<'a>> FromSql<'a> for ArrayIterator<'a, T> {
     ) -> Result<ArrayIterator<'a, T>, Box<dyn std::error::Error + Sync + Send>> {
         let member_type = match *escape_domain(ty).kind() {
             Kind::Array(ref member) => escape_domain(member),
-            _ => panic!("expected array type got {}", ty),
+            _ => panic!("expected array type got {ty}"),
         };
 
         let array = array_from_sql(raw)?;

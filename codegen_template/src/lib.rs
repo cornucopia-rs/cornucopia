@@ -124,7 +124,7 @@ fn gen_disp(s: &mut String, out: &str, ident: &str) {
 }
 
 /// Generate code to write interpolation patterns in `scan` into `out`
-fn gen_recursive<'a>(scan: &'a mut Scanner, s: &mut String, out: &str) {
+fn gen_recursive(scan: &mut Scanner, s: &mut String, out: &str) {
     loop {
         let (raw, pattern) = parse_next(scan);
         if raw.is_empty() && pattern.is_none() {
