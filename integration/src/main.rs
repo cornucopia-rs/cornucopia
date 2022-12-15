@@ -72,7 +72,7 @@ fn main() -> ExitCode {
 /// Print error to stderr
 fn display<T, E: Display>(result: Result<T, E>) -> Result<T, E> {
     if let Err(err) = &result {
-        eprintln!("{}", err);
+        eprintln!("{err}");
     }
     result
 }
@@ -285,7 +285,7 @@ fn run_codegen_test(
                 Run::Path(path) => {
                     // Switch directory
                     std::env::set_current_dir(&original_pwd)?;
-                    std::env::set_current_dir(&format!("../{}", path))?;
+                    std::env::set_current_dir(&format!("../{path}"))?;
                     true
                 }
             };

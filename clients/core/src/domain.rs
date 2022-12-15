@@ -75,7 +75,7 @@ pub fn escape_domain_to_sql<T: ToSql>(
 ) -> Result<IsNull, Box<dyn Error + Sync + Send>> {
     let member_type = match *ty.kind() {
         Kind::Array(ref member) => escape_domain(member),
-        _ => panic!("expected array type got {}", ty),
+        _ => panic!("expected array type got {ty}"),
     };
 
     let dimension = ArrayDimension {
