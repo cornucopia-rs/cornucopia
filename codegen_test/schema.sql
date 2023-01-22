@@ -194,7 +194,7 @@ CREATE TABLE nightmare (
 CREATE TYPE syntax_composite AS (
     async INT
 );
-CREATE TYPE syntax_enum AS Enum('async', 'box');
+CREATE TYPE syntax_enum AS Enum('async', 'box', 'I Love Chocolate');
 CREATE TABLE Syntax (
     "trick:y" TEXT,
     async syntax_composite,

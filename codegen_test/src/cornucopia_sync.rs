@@ -1178,6 +1178,7 @@ pub mod types {
         pub enum SyntaxEnum {
             r#async,
             r#box,
+            I_Love_Chocolate,
         }
         impl<'a> postgres_types::ToSql for SyntaxEnum {
             fn to_sql(
@@ -1189,6 +1190,7 @@ pub mod types {
                 let s = match *self {
                     SyntaxEnum::r#async => "async",
                     SyntaxEnum::r#box => "box",
+                    SyntaxEnum::I_Love_Chocolate => "I Love Chocolate",
                 };
                 buf.extend_from_slice(s.as_bytes());
                 std::result::Result::Ok(postgres_types::IsNull::No)
@@ -1199,12 +1201,13 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Enum(ref variants) => {
-                        if variants.len() != 2 {
+                        if variants.len() != 3 {
                             return false;
                         }
                         variants.iter().all(|v| match &**v {
                             "async" => true,
                             "box" => true,
+                            "I Love Chocolate" => true,
                             _ => false,
                         })
                     }
@@ -1228,6 +1231,7 @@ pub mod types {
                 match std::str::from_utf8(buf)? {
                     "async" => Ok(SyntaxEnum::r#async),
                     "box" => Ok(SyntaxEnum::r#box),
+                    "I Love Chocolate" => Ok(SyntaxEnum::I_Love_Chocolate),
                     s => Result::Err(Into::into(format!("invalid variant `{}`", s))),
                 }
             }
@@ -1237,12 +1241,13 @@ pub mod types {
                 }
                 match *ty.kind() {
                     postgres_types::Kind::Enum(ref variants) => {
-                        if variants.len() != 2 {
+                        if variants.len() != 3 {
                             return false;
                         }
                         variants.iter().all(|v| match &**v {
                             "async" => true,
                             "box" => true,
+                            "I Love Chocolate" => true,
                             _ => false,
                         })
                     }
