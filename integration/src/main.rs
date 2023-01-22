@@ -122,7 +122,7 @@ fn run_errors_test(
         "Expected:".bright_black()
     };
 
-    let original_pwd = std::env::current_dir().unwrap();
+    let original_pwd = &std::env::current_dir().unwrap();
     for file in std::fs::read_dir("fixtures/errors")? {
         let file = file?;
         let name = file.file_name().to_string_lossy().to_string();
@@ -149,7 +149,7 @@ fn run_errors_test(
             // Generate queries files
             std::fs::create_dir("queries")?;
             let name = test.query_name.unwrap_or("test.sql");
-            std::fs::write(&format!("queries/{name}"), test.query.unwrap_or_default())?;
+            std::fs::write(format!("queries/{name}"), test.query.unwrap_or_default())?;
 
             // Run codegen
             let result: Result<(), cornucopia::Error> = (|| {
@@ -184,7 +184,7 @@ fn run_errors_test(
             if apply {
                 test.error = Cow::Owned(err.trim().to_string());
             }
-            std::env::set_current_dir(&original_pwd)?;
+            std::env::set_current_dir(original_pwd)?;
         }
 
         if apply {
@@ -285,7 +285,7 @@ fn run_codegen_test(
                 Run::Path(path) => {
                     // Switch directory
                     std::env::set_current_dir(&original_pwd)?;
-                    std::env::set_current_dir(&format!("../{}", path))?;
+                    std::env::set_current_dir(format!("../{}", path))?;
                     true
                 }
             };
