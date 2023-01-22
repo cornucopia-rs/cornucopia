@@ -18,7 +18,7 @@ pub fn load_schema<P: AsRef<Path>>(client: &mut Client, paths: &[P]) -> Result<(
             err,
         })?;
         client.batch_execute(&sql).map_err(|err| {
-            let msg = format!("{:#}", err);
+            let msg = format!("{err:#}");
             let src = NamedSource::new(path.to_string_lossy(), sql);
             if let Some((position, msg, help)) = db_err(&err) {
                 Error::Postgres {

@@ -477,7 +477,7 @@ pub(crate) mod error {
             query_span: &SourceSpan,
             query_name: &Span<String>,
         ) -> Self {
-            let msg = format!("{:#}", err);
+            let msg = format!("{err:#}");
             if let Some((position, msg, help)) = db_err(err) {
                 Self::Db {
                     msg,
