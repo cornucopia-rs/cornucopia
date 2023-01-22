@@ -285,7 +285,7 @@ fn run_codegen_test(
                 Run::Path(path) => {
                     // Switch directory
                     std::env::set_current_dir(&original_pwd)?;
-                    std::env::set_current_dir(&format!("../{path}"))?;
+                    std::env::set_current_dir(format!("../{path}"))?;
                     true
                 }
             };
