@@ -22,13 +22,11 @@ use crate::cornucopia::{
             },
             InsertNightmareDomainParams, SelectNightmareDomain, SelectNightmareDomainNull,
         },
-        named::{
-            sync::{
-                named, named_by_id, named_complex, new_named_complex, new_named_hidden,
-                new_named_visible,
-            },
-            Named, NamedComplexParams, NamedParams,
+        named::sync::{
+            named, named_by_id, named_complex, new_named_complex, new_named_hidden,
+            new_named_visible,
         },
+        named::{Named, NamedComplex, NamedComplexParams, NamedParams},
         nullity::sync::{new_nullity, nullity},
         nullity::{Nullity, NullityParams},
         params::sync::insert_book,
@@ -50,9 +48,10 @@ use crate::cornucopia::{
     },
     types::public::{
         CloneCompositeBorrowed, CopyComposite, CustomComposite, CustomCompositeBorrowed,
-        DomainComposite, DomainCompositeParams, NamedComposite, NamedCompositeBorrowed,
-        NightmareComposite, NightmareCompositeParams, NullityComposite, NullityCompositeParams,
-        SpongebobCharacter, SyntaxComposite, SyntaxEnum,
+        DomainComposite, DomainCompositeParams, EnumWithDot, NamedComposite,
+        NamedCompositeBorrowed, NamedCompositeWithDot, NightmareComposite,
+        NightmareCompositeParams, NullityComposite, NullityCompositeParams, SpongebobCharacter,
+        SyntaxComposite, SyntaxEnum,
     },
 };
 use cornucopia_sync::Params;
@@ -257,16 +256,46 @@ pub fn test_named(client: &mut Client) {
                     wow: Some("Hello world"),
                     such_cool: None,
                 },
+                named_with_dot: Some(NamedCompositeWithDot {
+                    this_is_inconceivable: Some(EnumWithDot::variant_with_dot),
+                }),
+            },
+        )
+        .unwrap();
+
+    new_named_complex()
+        .params(
+            client,
+            &NamedComplexParams {
+                named: NamedCompositeBorrowed {
+                    wow: Some("Hello world, again"),
+                    such_cool: None,
+                },
+                named_with_dot: None,
             },
         )
         .unwrap();
 
     assert_eq!(
-        named_complex().bind(client).one().unwrap(),
-        NamedComposite {
-            wow: Some("Hello world".into()),
-            such_cool: None,
-        },
+        named_complex().bind(client).all().unwrap(),
+        vec![
+            NamedComplex {
+                named: NamedComposite {
+                    wow: Some("Hello world".into()),
+                    such_cool: None,
+                },
+                named_with_dot: Some(NamedCompositeWithDot {
+                    this_is_inconceivable: Some(EnumWithDot::variant_with_dot),
+                }),
+            },
+            NamedComplex {
+                named: NamedComposite {
+                    wow: Some("Hello world, again".into()),
+                    such_cool: None,
+                },
+                named_with_dot: None,
+            }
+        ],
     );
 }
 

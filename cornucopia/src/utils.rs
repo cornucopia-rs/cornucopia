@@ -61,17 +61,3 @@ pub(crate) const KEYWORD: [&str; 53] = [
     "return", "self", "static", "struct", "super", "trait", "true", "try", "type", "typeof",
     "union", "unsafe", "unsized", "use", "virtual", "where", "while", "yield",
 ];
-
-/// Escape ident if clash with rust reserved keywords
-pub(crate) fn escape_keyword(ident: String) -> String {
-    if KEYWORD.binary_search(&ident.as_str()).is_ok() {
-        format!("r#{ident}")
-    } else {
-        ident
-    }
-}
-
-/// Unescape ident
-pub(crate) fn unescape_keyword(ident: &str) -> &str {
-    ident.trim_start_matches("r#")
-}
