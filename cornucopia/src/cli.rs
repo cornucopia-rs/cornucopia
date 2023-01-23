@@ -19,9 +19,12 @@ struct Args {
     destination: PathBuf,
     #[clap(subcommand)]
     action: Action,
-    /// Generate synchronous rust code. Async otherwise.
+    /// Generate synchronous rust code
     #[clap(long)]
     sync: bool,
+    /// Generate asynchronous rust code
+    #[clap(long)]
+    r#async: bool,
     /// Derive serde's `Serialize` trait for generated types.
     #[clap(long)]
     serialize: bool,
@@ -49,21 +52,20 @@ pub fn run() -> Result<(), Error> {
         destination,
         action,
         sync,
+        r#async,
         serialize,
     } = Args::parse();
+
+    let settings = CodegenSettings {
+        gen_async: r#async || !sync,
+        gen_sync: sync,
+        derive_ser: serialize,
+    };
 
     match action {
         Action::Live { url } => {
             let mut client = conn::from_url(&url)?;
-            generate_live(
-                &mut client,
-                &queries_path,
-                Some(&destination),
-                CodegenSettings {
-                    is_async: !sync,
-                    derive_ser: serialize,
-                },
-            )?;
+            generate_live(&mut client, &queries_path, Some(&destination), settings)?;
         }
         Action::Schema { schema_files } => {
             // Run the generate command. If the command is unsuccessful, cleanup Cornucopia's container
@@ -72,10 +74,7 @@ pub fn run() -> Result<(), Error> {
                 &schema_files,
                 Some(destination),
                 podman,
-                CodegenSettings {
-                    is_async: !sync,
-                    derive_ser: serialize,
-                },
+                settings,
             ) {
                 container::cleanup(podman).ok();
                 return Err(e);

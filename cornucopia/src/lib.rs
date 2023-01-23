@@ -33,7 +33,8 @@ pub use load_schema::load_schema;
 /// Struct containing the settings for code generation.
 #[derive(Clone, Copy)]
 pub struct CodegenSettings {
-    pub is_async: bool,
+    pub gen_async: bool,
+    pub gen_sync: bool,
     pub derive_ser: bool,
 }
 

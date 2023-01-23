@@ -1,5 +1,4 @@
-mod cornucopia_async;
-mod cornucopia_sync;
+mod cornucopia;
 
 use ::cornucopia_async::IterSql;
 use eui48::MacAddress;
@@ -14,27 +13,38 @@ use std::{
 use time::{OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;
 
-use crate::cornucopia_sync::{
+use crate::cornucopia::{
     queries::{
-        copy::{insert_clone, insert_copy, select_copy},
+        copy::sync::{insert_clone, insert_copy, select_copy},
         domain::{
-            insert_nightmare_domain, select_nightmare_domain, select_nightmare_domain_null,
+            sync::{
+                insert_nightmare_domain, select_nightmare_domain, select_nightmare_domain_null,
+            },
             InsertNightmareDomainParams, SelectNightmareDomain, SelectNightmareDomainNull,
         },
-        named::{
+        named::sync::{
             named, named_by_id, named_complex, new_named_complex, new_named_hidden,
-            new_named_visible, Named, NamedComplex, NamedComplexParams, NamedParams,
+            new_named_visible,
         },
-        nullity::{new_nullity, nullity},
+        named::{Named, NamedComplex, NamedComplexParams, NamedParams},
+        nullity::sync::{new_nullity, nullity},
         nullity::{Nullity, NullityParams},
-        params::insert_book,
-        params::{find_books, params_use_twice, select_book, SelectBook},
-        stress::{
-            insert_everything, insert_everything_array, insert_nightmare, select_everything,
-            select_everything_array, select_nightmare, Everything, EverythingArray,
-            EverythingArrayParams, EverythingParams,
+        params::sync::insert_book,
+        params::{
+            sync::{find_books, params_use_twice, select_book},
+            SelectBook,
         },
-        syntax::{r#typeof, tricky_sql10, TrickySql10Params},
+        stress::{
+            sync::{
+                insert_everything, insert_everything_array, insert_nightmare, select_everything,
+                select_everything_array, select_nightmare,
+            },
+            Everything, EverythingArray, EverythingArrayParams, EverythingParams,
+        },
+        syntax::{
+            sync::{r#typeof, tricky_sql10},
+            TrickySql10Params,
+        },
     },
     types::public::{
         CloneCompositeBorrowed, CopyComposite, CustomComposite, CustomCompositeBorrowed,
@@ -44,7 +54,7 @@ use crate::cornucopia_sync::{
         SyntaxComposite, SyntaxEnum,
     },
 };
-use ::cornucopia_sync::Params;
+use cornucopia_sync::Params;
 
 pub fn main() {
     let client = &mut Config::new()

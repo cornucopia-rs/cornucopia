@@ -6,6 +6,7 @@ use postgres::Client;
 use postgres_types::{Kind, Type};
 
 use crate::{
+    codegen::GenCtx,
     parser::{Module, NullableIdent, Query, Span, TypeAnnotation},
     read_queries::ModuleInfo,
     type_registrar::CornucopiaType,
@@ -87,7 +88,7 @@ impl PreparedField {
 
 impl PreparedField {
     pub fn unwrapped_name(&self) -> String {
-        self.own_struct()
+        self.own_struct(&GenCtx::new(0, false, false))
             .replace(['<', '>', '_'], "")
             .to_upper_camel_case()
     }
@@ -111,6 +112,10 @@ impl PreparedItem {
             is_named: !is_implicit || fields.len() > 1,
             fields,
         }
+    }
+
+    pub fn path(&self, ctx: &GenCtx) -> String {
+        ctx.path(ctx.depth - 2, &self.name)
     }
 }
 

@@ -229,7 +229,6 @@ pub mod queries {
         }
     }
     pub mod module_2 {
-        use postgres::{fallible_iterator::FallibleIterator, GenericClient};
         #[derive(Debug)]
         pub struct AuthorNameStartingWithParams<T1: cornucopia_sync::StringSql> {
             pub start_str: T1,
@@ -254,6 +253,59 @@ pub mod queries {
                 }
             }
         }
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct AuthorNameStartingWith {
+            pub authorid: i32,
+            pub name: String,
+            pub bookid: i32,
+            pub title: String,
+        }
+        pub struct AuthorNameStartingWithBorrowed<'a> {
+            pub authorid: i32,
+            pub name: &'a str,
+            pub bookid: i32,
+            pub title: &'a str,
+        }
+        impl<'a> From<AuthorNameStartingWithBorrowed<'a>> for AuthorNameStartingWith {
+            fn from(
+                AuthorNameStartingWithBorrowed {
+                    authorid,
+                    name,
+                    bookid,
+                    title,
+                }: AuthorNameStartingWithBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    authorid,
+                    name: name.into(),
+                    bookid,
+                    title: title.into(),
+                }
+            }
+        }
+        #[derive(Debug, Clone, PartialEq)]
+        pub struct SelectTranslations {
+            pub title: String,
+            pub translations: Vec<String>,
+        }
+        pub struct SelectTranslationsBorrowed<'a> {
+            pub title: &'a str,
+            pub translations: cornucopia_sync::ArrayIterator<'a, &'a str>,
+        }
+        impl<'a> From<SelectTranslationsBorrowed<'a>> for SelectTranslations {
+            fn from(
+                SelectTranslationsBorrowed {
+                    title,
+                    translations,
+                }: SelectTranslationsBorrowed<'a>,
+            ) -> Self {
+                Self {
+                    title: title.into(),
+                    translations: translations.map(|v| v.into()).collect(),
+                }
+            }
+        }
+        use postgres::{fallible_iterator::FallibleIterator, GenericClient};
         pub struct AuthorsQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -350,36 +402,6 @@ pub mod queries {
                 Ok(it)
             }
         }
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct AuthorNameStartingWith {
-            pub authorid: i32,
-            pub name: String,
-            pub bookid: i32,
-            pub title: String,
-        }
-        pub struct AuthorNameStartingWithBorrowed<'a> {
-            pub authorid: i32,
-            pub name: &'a str,
-            pub bookid: i32,
-            pub title: &'a str,
-        }
-        impl<'a> From<AuthorNameStartingWithBorrowed<'a>> for AuthorNameStartingWith {
-            fn from(
-                AuthorNameStartingWithBorrowed {
-                    authorid,
-                    name,
-                    bookid,
-                    title,
-                }: AuthorNameStartingWithBorrowed<'a>,
-            ) -> Self {
-                Self {
-                    authorid,
-                    name: name.into(),
-                    bookid,
-                    title: title.into(),
-                }
-            }
-        }
         pub struct AuthorNameStartingWithQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -431,22 +453,22 @@ pub mod queries {
                 Ok(it)
             }
         }
-        pub struct SuperSuperTypesPublicVoiceactorQuery<'a, C: GenericClient, T, const N: usize> {
+        pub struct PublicVoiceactorQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             stmt: &'a mut cornucopia_sync::private::Stmt,
             extractor: fn(&postgres::Row) -> super::super::types::public::VoiceactorBorrowed,
             mapper: fn(super::super::types::public::VoiceactorBorrowed) -> T,
         }
-        impl<'a, C, T: 'a, const N: usize> SuperSuperTypesPublicVoiceactorQuery<'a, C, T, N>
+        impl<'a, C, T: 'a, const N: usize> PublicVoiceactorQuery<'a, C, T, N>
         where
             C: GenericClient,
         {
             pub fn map<R>(
                 self,
                 mapper: fn(super::super::types::public::VoiceactorBorrowed) -> R,
-            ) -> SuperSuperTypesPublicVoiceactorQuery<'a, C, R, N> {
-                SuperSuperTypesPublicVoiceactorQuery {
+            ) -> PublicVoiceactorQuery<'a, C, R, N> {
+                PublicVoiceactorQuery {
                     client: self.client,
                     params: self.params,
                     stmt: self.stmt,
@@ -480,28 +502,6 @@ pub mod queries {
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(it)
-            }
-        }
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct SelectTranslations {
-            pub title: String,
-            pub translations: Vec<String>,
-        }
-        pub struct SelectTranslationsBorrowed<'a> {
-            pub title: &'a str,
-            pub translations: cornucopia_sync::ArrayIterator<'a, &'a str>,
-        }
-        impl<'a> From<SelectTranslationsBorrowed<'a>> for SelectTranslations {
-            fn from(
-                SelectTranslationsBorrowed {
-                    title,
-                    translations,
-                }: SelectTranslationsBorrowed<'a>,
-            ) -> Self {
-                Self {
-                    title: title.into(),
-                    translations: translations.map(|v| v.into()).collect(),
-                }
             }
         }
         pub struct SelectTranslationsQuery<'a, C: GenericClient, T, const N: usize> {
@@ -699,13 +699,9 @@ WHERE
                 &'a mut self,
                 client: &'a mut C,
                 spongebob_character: &'a super::super::types::public::SpongeBobCharacter,
-            ) -> SuperSuperTypesPublicVoiceactorQuery<
-                'a,
-                C,
-                super::super::types::public::Voiceactor,
-                1,
-            > {
-                SuperSuperTypesPublicVoiceactorQuery {
+            ) -> PublicVoiceactorQuery<'a, C, super::super::types::public::Voiceactor, 1>
+            {
+                PublicVoiceactorQuery {
                     client,
                     params: [spongebob_character],
                     stmt: &mut self.0,

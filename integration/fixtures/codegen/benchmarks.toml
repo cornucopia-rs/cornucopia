@@ -1,10 +1,6 @@
 [[codegen]]
-name = "Sync"
+name = "Bench"
 base_path = "bench/usage/cornucopia_benches"
-destination = "generated_sync.rs"
+destination = "generated.rs"
 sync = true
-
-[[codegen]]
-name = "Async"
-base_path = "bench/usage/cornucopia_benches"
-destination = "generated_async.rs"
+async = true
