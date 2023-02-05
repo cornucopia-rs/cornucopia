@@ -425,7 +425,7 @@ fn gen_row_query(w: &mut impl Write, row: &PreparedItem, ctx: &GenCtx) {
     pub struct ${name}Query<'a, C: GenericClient, T, const N: usize> {
         client: &'a $client_mut C,
         params: [&'a (dyn postgres_types::ToSql + Sync); N],
-        stmt: &'a mut $client::private::Stmt,
+        query: &'static str,
         extractor: fn(&$backend::Row) -> $row_struct,
         mapper: fn($row_struct) -> T,
     }
@@ -434,15 +434,15 @@ fn gen_row_query(w: &mut impl Write, row: &PreparedItem, ctx: &GenCtx) {
             ${name}Query {
                 client: self.client,
                 params: self.params,
-                stmt: self.stmt,
+                query: self.query,
                 extractor: self.extractor,
                 mapper,
             }
         }
 
         pub $fn_async fn one(self) -> Result<T, $backend::Error> {
-            let stmt = self.stmt.prepare(self.client)$fn_await?;
-            let row = self.client.query_one(stmt, &self.params)$fn_await?;
+            let stmt = self.client.prepare(self.query)$fn_await?;
+            let row = self.client.query_one(&stmt, &self.params)$fn_await?;
             Ok((self.mapper)((self.extractor)(&row)))
         }
 
@@ -451,10 +451,10 @@ fn gen_row_query(w: &mut impl Write, row: &PreparedItem, ctx: &GenCtx) {
         }
 
         pub $fn_async fn opt(self) -> Result<Option<T>, $backend::Error> {
-            let stmt = self.stmt.prepare(self.client)$fn_await?;
+            let stmt = self.client.prepare(self.query)$fn_await?;
             Ok(self
                 .client
-                .query_opt(stmt, &self.params)
+                .query_opt(&stmt, &self.params)
                 $fn_await?
                 .map(|row| (self.mapper)((self.extractor)(&row))))
         }
@@ -462,10 +462,10 @@ fn gen_row_query(w: &mut impl Write, row: &PreparedItem, ctx: &GenCtx) {
         pub $fn_async fn iter(
             self,
         ) -> Result<impl $raw_type<Item = Result<T, $backend::Error>> + 'a, $backend::Error> {
-            let stmt = self.stmt.prepare(self.client)$fn_await?;
+            let stmt = self.client.prepare(self.query)$fn_await?;
             let it = self
                 .client
-                .query_raw(stmt, $client::private::slice_iter(&self.params))
+                .query_raw(&stmt, $client::private::slice_iter(&self.params))
                 $fn_await?
                 $raw_pre
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
@@ -547,11 +547,11 @@ fn gen_query_fn<W: Write>(w: &mut W, module: &PreparedModule, query: &PreparedQu
                 )
             };
             code!(w =>
-                pub fn bind<$($traits_idx: $traits,)>(&'a mut self, $($params_name: &'a $params_ty,) ) -> ${row_name}Query<'a,C, $row_struct_name, $nb_params> {
+                pub fn bind<'a, C: GenericClient, $($traits_idx: $traits,)>(&'a self, client: &'a $client_mut C, $($params_name: &'a $params_ty,) ) -> ${row_name}Query<'a,C, $row_struct_name, $nb_params> {
                     ${row_name}Query {
-                        client: self.0,
+                        client,
                         params: [$($params_name,)],
-                        stmt: &mut self.1,
+                        query: self.0,
                         extractor: |row| { $!extractor },
                         mapper: |it| { $mapper },
                     }
@@ -564,9 +564,9 @@ fn gen_query_fn<W: Write>(w: &mut W, module: &PreparedModule, query: &PreparedQu
                 p.ty.sql_wrapped(&p.ident.rs, ctx)
             });
             code!(w =>
-                pub $fn_async fn bind<$($traits_idx: $traits,)>(&'a mut self, $($params_name: &'a $params_ty,)) -> Result<u64, $backend::Error> {
-                    let stmt = self.1.prepare(self.0)$fn_await?;
-                    self.0.execute(stmt, &[ $($params_wrap,) ])$fn_await
+                pub $fn_async fn bind<'a, C: GenericClient, $($traits_idx: $traits,)>(&'a self, client: &'a $client_mut C, $($params_name: &'a $params_ty,)) -> Result<u64, $backend::Error> {
+                    let stmt = client.prepare(self.0)$fn_await?;
+                    client.execute(&stmt, &[ $($params_wrap,) ])$fn_await
                 }
             );
         }
@@ -576,11 +576,11 @@ fn gen_query_fn<W: Write>(w: &mut W, module: &PreparedModule, query: &PreparedQu
         let sql = sql.replace('"', "\\\""); // Rust string format escaping
         let name = &ident.rs;
         code!(w =>
-            pub fn $name<'a, C: GenericClient>(client: &'a$client_mut C) -> ${struct_name}Stmt<'a, C> {
-                ${struct_name}Stmt(client, $client::private::Stmt::new("$sql"))
+            pub fn $name() -> ${struct_name}Stmt {
+                ${struct_name}Stmt("$sql")
             }
-            pub struct ${struct_name}Stmt<'a, C: GenericClient>(&'a$client_mut C, $client::private::Stmt);
-            impl <'a, C: GenericClient> ${struct_name}Stmt<'a, C> {
+            pub struct ${struct_name}Stmt(&'static str);
+            impl ${struct_name}Stmt {
                 $!lazy_impl
             }
         );
@@ -605,9 +605,9 @@ fn gen_query_fn<W: Write>(w: &mut W, module: &PreparedModule, query: &PreparedQu
                 let name = &module.rows.get_index(*idx).unwrap().1.name;
                 let nb_params = param_field.len();
                 code!(w =>
-                    impl <'a, C: GenericClient,$($traits_idx: $traits,)> $client::Params<'a, $param_path<$lifetime $($traits_idx,)>, ${name}Query<'a, C, $query_row_struct, $nb_params>> for ${struct_name}Stmt<'a, C> {
-                        fn params(&'a mut self, params: &'a $param_path<$lifetime $($traits_idx,)>) -> ${name}Query<'a, C, $query_row_struct, $nb_params> {
-                            self.bind($(&params.$params_name,))
+                    impl <'a, C: GenericClient,$($traits_idx: $traits,)> $client::Params<'a, $param_path<$lifetime $($traits_idx,)>, ${name}Query<'a, C, $query_row_struct, $nb_params>, C> for ${struct_name}Stmt {
+                        fn params(&'a self, client: &'a $client_mut C, params: &'a $param_path<$lifetime $($traits_idx,)>) -> ${name}Query<'a, C, $query_row_struct, $nb_params> {
+                            self.bind(client, $(&params.$params_name,))
                         }
                     }
                 );
@@ -624,9 +624,9 @@ fn gen_query_fn<W: Write>(w: &mut W, module: &PreparedModule, query: &PreparedQu
                     ("", "Result", "", "self", "")
                 };
                 code!(w =>
-                    impl <'a, C: GenericClient $send_sync, $($traits_idx: $traits,)> $client::Params<'a, $param_path<$lifetime $($traits_idx,)>, $pre_ty<u64, $backend::Error>$post_ty_lf> for ${struct_name}Stmt<'a, C> {
-                        fn params(&'a mut self, params: &'a $param_path<$lifetime $($traits_idx,)>) -> $pre_ty<u64, $backend::Error>$post_ty_lf {
-                            $pre.bind($(&params.$params_name,))$post
+                    impl <'a, C: GenericClient $send_sync, $($traits_idx: $traits,)> $client::Params<'a, $param_path<$lifetime $($traits_idx,)>, $pre_ty<u64, $backend::Error>$post_ty_lf, C> for ${struct_name}Stmt {
+                        fn params(&'a self, client: &'a $client_mut C, params: &'a $param_path<$lifetime $($traits_idx,)>) -> $pre_ty<u64, $backend::Error>$post_ty_lf {
+                            $pre.bind(client, $(&params.$params_name,))$post
                         }
                     }
                 );

@@ -12,14 +12,15 @@ use self::generated::queries::bench::{
 mod generated;
 
 pub fn bench_trivial_query(b: &mut Bencher, client: &Client) {
-    b.iter(move || block_on(async { users(client).bind().all().await.unwrap() }))
+    let mut stmt = users();
+    b.iter(|| block_on(async { stmt.bind(client).all().await.unwrap() }))
 }
 
 pub fn bench_medium_complex_query(b: &mut Bencher, client: &Client) {
+    let mut stmt = select_complex();
     b.iter(|| {
         block_on(async {
-            select_complex(client)
-                .bind()
+            stmt.bind(client)
                 .map(|it| {
                     (
                         User {
@@ -43,14 +44,18 @@ pub fn bench_medium_complex_query(b: &mut Bencher, client: &Client) {
 }
 
 pub fn bench_insert(b: &mut Bencher, client: &mut Client, size: usize) {
+    let mut stmt = insert_user();
     b.iter(|| {
         block_on(async {
             let mut tx = client.transaction().await.unwrap();
             for x in 0..size {
-                insert_user(&mut tx)
-                    .bind(&format!("User {}", x).as_str(), &Some("hair_color"))
-                    .await
-                    .unwrap();
+                stmt.bind(
+                    &mut tx,
+                    &format!("User {}", x).as_str(),
+                    &Some("hair_color"),
+                )
+                .await
+                .unwrap();
             }
             tx.commit().await.unwrap();
         })
@@ -58,19 +63,21 @@ pub fn bench_insert(b: &mut Bencher, client: &mut Client, size: usize) {
 }
 
 pub fn loading_associations_sequentially(b: &mut Bencher, client: &Client) {
+    let mut user_stmt = users();
+    let mut post_stmt = post_by_user_ids();
+    let mut comment_stmt = comments_by_post_id();
     b.iter(|| {
-        let mut user_stmt = users(client);
         block_on(async {
-            let users = user_stmt.bind().all().await.unwrap();
+            let users = user_stmt.bind(client).all().await.unwrap();
             let users_ids: Vec<i32> = users.iter().map(|it| it.id).collect();
-            let posts = post_by_user_ids(client)
-                .bind(&users_ids.as_slice())
+            let posts = post_stmt
+                .bind(client, &users_ids.as_slice())
                 .all()
                 .await
                 .unwrap();
             let posts_ids: Vec<i32> = posts.iter().map(|it| it.id).collect();
-            let comments = comments_by_post_id(client)
-                .bind(&posts_ids.as_slice())
+            let comments = comment_stmt
+                .bind(client, &posts_ids.as_slice())
                 .all()
                 .await
                 .unwrap();
@@ -116,13 +123,14 @@ pub mod sync {
         Comment, Post, User,
     };
     pub fn bench_trivial_query(b: &mut Bencher, client: &mut Client) {
-        b.iter(|| users(client).bind().all().unwrap())
+        let mut stmt = users();
+        b.iter(|| stmt.bind(client).all().unwrap())
     }
 
     pub fn bench_medium_complex_query(b: &mut Bencher, client: &mut Client) {
+        let mut stmt = select_complex();
         b.iter(|| {
-            select_complex(client)
-                .bind()
+            stmt.bind(client)
                 .map(|it| {
                     (
                         User {
@@ -144,28 +152,33 @@ pub mod sync {
     }
 
     pub fn bench_insert(b: &mut Bencher, client: &mut Client, size: usize) {
+        let mut stmt = insert_user();
         b.iter(|| {
             let mut tx = client.transaction().unwrap();
             for x in 0..size {
-                insert_user(&mut tx)
-                    .bind(&format!("User {}", x).as_str(), &Some("hair_color"))
-                    .unwrap();
+                stmt.bind(
+                    &mut tx,
+                    &format!("User {}", x).as_str(),
+                    &Some("hair_color"),
+                )
+                .unwrap();
             }
             tx.commit().unwrap();
         })
     }
 
     pub fn loading_associations_sequentially(b: &mut Bencher, client: &mut Client) {
+        let mut user_stmt = users();
+        let mut post_stmt = post_by_user_ids();
+        let mut comment_stmt = comments_by_post_id();
+
         b.iter(|| {
-            let users = users(client).bind().all().unwrap();
+            let users = user_stmt.bind(client).all().unwrap();
             let users_ids: Vec<i32> = users.iter().map(|it| it.id).collect();
-            let posts = post_by_user_ids(client)
-                .bind(&users_ids.as_slice())
-                .all()
-                .unwrap();
+            let posts = post_stmt.bind(client, &users_ids.as_slice()).all().unwrap();
             let posts_ids: Vec<i32> = posts.iter().map(|it| it.id).collect();
-            let comments = comments_by_post_id(client)
-                .bind(&posts_ids.as_slice())
+            let comments = comment_stmt
+                .bind(client, &posts_ids.as_slice())
                 .all()
                 .unwrap();
 
