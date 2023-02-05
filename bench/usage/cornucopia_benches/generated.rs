@@ -397,9 +397,7 @@ pub mod queries {
                     mut self,
                     client: &'a mut C,
                 ) -> Result<Self, postgres::Error> {
-                    if self.1.is_none() {
-                        self.1 = Some(client.prepare(self.0)?)
-                    }
+                    self.1 = Some(client.prepare(self.0)?);
                     Ok(self)
                 }
                 pub fn bind<'a, C: GenericClient>(
@@ -429,9 +427,7 @@ pub mod queries {
                     mut self,
                     client: &'a mut C,
                 ) -> Result<Self, postgres::Error> {
-                    if self.1.is_none() {
-                        self.1 = Some(client.prepare(self.0)?)
-                    }
+                    self.1 = Some(client.prepare(self.0)?);
                     Ok(self)
                 }
                 pub fn bind<
@@ -478,9 +474,7 @@ pub mod queries {
                     mut self,
                     client: &'a mut C,
                 ) -> Result<Self, postgres::Error> {
-                    if self.1.is_none() {
-                        self.1 = Some(client.prepare(self.0)?)
-                    }
+                    self.1 = Some(client.prepare(self.0)?);
                     Ok(self)
                 }
                 pub fn bind<'a, C: GenericClient>(
@@ -511,9 +505,7 @@ pub mod queries {
                     mut self,
                     client: &'a mut C,
                 ) -> Result<Self, postgres::Error> {
-                    if self.1.is_none() {
-                        self.1 = Some(client.prepare(self.0)?)
-                    }
+                    self.1 = Some(client.prepare(self.0)?);
                     Ok(self)
                 }
                 pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::ArraySql<Item = i32>>(
@@ -545,9 +537,7 @@ pub mod queries {
                     mut self,
                     client: &'a mut C,
                 ) -> Result<Self, postgres::Error> {
-                    if self.1.is_none() {
-                        self.1 = Some(client.prepare(self.0)?)
-                    }
+                    self.1 = Some(client.prepare(self.0)?);
                     Ok(self)
                 }
                 pub fn bind<'a, C: GenericClient>(
@@ -577,9 +567,7 @@ pub mod queries {
                     mut self,
                     client: &'a mut C,
                 ) -> Result<Self, postgres::Error> {
-                    if self.1.is_none() {
-                        self.1 = Some(client.prepare(self.0)?)
-                    }
+                    self.1 = Some(client.prepare(self.0)?);
                     Ok(self)
                 }
                 pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::ArraySql<Item = i32>>(
@@ -610,9 +598,7 @@ pub mod queries {
                     mut self,
                     client: &'a mut C,
                 ) -> Result<Self, postgres::Error> {
-                    if self.1.is_none() {
-                        self.1 = Some(client.prepare(self.0)?)
-                    }
+                    self.1 = Some(client.prepare(self.0)?);
                     Ok(self)
                 }
                 pub fn bind<'a, C: GenericClient>(
@@ -919,9 +905,7 @@ pub mod queries {
                     mut self,
                     client: &'a C,
                 ) -> Result<Self, tokio_postgres::Error> {
-                    if self.1.is_none() {
-                        self.1 = Some(client.prepare(self.0).await?)
-                    }
+                    self.1 = Some(client.prepare(self.0).await?);
                     Ok(self)
                 }
                 pub fn bind<'a, C: GenericClient>(
@@ -951,9 +935,7 @@ pub mod queries {
                     mut self,
                     client: &'a C,
                 ) -> Result<Self, tokio_postgres::Error> {
-                    if self.1.is_none() {
-                        self.1 = Some(client.prepare(self.0).await?)
-                    }
+                    self.1 = Some(client.prepare(self.0).await?);
                     Ok(self)
                 }
                 pub async fn bind<
@@ -1012,9 +994,7 @@ pub mod queries {
                     mut self,
                     client: &'a C,
                 ) -> Result<Self, tokio_postgres::Error> {
-                    if self.1.is_none() {
-                        self.1 = Some(client.prepare(self.0).await?)
-                    }
+                    self.1 = Some(client.prepare(self.0).await?);
                     Ok(self)
                 }
                 pub fn bind<'a, C: GenericClient>(
@@ -1045,9 +1025,7 @@ pub mod queries {
                     mut self,
                     client: &'a C,
                 ) -> Result<Self, tokio_postgres::Error> {
-                    if self.1.is_none() {
-                        self.1 = Some(client.prepare(self.0).await?)
-                    }
+                    self.1 = Some(client.prepare(self.0).await?);
                     Ok(self)
                 }
                 pub fn bind<'a, C: GenericClient, T1: cornucopia_async::ArraySql<Item = i32>>(
@@ -1079,9 +1057,7 @@ pub mod queries {
                     mut self,
                     client: &'a C,
                 ) -> Result<Self, tokio_postgres::Error> {
-                    if self.1.is_none() {
-                        self.1 = Some(client.prepare(self.0).await?)
-                    }
+                    self.1 = Some(client.prepare(self.0).await?);
                     Ok(self)
                 }
                 pub fn bind<'a, C: GenericClient>(
@@ -1111,9 +1087,7 @@ pub mod queries {
                     mut self,
                     client: &'a C,
                 ) -> Result<Self, tokio_postgres::Error> {
-                    if self.1.is_none() {
-                        self.1 = Some(client.prepare(self.0).await?)
-                    }
+                    self.1 = Some(client.prepare(self.0).await?);
                     Ok(self)
                 }
                 pub fn bind<'a, C: GenericClient, T1: cornucopia_async::ArraySql<Item = i32>>(
@@ -1144,9 +1118,7 @@ pub mod queries {
                     mut self,
                     client: &'a C,
                 ) -> Result<Self, tokio_postgres::Error> {
-                    if self.1.is_none() {
-                        self.1 = Some(client.prepare(self.0).await?)
-                    }
+                    self.1 = Some(client.prepare(self.0).await?);
                     Ok(self)
                 }
                 pub fn bind<'a, C: GenericClient>(

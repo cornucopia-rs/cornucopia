@@ -225,9 +225,7 @@ pub mod queries {
                 mut self,
                 client: &'a C,
             ) -> Result<Self, tokio_postgres::Error> {
-                if self.1.is_none() {
-                    self.1 = Some(client.prepare(self.0).await?)
-                }
+                self.1 = Some(client.prepare(self.0).await?);
                 Ok(self)
             }
             pub async fn bind<'a, C: GenericClient, T1: cornucopia_async::StringSql>(
@@ -663,9 +661,7 @@ FROM
                 mut self,
                 client: &'a C,
             ) -> Result<Self, tokio_postgres::Error> {
-                if self.1.is_none() {
-                    self.1 = Some(client.prepare(self.0).await?)
-                }
+                self.1 = Some(client.prepare(self.0).await?);
                 Ok(self)
             }
             pub fn bind<'a, C: GenericClient>(
@@ -701,9 +697,7 @@ FROM
                 mut self,
                 client: &'a C,
             ) -> Result<Self, tokio_postgres::Error> {
-                if self.1.is_none() {
-                    self.1 = Some(client.prepare(self.0).await?)
-                }
+                self.1 = Some(client.prepare(self.0).await?);
                 Ok(self)
             }
             pub fn bind<'a, C: GenericClient>(
@@ -737,9 +731,7 @@ WHERE
                 mut self,
                 client: &'a C,
             ) -> Result<Self, tokio_postgres::Error> {
-                if self.1.is_none() {
-                    self.1 = Some(client.prepare(self.0).await?)
-                }
+                self.1 = Some(client.prepare(self.0).await?);
                 Ok(self)
             }
             pub fn bind<'a, C: GenericClient>(
@@ -779,9 +771,7 @@ WHERE
                 mut self,
                 client: &'a C,
             ) -> Result<Self, tokio_postgres::Error> {
-                if self.1.is_none() {
-                    self.1 = Some(client.prepare(self.0).await?)
-                }
+                self.1 = Some(client.prepare(self.0).await?);
                 Ok(self)
             }
             pub fn bind<'a, C: GenericClient, T1: cornucopia_async::StringSql>(
@@ -840,9 +830,7 @@ WHERE
                 mut self,
                 client: &'a C,
             ) -> Result<Self, tokio_postgres::Error> {
-                if self.1.is_none() {
-                    self.1 = Some(client.prepare(self.0).await?)
-                }
+                self.1 = Some(client.prepare(self.0).await?);
                 Ok(self)
             }
             pub fn bind<'a, C: GenericClient>(
@@ -877,9 +865,7 @@ FROM
                 mut self,
                 client: &'a C,
             ) -> Result<Self, tokio_postgres::Error> {
-                if self.1.is_none() {
-                    self.1 = Some(client.prepare(self.0).await?)
-                }
+                self.1 = Some(client.prepare(self.0).await?);
                 Ok(self)
             }
             pub fn bind<'a, C: GenericClient>(

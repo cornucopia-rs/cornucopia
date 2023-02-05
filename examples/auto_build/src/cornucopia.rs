@@ -93,9 +93,7 @@ FROM
                 mut self,
                 client: &'a C,
             ) -> Result<Self, tokio_postgres::Error> {
-                if self.1.is_none() {
-                    self.1 = Some(client.prepare(self.0).await?)
-                }
+                self.1 = Some(client.prepare(self.0).await?);
                 Ok(self)
             }
             pub fn bind<'a, C: GenericClient>(

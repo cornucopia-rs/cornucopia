@@ -576,9 +576,7 @@ fn gen_query_fn<W: Write>(w: &mut W, module: &PreparedModule, query: &PreparedQu
             pub struct ${struct_name}Stmt(&'static str, Option<$backend::Statement>);
             impl ${struct_name}Stmt {
                 pub $fn_async fn prepare<'a, C: GenericClient>(mut self, client: &'a $client_mut C) -> Result<Self, $backend::Error> {
-                    if self.1.is_none() {
-                        self.1 = Some(client.prepare(self.0)$fn_await?)
-                    }
+                    self.1 = Some(client.prepare(self.0)$fn_await?);
                     Ok(self)
                 }
 
