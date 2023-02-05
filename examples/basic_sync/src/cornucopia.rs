@@ -209,15 +209,26 @@ pub mod types {
 #[allow(dead_code)]
 pub mod queries {
     pub mod module_1 {
-        use postgres::{fallible_iterator::FallibleIterator, GenericClient};
+        use cornucopia_sync::GenericClient;
+        use postgres::fallible_iterator::FallibleIterator;
         pub fn insert_book() -> InsertBookStmt {
             InsertBookStmt(
                 "INSERT INTO Book (title)
   VALUES ($1)",
+                None,
             )
         }
-        pub struct InsertBookStmt(&'static str);
+        pub struct InsertBookStmt(&'static str, Option<postgres::Statement>);
         impl InsertBookStmt {
+            pub fn prepare<'a, C: GenericClient>(
+                mut self,
+                client: &'a mut C,
+            ) -> Result<Self, postgres::Error> {
+                if self.1.is_none() {
+                    self.1 = Some(client.prepare(self.0)?)
+                }
+                Ok(self)
+            }
             pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::StringSql>(
                 &'a self,
                 client: &'a mut C,
@@ -304,11 +315,13 @@ pub mod queries {
                 }
             }
         }
-        use postgres::{fallible_iterator::FallibleIterator, GenericClient};
+        use cornucopia_sync::GenericClient;
+        use postgres::fallible_iterator::FallibleIterator;
         pub struct AuthorsQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             query: &'static str,
+            cached: Option<&'a postgres::Statement>,
             extractor: fn(&postgres::Row) -> AuthorsBorrowed,
             mapper: fn(AuthorsBorrowed) -> T,
         }
@@ -321,42 +334,53 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
+                    cached: self.cached,
                     extractor: self.extractor,
                     mapper,
                 }
             }
             pub fn one(self) -> Result<T, postgres::Error> {
-                let row = self.client.query_one(self.query, &self.params)?;
+                let row = cornucopia_sync::private::one(
+                    self.client,
+                    self.query,
+                    &self.params,
+                    self.cached,
+                )?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                Ok(self
-                    .client
-                    .query_opt(self.query, &self.params)?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
+                let opt_row = cornucopia_sync::private::opt(
+                    self.client,
+                    self.query,
+                    &self.params,
+                    self.cached,
+                )?;
+                Ok(opt_row.map(|row| (self.mapper)((self.extractor)(&row))))
             }
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
             {
-                let it = self
-                    .client
-                    .query_raw(
-                        self.query,
-                        cornucopia_sync::private::slice_iter(&self.params),
-                    )?
+                let stream = cornucopia_sync::private::raw(
+                    self.client,
+                    self.query,
+                    cornucopia_sync::private::slice_iter(&self.params),
+                    self.cached,
+                )?;
+                let mapped = stream
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
-                Ok(it)
+                Ok(mapped)
             }
         }
         pub struct StringQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             query: &'static str,
+            cached: Option<&'a postgres::Statement>,
             extractor: fn(&postgres::Row) -> &str,
             mapper: fn(&str) -> T,
         }
@@ -369,42 +393,53 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
+                    cached: self.cached,
                     extractor: self.extractor,
                     mapper,
                 }
             }
             pub fn one(self) -> Result<T, postgres::Error> {
-                let row = self.client.query_one(self.query, &self.params)?;
+                let row = cornucopia_sync::private::one(
+                    self.client,
+                    self.query,
+                    &self.params,
+                    self.cached,
+                )?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                Ok(self
-                    .client
-                    .query_opt(self.query, &self.params)?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
+                let opt_row = cornucopia_sync::private::opt(
+                    self.client,
+                    self.query,
+                    &self.params,
+                    self.cached,
+                )?;
+                Ok(opt_row.map(|row| (self.mapper)((self.extractor)(&row))))
             }
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
             {
-                let it = self
-                    .client
-                    .query_raw(
-                        self.query,
-                        cornucopia_sync::private::slice_iter(&self.params),
-                    )?
+                let stream = cornucopia_sync::private::raw(
+                    self.client,
+                    self.query,
+                    cornucopia_sync::private::slice_iter(&self.params),
+                    self.cached,
+                )?;
+                let mapped = stream
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
-                Ok(it)
+                Ok(mapped)
             }
         }
         pub struct AuthorNameStartingWithQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             query: &'static str,
+            cached: Option<&'a postgres::Statement>,
             extractor: fn(&postgres::Row) -> AuthorNameStartingWithBorrowed,
             mapper: fn(AuthorNameStartingWithBorrowed) -> T,
         }
@@ -420,42 +455,53 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
+                    cached: self.cached,
                     extractor: self.extractor,
                     mapper,
                 }
             }
             pub fn one(self) -> Result<T, postgres::Error> {
-                let row = self.client.query_one(self.query, &self.params)?;
+                let row = cornucopia_sync::private::one(
+                    self.client,
+                    self.query,
+                    &self.params,
+                    self.cached,
+                )?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                Ok(self
-                    .client
-                    .query_opt(self.query, &self.params)?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
+                let opt_row = cornucopia_sync::private::opt(
+                    self.client,
+                    self.query,
+                    &self.params,
+                    self.cached,
+                )?;
+                Ok(opt_row.map(|row| (self.mapper)((self.extractor)(&row))))
             }
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
             {
-                let it = self
-                    .client
-                    .query_raw(
-                        self.query,
-                        cornucopia_sync::private::slice_iter(&self.params),
-                    )?
+                let stream = cornucopia_sync::private::raw(
+                    self.client,
+                    self.query,
+                    cornucopia_sync::private::slice_iter(&self.params),
+                    self.cached,
+                )?;
+                let mapped = stream
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
-                Ok(it)
+                Ok(mapped)
             }
         }
         pub struct PublicVoiceactorQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             query: &'static str,
+            cached: Option<&'a postgres::Statement>,
             extractor: fn(&postgres::Row) -> super::super::types::public::VoiceactorBorrowed,
             mapper: fn(super::super::types::public::VoiceactorBorrowed) -> T,
         }
@@ -471,42 +517,53 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
+                    cached: self.cached,
                     extractor: self.extractor,
                     mapper,
                 }
             }
             pub fn one(self) -> Result<T, postgres::Error> {
-                let row = self.client.query_one(self.query, &self.params)?;
+                let row = cornucopia_sync::private::one(
+                    self.client,
+                    self.query,
+                    &self.params,
+                    self.cached,
+                )?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                Ok(self
-                    .client
-                    .query_opt(self.query, &self.params)?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
+                let opt_row = cornucopia_sync::private::opt(
+                    self.client,
+                    self.query,
+                    &self.params,
+                    self.cached,
+                )?;
+                Ok(opt_row.map(|row| (self.mapper)((self.extractor)(&row))))
             }
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
             {
-                let it = self
-                    .client
-                    .query_raw(
-                        self.query,
-                        cornucopia_sync::private::slice_iter(&self.params),
-                    )?
+                let stream = cornucopia_sync::private::raw(
+                    self.client,
+                    self.query,
+                    cornucopia_sync::private::slice_iter(&self.params),
+                    self.cached,
+                )?;
+                let mapped = stream
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
-                Ok(it)
+                Ok(mapped)
             }
         }
         pub struct SelectTranslationsQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
             query: &'static str,
+            cached: Option<&'a postgres::Statement>,
             extractor: fn(&postgres::Row) -> SelectTranslationsBorrowed,
             mapper: fn(SelectTranslationsBorrowed) -> T,
         }
@@ -522,36 +579,46 @@ pub mod queries {
                     client: self.client,
                     params: self.params,
                     query: self.query,
+                    cached: self.cached,
                     extractor: self.extractor,
                     mapper,
                 }
             }
             pub fn one(self) -> Result<T, postgres::Error> {
-                let row = self.client.query_one(self.query, &self.params)?;
+                let row = cornucopia_sync::private::one(
+                    self.client,
+                    self.query,
+                    &self.params,
+                    self.cached,
+                )?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                Ok(self
-                    .client
-                    .query_opt(self.query, &self.params)?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
+                let opt_row = cornucopia_sync::private::opt(
+                    self.client,
+                    self.query,
+                    &self.params,
+                    self.cached,
+                )?;
+                Ok(opt_row.map(|row| (self.mapper)((self.extractor)(&row))))
             }
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
             {
-                let it = self
-                    .client
-                    .query_raw(
-                        self.query,
-                        cornucopia_sync::private::slice_iter(&self.params),
-                    )?
+                let stream = cornucopia_sync::private::raw(
+                    self.client,
+                    self.query,
+                    cornucopia_sync::private::slice_iter(&self.params),
+                    self.cached,
+                )?;
+                let mapped = stream
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
-                Ok(it)
+                Ok(mapped)
             }
         }
         pub fn authors() -> AuthorsStmt {
@@ -560,10 +627,20 @@ pub mod queries {
     *
 FROM
     Author",
+                None,
             )
         }
-        pub struct AuthorsStmt(&'static str);
+        pub struct AuthorsStmt(&'static str, Option<postgres::Statement>);
         impl AuthorsStmt {
+            pub fn prepare<'a, C: GenericClient>(
+                mut self,
+                client: &'a mut C,
+            ) -> Result<Self, postgres::Error> {
+                if self.1.is_none() {
+                    self.1 = Some(client.prepare(self.0)?)
+                }
+                Ok(self)
+            }
             pub fn bind<'a, C: GenericClient>(
                 &'a self,
                 client: &'a mut C,
@@ -572,6 +649,7 @@ FROM
                     client,
                     params: [],
                     query: self.0,
+                    cached: self.1.as_ref(),
                     extractor: |row| AuthorsBorrowed {
                         id: row.get(0),
                         name: row.get(1),
@@ -587,10 +665,20 @@ FROM
     Title
 FROM
     Book",
+                None,
             )
         }
-        pub struct BooksStmt(&'static str);
+        pub struct BooksStmt(&'static str, Option<postgres::Statement>);
         impl BooksStmt {
+            pub fn prepare<'a, C: GenericClient>(
+                mut self,
+                client: &'a mut C,
+            ) -> Result<Self, postgres::Error> {
+                if self.1.is_none() {
+                    self.1 = Some(client.prepare(self.0)?)
+                }
+                Ok(self)
+            }
             pub fn bind<'a, C: GenericClient>(
                 &'a self,
                 client: &'a mut C,
@@ -599,6 +687,7 @@ FROM
                     client,
                     params: [],
                     query: self.0,
+                    cached: self.1.as_ref(),
                     extractor: |row| row.get(0),
                     mapper: |it| it.into(),
                 }
@@ -612,10 +701,20 @@ FROM
     Author
 WHERE
     Author.Id = $1",
+                None,
             )
         }
-        pub struct AuthorNameByIdStmt(&'static str);
+        pub struct AuthorNameByIdStmt(&'static str, Option<postgres::Statement>);
         impl AuthorNameByIdStmt {
+            pub fn prepare<'a, C: GenericClient>(
+                mut self,
+                client: &'a mut C,
+            ) -> Result<Self, postgres::Error> {
+                if self.1.is_none() {
+                    self.1 = Some(client.prepare(self.0)?)
+                }
+                Ok(self)
+            }
             pub fn bind<'a, C: GenericClient>(
                 &'a self,
                 client: &'a mut C,
@@ -625,6 +724,7 @@ WHERE
                     client,
                     params: [id],
                     query: self.0,
+                    cached: self.1.as_ref(),
                     extractor: |row| row.get(0),
                     mapper: |it| it.into(),
                 }
@@ -643,10 +743,20 @@ FROM
     INNER JOIN Book ON Book.Id = BookAuthor.BookId
 WHERE
     Author.Name LIKE CONCAT($1::text, '%')",
+                None,
             )
         }
-        pub struct AuthorNameStartingWithStmt(&'static str);
+        pub struct AuthorNameStartingWithStmt(&'static str, Option<postgres::Statement>);
         impl AuthorNameStartingWithStmt {
+            pub fn prepare<'a, C: GenericClient>(
+                mut self,
+                client: &'a mut C,
+            ) -> Result<Self, postgres::Error> {
+                if self.1.is_none() {
+                    self.1 = Some(client.prepare(self.0)?)
+                }
+                Ok(self)
+            }
             pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::StringSql>(
                 &'a self,
                 client: &'a mut C,
@@ -656,6 +766,7 @@ WHERE
                     client,
                     params: [start_str],
                     query: self.0,
+                    cached: self.1.as_ref(),
                     extractor: |row| AuthorNameStartingWithBorrowed {
                         authorid: row.get(0),
                         name: row.get(1),
@@ -690,10 +801,20 @@ FROM
     SpongeBobVoiceActor
 WHERE
     character = $1",
+                None,
             )
         }
-        pub struct SelectVoiceActorWithCharacterStmt(&'static str);
+        pub struct SelectVoiceActorWithCharacterStmt(&'static str, Option<postgres::Statement>);
         impl SelectVoiceActorWithCharacterStmt {
+            pub fn prepare<'a, C: GenericClient>(
+                mut self,
+                client: &'a mut C,
+            ) -> Result<Self, postgres::Error> {
+                if self.1.is_none() {
+                    self.1 = Some(client.prepare(self.0)?)
+                }
+                Ok(self)
+            }
             pub fn bind<'a, C: GenericClient>(
                 &'a self,
                 client: &'a mut C,
@@ -704,6 +825,7 @@ WHERE
                     client,
                     params: [spongebob_character],
                     query: self.0,
+                    cached: self.1.as_ref(),
                     extractor: |row| row.get(0),
                     mapper: |it| it.into(),
                 }
@@ -716,10 +838,20 @@ WHERE
     Translations
 FROM
     Book",
+                None,
             )
         }
-        pub struct SelectTranslationsStmt(&'static str);
+        pub struct SelectTranslationsStmt(&'static str, Option<postgres::Statement>);
         impl SelectTranslationsStmt {
+            pub fn prepare<'a, C: GenericClient>(
+                mut self,
+                client: &'a mut C,
+            ) -> Result<Self, postgres::Error> {
+                if self.1.is_none() {
+                    self.1 = Some(client.prepare(self.0)?)
+                }
+                Ok(self)
+            }
             pub fn bind<'a, C: GenericClient>(
                 &'a self,
                 client: &'a mut C,
@@ -728,6 +860,7 @@ FROM
                     client,
                     params: [],
                     query: self.0,
+                    cached: self.1.as_ref(),
                     extractor: |row| SelectTranslationsBorrowed {
                         title: row.get(0),
                         translations: row.get(1),

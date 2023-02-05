@@ -1,5 +1,8 @@
 use async_trait::async_trait;
-use tokio_postgres::{types::BorrowToSql, Client, Error, RowStream, Transaction};
+use tokio_postgres::{
+    types::{BorrowToSql, ToSql},
+    Client, Error, Row, RowStream, Statement, ToStatement, Transaction,
+};
 
 /// Abstraction over multiple types of asynchronous clients.
 /// This allows you to use tokio_postgres clients and transactions interchangeably.
@@ -8,28 +11,34 @@ use tokio_postgres::{types::BorrowToSql, Client, Error, RowStream, Transaction};
 /// abstracts over deadpool clients and transactions
 #[async_trait]
 pub trait GenericClient: Send + Sync {
-    async fn execute(
-        &self,
-        query: &str,
-        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<u64, Error>;
-    async fn query_one(
-        &self,
-        query: &str,
-        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<tokio_postgres::Row, Error>;
-    async fn query_opt(
-        &self,
-        query: &str,
-        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<Option<tokio_postgres::Row>, Error>;
-    async fn query(
-        &self,
-        query: &str,
-        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<Vec<tokio_postgres::Row>, Error>;
-    async fn query_raw<P, I>(&self, query: &str, params: I) -> Result<RowStream, Error>
+    async fn prepare(&self, query: &str) -> Result<Statement, Error>;
+    fn stmt_cache() -> bool {
+        false
+    }
+    async fn execute<T>(&self, query: &T, params: &[&(dyn ToSql + Sync)]) -> Result<u64, Error>
     where
+        T: ?Sized + ToStatement + Sync + Send;
+    async fn query_one<T>(
+        &self,
+        statement: &T,
+        params: &[&(dyn ToSql + Sync)],
+    ) -> Result<Row, Error>
+    where
+        T: ?Sized + ToStatement + Sync + Send;
+    async fn query_opt<T>(
+        &self,
+        statement: &T,
+        params: &[&(dyn ToSql + Sync)],
+    ) -> Result<Option<Row>, Error>
+    where
+        T: ?Sized + ToStatement + Sync + Send;
+    async fn query<T>(&self, query: &T, params: &[&(dyn ToSql + Sync)]) -> Result<Vec<Row>, Error>
+    where
+        T: ?Sized + ToStatement + Sync + Send;
+
+    async fn query_raw<T, P, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
+    where
+        T: ?Sized + ToStatement + Sync + Send,
         P: BorrowToSql,
         I: IntoIterator<Item = P> + Sync + Send,
         I::IntoIter: ExactSizeIterator;
@@ -37,88 +46,106 @@ pub trait GenericClient: Send + Sync {
 
 #[async_trait]
 impl GenericClient for Transaction<'_> {
-    async fn execute(
-        &self,
-        query: &str,
-        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<u64, Error> {
+    async fn prepare(&self, query: &str) -> Result<Statement, Error> {
+        Transaction::prepare(self, query).await
+    }
+
+    async fn execute<T>(&self, query: &T, params: &[&(dyn ToSql + Sync)]) -> Result<u64, Error>
+    where
+        T: ?Sized + ToStatement + Sync + Send,
+    {
         Transaction::execute(self, query, params).await
     }
 
-    async fn query_one(
+    async fn query_one<T>(
         &self,
-        query: &str,
-        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<tokio_postgres::Row, Error> {
-        Transaction::query_one(self, query, params).await
+        statement: &T,
+        params: &[&(dyn ToSql + Sync)],
+    ) -> Result<Row, Error>
+    where
+        T: ?Sized + ToStatement + Sync + Send,
+    {
+        Transaction::query_one(self, statement, params).await
     }
 
-    async fn query_opt(
+    async fn query_opt<T>(
         &self,
-        query: &str,
-        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<Option<tokio_postgres::Row>, Error> {
-        Transaction::query_opt(self, query, params).await
+        statement: &T,
+        params: &[&(dyn ToSql + Sync)],
+    ) -> Result<Option<Row>, Error>
+    where
+        T: ?Sized + ToStatement + Sync + Send,
+    {
+        Transaction::query_opt(self, statement, params).await
     }
 
-    async fn query(
-        &self,
-        query: &str,
-        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<Vec<tokio_postgres::Row>, Error> {
+    async fn query<T>(&self, query: &T, params: &[&(dyn ToSql + Sync)]) -> Result<Vec<Row>, Error>
+    where
+        T: ?Sized + ToStatement + Sync + Send,
+    {
         Transaction::query(self, query, params).await
     }
 
-    async fn query_raw<P, I>(&self, query: &str, params: I) -> Result<RowStream, Error>
+    async fn query_raw<T, P, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
     where
+        T: ?Sized + ToStatement + Sync + Send,
         P: BorrowToSql,
         I: IntoIterator<Item = P> + Sync + Send,
         I::IntoIter: ExactSizeIterator,
     {
-        Transaction::query_raw(self, query, params).await
+        Transaction::query_raw(self, statement, params).await
     }
 }
 
 #[async_trait]
 impl GenericClient for Client {
-    async fn execute(
-        &self,
-        query: &str,
-        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<u64, Error> {
+    async fn prepare(&self, query: &str) -> Result<Statement, Error> {
+        Client::prepare(self, query).await
+    }
+
+    async fn execute<T>(&self, query: &T, params: &[&(dyn ToSql + Sync)]) -> Result<u64, Error>
+    where
+        T: ?Sized + ToStatement + Sync + Send,
+    {
         Client::execute(self, query, params).await
     }
 
-    async fn query_one(
+    async fn query_one<T>(
         &self,
-        query: &str,
-        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<tokio_postgres::Row, Error> {
-        Client::query_one(self, query, params).await
+        statement: &T,
+        params: &[&(dyn ToSql + Sync)],
+    ) -> Result<Row, Error>
+    where
+        T: ?Sized + ToStatement + Sync + Send,
+    {
+        Client::query_one(self, statement, params).await
     }
 
-    async fn query_opt(
+    async fn query_opt<T>(
         &self,
-        query: &str,
-        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<Option<tokio_postgres::Row>, Error> {
-        Client::query_opt(self, query, params).await
+        statement: &T,
+        params: &[&(dyn ToSql + Sync)],
+    ) -> Result<Option<Row>, Error>
+    where
+        T: ?Sized + ToStatement + Sync + Send,
+    {
+        Client::query_opt(self, statement, params).await
     }
 
-    async fn query(
-        &self,
-        query: &str,
-        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<Vec<tokio_postgres::Row>, Error> {
+    async fn query<T>(&self, query: &T, params: &[&(dyn ToSql + Sync)]) -> Result<Vec<Row>, Error>
+    where
+        T: ?Sized + ToStatement + Sync + Send,
+    {
         Client::query(self, query, params).await
     }
 
-    async fn query_raw<P, I>(&self, query: &str, params: I) -> Result<RowStream, Error>
+    async fn query_raw<T, P, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
     where
+        T: ?Sized + ToStatement + Sync + Send,
         P: BorrowToSql,
         I: IntoIterator<Item = P> + Sync + Send,
         I::IntoIter: ExactSizeIterator,
     {
-        Client::query_raw(self, query, params).await
+        Client::query_raw(self, statement, params).await
     }
 }

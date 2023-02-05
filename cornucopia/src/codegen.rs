@@ -426,6 +426,7 @@ fn gen_row_query(w: &mut impl Write, row: &PreparedItem, ctx: &GenCtx) {
         client: &'a $client_mut C,
         params: [&'a (dyn postgres_types::ToSql + Sync); N],
         query: &'static str,
+        cached: Option<&'a $backend::Statement>,
         extractor: fn(&$backend::Row) -> $row_struct,
         mapper: fn($row_struct) -> T,
     }
@@ -435,13 +436,14 @@ fn gen_row_query(w: &mut impl Write, row: &PreparedItem, ctx: &GenCtx) {
                 client: self.client,
                 params: self.params,
                 query: self.query,
+                cached: self.cached,
                 extractor: self.extractor,
                 mapper,
             }
         }
 
         pub $fn_async fn one(self) -> Result<T, $backend::Error> {
-            let row = self.client.query_one(self.query, &self.params)$fn_await?;
+            let row = $client::private::one(self.client, self.query, &self.params, self.cached)$fn_await?;
             Ok((self.mapper)((self.extractor)(&row)))
         }
 
@@ -450,24 +452,19 @@ fn gen_row_query(w: &mut impl Write, row: &PreparedItem, ctx: &GenCtx) {
         }
 
         pub $fn_async fn opt(self) -> Result<Option<T>, $backend::Error> {
-            Ok(self
-                .client
-                .query_opt(self.query, &self.params)
-                $fn_await?
-                .map(|row| (self.mapper)((self.extractor)(&row))))
+            let opt_row = $client::private::opt(self.client, self.query, &self.params, self.cached)$fn_await?;
+            Ok(opt_row.map(|row| (self.mapper)((self.extractor)(&row))))
         }
 
         pub $fn_async fn iter(
             self,
         ) -> Result<impl $raw_type<Item = Result<T, $backend::Error>> + 'a, $backend::Error> {
-            let it = self
-                .client
-                .query_raw(self.query, $client::private::slice_iter(&self.params))
-                $fn_await?
+            let stream = $client::private::raw(self.client, self.query, $client::private::slice_iter(&self.params), self.cached)$fn_await?;
+            let mapped = stream
                 $raw_pre
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                 $raw_post;
-            Ok(it)
+            Ok(mapped)
         }
     });
 }
@@ -549,6 +546,7 @@ fn gen_query_fn<W: Write>(w: &mut W, module: &PreparedModule, query: &PreparedQu
                         client,
                         params: [$($params_name,)],
                         query: self.0,
+                        cached: self.1.as_ref(),
                         extractor: |row| { $!extractor },
                         mapper: |it| { $mapper },
                     }
@@ -573,10 +571,17 @@ fn gen_query_fn<W: Write>(w: &mut W, module: &PreparedModule, query: &PreparedQu
         let name = &ident.rs;
         code!(w =>
             pub fn $name() -> ${struct_name}Stmt {
-                ${struct_name}Stmt("$sql")
+                ${struct_name}Stmt("$sql", None)
             }
-            pub struct ${struct_name}Stmt(&'static str);
+            pub struct ${struct_name}Stmt(&'static str, Option<$backend::Statement>);
             impl ${struct_name}Stmt {
+                pub $fn_async fn prepare<'a, C: GenericClient>(mut self, client: &'a $client_mut C) -> Result<Self, $backend::Error> {
+                    if self.1.is_none() {
+                        self.1 = Some(client.prepare(self.0)$fn_await?)
+                    }
+                    Ok(self)
+                }
+
                 $!lazy_impl
             }
         );
@@ -774,7 +779,7 @@ pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> S
                         let import = if is_async {
                             "use futures::{StreamExt, TryStreamExt};use futures; use cornucopia_async::GenericClient;"
                         } else {
-                            "use postgres::{fallible_iterator::FallibleIterator,GenericClient};"
+                            "use postgres::{fallible_iterator::FallibleIterator}; use cornucopia_sync::GenericClient;"
                         };
                         let rows_query_string = module
                             .rows

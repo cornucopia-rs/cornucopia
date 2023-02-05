@@ -3,100 +3,138 @@ use deadpool_postgres::{
     Client as DeadpoolClient, ClientWrapper, Transaction as DeadpoolTransaction,
 };
 use tokio_postgres::{
-    types::BorrowToSql, Client as PgClient, Error, RowStream, Transaction as PgTransaction,
+    types::BorrowToSql, Client as PgClient, Error, RowStream, Statement, ToStatement,
+    Transaction as PgTransaction,
 };
 
 use crate::generic_client::GenericClient;
 
 #[async_trait]
 impl GenericClient for DeadpoolClient {
-    async fn execute(
-        &self,
-        query: &str,
-        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<u64, Error> {
-        let stmt = ClientWrapper::prepare_cached(self, query).await?;
-        PgClient::execute(self, &stmt, params).await
+    async fn prepare(&self, query: &str) -> Result<Statement, Error> {
+        ClientWrapper::prepare_cached(self, query).await
     }
 
-    async fn query_one(
-        &self,
-        query: &str,
-        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<tokio_postgres::Row, Error> {
-        let stmt = ClientWrapper::prepare_cached(self, query).await?;
-        PgClient::query_one(self, &stmt, params).await
+    fn stmt_cache() -> bool {
+        true
     }
 
-    async fn query_opt(
+    async fn execute<T>(
         &self,
-        query: &str,
+        query: &T,
         params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<Option<tokio_postgres::Row>, Error> {
-        let stmt = ClientWrapper::prepare_cached(self, query).await?;
-        PgClient::query_opt(self, &stmt, params).await
-    }
-
-    async fn query(
-        &self,
-        query: &str,
-        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<Vec<tokio_postgres::Row>, Error> {
-        let stmt = ClientWrapper::prepare_cached(self, query).await?;
-        PgClient::query(self, &stmt, params).await
-    }
-
-    async fn query_raw<P, I>(&self, query: &str, params: I) -> Result<RowStream, Error>
+    ) -> Result<u64, Error>
     where
+        T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
+    {
+        PgClient::execute(self, query, params).await
+    }
+
+    async fn query_one<T>(
+        &self,
+        statement: &T,
+        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
+    ) -> Result<tokio_postgres::Row, Error>
+    where
+        T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
+    {
+        PgClient::query_one(self, statement, params).await
+    }
+
+    async fn query_opt<T>(
+        &self,
+        statement: &T,
+        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
+    ) -> Result<Option<tokio_postgres::Row>, Error>
+    where
+        T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
+    {
+        PgClient::query_opt(self, statement, params).await
+    }
+
+    async fn query<T>(
+        &self,
+        query: &T,
+        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
+    ) -> Result<Vec<tokio_postgres::Row>, Error>
+    where
+        T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
+    {
+        PgClient::query(self, query, params).await
+    }
+
+    async fn query_raw<T, P, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
+    where
+        T: ?Sized + ToStatement + Sync + Send,
         P: BorrowToSql,
         I: IntoIterator<Item = P> + Sync + Send,
         I::IntoIter: ExactSizeIterator,
     {
-        let stmt = ClientWrapper::prepare_cached(self, query).await?;
-        PgClient::query_raw(self, &stmt, params).await
+        PgClient::query_raw(self, statement, params).await
     }
 }
 
 #[async_trait]
 impl GenericClient for DeadpoolTransaction<'_> {
-    async fn execute(
+    async fn prepare(&self, query: &str) -> Result<Statement, Error> {
+        DeadpoolTransaction::prepare_cached(self, query).await
+    }
+
+    fn stmt_cache() -> bool {
+        true
+    }
+
+    async fn execute<T>(
         &self,
-        query: &str,
+        query: &T,
         params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<u64, Error> {
+    ) -> Result<u64, Error>
+    where
+        T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
+    {
         PgTransaction::execute(self, query, params).await
     }
 
-    async fn query_one(
+    async fn query_one<T>(
         &self,
-        query: &str,
+        statement: &T,
         params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<tokio_postgres::Row, Error> {
-        PgTransaction::query_one(self, query, params).await
+    ) -> Result<tokio_postgres::Row, Error>
+    where
+        T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
+    {
+        PgTransaction::query_one(self, statement, params).await
     }
 
-    async fn query_opt(
+    async fn query_opt<T>(
         &self,
-        query: &str,
+        statement: &T,
         params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<Option<tokio_postgres::Row>, Error> {
-        PgTransaction::query_opt(self, query, params).await
+    ) -> Result<Option<tokio_postgres::Row>, Error>
+    where
+        T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
+    {
+        PgTransaction::query_opt(self, statement, params).await
     }
 
-    async fn query(
+    async fn query<T>(
         &self,
-        query: &str,
+        query: &T,
         params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<Vec<tokio_postgres::Row>, Error> {
+    ) -> Result<Vec<tokio_postgres::Row>, Error>
+    where
+        T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
+    {
         PgTransaction::query(self, query, params).await
     }
 
-    async fn query_raw<P, I>(&self, query: &str, params: I) -> Result<RowStream, Error>
+    async fn query_raw<T, P, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
     where
+        T: ?Sized + ToStatement + Sync + Send,
         P: BorrowToSql,
         I: IntoIterator<Item = P> + Sync + Send,
         I::IntoIter: ExactSizeIterator,
     {
-        PgTransaction::query_raw(self, query, params).await
+        PgTransaction::query_raw(self, statement, params).await
     }
 }

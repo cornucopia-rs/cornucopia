@@ -1,8 +1,8 @@
 #[doc(hidden)]
 pub mod private;
 
-pub use crate::generic_client::GenericClient;
 pub use cornucopia_client_core::{ArrayIterator, ArraySql, BytesSql, IterSql, StringSql};
+pub use generic_client::GenericClient;
 
 #[cfg(feature = "with-serde_json-1")]
 pub use cornucopia_client_core::JsonSql;
