@@ -3,130 +3,100 @@ use deadpool_postgres::{
     Client as DeadpoolClient, ClientWrapper, Transaction as DeadpoolTransaction,
 };
 use tokio_postgres::{
-    types::BorrowToSql, Client as PgClient, Error, RowStream, Statement, ToStatement,
-    Transaction as PgTransaction,
+    types::BorrowToSql, Client as PgClient, Error, RowStream, Transaction as PgTransaction,
 };
 
 use crate::generic_client::GenericClient;
 
 #[async_trait]
 impl GenericClient for DeadpoolClient {
-    async fn prepare(&self, query: &str) -> Result<Statement, Error> {
-        ClientWrapper::prepare_cached(self, query).await
-    }
-
-    async fn execute<T>(
+    async fn execute(
         &self,
-        query: &T,
+        query: &str,
         params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<u64, Error>
-    where
-        T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
-    {
-        PgClient::execute(self, query, params).await
+    ) -> Result<u64, Error> {
+        let stmt = ClientWrapper::prepare_cached(self, query).await?;
+        PgClient::execute(self, &stmt, params).await
     }
 
-    async fn query_one<T>(
+    async fn query_one(
         &self,
-        statement: &T,
+        query: &str,
         params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<tokio_postgres::Row, Error>
-    where
-        T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
-    {
-        PgClient::query_one(self, statement, params).await
+    ) -> Result<tokio_postgres::Row, Error> {
+        let stmt = ClientWrapper::prepare_cached(self, query).await?;
+        PgClient::query_one(self, &stmt, params).await
     }
 
-    async fn query_opt<T>(
+    async fn query_opt(
         &self,
-        statement: &T,
+        query: &str,
         params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<Option<tokio_postgres::Row>, Error>
-    where
-        T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
-    {
-        PgClient::query_opt(self, statement, params).await
+    ) -> Result<Option<tokio_postgres::Row>, Error> {
+        let stmt = ClientWrapper::prepare_cached(self, query).await?;
+        PgClient::query_opt(self, &stmt, params).await
     }
 
-    async fn query<T>(
+    async fn query(
         &self,
-        query: &T,
+        query: &str,
         params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<Vec<tokio_postgres::Row>, Error>
-    where
-        T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
-    {
-        PgClient::query(self, query, params).await
+    ) -> Result<Vec<tokio_postgres::Row>, Error> {
+        let stmt = ClientWrapper::prepare_cached(self, query).await?;
+        PgClient::query(self, &stmt, params).await
     }
 
-    async fn query_raw<T, P, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
+    async fn query_raw<P, I>(&self, query: &str, params: I) -> Result<RowStream, Error>
     where
-        T: ?Sized + ToStatement + Sync + Send,
         P: BorrowToSql,
         I: IntoIterator<Item = P> + Sync + Send,
         I::IntoIter: ExactSizeIterator,
     {
-        PgClient::query_raw(self, statement, params).await
+        let stmt = ClientWrapper::prepare_cached(self, query).await?;
+        PgClient::query_raw(self, &stmt, params).await
     }
 }
 
 #[async_trait]
 impl GenericClient for DeadpoolTransaction<'_> {
-    async fn prepare(&self, query: &str) -> Result<Statement, Error> {
-        DeadpoolTransaction::prepare_cached(self, query).await
-    }
-
-    async fn execute<T>(
+    async fn execute(
         &self,
-        query: &T,
+        query: &str,
         params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<u64, Error>
-    where
-        T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
-    {
+    ) -> Result<u64, Error> {
         PgTransaction::execute(self, query, params).await
     }
 
-    async fn query_one<T>(
+    async fn query_one(
         &self,
-        statement: &T,
+        query: &str,
         params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<tokio_postgres::Row, Error>
-    where
-        T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
-    {
-        PgTransaction::query_one(self, statement, params).await
+    ) -> Result<tokio_postgres::Row, Error> {
+        PgTransaction::query_one(self, query, params).await
     }
 
-    async fn query_opt<T>(
+    async fn query_opt(
         &self,
-        statement: &T,
+        query: &str,
         params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<Option<tokio_postgres::Row>, Error>
-    where
-        T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
-    {
-        PgTransaction::query_opt(self, statement, params).await
+    ) -> Result<Option<tokio_postgres::Row>, Error> {
+        PgTransaction::query_opt(self, query, params).await
     }
 
-    async fn query<T>(
+    async fn query(
         &self,
-        query: &T,
+        query: &str,
         params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-    ) -> Result<Vec<tokio_postgres::Row>, Error>
-    where
-        T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
-    {
+    ) -> Result<Vec<tokio_postgres::Row>, Error> {
         PgTransaction::query(self, query, params).await
     }
 
-    async fn query_raw<T, P, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
+    async fn query_raw<P, I>(&self, query: &str, params: I) -> Result<RowStream, Error>
     where
-        T: ?Sized + ToStatement + Sync + Send,
         P: BorrowToSql,
         I: IntoIterator<Item = P> + Sync + Send,
         I::IntoIter: ExactSizeIterator,
     {
-        PgTransaction::query_raw(self, statement, params).await
+        PgTransaction::query_raw(self, query, params).await
     }
 }

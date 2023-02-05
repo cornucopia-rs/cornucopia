@@ -223,8 +223,7 @@ pub mod queries {
                 client: &'a mut C,
                 title: &'a T1,
             ) -> Result<u64, postgres::Error> {
-                let stmt = client.prepare(self.0)?;
-                client.execute(&stmt, &[title])
+                client.execute(self.0, &[title])
             }
         }
     }
@@ -327,28 +326,28 @@ pub mod queries {
                 }
             }
             pub fn one(self) -> Result<T, postgres::Error> {
-                let stmt = self.client.prepare(self.query)?;
-                let row = self.client.query_one(&stmt, &self.params)?;
+                let row = self.client.query_one(self.query, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                let stmt = self.client.prepare(self.query)?;
                 Ok(self
                     .client
-                    .query_opt(&stmt, &self.params)?
+                    .query_opt(self.query, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
             {
-                let stmt = self.client.prepare(self.query)?;
                 let it = self
                     .client
-                    .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                    .query_raw(
+                        self.query,
+                        cornucopia_sync::private::slice_iter(&self.params),
+                    )?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(it)
@@ -375,28 +374,28 @@ pub mod queries {
                 }
             }
             pub fn one(self) -> Result<T, postgres::Error> {
-                let stmt = self.client.prepare(self.query)?;
-                let row = self.client.query_one(&stmt, &self.params)?;
+                let row = self.client.query_one(self.query, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                let stmt = self.client.prepare(self.query)?;
                 Ok(self
                     .client
-                    .query_opt(&stmt, &self.params)?
+                    .query_opt(self.query, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
             {
-                let stmt = self.client.prepare(self.query)?;
                 let it = self
                     .client
-                    .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                    .query_raw(
+                        self.query,
+                        cornucopia_sync::private::slice_iter(&self.params),
+                    )?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(it)
@@ -426,28 +425,28 @@ pub mod queries {
                 }
             }
             pub fn one(self) -> Result<T, postgres::Error> {
-                let stmt = self.client.prepare(self.query)?;
-                let row = self.client.query_one(&stmt, &self.params)?;
+                let row = self.client.query_one(self.query, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                let stmt = self.client.prepare(self.query)?;
                 Ok(self
                     .client
-                    .query_opt(&stmt, &self.params)?
+                    .query_opt(self.query, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
             {
-                let stmt = self.client.prepare(self.query)?;
                 let it = self
                     .client
-                    .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                    .query_raw(
+                        self.query,
+                        cornucopia_sync::private::slice_iter(&self.params),
+                    )?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(it)
@@ -477,28 +476,28 @@ pub mod queries {
                 }
             }
             pub fn one(self) -> Result<T, postgres::Error> {
-                let stmt = self.client.prepare(self.query)?;
-                let row = self.client.query_one(&stmt, &self.params)?;
+                let row = self.client.query_one(self.query, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                let stmt = self.client.prepare(self.query)?;
                 Ok(self
                     .client
-                    .query_opt(&stmt, &self.params)?
+                    .query_opt(self.query, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
             {
-                let stmt = self.client.prepare(self.query)?;
                 let it = self
                     .client
-                    .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                    .query_raw(
+                        self.query,
+                        cornucopia_sync::private::slice_iter(&self.params),
+                    )?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(it)
@@ -528,28 +527,28 @@ pub mod queries {
                 }
             }
             pub fn one(self) -> Result<T, postgres::Error> {
-                let stmt = self.client.prepare(self.query)?;
-                let row = self.client.query_one(&stmt, &self.params)?;
+                let row = self.client.query_one(self.query, &self.params)?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
             pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                 self.iter()?.collect()
             }
             pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                let stmt = self.client.prepare(self.query)?;
                 Ok(self
                     .client
-                    .query_opt(&stmt, &self.params)?
+                    .query_opt(self.query, &self.params)?
                     .map(|row| (self.mapper)((self.extractor)(&row))))
             }
             pub fn iter(
                 self,
             ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
             {
-                let stmt = self.client.prepare(self.query)?;
                 let it = self
                     .client
-                    .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                    .query_raw(
+                        self.query,
+                        cornucopia_sync::private::slice_iter(&self.params),
+                    )?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(it)

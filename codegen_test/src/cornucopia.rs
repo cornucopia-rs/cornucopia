@@ -1292,28 +1292,28 @@ pub mod queries {
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
-                    let row = self.client.query_one(&stmt, &self.params)?;
+                    let row = self.client.query_one(self.query, &self.params)?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)?
+                        .query_opt(self.query, &self.params)?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.client.prepare(self.query)?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                        .query_raw(
+                            self.query,
+                            cornucopia_sync::private::slice_iter(&self.params),
+                        )?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -1343,28 +1343,28 @@ pub mod queries {
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
-                    let row = self.client.query_one(&stmt, &self.params)?;
+                    let row = self.client.query_one(self.query, &self.params)?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)?
+                        .query_opt(self.query, &self.params)?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.client.prepare(self.query)?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                        .query_raw(
+                            self.query,
+                            cornucopia_sync::private::slice_iter(&self.params),
+                        )?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -1380,8 +1380,7 @@ pub mod queries {
                     client: &'a mut C,
                     composite: &'a super::super::super::types::public::CloneCompositeBorrowed<'a>,
                 ) -> Result<u64, postgres::Error> {
-                    let stmt = client.prepare(self.0)?;
-                    client.execute(&stmt, &[composite])
+                    client.execute(self.0, &[composite])
                 }
             }
             pub fn select_clone() -> SelectCloneStmt {
@@ -1417,8 +1416,7 @@ pub mod queries {
                     client: &'a mut C,
                     composite: &'a super::super::super::types::public::CopyComposite,
                 ) -> Result<u64, postgres::Error> {
-                    let stmt = client.prepare(self.0)?;
-                    client.execute(&stmt, &[composite])
+                    client.execute(self.0, &[composite])
                 }
             }
             pub fn select_copy() -> SelectCopyStmt {
@@ -1476,18 +1474,16 @@ pub mod queries {
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
-                    let row = self.client.query_one(&stmt, &self.params).await?;
+                    let row = self.client.query_one(self.query, &self.params).await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)
+                        .query_opt(self.query, &self.params)
                         .await?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
@@ -1497,10 +1493,12 @@ pub mod queries {
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.client.prepare(self.query).await?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_async::private::slice_iter(&self.params))
+                        .query_raw(
+                            self.query,
+                            cornucopia_async::private::slice_iter(&self.params),
+                        )
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -1532,18 +1530,16 @@ pub mod queries {
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
-                    let row = self.client.query_one(&stmt, &self.params).await?;
+                    let row = self.client.query_one(self.query, &self.params).await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)
+                        .query_opt(self.query, &self.params)
                         .await?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
@@ -1553,10 +1549,12 @@ pub mod queries {
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.client.prepare(self.query).await?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_async::private::slice_iter(&self.params))
+                        .query_raw(
+                            self.query,
+                            cornucopia_async::private::slice_iter(&self.params),
+                        )
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -1573,8 +1571,7 @@ pub mod queries {
                     client: &'a C,
                     composite: &'a super::super::super::types::public::CloneCompositeBorrowed<'a>,
                 ) -> Result<u64, tokio_postgres::Error> {
-                    let stmt = client.prepare(self.0).await?;
-                    client.execute(&stmt, &[composite]).await
+                    client.execute(self.0, &[composite]).await
                 }
             }
             pub fn select_clone() -> SelectCloneStmt {
@@ -1610,8 +1607,7 @@ pub mod queries {
                     client: &'a C,
                     composite: &'a super::super::super::types::public::CopyComposite,
                 ) -> Result<u64, tokio_postgres::Error> {
-                    let stmt = client.prepare(self.0).await?;
-                    client.execute(&stmt, &[composite]).await
+                    client.execute(self.0, &[composite]).await
                 }
             }
             pub fn select_copy() -> SelectCopyStmt {
@@ -1754,28 +1750,28 @@ pub mod queries {
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
-                    let row = self.client.query_one(&stmt, &self.params)?;
+                    let row = self.client.query_one(self.query, &self.params)?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)?
+                        .query_opt(self.query, &self.params)?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.client.prepare(self.query)?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                        .query_raw(
+                            self.query,
+                            cornucopia_sync::private::slice_iter(&self.params),
+                        )?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -1805,28 +1801,28 @@ pub mod queries {
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
-                    let row = self.client.query_one(&stmt, &self.params)?;
+                    let row = self.client.query_one(self.query, &self.params)?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)?
+                        .query_opt(self.query, &self.params)?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.client.prepare(self.query)?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                        .query_raw(
+                            self.query,
+                            cornucopia_sync::private::slice_iter(&self.params),
+                        )?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -1879,9 +1875,8 @@ pub mod queries {
                         super::super::super::types::public::DomainCompositeParams<'a>,
                     >,
                 ) -> Result<u64, postgres::Error> {
-                    let stmt = client.prepare(self.0)?;
                     client.execute(
-                        &stmt,
+                        self.0,
                         &[
                             &cornucopia_sync::private::Domain(txt),
                             &cornucopia_sync::private::Domain(json),
@@ -1978,18 +1973,16 @@ pub mod queries {
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
-                    let row = self.client.query_one(&stmt, &self.params).await?;
+                    let row = self.client.query_one(self.query, &self.params).await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)
+                        .query_opt(self.query, &self.params)
                         .await?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
@@ -1999,10 +1992,12 @@ pub mod queries {
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.client.prepare(self.query).await?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_async::private::slice_iter(&self.params))
+                        .query_raw(
+                            self.query,
+                            cornucopia_async::private::slice_iter(&self.params),
+                        )
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -2033,18 +2028,16 @@ pub mod queries {
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
-                    let row = self.client.query_one(&stmt, &self.params).await?;
+                    let row = self.client.query_one(self.query, &self.params).await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)
+                        .query_opt(self.query, &self.params)
                         .await?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
@@ -2054,10 +2047,12 @@ pub mod queries {
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.client.prepare(self.query).await?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_async::private::slice_iter(&self.params))
+                        .query_raw(
+                            self.query,
+                            cornucopia_async::private::slice_iter(&self.params),
+                        )
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -2111,10 +2106,9 @@ pub mod queries {
                         super::super::super::types::public::DomainCompositeParams<'a>,
                     >,
                 ) -> Result<u64, tokio_postgres::Error> {
-                    let stmt = client.prepare(self.0).await?;
                     client
                         .execute(
-                            &stmt,
+                            self.0,
                             &[
                                 &cornucopia_async::private::Domain(txt),
                                 &cornucopia_async::private::Domain(json),
@@ -2287,28 +2281,28 @@ pub mod queries {
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
-                    let row = self.client.query_one(&stmt, &self.params)?;
+                    let row = self.client.query_one(self.query, &self.params)?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)?
+                        .query_opt(self.query, &self.params)?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.client.prepare(self.query)?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                        .query_raw(
+                            self.query,
+                            cornucopia_sync::private::slice_iter(&self.params),
+                        )?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -2338,28 +2332,28 @@ pub mod queries {
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
-                    let row = self.client.query_one(&stmt, &self.params)?;
+                    let row = self.client.query_one(self.query, &self.params)?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)?
+                        .query_opt(self.query, &self.params)?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.client.prepare(self.query)?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                        .query_raw(
+                            self.query,
+                            cornucopia_sync::private::slice_iter(&self.params),
+                        )?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -2389,28 +2383,28 @@ pub mod queries {
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
-                    let row = self.client.query_one(&stmt, &self.params)?;
+                    let row = self.client.query_one(self.query, &self.params)?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)?
+                        .query_opt(self.query, &self.params)?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.client.prepare(self.query)?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                        .query_raw(
+                            self.query,
+                            cornucopia_sync::private::slice_iter(&self.params),
+                        )?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -2546,8 +2540,7 @@ pub mod queries {
                         super::super::super::types::public::NamedCompositeWithDot,
                     >,
                 ) -> Result<u64, postgres::Error> {
-                    let stmt = client.prepare(self.0)?;
-                    client.execute(&stmt, &[named, named_with_dot])
+                    client.execute(self.0, &[named, named_with_dot])
                 }
             }
             impl<'a, C: GenericClient>
@@ -2613,18 +2606,16 @@ pub mod queries {
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
-                    let row = self.client.query_one(&stmt, &self.params).await?;
+                    let row = self.client.query_one(self.query, &self.params).await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)
+                        .query_opt(self.query, &self.params)
                         .await?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
@@ -2634,10 +2625,12 @@ pub mod queries {
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.client.prepare(self.query).await?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_async::private::slice_iter(&self.params))
+                        .query_raw(
+                            self.query,
+                            cornucopia_async::private::slice_iter(&self.params),
+                        )
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -2668,18 +2661,16 @@ pub mod queries {
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
-                    let row = self.client.query_one(&stmt, &self.params).await?;
+                    let row = self.client.query_one(self.query, &self.params).await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)
+                        .query_opt(self.query, &self.params)
                         .await?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
@@ -2689,10 +2680,12 @@ pub mod queries {
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.client.prepare(self.query).await?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_async::private::slice_iter(&self.params))
+                        .query_raw(
+                            self.query,
+                            cornucopia_async::private::slice_iter(&self.params),
+                        )
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -2723,18 +2716,16 @@ pub mod queries {
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
-                    let row = self.client.query_one(&stmt, &self.params).await?;
+                    let row = self.client.query_one(self.query, &self.params).await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)
+                        .query_opt(self.query, &self.params)
                         .await?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
@@ -2744,10 +2735,12 @@ pub mod queries {
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.client.prepare(self.query).await?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_async::private::slice_iter(&self.params))
+                        .query_raw(
+                            self.query,
+                            cornucopia_async::private::slice_iter(&self.params),
+                        )
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -2892,8 +2885,7 @@ pub mod queries {
                         super::super::super::types::public::NamedCompositeWithDot,
                     >,
                 ) -> Result<u64, tokio_postgres::Error> {
-                    let stmt = client.prepare(self.0).await?;
-                    client.execute(&stmt, &[named, named_with_dot]).await
+                    client.execute(self.0, &[named, named_with_dot]).await
                 }
             }
             impl<'a, C: GenericClient + Send + Sync>
@@ -3011,28 +3003,28 @@ pub mod queries {
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
-                    let row = self.client.query_one(&stmt, &self.params)?;
+                    let row = self.client.query_one(self.query, &self.params)?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)?
+                        .query_opt(self.query, &self.params)?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.client.prepare(self.query)?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                        .query_raw(
+                            self.query,
+                            cornucopia_sync::private::slice_iter(&self.params),
+                        )?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -3058,8 +3050,7 @@ pub mod queries {
                         super::super::super::types::public::NullityCompositeParams<'a>,
                     >,
                 ) -> Result<u64, postgres::Error> {
-                    let stmt = client.prepare(self.0)?;
-                    client.execute(&stmt, &[texts, name, composite])
+                    client.execute(self.0, &[texts, name, composite])
                 }
             }
             impl<
@@ -3135,18 +3126,16 @@ pub mod queries {
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
-                    let row = self.client.query_one(&stmt, &self.params).await?;
+                    let row = self.client.query_one(self.query, &self.params).await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)
+                        .query_opt(self.query, &self.params)
                         .await?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
@@ -3156,10 +3145,12 @@ pub mod queries {
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.client.prepare(self.query).await?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_async::private::slice_iter(&self.params))
+                        .query_raw(
+                            self.query,
+                            cornucopia_async::private::slice_iter(&self.params),
+                        )
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -3186,8 +3177,7 @@ pub mod queries {
                         super::super::super::types::public::NullityCompositeParams<'a>,
                     >,
                 ) -> Result<u64, tokio_postgres::Error> {
-                    let stmt = client.prepare(self.0).await?;
-                    client.execute(&stmt, &[texts, name, composite]).await
+                    client.execute(self.0, &[texts, name, composite]).await
                 }
             }
             impl<
@@ -3322,28 +3312,28 @@ pub mod queries {
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
-                    let row = self.client.query_one(&stmt, &self.params)?;
+                    let row = self.client.query_one(self.query, &self.params)?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)?
+                        .query_opt(self.query, &self.params)?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.client.prepare(self.query)?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                        .query_raw(
+                            self.query,
+                            cornucopia_sync::private::slice_iter(&self.params),
+                        )?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -3373,28 +3363,28 @@ pub mod queries {
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
-                    let row = self.client.query_one(&stmt, &self.params)?;
+                    let row = self.client.query_one(self.query, &self.params)?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)?
+                        .query_opt(self.query, &self.params)?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.client.prepare(self.query)?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                        .query_raw(
+                            self.query,
+                            cornucopia_sync::private::slice_iter(&self.params),
+                        )?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -3416,8 +3406,7 @@ pub mod queries {
                     author: &'a Option<T1>,
                     name: &'a T2,
                 ) -> Result<u64, postgres::Error> {
-                    let stmt = client.prepare(self.0)?;
-                    client.execute(&stmt, &[author, name])
+                    client.execute(self.0, &[author, name])
                 }
             }
             impl<
@@ -3501,8 +3490,7 @@ pub mod queries {
                     client: &'a mut C,
                     name: &'a T1,
                 ) -> Result<u64, postgres::Error> {
-                    let stmt = client.prepare(self.0)?;
-                    client.execute(&stmt, &[name])
+                    client.execute(self.0, &[name])
                 }
             }
             pub fn params_order() -> ParamsOrderStmt {
@@ -3516,8 +3504,7 @@ pub mod queries {
                     c: &'a i32,
                     a: &'a i32,
                 ) -> Result<u64, postgres::Error> {
-                    let stmt = client.prepare(self.0)?;
-                    client.execute(&stmt, &[c, a])
+                    client.execute(self.0, &[c, a])
                 }
             }
             impl<'a, C: GenericClient>
@@ -3565,18 +3552,16 @@ pub mod queries {
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
-                    let row = self.client.query_one(&stmt, &self.params).await?;
+                    let row = self.client.query_one(self.query, &self.params).await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)
+                        .query_opt(self.query, &self.params)
                         .await?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
@@ -3586,10 +3571,12 @@ pub mod queries {
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.client.prepare(self.query).await?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_async::private::slice_iter(&self.params))
+                        .query_raw(
+                            self.query,
+                            cornucopia_async::private::slice_iter(&self.params),
+                        )
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -3620,18 +3607,16 @@ pub mod queries {
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
-                    let row = self.client.query_one(&stmt, &self.params).await?;
+                    let row = self.client.query_one(self.query, &self.params).await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)
+                        .query_opt(self.query, &self.params)
                         .await?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
@@ -3641,10 +3626,12 @@ pub mod queries {
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.client.prepare(self.query).await?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_async::private::slice_iter(&self.params))
+                        .query_raw(
+                            self.query,
+                            cornucopia_async::private::slice_iter(&self.params),
+                        )
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -3667,8 +3654,7 @@ pub mod queries {
                     author: &'a Option<T1>,
                     name: &'a T2,
                 ) -> Result<u64, tokio_postgres::Error> {
-                    let stmt = client.prepare(self.0).await?;
-                    client.execute(&stmt, &[author, name]).await
+                    client.execute(self.0, &[author, name]).await
                 }
             }
             impl<
@@ -3764,8 +3750,7 @@ pub mod queries {
                     client: &'a C,
                     name: &'a T1,
                 ) -> Result<u64, tokio_postgres::Error> {
-                    let stmt = client.prepare(self.0).await?;
-                    client.execute(&stmt, &[name]).await
+                    client.execute(self.0, &[name]).await
                 }
             }
             pub fn params_order() -> ParamsOrderStmt {
@@ -3779,8 +3764,7 @@ pub mod queries {
                     c: &'a i32,
                     a: &'a i32,
                 ) -> Result<u64, tokio_postgres::Error> {
-                    let stmt = client.prepare(self.0).await?;
-                    client.execute(&stmt, &[c, a]).await
+                    client.execute(self.0, &[c, a]).await
                 }
             }
             impl<'a, C: GenericClient + Send + Sync>
@@ -4532,28 +4516,28 @@ pub mod queries {
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
-                    let row = self.client.query_one(&stmt, &self.params)?;
+                    let row = self.client.query_one(self.query, &self.params)?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)?
+                        .query_opt(self.query, &self.params)?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.client.prepare(self.query)?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                        .query_raw(
+                            self.query,
+                            cornucopia_sync::private::slice_iter(&self.params),
+                        )?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -4583,28 +4567,28 @@ pub mod queries {
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
-                    let row = self.client.query_one(&stmt, &self.params)?;
+                    let row = self.client.query_one(self.query, &self.params)?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)?
+                        .query_opt(self.query, &self.params)?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.client.prepare(self.query)?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                        .query_raw(
+                            self.query,
+                            cornucopia_sync::private::slice_iter(&self.params),
+                        )?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -4634,28 +4618,28 @@ pub mod queries {
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
-                    let row = self.client.query_one(&stmt, &self.params)?;
+                    let row = self.client.query_one(self.query, &self.params)?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)?
+                        .query_opt(self.query, &self.params)?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.client.prepare(self.query)?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                        .query_raw(
+                            self.query,
+                            cornucopia_sync::private::slice_iter(&self.params),
+                        )?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -4685,28 +4669,28 @@ pub mod queries {
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
-                    let row = self.client.query_one(&stmt, &self.params)?;
+                    let row = self.client.query_one(self.query, &self.params)?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)?
+                        .query_opt(self.query, &self.params)?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.client.prepare(self.query)?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                        .query_raw(
+                            self.query,
+                            cornucopia_sync::private::slice_iter(&self.params),
+                        )?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -4739,28 +4723,28 @@ pub mod queries {
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
-                    let row = self.client.query_one(&stmt, &self.params)?;
+                    let row = self.client.query_one(self.query, &self.params)?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)?
+                        .query_opt(self.query, &self.params)?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.client.prepare(self.query)?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                        .query_raw(
+                            self.query,
+                            cornucopia_sync::private::slice_iter(&self.params),
+                        )?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -4934,9 +4918,8 @@ FROM
                     macaddr_: &'a eui48::MacAddress,
                     numeric_: &'a rust_decimal::Decimal,
                 ) -> Result<u64, postgres::Error> {
-                    let stmt = client.prepare(self.0)?;
                     client.execute(
-                        &stmt,
+                        self.0,
                         &[
                             bool_,
                             boolean_,
@@ -5215,9 +5198,8 @@ FROM
                     macaddr_: &'a T32,
                     numeric_: &'a T33,
                 ) -> Result<u64, postgres::Error> {
-                    let stmt = client.prepare(self.0)?;
                     client.execute(
-                        &stmt,
+                        self.0,
                         &[
                             bool_,
                             boolean_,
@@ -5442,8 +5424,7 @@ FROM
                     client: &'a mut C,
                     composite: &'a super::super::super::types::public::NightmareCompositeParams<'a>,
                 ) -> Result<u64, postgres::Error> {
-                    let stmt = client.prepare(self.0)?;
-                    client.execute(&stmt, &[composite])
+                    client.execute(self.0, &[composite])
                 }
             }
         }
@@ -5475,18 +5456,16 @@ FROM
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
-                    let row = self.client.query_one(&stmt, &self.params).await?;
+                    let row = self.client.query_one(self.query, &self.params).await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)
+                        .query_opt(self.query, &self.params)
                         .await?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
@@ -5496,10 +5475,12 @@ FROM
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.client.prepare(self.query).await?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_async::private::slice_iter(&self.params))
+                        .query_raw(
+                            self.query,
+                            cornucopia_async::private::slice_iter(&self.params),
+                        )
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -5530,18 +5511,16 @@ FROM
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
-                    let row = self.client.query_one(&stmt, &self.params).await?;
+                    let row = self.client.query_one(self.query, &self.params).await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)
+                        .query_opt(self.query, &self.params)
                         .await?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
@@ -5551,10 +5530,12 @@ FROM
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.client.prepare(self.query).await?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_async::private::slice_iter(&self.params))
+                        .query_raw(
+                            self.query,
+                            cornucopia_async::private::slice_iter(&self.params),
+                        )
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -5585,18 +5566,16 @@ FROM
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
-                    let row = self.client.query_one(&stmt, &self.params).await?;
+                    let row = self.client.query_one(self.query, &self.params).await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)
+                        .query_opt(self.query, &self.params)
                         .await?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
@@ -5606,10 +5585,12 @@ FROM
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.client.prepare(self.query).await?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_async::private::slice_iter(&self.params))
+                        .query_raw(
+                            self.query,
+                            cornucopia_async::private::slice_iter(&self.params),
+                        )
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -5640,18 +5621,16 @@ FROM
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
-                    let row = self.client.query_one(&stmt, &self.params).await?;
+                    let row = self.client.query_one(self.query, &self.params).await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)
+                        .query_opt(self.query, &self.params)
                         .await?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
@@ -5661,10 +5640,12 @@ FROM
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.client.prepare(self.query).await?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_async::private::slice_iter(&self.params))
+                        .query_raw(
+                            self.query,
+                            cornucopia_async::private::slice_iter(&self.params),
+                        )
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -5698,18 +5679,16 @@ FROM
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
-                    let row = self.client.query_one(&stmt, &self.params).await?;
+                    let row = self.client.query_one(self.query, &self.params).await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)
+                        .query_opt(self.query, &self.params)
                         .await?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
@@ -5719,10 +5698,12 @@ FROM
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.client.prepare(self.query).await?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_async::private::slice_iter(&self.params))
+                        .query_raw(
+                            self.query,
+                            cornucopia_async::private::slice_iter(&self.params),
+                        )
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -5897,10 +5878,9 @@ FROM
                     macaddr_: &'a eui48::MacAddress,
                     numeric_: &'a rust_decimal::Decimal,
                 ) -> Result<u64, tokio_postgres::Error> {
-                    let stmt = client.prepare(self.0).await?;
                     client
                         .execute(
-                            &stmt,
+                            self.0,
                             &[
                                 bool_,
                                 boolean_,
@@ -6192,10 +6172,9 @@ FROM
                     macaddr_: &'a T32,
                     numeric_: &'a T33,
                 ) -> Result<u64, tokio_postgres::Error> {
-                    let stmt = client.prepare(self.0).await?;
                     client
                         .execute(
-                            &stmt,
+                            self.0,
                             &[
                                 bool_,
                                 boolean_,
@@ -6433,8 +6412,7 @@ FROM
                     client: &'a C,
                     composite: &'a super::super::super::types::public::NightmareCompositeParams<'a>,
                 ) -> Result<u64, tokio_postgres::Error> {
-                    let stmt = client.prepare(self.0).await?;
-                    client.execute(&stmt, &[composite]).await
+                    client.execute(self.0, &[composite]).await
                 }
             }
         }
@@ -6573,28 +6551,28 @@ FROM
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
-                    let row = self.client.query_one(&stmt, &self.params)?;
+                    let row = self.client.query_one(self.query, &self.params)?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)?
+                        .query_opt(self.query, &self.params)?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.client.prepare(self.query)?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                        .query_raw(
+                            self.query,
+                            cornucopia_sync::private::slice_iter(&self.params),
+                        )?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -6621,28 +6599,28 @@ FROM
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
-                    let row = self.client.query_one(&stmt, &self.params)?;
+                    let row = self.client.query_one(self.query, &self.params)?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)?
+                        .query_opt(self.query, &self.params)?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.client.prepare(self.query)?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                        .query_raw(
+                            self.query,
+                            cornucopia_sync::private::slice_iter(&self.params),
+                        )?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -6669,28 +6647,28 @@ FROM
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
-                    let row = self.client.query_one(&stmt, &self.params)?;
+                    let row = self.client.query_one(self.query, &self.params)?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)?
+                        .query_opt(self.query, &self.params)?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.client.prepare(self.query)?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                        .query_raw(
+                            self.query,
+                            cornucopia_sync::private::slice_iter(&self.params),
+                        )?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -6720,28 +6698,28 @@ FROM
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
-                    let row = self.client.query_one(&stmt, &self.params)?;
+                    let row = self.client.query_one(self.query, &self.params)?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)?
+                        .query_opt(self.query, &self.params)?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.client.prepare(self.query)?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                        .query_raw(
+                            self.query,
+                            cornucopia_sync::private::slice_iter(&self.params),
+                        )?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -6771,28 +6749,28 @@ FROM
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
-                    let row = self.client.query_one(&stmt, &self.params)?;
+                    let row = self.client.query_one(self.query, &self.params)?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.client.prepare(self.query)?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)?
+                        .query_opt(self.query, &self.params)?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.client.prepare(self.query)?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                        .query_raw(
+                            self.query,
+                            cornucopia_sync::private::slice_iter(&self.params),
+                        )?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -7003,8 +6981,7 @@ FROM
                     r#async: &'a super::super::super::types::public::SyntaxComposite,
                     r#enum: &'a super::super::super::types::public::SyntaxEnum,
                 ) -> Result<u64, postgres::Error> {
-                    let stmt = client.prepare(self.0)?;
-                    client.execute(&stmt, &[r#async, r#enum])
+                    client.execute(self.0, &[r#async, r#enum])
                 }
             }
             impl<'a, C: GenericClient>
@@ -7030,8 +7007,7 @@ FROM
                     r#async: &'a super::super::super::types::public::SyntaxComposite,
                     r#enum: &'a super::super::super::types::public::SyntaxEnum,
                 ) -> Result<u64, postgres::Error> {
-                    let stmt = client.prepare(self.0)?;
-                    client.execute(&stmt, &[r#async, r#enum])
+                    client.execute(self.0, &[r#async, r#enum])
                 }
             }
             impl<'a, C: GenericClient>
@@ -7061,8 +7037,7 @@ FROM
                     r#async: &'a super::super::super::types::public::SyntaxComposite,
                     r#enum: &'a super::super::super::types::public::SyntaxEnum,
                 ) -> Result<u64, postgres::Error> {
-                    let stmt = client.prepare(self.0)?;
-                    client.execute(&stmt, &[r#async, r#enum])
+                    client.execute(self.0, &[r#async, r#enum])
                 }
             }
             impl<'a, C: GenericClient>
@@ -7092,8 +7067,7 @@ FROM
                     r#async: &'a super::super::super::types::public::SyntaxComposite,
                     r#enum: &'a super::super::super::types::public::SyntaxEnum,
                 ) -> Result<u64, postgres::Error> {
-                    let stmt = client.prepare(self.0)?;
-                    client.execute(&stmt, &[r#async, r#enum])
+                    client.execute(self.0, &[r#async, r#enum])
                 }
             }
             impl<'a, C: GenericClient>
@@ -7123,8 +7097,7 @@ FROM
                     r#async: &'a super::super::super::types::public::SyntaxComposite,
                     r#enum: &'a super::super::super::types::public::SyntaxEnum,
                 ) -> Result<u64, postgres::Error> {
-                    let stmt = client.prepare(self.0)?;
-                    client.execute(&stmt, &[r#async, r#enum])
+                    client.execute(self.0, &[r#async, r#enum])
                 }
             }
             impl<'a, C: GenericClient>
@@ -7154,8 +7127,7 @@ FROM
                     r#async: &'a super::super::super::types::public::SyntaxComposite,
                     r#enum: &'a super::super::super::types::public::SyntaxEnum,
                 ) -> Result<u64, postgres::Error> {
-                    let stmt = client.prepare(self.0)?;
-                    client.execute(&stmt, &[r#async, r#enum])
+                    client.execute(self.0, &[r#async, r#enum])
                 }
             }
             impl<'a, C: GenericClient>
@@ -7185,8 +7157,7 @@ FROM
                     r#async: &'a super::super::super::types::public::SyntaxComposite,
                     r#enum: &'a super::super::super::types::public::SyntaxEnum,
                 ) -> Result<u64, postgres::Error> {
-                    let stmt = client.prepare(self.0)?;
-                    client.execute(&stmt, &[r#async, r#enum])
+                    client.execute(self.0, &[r#async, r#enum])
                 }
             }
             impl<'a, C: GenericClient>
@@ -7216,8 +7187,7 @@ FROM
                     r#async: &'a super::super::super::types::public::SyntaxComposite,
                     r#enum: &'a super::super::super::types::public::SyntaxEnum,
                 ) -> Result<u64, postgres::Error> {
-                    let stmt = client.prepare(self.0)?;
-                    client.execute(&stmt, &[r#async, r#enum])
+                    client.execute(self.0, &[r#async, r#enum])
                 }
             }
             impl<'a, C: GenericClient>
@@ -7247,8 +7217,7 @@ FROM
                     r#async: &'a super::super::super::types::public::SyntaxComposite,
                     r#enum: &'a super::super::super::types::public::SyntaxEnum,
                 ) -> Result<u64, postgres::Error> {
-                    let stmt = client.prepare(self.0)?;
-                    client.execute(&stmt, &[r#async, r#enum])
+                    client.execute(self.0, &[r#async, r#enum])
                 }
             }
             impl<'a, C: GenericClient>
@@ -7278,8 +7247,7 @@ FROM
                     r#async: &'a super::super::super::types::public::SyntaxComposite,
                     r#enum: &'a super::super::super::types::public::SyntaxEnum,
                 ) -> Result<u64, postgres::Error> {
-                    let stmt = client.prepare(self.0)?;
-                    client.execute(&stmt, &[r#async, r#enum])
+                    client.execute(self.0, &[r#async, r#enum])
                 }
             }
             impl<'a, C: GenericClient>
@@ -7352,18 +7320,16 @@ FROM
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
-                    let row = self.client.query_one(&stmt, &self.params).await?;
+                    let row = self.client.query_one(self.query, &self.params).await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)
+                        .query_opt(self.query, &self.params)
                         .await?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
@@ -7373,10 +7339,12 @@ FROM
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.client.prepare(self.query).await?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_async::private::slice_iter(&self.params))
+                        .query_raw(
+                            self.query,
+                            cornucopia_async::private::slice_iter(&self.params),
+                        )
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -7404,18 +7372,16 @@ FROM
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
-                    let row = self.client.query_one(&stmt, &self.params).await?;
+                    let row = self.client.query_one(self.query, &self.params).await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)
+                        .query_opt(self.query, &self.params)
                         .await?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
@@ -7425,10 +7391,12 @@ FROM
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.client.prepare(self.query).await?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_async::private::slice_iter(&self.params))
+                        .query_raw(
+                            self.query,
+                            cornucopia_async::private::slice_iter(&self.params),
+                        )
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -7456,18 +7424,16 @@ FROM
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
-                    let row = self.client.query_one(&stmt, &self.params).await?;
+                    let row = self.client.query_one(self.query, &self.params).await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)
+                        .query_opt(self.query, &self.params)
                         .await?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
@@ -7477,10 +7443,12 @@ FROM
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.client.prepare(self.query).await?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_async::private::slice_iter(&self.params))
+                        .query_raw(
+                            self.query,
+                            cornucopia_async::private::slice_iter(&self.params),
+                        )
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -7511,18 +7479,16 @@ FROM
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
-                    let row = self.client.query_one(&stmt, &self.params).await?;
+                    let row = self.client.query_one(self.query, &self.params).await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)
+                        .query_opt(self.query, &self.params)
                         .await?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
@@ -7532,10 +7498,12 @@ FROM
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.client.prepare(self.query).await?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_async::private::slice_iter(&self.params))
+                        .query_raw(
+                            self.query,
+                            cornucopia_async::private::slice_iter(&self.params),
+                        )
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -7566,18 +7534,16 @@ FROM
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
-                    let row = self.client.query_one(&stmt, &self.params).await?;
+                    let row = self.client.query_one(self.query, &self.params).await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.client.prepare(self.query).await?;
                     Ok(self
                         .client
-                        .query_opt(&stmt, &self.params)
+                        .query_opt(self.query, &self.params)
                         .await?
                         .map(|row| (self.mapper)((self.extractor)(&row))))
                 }
@@ -7587,10 +7553,12 @@ FROM
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.client.prepare(self.query).await?;
                     let it = self
                         .client
-                        .query_raw(&stmt, cornucopia_async::private::slice_iter(&self.params))
+                        .query_raw(
+                            self.query,
+                            cornucopia_async::private::slice_iter(&self.params),
+                        )
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -7802,8 +7770,7 @@ FROM
                     r#async: &'a super::super::super::types::public::SyntaxComposite,
                     r#enum: &'a super::super::super::types::public::SyntaxEnum,
                 ) -> Result<u64, tokio_postgres::Error> {
-                    let stmt = client.prepare(self.0).await?;
-                    client.execute(&stmt, &[r#async, r#enum]).await
+                    client.execute(self.0, &[r#async, r#enum]).await
                 }
             }
             impl<'a, C: GenericClient + Send + Sync>
@@ -7845,8 +7812,7 @@ FROM
                     r#async: &'a super::super::super::types::public::SyntaxComposite,
                     r#enum: &'a super::super::super::types::public::SyntaxEnum,
                 ) -> Result<u64, tokio_postgres::Error> {
-                    let stmt = client.prepare(self.0).await?;
-                    client.execute(&stmt, &[r#async, r#enum]).await
+                    client.execute(self.0, &[r#async, r#enum]).await
                 }
             }
             impl<'a, C: GenericClient + Send + Sync>
@@ -7888,8 +7854,7 @@ FROM
                     r#async: &'a super::super::super::types::public::SyntaxComposite,
                     r#enum: &'a super::super::super::types::public::SyntaxEnum,
                 ) -> Result<u64, tokio_postgres::Error> {
-                    let stmt = client.prepare(self.0).await?;
-                    client.execute(&stmt, &[r#async, r#enum]).await
+                    client.execute(self.0, &[r#async, r#enum]).await
                 }
             }
             impl<'a, C: GenericClient + Send + Sync>
@@ -7931,8 +7896,7 @@ FROM
                     r#async: &'a super::super::super::types::public::SyntaxComposite,
                     r#enum: &'a super::super::super::types::public::SyntaxEnum,
                 ) -> Result<u64, tokio_postgres::Error> {
-                    let stmt = client.prepare(self.0).await?;
-                    client.execute(&stmt, &[r#async, r#enum]).await
+                    client.execute(self.0, &[r#async, r#enum]).await
                 }
             }
             impl<'a, C: GenericClient + Send + Sync>
@@ -7974,8 +7938,7 @@ FROM
                     r#async: &'a super::super::super::types::public::SyntaxComposite,
                     r#enum: &'a super::super::super::types::public::SyntaxEnum,
                 ) -> Result<u64, tokio_postgres::Error> {
-                    let stmt = client.prepare(self.0).await?;
-                    client.execute(&stmt, &[r#async, r#enum]).await
+                    client.execute(self.0, &[r#async, r#enum]).await
                 }
             }
             impl<'a, C: GenericClient + Send + Sync>
@@ -8017,8 +7980,7 @@ FROM
                     r#async: &'a super::super::super::types::public::SyntaxComposite,
                     r#enum: &'a super::super::super::types::public::SyntaxEnum,
                 ) -> Result<u64, tokio_postgres::Error> {
-                    let stmt = client.prepare(self.0).await?;
-                    client.execute(&stmt, &[r#async, r#enum]).await
+                    client.execute(self.0, &[r#async, r#enum]).await
                 }
             }
             impl<'a, C: GenericClient + Send + Sync>
@@ -8060,8 +8022,7 @@ FROM
                     r#async: &'a super::super::super::types::public::SyntaxComposite,
                     r#enum: &'a super::super::super::types::public::SyntaxEnum,
                 ) -> Result<u64, tokio_postgres::Error> {
-                    let stmt = client.prepare(self.0).await?;
-                    client.execute(&stmt, &[r#async, r#enum]).await
+                    client.execute(self.0, &[r#async, r#enum]).await
                 }
             }
             impl<'a, C: GenericClient + Send + Sync>
@@ -8103,8 +8064,7 @@ FROM
                     r#async: &'a super::super::super::types::public::SyntaxComposite,
                     r#enum: &'a super::super::super::types::public::SyntaxEnum,
                 ) -> Result<u64, tokio_postgres::Error> {
-                    let stmt = client.prepare(self.0).await?;
-                    client.execute(&stmt, &[r#async, r#enum]).await
+                    client.execute(self.0, &[r#async, r#enum]).await
                 }
             }
             impl<'a, C: GenericClient + Send + Sync>
@@ -8146,8 +8106,7 @@ FROM
                     r#async: &'a super::super::super::types::public::SyntaxComposite,
                     r#enum: &'a super::super::super::types::public::SyntaxEnum,
                 ) -> Result<u64, tokio_postgres::Error> {
-                    let stmt = client.prepare(self.0).await?;
-                    client.execute(&stmt, &[r#async, r#enum]).await
+                    client.execute(self.0, &[r#async, r#enum]).await
                 }
             }
             impl<'a, C: GenericClient + Send + Sync>
@@ -8189,8 +8148,7 @@ FROM
                     r#async: &'a super::super::super::types::public::SyntaxComposite,
                     r#enum: &'a super::super::super::types::public::SyntaxEnum,
                 ) -> Result<u64, tokio_postgres::Error> {
-                    let stmt = client.prepare(self.0).await?;
-                    client.execute(&stmt, &[r#async, r#enum]).await
+                    client.execute(self.0, &[r#async, r#enum]).await
                 }
             }
             impl<'a, C: GenericClient + Send + Sync>

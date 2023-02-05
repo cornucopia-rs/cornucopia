@@ -441,8 +441,7 @@ fn gen_row_query(w: &mut impl Write, row: &PreparedItem, ctx: &GenCtx) {
         }
 
         pub $fn_async fn one(self) -> Result<T, $backend::Error> {
-            let stmt = self.client.prepare(self.query)$fn_await?;
-            let row = self.client.query_one(&stmt, &self.params)$fn_await?;
+            let row = self.client.query_one(self.query, &self.params)$fn_await?;
             Ok((self.mapper)((self.extractor)(&row)))
         }
 
@@ -451,10 +450,9 @@ fn gen_row_query(w: &mut impl Write, row: &PreparedItem, ctx: &GenCtx) {
         }
 
         pub $fn_async fn opt(self) -> Result<Option<T>, $backend::Error> {
-            let stmt = self.client.prepare(self.query)$fn_await?;
             Ok(self
                 .client
-                .query_opt(&stmt, &self.params)
+                .query_opt(self.query, &self.params)
                 $fn_await?
                 .map(|row| (self.mapper)((self.extractor)(&row))))
         }
@@ -462,10 +460,9 @@ fn gen_row_query(w: &mut impl Write, row: &PreparedItem, ctx: &GenCtx) {
         pub $fn_async fn iter(
             self,
         ) -> Result<impl $raw_type<Item = Result<T, $backend::Error>> + 'a, $backend::Error> {
-            let stmt = self.client.prepare(self.query)$fn_await?;
             let it = self
                 .client
-                .query_raw(&stmt, $client::private::slice_iter(&self.params))
+                .query_raw(self.query, $client::private::slice_iter(&self.params))
                 $fn_await?
                 $raw_pre
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
@@ -565,8 +562,7 @@ fn gen_query_fn<W: Write>(w: &mut W, module: &PreparedModule, query: &PreparedQu
             });
             code!(w =>
                 pub $fn_async fn bind<'a, C: GenericClient, $($traits_idx: $traits,)>(&'a self, client: &'a $client_mut C, $($params_name: &'a $params_ty,)) -> Result<u64, $backend::Error> {
-                    let stmt = client.prepare(self.0)$fn_await?;
-                    client.execute(&stmt, &[ $($params_wrap,) ])$fn_await
+                    client.execute(self.0, &[ $($params_wrap,) ])$fn_await
                 }
             );
         }
