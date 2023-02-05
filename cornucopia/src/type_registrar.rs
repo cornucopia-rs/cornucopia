@@ -242,7 +242,7 @@ impl CornucopiaType {
             } => {
                 if !is_copy && !is_params {
                     let path = custom_ty_path(pg_ty.schema(), struct_name, ctx);
-                    format!("{}Params<'a>", path)
+                    format!("{path}Params<'a>")
                 } else {
                     self.brw_ty(is_inner_nullable, true, ctx)
                 }
@@ -293,7 +293,7 @@ impl CornucopiaType {
                 if *is_copy {
                     path
                 } else {
-                    format!("{}Borrowed<{lifetime}>", path)
+                    format!("{path}Borrowed<{lifetime}>")
                 }
             }
         }
@@ -302,14 +302,11 @@ impl CornucopiaType {
 
 pub fn custom_ty_path(schema: &str, struct_name: &str, ctx: &GenCtx) -> String {
     if ctx.depth == 0 {
-        format!("{}::{}", schema, struct_name)
+        format!("{schema}::{struct_name}")
     } else if ctx.depth == 1 {
-        format!("super::{}::{}", schema, struct_name)
+        format!("super::{schema}::{struct_name}")
     } else {
-        ctx.path(
-            ctx.depth,
-            format_args!("types::{}::{}", schema, struct_name),
-        )
+        ctx.path(ctx.depth, format_args!("types::{schema}::{struct_name}"))
     }
 }
 
