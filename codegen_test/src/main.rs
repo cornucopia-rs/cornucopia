@@ -80,18 +80,18 @@ pub fn moving<T>(_item: T) {}
 pub fn test_params(client: &mut Client) {
     assert_eq!(
         1,
-        insert_book()
-            .bind(client, &None::<&str>, &"Necronomicon")
+        insert_book(client)
+            .bind(&None::<&str>, &"Necronomicon")
             .unwrap()
     );
     assert_eq!(
         1,
-        insert_book()
-            .bind(client, &Some("Marcel Proust"), &"In Search of Lost Time")
+        insert_book(client)
+            .bind(&Some("Marcel Proust"), &"In Search of Lost Time")
             .unwrap()
     );
     assert_eq!(
-        select_book().bind(client).all().unwrap(),
+        select_book(client).bind().all().unwrap(),
         &[
             SelectBook {
                 author: None,
@@ -103,66 +103,61 @@ pub fn test_params(client: &mut Client) {
             }
         ]
     );
-    params_use_twice().bind(client, &"name").unwrap();
+    params_use_twice(client).bind(&"name").unwrap();
 }
 
 pub fn test_trait_sql(client: &mut Client) {
     let str = "hello world";
-    insert_book().bind(client, &Some(str), &str).unwrap();
-    find_books().bind(client, &[str].as_slice()).all().unwrap();
+    insert_book(client).bind(&Some(str), &str).unwrap();
+    find_books(client).bind(&[str].as_slice()).all().unwrap();
 
     let string = str.to_string();
-    insert_book()
-        .bind(client, &Some(string.clone()), &string)
+    insert_book(client)
+        .bind(&Some(string.clone()), &string)
         .unwrap();
-    find_books()
-        .bind(client, &vec![string.clone()])
+    find_books(client)
+        .bind(&vec![string.clone()])
         .all()
         .unwrap();
 
-    let boxed = string.clone().into_boxed_str();
-    insert_book()
-        .bind(client, &Some(boxed.clone()), &boxed)
+    let boxed = string.into_boxed_str();
+    insert_book(client)
+        .bind(&Some(boxed.clone()), &boxed)
         .unwrap();
-    find_books().bind(client, &vec![boxed]).all().unwrap();
+    find_books(client).bind(&vec![boxed]).all().unwrap();
 
     let cow = Cow::Borrowed(str);
-    insert_book()
-        .bind(client, &Some(cow.clone()), &cow)
-        .unwrap();
-    find_books().bind(client, &vec![cow]).all().unwrap();
+    insert_book(client).bind(&Some(cow.clone()), &cow).unwrap();
+    find_books(client).bind(&vec![cow]).all().unwrap();
 
     let map: HashMap<&str, &str> =
         HashMap::from_iter([("one", "1"), ("two", "2"), ("three", "3")].into_iter());
 
     // Old way with allocation
     let vec: Vec<_> = map.values().collect();
-    find_books().bind(client, &vec.as_slice()).all().unwrap();
+    find_books(client).bind(&vec.as_slice()).all().unwrap();
     // A little more ergonomic
-    find_books().bind(client, &vec).all().unwrap();
+    find_books(client).bind(&vec).all().unwrap();
     // Zero allocation
-    find_books()
-        .bind(client, &IterSql(|| map.values()))
+    find_books(client)
+        .bind(&IterSql(|| map.values()))
         .all()
         .unwrap();
 }
 
 pub fn test_nullity(client: &mut Client) {
-    new_nullity()
-        .params(
-            client,
-            &NullityParams {
-                composite: Some(NullityCompositeParams {
-                    jsons: Some(&[None]),
-                    id: 42,
-                }),
-                name: "James Bond",
-                texts: [Some("Hello"), Some("world"), None].as_slice(),
-            },
-        )
+    new_nullity(client)
+        .params(&NullityParams {
+            composite: Some(NullityCompositeParams {
+                jsons: Some(&[None]),
+                id: 42,
+            }),
+            name: "James Bond",
+            texts: [Some("Hello"), Some("world"), None].as_slice(),
+        })
         .unwrap();
     assert_eq!(
-        nullity().bind(client).one().unwrap(),
+        nullity(client).bind().one().unwrap(),
         Nullity {
             composite: Some(NullityComposite {
                 jsons: Some(vec![None]),
@@ -175,35 +170,29 @@ pub fn test_nullity(client: &mut Client) {
 }
 
 pub fn test_named(client: &mut Client) {
-    let hidden_id = new_named_hidden()
-        .params(
-            client,
-            &NamedParams {
-                name: "secret",
-                price: Some(42.0),
-            },
-        )
+    let hidden_id = new_named_hidden(client)
+        .params(&NamedParams {
+            name: "secret",
+            price: Some(42.0),
+        })
         .one()
         .unwrap()
         .id;
-    let visible_id = new_named_visible()
-        .params(
-            client,
-            &NamedParams {
-                name: "stuff",
-                price: Some(84.0),
-            },
-        )
+    let visible_id = new_named_visible(client)
+        .params(&NamedParams {
+            name: "stuff",
+            price: Some(84.0),
+        })
         .one()
         .unwrap()
         .id;
-    let last_id = new_named_visible()
-        .bind(client, &"can't by me", &None)
+    let last_id = new_named_visible(client)
+        .bind(&"can't by me", &None)
         .one()
         .unwrap()
         .id;
     assert_eq!(
-        named().bind(client).all().unwrap(),
+        named(client).bind().all().unwrap(),
         &[
             Named {
                 id: hidden_id,
@@ -226,7 +215,7 @@ pub fn test_named(client: &mut Client) {
         ]
     );
     assert_eq!(
-        named_by_id().bind(client, &hidden_id).one().unwrap(),
+        named_by_id(client).bind(&hidden_id).one().unwrap(),
         Named {
             id: hidden_id,
             name: "secret".into(),
@@ -235,7 +224,7 @@ pub fn test_named(client: &mut Client) {
         }
     );
     assert_eq!(
-        named_by_id().bind(client, &visible_id).one().unwrap(),
+        named_by_id(client).bind(&visible_id).one().unwrap(),
         Named {
             id: visible_id,
             name: "stuff".into(),
@@ -244,40 +233,34 @@ pub fn test_named(client: &mut Client) {
         }
     );
     assert_eq!(
-        named().bind(client).map(|it| it.id).all().unwrap(),
+        named(client).bind().map(|it| it.id).all().unwrap(),
         &[hidden_id, visible_id, last_id]
     );
 
-    new_named_complex()
-        .params(
-            client,
-            &NamedComplexParams {
-                named: NamedCompositeBorrowed {
-                    wow: Some("Hello world"),
-                    such_cool: None,
-                },
-                named_with_dot: Some(NamedCompositeWithDot {
-                    this_is_inconceivable: Some(EnumWithDot::variant_with_dot),
-                }),
+    new_named_complex(client)
+        .params(&NamedComplexParams {
+            named: NamedCompositeBorrowed {
+                wow: Some("Hello world"),
+                such_cool: None,
             },
-        )
+            named_with_dot: Some(NamedCompositeWithDot {
+                this_is_inconceivable: Some(EnumWithDot::variant_with_dot),
+            }),
+        })
         .unwrap();
 
-    new_named_complex()
-        .params(
-            client,
-            &NamedComplexParams {
-                named: NamedCompositeBorrowed {
-                    wow: Some("Hello world, again"),
-                    such_cool: None,
-                },
-                named_with_dot: None,
+    new_named_complex(client)
+        .params(&NamedComplexParams {
+            named: NamedCompositeBorrowed {
+                wow: Some("Hello world, again"),
+                such_cool: None,
             },
-        )
+            named_with_dot: None,
+        })
         .unwrap();
 
     assert_eq!(
-        named_complex().bind(client).all().unwrap(),
+        named_complex(client).bind().all().unwrap(),
         vec![
             NamedComplex {
                 named: NamedComposite {
@@ -307,8 +290,8 @@ pub fn test_copy(client: &mut Client) {
         second: 4.2,
     };
     moving(copy_params); // Ignore if copied
-    insert_copy().bind(client, &copy_params).unwrap();
-    let copy_row = select_copy().bind(client).one().unwrap();
+    insert_copy(client).bind(&copy_params).unwrap();
+    let copy_row = select_copy(client).bind().one().unwrap();
     moving(copy_row); // Ignore if copied
     moving(copy_row);
 
@@ -317,8 +300,8 @@ pub fn test_copy(client: &mut Client) {
         first: 42,
         second: "Hello world",
     };
-    insert_clone().bind(client, &clone_params).unwrap();
-    select_copy().bind(client).one().unwrap();
+    insert_clone(client).bind(&clone_params).unwrap();
+    select_copy(client).bind().one().unwrap();
 }
 
 // Test domain erasing
@@ -345,11 +328,8 @@ pub fn test_domain(client: &mut Client) {
         nb: 42,
         txt: "Hello world".to_string(),
     };
-    assert_eq!(
-        1,
-        insert_nightmare_domain().params(client, &params).unwrap()
-    );
-    let actual = select_nightmare_domain().bind(client).one().unwrap();
+    assert_eq!(1, insert_nightmare_domain(client).params(&params).unwrap());
+    let actual = select_nightmare_domain(client).bind().one().unwrap();
     assert_eq!(expected, actual);
     let expected = SelectNightmareDomainNull {
         arr: Some(vec![Some(json.clone())]),
@@ -363,7 +343,7 @@ pub fn test_domain(client: &mut Client) {
             txt: "Hello world".to_string(),
         }),
     };
-    let actual = select_nightmare_domain_null().bind(client).one().unwrap();
+    let actual = select_nightmare_domain_null(client).bind().one().unwrap();
     assert_eq!(expected, actual);
 }
 
@@ -453,8 +433,8 @@ pub fn test_stress(client: &mut Client) {
         varchar_: &expected.varchar_,
         numeric_: Decimal::new(202, 2),
     };
-    assert_eq!(1, insert_everything().params(client, &params).unwrap());
-    let actual = select_everything().bind(client).one().unwrap();
+    assert_eq!(1, insert_everything(client).params(&params).unwrap());
+    let actual = select_everything(client).bind().one().unwrap();
     assert_eq!(expected, actual);
 
     // Every supported array type
@@ -530,11 +510,8 @@ pub fn test_stress(client: &mut Client) {
         varchar_: txt,
         numeric_: &expected.numeric_,
     };
-    assert_eq!(
-        1,
-        insert_everything_array().params(client, &params).unwrap()
-    );
-    let actual = select_everything_array().bind(client).one().unwrap();
+    assert_eq!(1, insert_everything_array(client).params(&params).unwrap());
+    let actual = select_everything_array(client).bind().one().unwrap();
     assert_eq!(expected, actual);
 
     // Complex mix of enum, domain and composite types
@@ -557,8 +534,8 @@ pub fn test_stress(client: &mut Client) {
         domain: "Hello",
     };
 
-    assert_eq!(1, insert_nightmare().bind(client, &params).unwrap());
-    let actual = select_nightmare().bind(client).one().unwrap();
+    assert_eq!(1, insert_nightmare(client).bind(&params).unwrap());
+    let actual = select_nightmare(client).bind().one().unwrap();
     assert_eq!(expected, actual);
 }
 
@@ -568,6 +545,6 @@ pub fn test_keyword_escaping(client: &mut Client) {
         r#async: SyntaxComposite { r#async: 34 },
         r#enum: SyntaxEnum::r#box,
     };
-    tricky_sql10().params(client, &params).unwrap();
-    r#typeof().bind(client).all().unwrap();
+    tricky_sql10(client).params(&params).unwrap();
+    r#typeof(client).bind().all().unwrap();
 }

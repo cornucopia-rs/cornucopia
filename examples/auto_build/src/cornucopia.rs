@@ -66,24 +66,24 @@ pub mod queries {
                 Ok(it)
             }
         }
-        pub fn example_query() -> ExampleQueryStmt {
-            ExampleQueryStmt(cornucopia_async::private::Stmt::new(
-                "SELECT
+        pub fn example_query<'a, C: GenericClient>(client: &'a C) -> ExampleQueryStmt<'a, C> {
+            ExampleQueryStmt(
+                client,
+                cornucopia_async::private::Stmt::new(
+                    "SELECT
     *
 FROM
     example_table",
-            ))
+                ),
+            )
         }
-        pub struct ExampleQueryStmt(cornucopia_async::private::Stmt);
-        impl ExampleQueryStmt {
-            pub fn bind<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a C,
-            ) -> StringQuery<'a, C, String, 0> {
+        pub struct ExampleQueryStmt<'a, C: GenericClient>(&'a C, cornucopia_async::private::Stmt);
+        impl<'a, C: GenericClient> ExampleQueryStmt<'a, C> {
+            pub fn bind(&'a mut self) -> StringQuery<'a, C, String, 0> {
                 StringQuery {
-                    client,
+                    client: self.0,
                     params: [],
-                    stmt: &mut self.0,
+                    stmt: &mut self.1,
                     extractor: |row| row.get(0),
                     mapper: |it| it.into(),
                 }

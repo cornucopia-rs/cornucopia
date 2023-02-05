@@ -547,11 +547,11 @@ fn gen_query_fn<W: Write>(w: &mut W, module: &PreparedModule, query: &PreparedQu
                 )
             };
             code!(w =>
-                pub fn bind<'a, C: GenericClient,$($traits_idx: $traits,)>(&'a mut self, client: &'a $client_mut C, $($params_name: &'a $params_ty,) ) -> ${row_name}Query<'a,C, $row_struct_name, $nb_params> {
+                pub fn bind<$($traits_idx: $traits,)>(&'a mut self, $($params_name: &'a $params_ty,) ) -> ${row_name}Query<'a,C, $row_struct_name, $nb_params> {
                     ${row_name}Query {
-                        client,
+                        client: self.0,
                         params: [$($params_name,)],
-                        stmt: &mut self.0,
+                        stmt: &mut self.1,
                         extractor: |row| { $!extractor },
                         mapper: |it| { $mapper },
                     }
@@ -564,9 +564,9 @@ fn gen_query_fn<W: Write>(w: &mut W, module: &PreparedModule, query: &PreparedQu
                 p.ty.sql_wrapped(&p.ident.rs, ctx)
             });
             code!(w =>
-                pub $fn_async fn bind<'a, C: GenericClient,$($traits_idx: $traits,)>(&'a mut self, client: &'a $client_mut C, $($params_name: &'a $params_ty,)) -> Result<u64, $backend::Error> {
-                    let stmt = self.0.prepare(client)$fn_await?;
-                    client.execute(stmt, &[ $($params_wrap,) ])$fn_await
+                pub $fn_async fn bind<$($traits_idx: $traits,)>(&'a mut self, $($params_name: &'a $params_ty,)) -> Result<u64, $backend::Error> {
+                    let stmt = self.1.prepare(self.0)$fn_await?;
+                    self.0.execute(stmt, &[ $($params_wrap,) ])$fn_await
                 }
             );
         }
@@ -576,11 +576,11 @@ fn gen_query_fn<W: Write>(w: &mut W, module: &PreparedModule, query: &PreparedQu
         let sql = sql.replace('"', "\\\""); // Rust string format escaping
         let name = &ident.rs;
         code!(w =>
-            pub fn $name() -> ${struct_name}Stmt {
-                ${struct_name}Stmt($client::private::Stmt::new("$sql"))
+            pub fn $name<'a, C: GenericClient>(client: &'a$client_mut C) -> ${struct_name}Stmt<'a, C> {
+                ${struct_name}Stmt(client, $client::private::Stmt::new("$sql"))
             }
-            pub struct ${struct_name}Stmt($client::private::Stmt);
-            impl ${struct_name}Stmt {
+            pub struct ${struct_name}Stmt<'a, C: GenericClient>(&'a$client_mut C, $client::private::Stmt);
+            impl <'a, C: GenericClient> ${struct_name}Stmt<'a, C> {
                 $!lazy_impl
             }
         );
@@ -605,9 +605,9 @@ fn gen_query_fn<W: Write>(w: &mut W, module: &PreparedModule, query: &PreparedQu
                 let name = &module.rows.get_index(*idx).unwrap().1.name;
                 let nb_params = param_field.len();
                 code!(w =>
-                    impl <'a, C: GenericClient,$($traits_idx: $traits,)> $client::Params<'a, $param_path<$lifetime $($traits_idx,)>, ${name}Query<'a, C, $query_row_struct, $nb_params>, C> for ${struct_name}Stmt {
-                        fn params(&'a mut self, client: &'a $client_mut C, params: &'a $param_path<$lifetime $($traits_idx,)>) -> ${name}Query<'a, C, $query_row_struct, $nb_params> {
-                            self.bind(client, $(&params.$params_name,))
+                    impl <'a, C: GenericClient,$($traits_idx: $traits,)> $client::Params<'a, $param_path<$lifetime $($traits_idx,)>, ${name}Query<'a, C, $query_row_struct, $nb_params>> for ${struct_name}Stmt<'a, C> {
+                        fn params(&'a mut self, params: &'a $param_path<$lifetime $($traits_idx,)>) -> ${name}Query<'a, C, $query_row_struct, $nb_params> {
+                            self.bind($(&params.$params_name,))
                         }
                     }
                 );
@@ -624,9 +624,9 @@ fn gen_query_fn<W: Write>(w: &mut W, module: &PreparedModule, query: &PreparedQu
                     ("", "Result", "", "self", "")
                 };
                 code!(w =>
-                    impl <'a, C: GenericClient $send_sync, $($traits_idx: $traits,)> $client::Params<'a, $param_path<$lifetime $($traits_idx,)>, $pre_ty<u64, $backend::Error>$post_ty_lf, C> for ${struct_name}Stmt {
-                        fn params(&'a mut self, client: &'a $client_mut C, params: &'a $param_path<$lifetime $($traits_idx,)>) -> $pre_ty<u64, $backend::Error>$post_ty_lf {
-                            $pre.bind(client, $(&params.$params_name,))$post
+                    impl <'a, C: GenericClient $send_sync, $($traits_idx: $traits,)> $client::Params<'a, $param_path<$lifetime $($traits_idx,)>, $pre_ty<u64, $backend::Error>$post_ty_lf> for ${struct_name}Stmt<'a, C> {
+                        fn params(&'a mut self, params: &'a $param_path<$lifetime $($traits_idx,)>) -> $pre_ty<u64, $backend::Error>$post_ty_lf {
+                            $pre.bind($(&params.$params_name,))$post
                         }
                     }
                 );

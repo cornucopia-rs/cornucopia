@@ -210,21 +210,23 @@ pub mod types {
 pub mod queries {
     pub mod module_1 {
         use postgres::{fallible_iterator::FallibleIterator, GenericClient};
-        pub fn insert_book() -> InsertBookStmt {
-            InsertBookStmt(cornucopia_sync::private::Stmt::new(
-                "INSERT INTO Book (title)
+        pub fn insert_book<'a, C: GenericClient>(client: &'a mut C) -> InsertBookStmt<'a, C> {
+            InsertBookStmt(
+                client,
+                cornucopia_sync::private::Stmt::new(
+                    "INSERT INTO Book (title)
   VALUES ($1)",
-            ))
+                ),
+            )
         }
-        pub struct InsertBookStmt(cornucopia_sync::private::Stmt);
-        impl InsertBookStmt {
-            pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::StringSql>(
+        pub struct InsertBookStmt<'a, C: GenericClient>(&'a mut C, cornucopia_sync::private::Stmt);
+        impl<'a, C: GenericClient> InsertBookStmt<'a, C> {
+            pub fn bind<T1: cornucopia_sync::StringSql>(
                 &'a mut self,
-                client: &'a mut C,
                 title: &'a T1,
             ) -> Result<u64, postgres::Error> {
-                let stmt = self.0.prepare(client)?;
-                client.execute(stmt, &[title])
+                let stmt = self.1.prepare(self.0)?;
+                self.0.execute(stmt, &[title])
             }
         }
     }
@@ -555,24 +557,24 @@ pub mod queries {
                 Ok(it)
             }
         }
-        pub fn authors() -> AuthorsStmt {
-            AuthorsStmt(cornucopia_sync::private::Stmt::new(
-                "SELECT
+        pub fn authors<'a, C: GenericClient>(client: &'a mut C) -> AuthorsStmt<'a, C> {
+            AuthorsStmt(
+                client,
+                cornucopia_sync::private::Stmt::new(
+                    "SELECT
     *
 FROM
     Author",
-            ))
+                ),
+            )
         }
-        pub struct AuthorsStmt(cornucopia_sync::private::Stmt);
-        impl AuthorsStmt {
-            pub fn bind<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-            ) -> AuthorsQuery<'a, C, Authors, 0> {
+        pub struct AuthorsStmt<'a, C: GenericClient>(&'a mut C, cornucopia_sync::private::Stmt);
+        impl<'a, C: GenericClient> AuthorsStmt<'a, C> {
+            pub fn bind(&'a mut self) -> AuthorsQuery<'a, C, Authors, 0> {
                 AuthorsQuery {
-                    client,
+                    client: self.0,
                     params: [],
-                    stmt: &mut self.0,
+                    stmt: &mut self.1,
                     extractor: |row| AuthorsBorrowed {
                         id: row.get(0),
                         name: row.get(1),
@@ -582,58 +584,66 @@ FROM
                 }
             }
         }
-        pub fn books() -> BooksStmt {
-            BooksStmt(cornucopia_sync::private::Stmt::new(
-                "SELECT
+        pub fn books<'a, C: GenericClient>(client: &'a mut C) -> BooksStmt<'a, C> {
+            BooksStmt(
+                client,
+                cornucopia_sync::private::Stmt::new(
+                    "SELECT
     Title
 FROM
     Book",
-            ))
+                ),
+            )
         }
-        pub struct BooksStmt(cornucopia_sync::private::Stmt);
-        impl BooksStmt {
-            pub fn bind<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-            ) -> StringQuery<'a, C, String, 0> {
+        pub struct BooksStmt<'a, C: GenericClient>(&'a mut C, cornucopia_sync::private::Stmt);
+        impl<'a, C: GenericClient> BooksStmt<'a, C> {
+            pub fn bind(&'a mut self) -> StringQuery<'a, C, String, 0> {
                 StringQuery {
-                    client,
+                    client: self.0,
                     params: [],
-                    stmt: &mut self.0,
+                    stmt: &mut self.1,
                     extractor: |row| row.get(0),
                     mapper: |it| it.into(),
                 }
             }
         }
-        pub fn author_name_by_id() -> AuthorNameByIdStmt {
-            AuthorNameByIdStmt(cornucopia_sync::private::Stmt::new(
-                "SELECT
+        pub fn author_name_by_id<'a, C: GenericClient>(
+            client: &'a mut C,
+        ) -> AuthorNameByIdStmt<'a, C> {
+            AuthorNameByIdStmt(
+                client,
+                cornucopia_sync::private::Stmt::new(
+                    "SELECT
     Author.Name
 FROM
     Author
 WHERE
     Author.Id = $1",
-            ))
+                ),
+            )
         }
-        pub struct AuthorNameByIdStmt(cornucopia_sync::private::Stmt);
-        impl AuthorNameByIdStmt {
-            pub fn bind<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-                id: &'a i32,
-            ) -> StringQuery<'a, C, String, 1> {
+        pub struct AuthorNameByIdStmt<'a, C: GenericClient>(
+            &'a mut C,
+            cornucopia_sync::private::Stmt,
+        );
+        impl<'a, C: GenericClient> AuthorNameByIdStmt<'a, C> {
+            pub fn bind(&'a mut self, id: &'a i32) -> StringQuery<'a, C, String, 1> {
                 StringQuery {
-                    client,
+                    client: self.0,
                     params: [id],
-                    stmt: &mut self.0,
+                    stmt: &mut self.1,
                     extractor: |row| row.get(0),
                     mapper: |it| it.into(),
                 }
             }
         }
-        pub fn author_name_starting_with() -> AuthorNameStartingWithStmt {
-            AuthorNameStartingWithStmt(cornucopia_sync::private::Stmt::new(
-                "SELECT
+        pub fn author_name_starting_with<'a, C: GenericClient>(
+            client: &'a mut C,
+        ) -> AuthorNameStartingWithStmt<'a, C> {
+            AuthorNameStartingWithStmt(
+                client,
+                cornucopia_sync::private::Stmt::new(
+                    "SELECT
     BookAuthor.AuthorId,
     Author.Name,
     BookAuthor.BookId,
@@ -644,19 +654,22 @@ FROM
     INNER JOIN Book ON Book.Id = BookAuthor.BookId
 WHERE
     Author.Name LIKE CONCAT($1::text, '%')",
-            ))
+                ),
+            )
         }
-        pub struct AuthorNameStartingWithStmt(cornucopia_sync::private::Stmt);
-        impl AuthorNameStartingWithStmt {
-            pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::StringSql>(
+        pub struct AuthorNameStartingWithStmt<'a, C: GenericClient>(
+            &'a mut C,
+            cornucopia_sync::private::Stmt,
+        );
+        impl<'a, C: GenericClient> AuthorNameStartingWithStmt<'a, C> {
+            pub fn bind<T1: cornucopia_sync::StringSql>(
                 &'a mut self,
-                client: &'a mut C,
                 start_str: &'a T1,
             ) -> AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith, 1> {
                 AuthorNameStartingWithQuery {
-                    client,
+                    client: self.0,
                     params: [start_str],
-                    stmt: &mut self.0,
+                    stmt: &mut self.1,
                     extractor: |row| AuthorNameStartingWithBorrowed {
                         authorid: row.get(0),
                         name: row.get(1),
@@ -672,63 +685,73 @@ WHERE
                 'a,
                 AuthorNameStartingWithParams<T1>,
                 AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith, 1>,
-                C,
-            > for AuthorNameStartingWithStmt
+            > for AuthorNameStartingWithStmt<'a, C>
         {
             fn params(
                 &'a mut self,
-                client: &'a mut C,
                 params: &'a AuthorNameStartingWithParams<T1>,
             ) -> AuthorNameStartingWithQuery<'a, C, AuthorNameStartingWith, 1> {
-                self.bind(client, &params.start_str)
+                self.bind(&params.start_str)
             }
         }
-        pub fn select_voice_actor_with_character() -> SelectVoiceActorWithCharacterStmt {
-            SelectVoiceActorWithCharacterStmt(cornucopia_sync::private::Stmt::new(
-                "SELECT
+        pub fn select_voice_actor_with_character<'a, C: GenericClient>(
+            client: &'a mut C,
+        ) -> SelectVoiceActorWithCharacterStmt<'a, C> {
+            SelectVoiceActorWithCharacterStmt(
+                client,
+                cornucopia_sync::private::Stmt::new(
+                    "SELECT
     voice_actor
 FROM
     SpongeBobVoiceActor
 WHERE
     character = $1",
-            ))
+                ),
+            )
         }
-        pub struct SelectVoiceActorWithCharacterStmt(cornucopia_sync::private::Stmt);
-        impl SelectVoiceActorWithCharacterStmt {
-            pub fn bind<'a, C: GenericClient>(
+        pub struct SelectVoiceActorWithCharacterStmt<'a, C: GenericClient>(
+            &'a mut C,
+            cornucopia_sync::private::Stmt,
+        );
+        impl<'a, C: GenericClient> SelectVoiceActorWithCharacterStmt<'a, C> {
+            pub fn bind(
                 &'a mut self,
-                client: &'a mut C,
                 spongebob_character: &'a super::super::types::public::SpongeBobCharacter,
             ) -> PublicVoiceactorQuery<'a, C, super::super::types::public::Voiceactor, 1>
             {
                 PublicVoiceactorQuery {
-                    client,
+                    client: self.0,
                     params: [spongebob_character],
-                    stmt: &mut self.0,
+                    stmt: &mut self.1,
                     extractor: |row| row.get(0),
                     mapper: |it| it.into(),
                 }
             }
         }
-        pub fn select_translations() -> SelectTranslationsStmt {
-            SelectTranslationsStmt(cornucopia_sync::private::Stmt::new(
-                "SELECT
+        pub fn select_translations<'a, C: GenericClient>(
+            client: &'a mut C,
+        ) -> SelectTranslationsStmt<'a, C> {
+            SelectTranslationsStmt(
+                client,
+                cornucopia_sync::private::Stmt::new(
+                    "SELECT
     Title,
     Translations
 FROM
     Book",
-            ))
+                ),
+            )
         }
-        pub struct SelectTranslationsStmt(cornucopia_sync::private::Stmt);
-        impl SelectTranslationsStmt {
-            pub fn bind<'a, C: GenericClient>(
-                &'a mut self,
-                client: &'a mut C,
-            ) -> SelectTranslationsQuery<'a, C, SelectTranslations, 0> {
+        pub struct SelectTranslationsStmt<'a, C: GenericClient>(
+            &'a mut C,
+            cornucopia_sync::private::Stmt,
+        );
+        impl<'a, C: GenericClient> SelectTranslationsStmt<'a, C> {
+            pub fn bind(&'a mut self) -> SelectTranslationsQuery<'a, C, SelectTranslations, 0> {
                 SelectTranslationsQuery {
-                    client,
+                    client: self.0,
                     params: [],
-                    stmt: &mut self.0,
+                    stmt: &mut self.1,
                     extractor: |row| SelectTranslationsBorrowed {
                         title: row.get(0),
                         translations: row.get(1),
