@@ -20,4 +20,4 @@ miette = { version = "5.5.0", features = ["fancy"] }
 clap = { version = "4.1.1", features = ["derive"] }
 heck = "0.4.0"
 indexmap = "1.9.2"
-chumsky = "0.8.0"
+chumsky = "0.9.0"
