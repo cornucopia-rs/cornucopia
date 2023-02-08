@@ -71,7 +71,7 @@ mod test {
         assert!(test(crate::Args {
             apply_errors: false,
             apply_codegen: false,
-            podman: true
+            podman: false
         }))
     }
 }
