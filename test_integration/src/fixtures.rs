@@ -1,11 +1,15 @@
-use std::path::{Path, PathBuf};
+use std::{
+    error::Error,
+    path::{Path, PathBuf},
+};
 
 use cornucopia::CodegenSettings;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-#[derive(Deserialize)]
-struct TestSuiteDeserializer<T> {
-    test: Vec<T>,
+#[derive(Serialize, Deserialize)]
+struct TestSuiteSerde<T> {
+    #[serde(rename = "test")]
+    tests: Vec<T>,
 }
 
 pub struct TestSuite<T> {
@@ -21,13 +25,22 @@ impl<T: DeserializeOwned> TestSuite<T> {
             let name = file.file_name().to_string_lossy().to_string();
             let path = file.path();
             let content = std::fs::read_to_string(&path).unwrap();
-            let tests: TestSuiteDeserializer<T> = toml::from_str(&content).unwrap();
+            let test_suite: TestSuiteSerde<T> = toml::from_str(&content).unwrap();
             TestSuite {
                 name,
-                tests: tests.test,
+                tests: test_suite.tests,
                 path,
             }
         })
+    }
+}
+
+impl<T: Serialize> TestSuite<T> {
+    pub(crate) fn write(self) -> Result<(), Box<dyn Error>> {
+        let suite = TestSuiteSerde { tests: self.tests };
+        let edited = toml::to_string_pretty(&suite)?;
+        std::fs::write(self.path, edited)?;
+        Ok(())
     }
 }
 
@@ -72,10 +85,8 @@ impl From<&CodegenTest> for CodegenSettings {
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct ErrorTest {
     pub(crate) name: String,
-    #[serde(default)]
-    pub(crate) query: String,
-    #[serde(default)]
-    pub(crate) schema: String,
+    pub(crate) query: Option<String>,
+    pub(crate) schema: Option<String>,
     pub(crate) error: String,
 }
 

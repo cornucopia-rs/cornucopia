@@ -18,6 +18,9 @@ pub(crate) fn run_errors_test(
     for mut suite in test_suites {
         println!("{} {}", "[error]".magenta(), suite.name.magenta());
         for test in suite.tests.iter_mut() {
+            // Reset db
+            reset_db(client)?;
+
             // Generate file tree path
             let temp_dir = tempfile::tempdir()?;
 
@@ -29,17 +32,17 @@ pub(crate) fn run_errors_test(
                 "schema.sql",
                 [
                     "CREATE TABLE author (id SERIAL, name TEXT);\n",
-                    &test.schema,
+                    test.schema.as_deref().unwrap_or_default(),
                 ]
                 .concat(),
             )?;
 
             // Generate queries files
             std::fs::create_dir("queries")?;
-            std::fs::write("queries/test.sql", &test.query)?;
-
-            // Reset db
-            reset_db(client)?;
+            std::fs::write(
+                "queries/test.sql",
+                test.query.as_deref().unwrap_or_default(),
+            )?;
 
             // Run codegen
             let result = cornucopia::load_schema(client, &["schema.sql"])
@@ -85,10 +88,9 @@ pub(crate) fn run_errors_test(
             std::env::set_current_dir(&original_pwd)?;
         }
 
+        // Update error message if needed
         if apply {
-            // Format test descriptor and update error message if needed
-            let edited = toml::to_string_pretty(&suite.tests)?;
-            std::fs::write(suite.path, edited)?;
+            suite.write()?;
         }
     }
 
