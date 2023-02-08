@@ -1,12 +1,12 @@
 [[test]]
-name = 'ClashBorrowed'
-query = '''
+name = "ClashBorrowed"
+query = """
 --! select
 SELECT * FROM author;
 --! select_borrowed
 SELECT * FROM author;
-'''
-error = '''
+"""
+error = """
 × `SelectBorrowed` is used multiple time
    ╭─[queries/test.sql:1:1]
  1 │ --! select
@@ -18,17 +18,17 @@ error = '''
    ·            ╰── redefined as row here
  4 │ SELECT * FROM author;
    ╰────
-  help: use a different name for one of those'''
+  help: use a different name for one of those"""
 
 [[test]]
-name = 'ClashParams'
-query = '''
+name = "ClashParams"
+query = """
 --! new_author
 INSERT INTO Author (id, name) VALUES (:id, :name);
 --! new_author_params
 SELECT * FROM author;
-'''
-error = '''
+"""
+error = """
 × `NewAuthorParams` is used multiple time
    ╭─[queries/test.sql:1:1]
  1 │ --! new_author
@@ -40,17 +40,17 @@ error = '''
    ·             ╰── redefined as row here
  4 │ SELECT * FROM author;
    ╰────
-  help: use a different name for one of those'''
+  help: use a different name for one of those"""
 
 [[test]]
-name = 'ClashQuery'
-query = '''
+name = "ClashQuery"
+query = """
 --! select
 SELECT * FROM author;
 --! select_query
 SELECT * FROM author;
-'''
-error = '''
+"""
+error = """
 × `SelectQuery` is used multiple time
    ╭─[queries/test.sql:1:1]
  1 │ --! select
@@ -62,16 +62,16 @@ error = '''
    ·           ╰── redefined as row here
  4 │ SELECT * FROM author;
    ╰────
-  help: use a different name for one of those'''
+  help: use a different name for one of those"""
 
 [[test]]
-name = 'ClashTypeQuery'
-query = '''
+name = "ClashTypeQuery"
+query = """
 --: AuthorParams()
 --! author: AuthorParams
 INSERT INTO Author (id, name) VALUES (:id, :name) RETURNING *;
-'''
-error = '''
+"""
+error = """
 × `AuthorParams` is used multiple time
    ╭─[queries/test.sql:1:1]
  1 │ --: AuthorParams()
@@ -81,15 +81,15 @@ error = '''
    ·        ╰── previous definition as params here
  3 │ INSERT INTO Author (id, name) VALUES (:id, :name) RETURNING *;
    ╰────
-  help: use a different name for one of those'''
+  help: use a different name for one of those"""
 
 [[test]]
-name = 'ClashTypeReuse'
-query = '''
+name = "ClashTypeReuse"
+query = """
 --! author Author(): Author()
 INSERT INTO Author (id, name) VALUES (:id, :name) RETURNING *;
-'''
-error = '''
+"""
+error = """
 × `Author` is used multiple time
    ╭─[queries/test.sql:1:1]
  1 │ --! author Author(): Author()
@@ -98,15 +98,15 @@ error = '''
    ·               ╰── previous definition as params here
  2 │ INSERT INTO Author (id, name) VALUES (:id, :name) RETURNING *;
    ╰────
-  help: use a different name for one of those'''
+  help: use a different name for one of those"""
 
 [[test]]
-name = 'ClashInlineReuse'
-query = '''
+name = "ClashInlineReuse"
+query = """
 --! author: AuthorParams(id?)
 INSERT INTO Author (id, name) VALUES (:id, :name) RETURNING *;
-'''
-error = '''
+"""
+error = """
 × `AuthorParams` is used multiple time
    ╭─[queries/test.sql:1:1]
  1 │ --! author: AuthorParams(id?)
@@ -115,4 +115,4 @@ error = '''
    ·        ╰── previous definition as params here
  2 │ INSERT INTO Author (id, name) VALUES (:id, :name) RETURNING *;
    ╰────
-  help: use a different name for one of those'''
+  help: use a different name for one of those"""
