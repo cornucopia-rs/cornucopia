@@ -114,7 +114,7 @@ fn insert_users<F: Fn(usize) -> Option<&'static str>, const N: usize>(
         let mut data = Box::new([DUMMY_USER; N]);
 
         for (idx, user) in data.iter_mut().enumerate() {
-            *user = NewUser::new(&format!("User {}", idx), hair_color_init(idx));
+            *user = NewUser::new(&format!("User {idx}"), hair_color_init(idx));
         }
 
         insert_into(users::table)
@@ -125,7 +125,7 @@ fn insert_users<F: Fn(usize) -> Option<&'static str>, const N: usize>(
         let mut data = [DUMMY_USER; N];
 
         for (idx, user) in data.iter_mut().enumerate() {
-            *user = NewUser::new(&format!("User {}", idx), hair_color_init(idx));
+            *user = NewUser::new(&format!("User {idx}"), hair_color_init(idx));
         }
 
         insert_into(users::table)

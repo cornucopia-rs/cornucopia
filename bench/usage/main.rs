@@ -37,7 +37,7 @@ fn prepare_client(
             2 * x + 2
         )
         .unwrap();
-        params.push((format!("User {}", x), hair_color_init(x)));
+        params.push((format!("User {x}"), hair_color_init(x)));
     }
 
     let params = params
@@ -63,7 +63,7 @@ fn prepare_full(client: &mut Client) {
     let data = user_ids
         .iter()
         .flat_map(|user_id| {
-            (0..10).map(move |i| (format!("Post {} by user {}", i, user_id), user_id, None))
+            (0..10).map(move |i| (format!("Post {i} by user {user_id}"), user_id, None))
         })
         .collect::<Vec<_>>();
 
@@ -100,7 +100,7 @@ fn prepare_full(client: &mut Client) {
     let data = all_posts
         .iter()
         .flat_map(|post_id| {
-            (0..10).map(move |i| (format!("Comment {} on post {}", i, post_id), post_id))
+            (0..10).map(move |i| (format!("Comment {i} on post {post_id}"), post_id))
         })
         .collect::<Vec<_>>();
 

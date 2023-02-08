@@ -80,16 +80,12 @@ pub fn bench_medium_complex_query(b: &mut Bencher, client: &mut Client) {
                                 name: row.get(1),
                                 hair_color: row.get(2),
                             },
-                            if let Some(id) = row.get(3) {
-                                Some(Post {
-                                    id,
-                                    user_id: row.get(4),
-                                    title: row.get(5),
-                                    body: row.get(6),
-                                })
-                            } else {
-                                None
-                            },
+                            row.get::<usize, Option<i32>>(3).map(|id| Post {
+                                id,
+                                user_id: row.get(4),
+                                title: row.get(5),
+                                body: row.get(6),
+                            }),
                         )
                     })
                 })
@@ -116,7 +112,7 @@ pub fn bench_insert(b: &mut Bencher, client: &mut Client, size: usize) {
                     2 * x + 2
                 )
                 .unwrap();
-                params.push((format!("User {}", x), Some("hair_color")));
+                params.push((format!("User {x}"), Some("hair_color")));
             }
 
             let params = params
@@ -236,8 +232,7 @@ pub fn loading_associations_sequentially(b: &mut Bencher, client: &mut Client) {
             }
 
             users
-                .into_iter()
-                .map(|(_, users_with_post_and_comment)| users_with_post_and_comment)
+                .into_values()
                 .collect::<Vec<(User, Vec<(Post, Vec<Comment>)>)>>()
         });
     })
