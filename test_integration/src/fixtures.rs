@@ -43,7 +43,7 @@ pub(crate) struct CodegenTest {
     #[serde(default)]
     pub(crate) sync: bool,
     #[serde(default)]
-    pub(crate) _async: bool,
+    pub(crate) r#async: bool,
     #[serde(default)]
     pub(crate) derive_ser: bool,
     #[serde(default)]
@@ -61,8 +61,8 @@ fn default_destination_path() -> PathBuf {
 impl From<&CodegenTest> for CodegenSettings {
     fn from(codegen_test: &CodegenTest) -> Self {
         Self {
-            gen_async: codegen_test._async || !codegen_test.sync,
-            gen_sync: !codegen_test.sync,
+            gen_async: codegen_test.r#async || !codegen_test.sync,
+            gen_sync: codegen_test.sync,
             derive_ser: codegen_test.derive_ser,
         }
     }
