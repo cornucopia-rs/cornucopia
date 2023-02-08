@@ -47,15 +47,11 @@ pub fn bench_insert(b: &mut Bencher, client: &mut Client, size: usize) {
     let mut stmt = insert_user();
     b.iter(|| {
         block_on(async {
-            let mut tx = client.transaction().await.unwrap();
+            let tx = client.transaction().await.unwrap();
             for x in 0..size {
-                stmt.bind(
-                    &mut tx,
-                    &format!("User {}", x).as_str(),
-                    &Some("hair_color"),
-                )
-                .await
-                .unwrap();
+                stmt.bind(&tx, &format!("User {x}").as_str(), &Some("hair_color"))
+                    .await
+                    .unwrap();
             }
             tx.commit().await.unwrap();
         })
@@ -105,8 +101,7 @@ pub fn loading_associations_sequentially(b: &mut Bencher, client: &Client) {
             }
 
             users
-                .into_iter()
-                .map(|(_, users_with_post_and_comment)| users_with_post_and_comment)
+                .into_values()
                 .collect::<Vec<(User, Vec<(Post, Vec<Comment>)>)>>()
         })
     })
@@ -156,12 +151,8 @@ pub mod sync {
         b.iter(|| {
             let mut tx = client.transaction().unwrap();
             for x in 0..size {
-                stmt.bind(
-                    &mut tx,
-                    &format!("User {}", x).as_str(),
-                    &Some("hair_color"),
-                )
-                .unwrap();
+                stmt.bind(&mut tx, &format!("User {x}").as_str(), &Some("hair_color"))
+                    .unwrap();
             }
             tx.commit().unwrap();
         })
@@ -205,8 +196,7 @@ pub mod sync {
             }
 
             users
-                .into_iter()
-                .map(|(_, users_with_post_and_comment)| users_with_post_and_comment)
+                .into_values()
                 .collect::<Vec<(User, Vec<(Post, Vec<Comment>)>)>>()
         })
     }
