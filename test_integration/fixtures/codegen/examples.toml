@@ -13,5 +13,5 @@ run = true
 [[test]]
 name = "Basic async"
 base_path = "examples/basic_async"
-run = true
 async = true
+run = true
