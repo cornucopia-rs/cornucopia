@@ -1,8 +1,0 @@
-[[codegen]]
-name = "Codegen"
-base_path = "codegen_test"
-destination = "src/cornucopia.rs"
-derive_ser = true
-sync = true
-async = true
-run = "codegen_test"

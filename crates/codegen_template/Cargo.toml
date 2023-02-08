@@ -1,0 +1,16 @@
+[package]
+name = "codegen_template"
+version = "0.1.0"
+edition = "2021"
+description = "A templating macro to generate Rust code into a buffer."
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+# String scanner
+unscanny = "0.1.0"
+# Utility to parse rust identifiers
+unicode-xid = "0.2.4"

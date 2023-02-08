@@ -1,0 +1,35 @@
+[package]
+name = "cornucopia"
+version = "0.9.0"
+edition = "2021"
+license = "MIT/Apache-2.0"
+description = "Generate type-checked Rust from your PostgreSQL queries."
+homepage = "https://cornucopia-rs.netlify.app/"
+repository = "https://github.com/cornucopia-rs/cornucopia"
+readme = "../README.md"
+categories = ["database"]
+keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
+
+[dependencies]
+# Path dependencies
+codegen_template = { path = "../codegen_template", version = "0.1.0" }
+
+# Postgres interaction
+postgres = "0.19.4"
+postgres-types = "0.2.4"
+
+# Error handling and reporting
+thiserror = "1.0.38"
+miette = { version = "5.5.0", features = ["fancy"] }
+
+# Parser
+chumsky = "0.9.0"
+
+# CLI handling
+clap = { version = "4.1.1", features = ["derive"] }
+
+# Word case
+heck = "0.4.0"
+
+# Order-preserving map to work around borrowing issues
+indexmap = "1.9.2"

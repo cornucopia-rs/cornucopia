@@ -1,6 +1,0 @@
-[[codegen]]
-name = "Bench"
-base_path = "bench/usage/cornucopia_benches"
-destination = "generated.rs"
-sync = true
-async = true
