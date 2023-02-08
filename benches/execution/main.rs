@@ -126,8 +126,8 @@ fn prepare_full(client: &mut Client) {
 }
 
 fn bench(c: &mut Criterion) {
-    cornucopia::container::cleanup(false).ok();
-    cornucopia::container::setup(false).unwrap();
+    cornucopia::container::cleanup(true).ok();
+    cornucopia::container::setup(true).unwrap();
     let client = &mut cornucopia_conn().unwrap();
     let rt: &'static Runtime = Box::leak(Box::new(Runtime::new().unwrap()));
     let async_client = &mut rt.block_on(async {
@@ -144,7 +144,7 @@ fn bench(c: &mut Criterion) {
         &mut PgConnection::establish("postgresql://postgres:postgres@127.0.0.1:5435/postgres")
             .unwrap();
 
-    cornucopia::load_schema(client, &["usage/cornucopia_benches/schema.sql"]).unwrap();
+    cornucopia::load_schema(client, &["execution/cornucopia_benches/schema.sql"]).unwrap();
     {
         let mut group = c.benchmark_group("bench_trivial_query");
         for size in QUERY_SIZE {
@@ -237,7 +237,7 @@ fn bench(c: &mut Criterion) {
         group.finish();
     }
 
-    cornucopia::container::cleanup(false).unwrap();
+    cornucopia::container::cleanup(true).unwrap();
 }
 criterion::criterion_group!(benches, bench);
 criterion::criterion_main!(benches);
