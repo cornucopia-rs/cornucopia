@@ -306,10 +306,7 @@ pub fn custom_ty_path(schema: &str, struct_name: &str, ctx: &GenCtx) -> String {
     } else if ctx.depth == 1 {
         format!("super::{schema}::{struct_name}")
     } else {
-        ctx.path(
-            ctx.depth,
-            format_args!("types::{schema}::{struct_name}"),
-        )
+        ctx.path(ctx.depth, format_args!("types::{schema}::{struct_name}"))
     }
 }
 
