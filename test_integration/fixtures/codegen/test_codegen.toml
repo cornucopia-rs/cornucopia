@@ -5,4 +5,4 @@ destination = "src/cornucopia.rs"
 sync = true
 async = true
 derive_ser = true
-run = "codegen_test"
+run = true
