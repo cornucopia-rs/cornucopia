@@ -20,10 +20,13 @@ pub(crate) fn run_codegen_test(
     for suite in test_suites {
         println!("{}", format!("[codegen] {}", suite.name).magenta());
         for test in suite.tests {
+            // Reset DB
+            reset_db(client)?;
+
+            // Set current dir to test base path
             set_current_dir(format!("../{}", test.base_path))?;
 
             // Load schema
-            reset_db(client)?;
             cornucopia::load_schema(client, &["schema.sql"])?;
 
             // If `--apply`, then the code will be regenerated.
