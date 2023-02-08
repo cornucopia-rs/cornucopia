@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use cornucopia::CodegenSettings;
-use serde::{de::DeserializeOwned, Deserialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 #[derive(Deserialize)]
 struct TestSuiteDeserializer<T> {
@@ -32,7 +32,7 @@ impl<T: DeserializeOwned> TestSuite<T> {
 }
 
 /// Codegen test case
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, Deserialize)]
 pub(crate) struct CodegenTest {
     pub(crate) name: String,
     pub(crate) base_path: String,
@@ -43,13 +43,15 @@ pub(crate) struct CodegenTest {
     #[serde(default)]
     pub(crate) sync: bool,
     #[serde(default)]
+    pub(crate) _async: bool,
+    #[serde(default)]
     pub(crate) derive_ser: bool,
     #[serde(default)]
     pub(crate) run: bool,
 }
 
 fn default_queries_path() -> PathBuf {
-    PathBuf::from("queries")
+    PathBuf::from("queries/")
 }
 
 fn default_destination_path() -> PathBuf {
@@ -59,14 +61,15 @@ fn default_destination_path() -> PathBuf {
 impl From<&CodegenTest> for CodegenSettings {
     fn from(codegen_test: &CodegenTest) -> Self {
         Self {
-            is_async: !codegen_test.sync,
+            gen_async: codegen_test._async || !codegen_test.sync,
+            gen_sync: !codegen_test.sync,
             derive_ser: codegen_test.derive_ser,
         }
     }
 }
 
 /// Error test case
-#[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct ErrorTest {
     pub(crate) name: String,
     #[serde(default)]
@@ -79,8 +82,9 @@ pub(crate) struct ErrorTest {
 impl From<&ErrorTest> for CodegenSettings {
     fn from(_error_test: &ErrorTest) -> Self {
         Self {
-            is_async: false,
             derive_ser: false,
+            gen_async: false,
+            gen_sync: true,
         }
     }
 }

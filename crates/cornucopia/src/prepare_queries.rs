@@ -6,11 +6,12 @@ use postgres::Client;
 use postgres_types::{Kind, Type};
 
 use crate::{
+    codegen::GenCtx,
     parser::{Module, NullableIdent, Query, Span, TypeAnnotation},
     read_queries::ModuleInfo,
     type_registrar::CornucopiaType,
     type_registrar::TypeRegistrar,
-    utils::escape_keyword,
+    utils::KEYWORD,
     validation,
 };
 
@@ -20,16 +21,51 @@ use self::error::Error;
 /// all constructs related to this particular query.
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedQuery {
-    pub(crate) name: String,
+    pub(crate) ident: Ident,
     pub(crate) param: Option<(usize, Vec<usize>)>,
     pub(crate) row: Option<(usize, Vec<usize>)>,
     pub(crate) sql: String,
 }
 
+/// A normalized ident replacing all non-alphanumeric characters with an underscore (`_`)
+/// and escaping it with a raw identifier prefix (`r#`) if it clashes with a keyword reserved in Rust.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Ident {
+    /// Database original ident
+    pub(crate) db: String,
+    /// Normalized ident for rust code usage
+    pub(crate) rs: String,
+}
+
+impl Ident {
+    pub(crate) fn new(db: String) -> Self {
+        Self {
+            rs: Self::normalize_ident(&db),
+            db,
+        }
+    }
+
+    pub(crate) fn type_ident(&self) -> String {
+        self.rs.to_upper_camel_case()
+    }
+
+    /// Normalize identifier by replacing all non-alphanumeric characters with an underscore (`_`) and
+    /// escaping it with a raw identifier prefix (`r#`) if it clashes with a keyword reserved in Rust.
+    fn normalize_ident(ident: &str) -> String {
+        let ident = ident.replace(|c: char| !c.is_ascii_alphanumeric() && c != '_', "_");
+
+        if KEYWORD.binary_search(&ident.as_str()).is_ok() {
+            format!("r#{ident}")
+        } else {
+            ident
+        }
+    }
+}
+
 /// A row or params field
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PreparedField {
-    pub(crate) name: String,
+    pub(crate) ident: Ident,
     pub(crate) ty: Rc<CornucopiaType>,
     pub(crate) is_nullable: bool,
     pub(crate) is_inner_nullable: bool, // Vec only
@@ -37,12 +73,12 @@ pub struct PreparedField {
 
 impl PreparedField {
     pub(crate) fn new(
-        name: String,
+        db_ident: String,
         ty: Rc<CornucopiaType>,
         nullity: Option<&NullableIdent>,
     ) -> Self {
         Self {
-            name: escape_keyword(name),
+            ident: Ident::new(db_ident),
             ty,
             is_nullable: nullity.map_or(false, |it| it.nullable),
             is_inner_nullable: nullity.map_or(false, |it| it.inner_nullable),
@@ -52,7 +88,7 @@ impl PreparedField {
 
 impl PreparedField {
     pub fn unwrapped_name(&self) -> String {
-        self.own_struct()
+        self.own_struct(&GenCtx::new(0, false, false))
             .replace(['<', '>', '_'], "")
             .to_upper_camel_case()
     }
@@ -77,6 +113,10 @@ impl PreparedItem {
             fields,
         }
     }
+
+    pub fn path(&self, ctx: &GenCtx) -> String {
+        ctx.path(ctx.depth - 2, &self.name)
+    }
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -90,7 +130,7 @@ pub(crate) struct PreparedType {
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub(crate) enum PreparedContent {
-    Enum(Vec<String>),
+    Enum(Vec<Ident>),
     Composite(Vec<PreparedField>),
 }
 
@@ -176,7 +216,7 @@ impl PreparedModule {
         self.queries.insert(
             name.clone(),
             PreparedQuery {
-                name: name.value,
+                ident: Ident::new(name.value),
                 row: row_idx,
                 sql,
                 param: param_idx,
@@ -244,7 +284,7 @@ fn prepare_type(
             .map_or(&[] as &[NullableIdent], |it| it.fields.as_slice());
         let content = match pg_ty.kind() {
             Kind::Enum(variants) => {
-                PreparedContent::Enum(variants.clone().into_iter().map(escape_keyword).collect())
+                PreparedContent::Enum(variants.clone().into_iter().map(Ident::new).collect())
             }
 
             Kind::Domain(_) => return None,
@@ -442,7 +482,7 @@ pub(crate) mod error {
             query_span: &SourceSpan,
             query_name: &Span<String>,
         ) -> Self {
-            let msg = format!("{:#}", err);
+            let msg = format!("{err:#}");
             if let Some((position, msg, help)) = db_err(err) {
                 Self::Db {
                     msg,

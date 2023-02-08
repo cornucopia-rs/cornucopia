@@ -4,12 +4,12 @@ use criterion::Bencher;
 use futures::executor::block_on;
 use tokio_postgres::Client;
 
-use self::generated_async::queries::bench::{
-    comments_by_post_id, insert_user, post_by_user_ids, select_complex, users, Comment, Post, User,
+use self::generated::queries::bench::{
+    async_::{comments_by_post_id, insert_user, post_by_user_ids, select_complex, users},
+    Comment, Post, User,
 };
 
-mod generated_async;
-mod generated_sync;
+mod generated;
 
 pub fn bench_trivial_query(b: &mut Bencher, client: &Client) {
     let mut stmt = users();
@@ -49,7 +49,7 @@ pub fn bench_insert(b: &mut Bencher, client: &mut Client, size: usize) {
         block_on(async {
             let tx = client.transaction().await.unwrap();
             for x in 0..size {
-                stmt.bind(&tx, &format!("User {}", x).as_str(), &Some("hair_color"))
+                stmt.bind(&tx, &format!("User {x}").as_str(), &Some("hair_color"))
                     .await
                     .unwrap();
             }
@@ -101,8 +101,7 @@ pub fn loading_associations_sequentially(b: &mut Bencher, client: &Client) {
             }
 
             users
-                .into_iter()
-                .map(|(_, users_with_post_and_comment)| users_with_post_and_comment)
+                .into_values()
                 .collect::<Vec<(User, Vec<(Post, Vec<Comment>)>)>>()
         })
     })
@@ -114,9 +113,9 @@ pub mod sync {
     use criterion::Bencher;
     use postgres::Client;
 
-    use super::generated_sync::queries::bench::{
-        comments_by_post_id, insert_user, post_by_user_ids, select_complex, users, Comment, Post,
-        User,
+    use super::generated::queries::bench::{
+        sync::{comments_by_post_id, insert_user, post_by_user_ids, select_complex, users},
+        Comment, Post, User,
     };
     pub fn bench_trivial_query(b: &mut Bencher, client: &mut Client) {
         let mut stmt = users();
@@ -152,12 +151,8 @@ pub mod sync {
         b.iter(|| {
             let mut tx = client.transaction().unwrap();
             for x in 0..size {
-                stmt.bind(
-                    &mut tx,
-                    &format!("User {}", x).as_str(),
-                    &Some("hair_color"),
-                )
-                .unwrap();
+                stmt.bind(&mut tx, &format!("User {x}").as_str(), &Some("hair_color"))
+                    .unwrap();
             }
             tx.commit().unwrap();
         })
@@ -201,8 +196,7 @@ pub mod sync {
             }
 
             users
-                .into_iter()
-                .map(|(_, users_with_post_and_comment)| users_with_post_and_comment)
+                .into_values()
                 .collect::<Vec<(User, Vec<(Post, Vec<Comment>)>)>>()
         })
     }

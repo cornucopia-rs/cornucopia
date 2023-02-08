@@ -42,7 +42,7 @@ pub(crate) fn run_errors_test(
             reset_db(client)?;
 
             // Run codegen
-            let result = cornucopia::load_schema(client, vec!["schema.sql".into()])
+            let result = cornucopia::load_schema(client, &["schema.sql"])
                 .map_err(Error::from)
                 .and_then(|_| {
                     cornucopia::generate_live(

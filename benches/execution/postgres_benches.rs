@@ -70,7 +70,6 @@ pub fn bench_medium_complex_query(b: &mut Bencher, client: &mut Client) {
                     title: row.get(5),
                     body: row.get(6),
                 });
-
                 Ok((user, post))
             })
             .collect::<Vec<_>>()
@@ -93,7 +92,7 @@ pub fn bench_insert(b: &mut Bencher, client: &mut Client, size: usize) {
                 2 * x + 2
             )
             .unwrap();
-            params.push((format!("User {}", x), Some("hair_color")));
+            params.push((format!("User {x}"), Some("hair_color")));
         }
 
         let params = params
@@ -202,8 +201,7 @@ pub fn loading_associations_sequentially(b: &mut Bencher, client: &mut Client) {
         }
 
         users
-            .into_iter()
-            .map(|(_, users_with_post_and_comment)| users_with_post_and_comment)
+            .into_values()
             .collect::<Vec<(User, Vec<(Post, Vec<Comment>)>)>>()
     })
 }

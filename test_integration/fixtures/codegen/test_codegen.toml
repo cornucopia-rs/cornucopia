@@ -1,13 +1,8 @@
 [[test]]
-name = "Sync"
+name = "Codegen"
 base_path = "test_codegen"
-destination = "src/cornucopia_sync.rs"
-derive_ser = true
+destination = "src/cornucopia.rs"
 sync = true
-run = true
-
-[[test]]
-name = "Async"
-base_path = "test_codegen"
-destination = "src/cornucopia_async.rs"
+async = true
 derive_ser = true
+run = "codegen_test"

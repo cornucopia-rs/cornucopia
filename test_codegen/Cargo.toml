@@ -33,11 +33,11 @@ tokio-postgres = { version = "0.7.7", features = [
 postgres-types = { version = "0.2.4", features = ["derive"] }
 
 # serde
-serde = { version = "1.0.148", features = ["derive"] }
+serde = { version = "1.0.152", features = ["derive"] }
 
 # extra types
-serde_json = { version = "1.0.89", features = ["raw_value"] }
+serde_json = { version = "1.0.91", features = ["raw_value"] }
 time = { version = "0.3.17", features = ["parsing", "serde"] }
 uuid = { version = "1.2.2", features = ["serde"] }
 eui48 = { version = "1.1.0", features = ["serde"] }
-rust_decimal = { version = "1.27.0", features = ["db-postgres"] }
+rust_decimal = { version = "1.28.0", features = ["db-postgres"] }

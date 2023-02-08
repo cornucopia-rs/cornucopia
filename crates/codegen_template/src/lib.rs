@@ -36,6 +36,20 @@ fn parse_ident<'a>(scan: &mut Scanner<'a>) -> Option<&'a str> {
     }
 }
 
+/// Parse out identifier 'ident =>'
+fn parse_out<'a>(scan: &mut Scanner<'a>) -> Option<&'a str> {
+    let start = scan.cursor();
+    scan.eat_whitespace();
+    if let Some(ident) = parse_ident(scan) {
+        scan.eat_whitespace();
+        if scan.eat_if("=>") {
+            return Some(ident);
+        }
+    }
+    scan.jump(start);
+    None
+}
+
 /// Parse the next raw string and optional pattern pair from `scan`
 /// Return ("", None) when reach EOF
 fn parse_next<'a>(scan: &mut Scanner<'a>) -> (&'a str, Option<Kind<'a>>) {
@@ -124,7 +138,7 @@ fn gen_disp(s: &mut String, out: &str, ident: &str) {
 }
 
 /// Generate code to write interpolation patterns in `scan` into `out`
-fn gen_recursive<'a>(scan: &'a mut Scanner, s: &mut String, out: &str) {
+fn gen_recursive(scan: &mut Scanner, s: &mut String, out: &str) {
     loop {
         let (raw, pattern) = parse_next(scan);
         if raw.is_empty() && pattern.is_none() {
@@ -203,15 +217,17 @@ fn gen_recursive<'a>(scan: &'a mut Scanner, s: &mut String, out: &str) {
 pub fn code(pattern: TokenStream) -> TokenStream {
     let pattern = pattern.to_string();
     let mut scan = unscanny::Scanner::new(&pattern);
-    scan.eat_whitespace();
-    let out = scan.eat_while(id_continue);
-    scan.eat_whitespace();
-    scan.expect("=>");
-    scan.eat_whitespace();
 
+    let out = parse_out(&mut scan);
     let mut s = String::new();
     s.push('{');
-    gen_recursive(&mut scan, &mut s, out);
+    if let Some(out) = out {
+        gen_recursive(&mut scan, &mut s, out);
+    } else {
+        s.push_str("let mut out = String::new();\n");
+        gen_recursive(&mut scan, &mut s, "out");
+        s.push_str("out")
+    }
     s.push('}');
     s.parse().unwrap()
 }

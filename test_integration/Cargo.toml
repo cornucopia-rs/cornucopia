@@ -8,12 +8,6 @@ edition = "2021"
 [dependencies]
 # Path dependencies
 cornucopia = { path = "../crates/cornucopia" }
-cornucopia_sync = { path = "../crates/client_sync", features = [
-    "with-serde_json-1",
-] }
-cornucopia_async = { path = "../crates/client_async", features = [
-    "with-serde_json-1",
-] }
 
 # Create temporary projects for error tests.
 tempfile = "3.3.0"
@@ -24,28 +18,13 @@ owo-colors = "3.5.0"
 # CLI handling
 clap = { version = "4.0.29", features = ["derive"] }
 
-# async
-futures = "0.3.25"
-
-# rust-postgres interaction
-postgres = { version = "0.19.4", features = [
-    "with-serde_json-1",
-    "with-time-0_3",
-    "with-uuid-1",
-    "with-eui48-1",
-] }
-tokio-postgres = { version = "0.7.7", features = [
-    "with-serde_json-1",
-    "with-time-0_3",
-    "with-uuid-1",
-    "with-eui48-1",
-] }
-postgres-types = { version = "0.2.4", features = ["derive"] }
+# Postgres interaction
+postgres = { version = "0.19.4" }
 
 # serde
-## Both for test helpers ser/de and codegen `Serialize` derives
+## Test fixtures ser/de
 serde = { version = "1.0.148", features = ["derive"] }
-## Read fixture files
+## Read/write fixture files
 toml = "0.7.2"
 
 # extra types

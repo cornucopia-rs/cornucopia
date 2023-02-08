@@ -24,7 +24,7 @@ pub(crate) fn run_codegen_test(
 
             // Load schema
             reset_db(client)?;
-            cornucopia::load_schema(client, vec!["schema.sql".to_string()])?;
+            cornucopia::load_schema(client, &["schema.sql"])?;
 
             // If `--apply`, then the code will be regenerated.
             // Otherwise, it is only checked.
@@ -32,8 +32,8 @@ pub(crate) fn run_codegen_test(
                 // Generate
                 cornucopia::generate_live(
                     client,
-                    test.queries_path.to_str().unwrap(), // TODO: Update this once our API accepts paths
-                    Some(test.destination.to_str().unwrap()), // TODO: Update this once our API accepts paths
+                    &test.queries_path,
+                    Some(&test.destination),
                     CodegenSettings::from(&test),
                 )
                 .map_err(Error::report)?;
@@ -45,7 +45,7 @@ pub(crate) fn run_codegen_test(
                 // Generate new file
                 let new_codegen = cornucopia::generate_live(
                     client,
-                    test.queries_path.to_str().unwrap(), // TODO: Update this once our API accepts paths
+                    &test.queries_path,
                     None,
                     CodegenSettings::from(&test),
                 )

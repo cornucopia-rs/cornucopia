@@ -14,6 +14,8 @@ pub mod conn;
 /// High-level interfaces to work with Cornucopia's container manager.
 pub mod container;
 
+use std::path::Path;
+
 use postgres::Client;
 
 use codegen::generate as generate_internal;
@@ -31,7 +33,8 @@ pub use load_schema::load_schema;
 /// Struct containing the settings for code generation.
 #[derive(Clone, Copy)]
 pub struct CodegenSettings {
-    pub is_async: bool,
+    pub gen_async: bool,
+    pub gen_sync: bool,
     pub derive_ser: bool,
 }
 
@@ -39,14 +42,14 @@ pub struct CodegenSettings {
 /// using a live database managed by you. If some `destination` is given,
 /// the generated code will be written at that path. Code generation settings are
 /// set using the `settings` parameter.
-pub fn generate_live(
+pub fn generate_live<P: AsRef<Path>>(
     client: &mut Client,
-    queries_path: &str,
-    destination: Option<&str>,
+    queries_path: P,
+    destination: Option<P>,
     settings: CodegenSettings,
 ) -> Result<String, Error> {
     // Read
-    let modules = read_query_modules(queries_path)?
+    let modules = read_query_modules(queries_path.as_ref())?
         .into_iter()
         .map(parse_query_module)
         .collect::<Result<_, parser::error::Error>>()?;
@@ -55,7 +58,7 @@ pub fn generate_live(
     let generated_code = generate_internal(prepared_modules, settings);
     // Write
     if let Some(d) = destination {
-        write_generated_code(d, &generated_code)?;
+        write_generated_code(d.as_ref(), &generated_code)?;
     };
 
     Ok(generated_code)
@@ -68,15 +71,15 @@ pub fn generate_live(
 ///
 /// By default, the container manager is Docker, but Podman can be used by setting the
 /// `podman` parameter to `true`.
-pub fn generate_managed(
-    queries_path: &str,
-    schema_files: Vec<String>,
-    destination: Option<&str>,
+pub fn generate_managed<P: AsRef<Path>>(
+    queries_path: P,
+    schema_files: &[P],
+    destination: Option<P>,
     podman: bool,
     settings: CodegenSettings,
 ) -> Result<String, Error> {
     // Read
-    let modules = read_query_modules(queries_path)?
+    let modules = read_query_modules(queries_path.as_ref())?
         .into_iter()
         .map(parse_query_module)
         .collect::<Result<_, parser::error::Error>>()?;
@@ -88,17 +91,17 @@ pub fn generate_managed(
     container::cleanup(podman)?;
 
     if let Some(destination) = destination {
-        write_generated_code(destination, &generated_code)?;
+        write_generated_code(destination.as_ref(), &generated_code)?;
     };
 
     Ok(generated_code)
 }
 
-fn write_generated_code(destination: &str, generated_code: &str) -> Result<(), Error> {
+fn write_generated_code(destination: &Path, generated_code: &str) -> Result<(), Error> {
     Ok(
         std::fs::write(destination, generated_code).map_err(|err| WriteOutputError {
             err,
-            file_path: String::from(destination),
+            file_path: destination.to_owned(),
         })?,
     )
 }

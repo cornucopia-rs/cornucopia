@@ -25,6 +25,6 @@ fallible-iterator = "0.2.0"
 # json
 ## This crate implements the "ergonomic paramters" for 
 ## `serde_json::Value` and `serde_json::raw::RawValue`.
-serde_json = { version = "1.0.89", optional = true }
+serde_json = { version = "1.0.91", optional = true }
 ## Used for `postgres_types::Json` `Serialize` trait bounds
-serde = { version = "1.0.148", optional = true }
+serde = { version = "1.0.152", optional = true }

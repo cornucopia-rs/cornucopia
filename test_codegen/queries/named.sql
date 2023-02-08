@@ -12,8 +12,9 @@ SELECT * FROM named;
 SELECT * FROM named WHERE id = :id;
 
 --: named_composite(wow?,such_cool?)
+--: "named_composite.with_dot"("this.is.inconceivable"?)
 
---! new_named_complex NamedComplexParams()
-INSERT INTO named_complex (named) VALUES (:named);
---! named_complex
+--! new_named_complex NamedComplexParams(named_with_dot?)
+INSERT INTO named_complex (named, "named.with_dot") VALUES (:named, :named_with_dot);
+--! named_complex: NamedComplex("named.with_dot"?)
 SELECT * FROM named_complex;
