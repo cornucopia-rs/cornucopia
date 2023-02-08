@@ -46,7 +46,7 @@ postgres-types = { version = "0.2.4", features = ["derive"] }
 ## Both for test helpers ser/de and codegen `Serialize` derives
 serde = { version = "1.0.148", features = ["derive"] }
 ## Read fixture files
-toml = "0.5.9"
+toml = "0.7.2"
 
 # extra types
 serde_json = { version = "1.0.89", features = ["raw_value"] }
