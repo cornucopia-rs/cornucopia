@@ -1737,16 +1737,11 @@ version = "0.1.0"
 dependencies = [
  "clap 4.1.4",
  "cornucopia",
- "eui48",
  "owo-colors",
  "postgres",
- "rust_decimal",
  "serde",
- "serde_json",
  "tempfile",
- "time",
  "toml 0.7.2",
- "uuid",
 ]
 
 [[package]]
