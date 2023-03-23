@@ -323,7 +323,7 @@ fn gen_params_struct(w: &mut impl Write, params: &PreparedItem, ctx: &GenCtx) {
             .map(|p| p.param_ergo_ty(traits, ctx))
             .collect::<Vec<_>>();
         let fields_name = fields.iter().map(|p| &p.ident.rs);
-        let traits_idx = (1..=traits.len()).into_iter().map(idx_char);
+        let traits_idx = (1..=traits.len()).map(idx_char);
         code!(w =>
             #[derive($copy Debug)]
             pub struct $name<$lifetime $($traits_idx: $traits,)> {
@@ -507,7 +507,7 @@ fn gen_query_fn<W: Write>(w: &mut W, module: &PreparedModule, query: &PreparedQu
         .map(|idx| param_field[*idx].param_ergo_ty(traits, ctx))
         .collect();
     let params_name = order.iter().map(|idx| &param_field[*idx].ident.rs);
-    let traits_idx = (1..=traits.len()).into_iter().map(idx_char);
+    let traits_idx = (1..=traits.len()).map(idx_char);
     let lazy_impl = |w: &mut W| {
         if let Some((idx, index)) = row {
             let item = module.rows.get_index(*idx).unwrap().1;
