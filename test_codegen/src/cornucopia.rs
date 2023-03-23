@@ -3897,7 +3897,7 @@ pub mod queries {
             pub uuid_: uuid::Uuid,
             pub inet_: std::net::IpAddr,
             pub macaddr_: eui48::MacAddress,
-            pub numeric_: rust_decimal::Decimal,
+            pub numeric_: bigdecimal::BigDecimal,
         }
         #[derive(Debug)]
         pub struct EverythingArrayParams<
@@ -3933,7 +3933,7 @@ pub mod queries {
             T30: cornucopia_async::ArraySql<Item = uuid::Uuid>,
             T31: cornucopia_async::ArraySql<Item = std::net::IpAddr>,
             T32: cornucopia_async::ArraySql<Item = eui48::MacAddress>,
-            T33: cornucopia_async::ArraySql<Item = rust_decimal::Decimal>,
+            T33: cornucopia_async::ArraySql<Item = bigdecimal::BigDecimal>,
         > {
             pub bool_: T1,
             pub boolean_: T2,
@@ -3999,7 +3999,7 @@ pub mod queries {
             pub uuid_: uuid::Uuid,
             pub inet_: std::net::IpAddr,
             pub macaddr_: eui48::MacAddress,
-            pub numeric_: rust_decimal::Decimal,
+            pub numeric_: bigdecimal::BigDecimal,
         }
         pub struct EverythingBorrowed<'a> {
             pub bool_: bool,
@@ -4035,7 +4035,7 @@ pub mod queries {
             pub uuid_: uuid::Uuid,
             pub inet_: std::net::IpAddr,
             pub macaddr_: eui48::MacAddress,
-            pub numeric_: rust_decimal::Decimal,
+            pub numeric_: bigdecimal::BigDecimal,
         }
         impl<'a> From<EverythingBorrowed<'a>> for Everything {
             fn from(
@@ -4149,7 +4149,7 @@ pub mod queries {
             pub uuid_: Option<uuid::Uuid>,
             pub inet_: Option<std::net::IpAddr>,
             pub macaddr_: Option<eui48::MacAddress>,
-            pub numeric_: Option<rust_decimal::Decimal>,
+            pub numeric_: Option<bigdecimal::BigDecimal>,
         }
         pub struct EverythingNullBorrowed<'a> {
             pub bool_: Option<bool>,
@@ -4185,7 +4185,7 @@ pub mod queries {
             pub uuid_: Option<uuid::Uuid>,
             pub inet_: Option<std::net::IpAddr>,
             pub macaddr_: Option<eui48::MacAddress>,
-            pub numeric_: Option<rust_decimal::Decimal>,
+            pub numeric_: Option<bigdecimal::BigDecimal>,
         }
         impl<'a> From<EverythingNullBorrowed<'a>> for EverythingNull {
             fn from(
@@ -4293,7 +4293,7 @@ pub mod queries {
             pub uuid_: Vec<uuid::Uuid>,
             pub inet_: Vec<std::net::IpAddr>,
             pub macaddr_: Vec<eui48::MacAddress>,
-            pub numeric_: Vec<rust_decimal::Decimal>,
+            pub numeric_: Vec<bigdecimal::BigDecimal>,
         }
         pub struct EverythingArrayBorrowed<'a> {
             pub bool_: cornucopia_async::ArrayIterator<'a, bool>,
@@ -4331,7 +4331,7 @@ pub mod queries {
             pub uuid_: cornucopia_async::ArrayIterator<'a, uuid::Uuid>,
             pub inet_: cornucopia_async::ArrayIterator<'a, std::net::IpAddr>,
             pub macaddr_: cornucopia_async::ArrayIterator<'a, eui48::MacAddress>,
-            pub numeric_: cornucopia_async::ArrayIterator<'a, rust_decimal::Decimal>,
+            pub numeric_: cornucopia_async::ArrayIterator<'a, bigdecimal::BigDecimal>,
         }
         impl<'a> From<EverythingArrayBorrowed<'a>> for EverythingArray {
             fn from(
@@ -4431,7 +4431,7 @@ pub mod queries {
             pub uuid_: Option<Vec<uuid::Uuid>>,
             pub inet_: Option<Vec<std::net::IpAddr>>,
             pub macaddr_: Option<Vec<eui48::MacAddress>>,
-            pub numeric_: Option<Vec<rust_decimal::Decimal>>,
+            pub numeric_: Option<Vec<bigdecimal::BigDecimal>>,
         }
         pub struct EverythingArrayNullBorrowed<'a> {
             pub bool_: Option<cornucopia_async::ArrayIterator<'a, bool>>,
@@ -4473,7 +4473,7 @@ pub mod queries {
             pub uuid_: Option<cornucopia_async::ArrayIterator<'a, uuid::Uuid>>,
             pub inet_: Option<cornucopia_async::ArrayIterator<'a, std::net::IpAddr>>,
             pub macaddr_: Option<cornucopia_async::ArrayIterator<'a, eui48::MacAddress>>,
-            pub numeric_: Option<cornucopia_async::ArrayIterator<'a, rust_decimal::Decimal>>,
+            pub numeric_: Option<cornucopia_async::ArrayIterator<'a, bigdecimal::BigDecimal>>,
         }
         impl<'a> From<EverythingArrayNullBorrowed<'a>> for EverythingArrayNull {
             fn from(
@@ -4974,7 +4974,7 @@ FROM
                     uuid_: &'a uuid::Uuid,
                     inet_: &'a std::net::IpAddr,
                     macaddr_: &'a eui48::MacAddress,
-                    numeric_: &'a rust_decimal::Decimal,
+                    numeric_: &'a bigdecimal::BigDecimal,
                 ) -> Result<u64, postgres::Error> {
                     let stmt = self.0.prepare(client)?;
                     client.execute(
@@ -5224,7 +5224,7 @@ FROM
                     T30: cornucopia_sync::ArraySql<Item = uuid::Uuid>,
                     T31: cornucopia_sync::ArraySql<Item = std::net::IpAddr>,
                     T32: cornucopia_sync::ArraySql<Item = eui48::MacAddress>,
-                    T33: cornucopia_sync::ArraySql<Item = rust_decimal::Decimal>,
+                    T33: cornucopia_sync::ArraySql<Item = bigdecimal::BigDecimal>,
                 >(
                     &'a mut self,
                     client: &'a mut C,
@@ -5328,7 +5328,7 @@ FROM
                     T30: cornucopia_sync::ArraySql<Item = uuid::Uuid>,
                     T31: cornucopia_sync::ArraySql<Item = std::net::IpAddr>,
                     T32: cornucopia_sync::ArraySql<Item = eui48::MacAddress>,
-                    T33: cornucopia_sync::ArraySql<Item = rust_decimal::Decimal>,
+                    T33: cornucopia_sync::ArraySql<Item = bigdecimal::BigDecimal>,
                 >
                 cornucopia_sync::Params<
                     'a,
@@ -5937,7 +5937,7 @@ FROM
                     uuid_: &'a uuid::Uuid,
                     inet_: &'a std::net::IpAddr,
                     macaddr_: &'a eui48::MacAddress,
-                    numeric_: &'a rust_decimal::Decimal,
+                    numeric_: &'a bigdecimal::BigDecimal,
                 ) -> Result<u64, tokio_postgres::Error> {
                     let stmt = self.0.prepare(client).await?;
                     client
@@ -6201,7 +6201,7 @@ FROM
                     T30: cornucopia_async::ArraySql<Item = uuid::Uuid>,
                     T31: cornucopia_async::ArraySql<Item = std::net::IpAddr>,
                     T32: cornucopia_async::ArraySql<Item = eui48::MacAddress>,
-                    T33: cornucopia_async::ArraySql<Item = rust_decimal::Decimal>,
+                    T33: cornucopia_async::ArraySql<Item = bigdecimal::BigDecimal>,
                 >(
                     &'a mut self,
                     client: &'a C,
@@ -6307,7 +6307,7 @@ FROM
                     T30: cornucopia_async::ArraySql<Item = uuid::Uuid>,
                     T31: cornucopia_async::ArraySql<Item = std::net::IpAddr>,
                     T32: cornucopia_async::ArraySql<Item = eui48::MacAddress>,
-                    T33: cornucopia_async::ArraySql<Item = rust_decimal::Decimal>,
+                    T33: cornucopia_async::ArraySql<Item = bigdecimal::BigDecimal>,
                 >
                 cornucopia_async::Params<
                     'a,

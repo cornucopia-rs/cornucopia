@@ -40,4 +40,4 @@ serde_json = { version = "1.0.91", features = ["raw_value"] }
 time = { version = "0.3.17", features = ["parsing", "serde"] }
 uuid = { version = "1.2.2", features = ["serde"] }
 eui48 = { version = "1.1.0", features = ["serde"] }
-rust_decimal = { version = "1.28.0", features = ["db-postgres"] }
+bigdecimal = { version = "0.3.0" }

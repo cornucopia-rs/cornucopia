@@ -2,9 +2,9 @@ mod cornucopia;
 
 use ::cornucopia_sync::IterSql;
 
+use bigdecimal::BigDecimal;
 use eui48::MacAddress;
 use postgres::{Client, Config, NoTls};
-use rust_decimal::Decimal;
 use serde_json::Value;
 use std::{
     borrow::Cow,
@@ -415,7 +415,7 @@ pub fn test_stress(client: &mut Client) {
         uuid_: Uuid::parse_str("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11").unwrap(),
         inet_: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
         macaddr_: MacAddress::new([8, 0, 43, 1, 2, 3]),
-        numeric_: Decimal::new(202, 2),
+        numeric_: bigdecimal::BigDecimal::new(131072, 16383),
     };
     let params = EverythingParams {
         bigserial_: expected.bigserial_,
@@ -451,7 +451,7 @@ pub fn test_stress(client: &mut Client) {
         timestamptz_: expected.timestamptz_,
         uuid_: expected.uuid_,
         varchar_: &expected.varchar_,
-        numeric_: Decimal::new(202, 2),
+        numeric_: bigdecimal::BigDecimal::new(131072, 16383),
     };
     assert_eq!(1, insert_everything().params(client, &params).unwrap());
     let actual = select_everything().bind(client).one().unwrap();
@@ -486,7 +486,7 @@ pub fn test_stress(client: &mut Client) {
         uuid_: vec![Uuid::parse_str("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11").unwrap()],
         inet_: vec![IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))],
         macaddr_: vec![MacAddress::new([8, 0, 43, 1, 2, 3])],
-        numeric_: vec![Decimal::new(202, 2)],
+        numeric_: vec![bigdecimal::BigDecimal::new(131072, 16383)],
     };
 
     let bytea = expected
