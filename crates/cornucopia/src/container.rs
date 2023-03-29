@@ -75,14 +75,20 @@ fn is_postgres_healthy(opts: &ContainerOpts) -> Result<bool, Error> {
 }
 
 /// This function controls how the healthcheck retries are handled.
-fn healthcheck(podman: bool, max_retries: u64, ms_per_retry: u64) -> Result<(), Error> {
+fn healthcheck(opts: &ContainerOpts, max_retries: u64, ms_per_retry: u64) -> Result<(), Error> {
     let slow_threshold = 10 + max_retries / 10;
     let mut nb_retries = 0;
-    while !is_postgres_healthy(podman)? {
+    let mut consecutive_successes = 0;
+    while consecutive_successes < 5 {
+        if is_postgres_healthy(opts)? {
+            consecutive_successes += 1;
+        } else {
+            consecutive_successes = 0;
+        }
         if nb_retries >= max_retries {
             return Err(Error::new(
                 String::from("Cornucopia reached the max number of connection retries"),
-                podman,
+                opts,
             ));
         };
         std::thread::sleep(std::time::Duration::from_millis(ms_per_retry));
@@ -92,8 +98,6 @@ fn healthcheck(podman: bool, max_retries: u64, ms_per_retry: u64) -> Result<(), 
             println!("Container startup slower than expected ({nb_retries} retries out of {max_retries})");
         }
     }
-    // Just for extra safety...
-    std::thread::sleep(std::time::Duration::from_millis(250));
     Ok(())
 }
 
