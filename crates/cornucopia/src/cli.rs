@@ -2,15 +2,17 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
-use crate::{conn, container, error::Error, generate_live, generate_managed, CodegenSettings};
+use crate::{
+    conn,
+    container::{self, ContainerOpts},
+    error::Error,
+    generate_live, generate_managed, CodegenSettings,
+};
 
 /// Command line interface to interact with Cornucopia SQL.
 #[derive(Parser, Debug)]
 #[clap(version)]
 struct Args {
-    /// Use `podman` instead of `docker`
-    #[clap(short, long)]
-    podman: bool,
     /// Folder containing the queries
     #[clap(short, long, default_value = "queries/")]
     queries_path: PathBuf,
@@ -41,13 +43,15 @@ enum Action {
     Schema {
         /// SQL files containing the database schema
         schema_files: Vec<PathBuf>,
+        /// Container options
+        #[command(flatten)]
+        container_opts: ContainerOpts,
     },
 }
 
 // Main entrypoint of the CLI. Parses the args and calls the appropriate routines.
 pub fn run() -> Result<(), Error> {
     let Args {
-        podman,
         queries_path,
         destination,
         action,
@@ -67,16 +71,19 @@ pub fn run() -> Result<(), Error> {
             let mut client = conn::from_url(&url)?;
             generate_live(&mut client, &queries_path, Some(&destination), settings)?;
         }
-        Action::Schema { schema_files } => {
+        Action::Schema {
+            schema_files,
+            container_opts,
+        } => {
             // Run the generate command. If the command is unsuccessful, cleanup Cornucopia's container
             if let Err(e) = generate_managed(
                 queries_path,
                 &schema_files,
                 Some(destination),
-                podman,
+                &container_opts,
                 settings,
             ) {
-                container::cleanup(podman).ok();
+                container::cleanup(&container_opts).ok();
                 return Err(e);
             }
         }

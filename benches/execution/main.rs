@@ -1,6 +1,6 @@
 use std::fmt::Write;
 
-use cornucopia::conn::cornucopia_conn;
+use cornucopia::{conn::cornucopia_conn, container::ContainerOpts};
 use criterion::{BenchmarkId, Criterion};
 use diesel::{Connection, PgConnection};
 use postgres::{fallible_iterator::FallibleIterator, Client, NoTls};
@@ -126,9 +126,10 @@ fn prepare_full(client: &mut Client) {
 }
 
 fn bench(c: &mut Criterion) {
-    cornucopia::container::cleanup(false).ok();
-    cornucopia::container::setup(false).unwrap();
-    let client = &mut cornucopia_conn().unwrap();
+    let container_opts = ContainerOpts::default();
+    cornucopia::container::cleanup(&container_opts).ok();
+    cornucopia::container::setup(&container_opts).unwrap();
+    let client = &mut cornucopia_conn(&container_opts).unwrap();
     let rt: &'static Runtime = Box::leak(Box::new(Runtime::new().unwrap()));
     let async_client = &mut rt.block_on(async {
         let (client, conn) = tokio_postgres::connect(
@@ -237,7 +238,7 @@ fn bench(c: &mut Criterion) {
         group.finish();
     }
 
-    cornucopia::container::cleanup(false).unwrap();
+    cornucopia::container::cleanup(&container_opts).unwrap();
 }
 criterion::criterion_group!(benches, bench);
 criterion::criterion_main!(benches);
