@@ -9,8 +9,8 @@ use std::{
     borrow::Cow,
     collections::HashMap,
     net::{IpAddr, Ipv4Addr},
+    time::SystemTime,
 };
-use time::{OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;
 
 use crate::cornucopia::{
@@ -369,15 +369,7 @@ pub fn test_domain(client: &mut Client) {
 
 // Test hard cases
 pub fn test_stress(client: &mut Client) {
-    let primitive_datetime_format =
-        time::format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]").unwrap();
-    let primitive_datetime =
-        PrimitiveDateTime::parse("2020-01-02 03:04:05", &primitive_datetime_format).unwrap();
-    let offset_datetime = OffsetDateTime::parse(
-        "1985-04-12T23:20:50.52Z",
-        &time::format_description::well_known::Rfc3339,
-    )
-    .unwrap();
+    let now = SystemTime::now();
     let json: Value = serde_json::from_str("{}").unwrap();
 
     // Every supported type
@@ -404,10 +396,10 @@ pub fn test_stress(client: &mut Client) {
         text_: String::from("hello"),
         varchar_: String::from("hello"),
         bytea_: vec![222u8, 173u8, 190u8, 239u8],
-        timestamp_: primitive_datetime,
-        timestamp_without_time_zone_: primitive_datetime,
-        timestamptz_: offset_datetime,
-        timestamp_with_time_zone_: offset_datetime,
+        timestamp_: now,
+        timestamp_without_time_zone_: now,
+        timestamptz_: now,
+        timestamp_with_time_zone_: now,
         date_: time::Date::from_calendar_date(1999, time::Month::January, 8).unwrap(),
         time_: time::Time::from_hms_milli(4, 5, 6, 789).unwrap(),
         json_: json.clone(),
@@ -475,10 +467,10 @@ pub fn test_stress(client: &mut Client) {
         text_: vec![String::from("hello")],
         varchar_: vec![String::from("hello")],
         bytea_: vec![vec![222u8, 173u8, 190u8, 239u8]],
-        timestamp_: vec![primitive_datetime],
-        timestamp_without_time_zone_: vec![primitive_datetime],
-        timestamptz_: vec![offset_datetime],
-        timestamp_with_time_zone_: vec![offset_datetime],
+        timestamp_: vec![now],
+        timestamp_without_time_zone_: vec![now],
+        timestamptz_: vec![now],
+        timestamp_with_time_zone_: vec![now],
         date_: vec![time::Date::from_calendar_date(1999, time::Month::January, 8).unwrap()],
         time_: vec![time::Time::from_hms_milli(4, 5, 6, 789).unwrap()],
         json_: vec![json.clone()],
