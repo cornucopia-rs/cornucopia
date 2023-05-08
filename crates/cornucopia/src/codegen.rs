@@ -3,6 +3,7 @@ use std::fmt::{Display, Write};
 
 use codegen_template::code;
 use indexmap::IndexMap;
+use tempfile::TempDir;
 
 use crate::{
     prepare_queries::{
@@ -37,9 +38,9 @@ impl GenCtx {
 
     pub fn client_name(&self) -> &'static str {
         if self.is_async {
-            "cornucopia_async"
+            "crate::client::async_"
         } else {
-            "cornucopia_sync"
+            "crate::client::sync"
         }
     }
 }
@@ -388,7 +389,7 @@ fn gen_row_query(w: &mut impl Write, row: &PreparedItem, ctx: &GenCtx) {
     } = row;
     // Generate query struct
     let borrowed_str = if *is_copy { "" } else { "Borrowed" };
-    let (client_mut, fn_async, fn_await, backend, collect, raw_type, raw_pre, raw_post, client) =
+    let (client_mut, fn_async, fn_await, backend, collect, raw_type, raw_pre, raw_post) =
         if ctx.is_async {
             (
                 "",
@@ -399,7 +400,6 @@ fn gen_row_query(w: &mut impl Write, row: &PreparedItem, ctx: &GenCtx) {
                 "futures::Stream",
                 "",
                 ".into_stream()",
-                "cornucopia_async",
             )
         } else {
             (
@@ -411,9 +411,9 @@ fn gen_row_query(w: &mut impl Write, row: &PreparedItem, ctx: &GenCtx) {
                 "Iterator",
                 ".iterator()",
                 "",
-                "cornucopia_sync",
             )
         };
+    let client = ctx.client_name();
 
     let row_struct = if *is_named {
         format!("{}{borrowed_str}", row.path(ctx))
@@ -487,11 +487,12 @@ fn gen_query_fn<W: Write>(w: &mut W, module: &PreparedModule, query: &PreparedQu
         param,
     } = query;
 
-    let (client_mut, fn_async, fn_await, backend, client) = if ctx.is_async {
-        ("", "async", ".await", "tokio_postgres", "cornucopia_async")
+    let (client_mut, fn_async, fn_await, backend) = if ctx.is_async {
+        ("", "async", ".await", "tokio_postgres")
     } else {
-        ("mut", "", "", "postgres", "cornucopia_sync")
+        ("mut", "", "", "postgres")
     };
+    let client = ctx.client_name();
 
     let struct_name = ident.type_ident();
     let (param, param_field, order) = match param {
@@ -748,7 +749,7 @@ fn gen_type_modules<W: Write>(
     );
 }
 
-pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> String {
+fn generate_lib_code(preparation: &Preparation, settings: CodegenSettings) -> String {
     let mut buff = "// This file was generated with `cornucopia`. Do not modify.\n\n".to_string();
     let w = &mut buff;
     // Generate database type
@@ -776,7 +777,7 @@ pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> S
                     move |w: &mut String| {
                         let ctx = GenCtx::new(depth, is_async, settings.derive_ser);
                         let import = if is_async {
-                            "use futures::{StreamExt, TryStreamExt};use futures; use cornucopia_async::GenericClient;"
+                            "use futures::{StreamExt, TryStreamExt};use futures; use crate::client::async_::GenericClient;"
                         } else {
                             "use postgres::{fallible_iterator::FallibleIterator,GenericClient};"
                         };
@@ -835,6 +836,120 @@ pub(crate) fn generate(preparation: Preparation, settings: CodegenSettings) -> S
         pub mod queries {
             $($!query_modules)
         }
+        pub mod client;
     );
     buff
+}
+
+fn generate_cargo_file(name: &str, preparation: &Preparation, settings: CodegenSettings) -> String {
+    const VERSION: &str = env!("CARGO_PKG_VERSION");
+    format!(
+        r#"# This file was generated with `cornucopia`. Do not modify
+[package]
+name = "{name}"
+version = "{VERSION}"
+edition = "2021"
+
+[dependencies]
+## Core dependencies
+# Postgres sync client
+postgres = "*"
+# Postgres async client
+tokio-postgres = {{ version = "*", features = [
+    "with-serde_json-1",
+    "with-time-0_3",
+    "with-uuid-1",
+    "with-eui48-1",
+] }}
+# Postgres types
+postgres-types = {{ version = "*", features = ["derive"] }}
+# Postgres interaction
+postgres-protocol = "0.6.4"
+
+## Features dependencies
+# Async connection pooling
+deadpool-postgres = {{ version = "*" }}
+   
+## Extra types dependencies
+# JSON
+serde_json = "*"
+serde = {{ version = "*", features = ["derive"] }}
+# TIMESTAMP
+time = "*"
+# UUID
+uuid = "*"
+# ??
+eui48 = "*"
+# DECIMAL
+rust_decimal = {{ version = "*", features = ["db-postgres"] }} 
+
+## Sync client dependencies
+# Iterator utils required for working with `postgres_protocol::types::ArrayValues`
+fallible-iterator = "0.2.0"
+
+## Async client dependencies
+# ??
+async-trait = "0.1.63"
+# ??
+futures = "*"
+"#
+    )
+}
+
+const CLIENT_CORE: &[(&str, &[u8])] = &[
+    ("mod.rs", include_bytes!("clients/mod.rs")),
+    ("domain.rs", include_bytes!("clients/domain.rs")),
+    (
+        "array_iterator.rs",
+        include_bytes!("clients/array_iterator.rs"),
+    ),
+    ("type_traits.rs", include_bytes!("clients/type_traits.rs")),
+    ("utils.rs", include_bytes!("clients/utils.rs")),
+];
+const CLIENT_ASYNC: &[(&str, &[u8])] = &[
+    ("mod.rs", include_bytes!("clients/client_async/mod.rs")),
+    (
+        "private.rs",
+        include_bytes!("clients/client_async/private.rs"),
+    ),
+    (
+        "deadpool.rs",
+        include_bytes!("clients/client_async/deadpool.rs"),
+    ),
+    (
+        "generic_client.rs",
+        include_bytes!("clients/client_async/generic_client.rs"),
+    ),
+];
+const CLIENT_SYNC: &[(&str, &[u8])] = &[
+    ("mod.rs", include_bytes!("clients/client_sync/mod.rs")),
+    (
+        "private.rs",
+        include_bytes!("clients/client_sync/private.rs"),
+    ),
+];
+
+pub(crate) fn generate(
+    name: &str,
+    preparation: Preparation,
+    settings: CodegenSettings,
+) -> Result<TempDir, std::io::Error> {
+    let lib = generate_lib_code(&preparation, settings);
+    let cargo = generate_cargo_file(name, &preparation, settings);
+    let tmp = tempfile::tempdir()?;
+    std::fs::write(tmp.path().join("Cargo.toml"), cargo)?;
+    std::fs::create_dir(tmp.path().join("src"))?;
+    std::fs::write(tmp.path().join("src/lib.rs"), lib)?;
+    for (path, files) in [
+        ("", CLIENT_CORE),
+        ("sync", CLIENT_SYNC),
+        ("async_", CLIENT_ASYNC),
+    ] {
+        let dir = tmp.path().join("src/client").join(path);
+        std::fs::create_dir(&dir)?;
+        for (name, content) in files {
+            std::fs::write(dir.join(name), content)?;
+        }
+    }
+    Ok(tmp)
 }

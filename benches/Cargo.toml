@@ -8,8 +8,6 @@ edition = "2021"
 [dependencies]
 # Path dependencies
 cornucopia = { path = "../crates/cornucopia" }
-cornucopia_sync = { path = "../crates/client_sync" }
-cornucopia_async = { path = "../crates/client_async" }
 
 # benchmarking
 criterion = { version = "0.4.0", features = ["html_reports"] }
@@ -25,6 +23,11 @@ postgres-types = "0.2.4"
 
 # diesel
 diesel = { version = "2.0.2", features = ["postgres"] }
+
+# Temporary files
+tempfile = "3.5.0"
+
+generated = { path = "generated" }
 
 [[bench]]
 name = "execution"

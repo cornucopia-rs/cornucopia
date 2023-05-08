@@ -6,10 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# Cornucopia async client
-## If you're trying this example as a standalone crate, 
-## replace the path with the latest current version
-cornucopia_async = { path = "../../crates/client_async" }
+#cornucopia = { path = "cornucopia" }
 
 # Async
 tokio = { version = "1.24.2", features = ["full"] }
@@ -17,12 +14,7 @@ futures = "0.3.25"
 
 # Postgres interaction
 tokio-postgres = "0.7.7"
-postgres-types = "0.2.4"
 ## Connection pooling
 deadpool-postgres = "0.10.4"
 
-[build-dependencies]
-# Cornucopia library to automatically
-## If you're trying this example as a standalone crate, 
-## replace the path with the latest current version
-cornucopia = { path = "../../crates/cornucopia" }
+codegen = { path = "auto_build_codegen", package = "auto_build_codegen" }

@@ -5,9 +5,10 @@ use cornucopia::{CodegenSettings, Error};
 // we could also generate it elsewhere and embed the generated
 // file with a `include_str` statement in your project.
 fn main() -> Result<(), Error> {
+    /* TODO replace with cargo-px
     let queries_path = "queries";
     let schema_file = "schema.sql";
-    let destination = "src/cornucopia.rs";
+    let destination = "cornucopia";
     let settings = CodegenSettings {
         is_async: true,
         derive_ser: false,
@@ -22,6 +23,7 @@ fn main() -> Result<(), Error> {
         false,
         settings,
     )?;
+    */
 
     Ok(())
 }

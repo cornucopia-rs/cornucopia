@@ -1,7 +1,7 @@
-// Take a look at the generated `cornucopia.rs` file if you want to
+// Take a look at the generated `cornucopia` crate if you want to
 // see what it looks like under the hood.
-mod cornucopia;
-use crate::cornucopia::{
+use codegen::{
+    client::async_::Params,
     queries::{
         module_1::insert_book,
         module_2::{
@@ -11,7 +11,6 @@ use crate::cornucopia::{
     },
     types::public::SpongeBobCharacter,
 };
-use cornucopia_async::Params;
 
 #[tokio::main]
 pub async fn main() {

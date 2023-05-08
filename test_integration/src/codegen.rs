@@ -1,11 +1,12 @@
 use crate::{
     fixtures::{CodegenTest, TestSuite},
-    utils::{reset_db, rustfmt_file, rustfmt_string},
+    utils::{reset_db, rustfmt_lib},
 };
 
 use cornucopia::{CodegenSettings, Error};
 use owo_colors::OwoColorize;
 use std::{env::set_current_dir, process::Command};
+use tempfile::tempdir;
 
 // Run codegen test, return true if all test are successful
 pub(crate) fn run_codegen_test(
@@ -17,6 +18,7 @@ pub(crate) fn run_codegen_test(
     let fixture_path = "fixtures/codegen";
 
     let test_suites = TestSuite::<CodegenTest>::read(fixture_path);
+    let tmp_dir = tempdir()?;
     for suite in test_suites {
         println!("{}", format!("[codegen] {}", suite.name).magenta());
         for test in suite.tests {
@@ -36,29 +38,34 @@ pub(crate) fn run_codegen_test(
                 cornucopia::generate_live(
                     client,
                     &test.queries_path,
-                    Some(&test.destination),
+                    &test.destination,
                     CodegenSettings::from(&test),
                 )
                 .map_err(Error::report)?;
-                // Format the generated file
-                rustfmt_file(&test.destination);
+                // Format the generated crate
+                rustfmt_lib(&test.destination);
             } else {
-                // Get currently checked-in generate file
-                let old_codegen = std::fs::read_to_string(&test.destination).unwrap();
-                // Generate new file
-                let new_codegen = cornucopia::generate_live(
+                let tmp_path = tmp_dir.path().join(
+                    test.destination
+                        .file_name()
+                        .unwrap_or("cornucopia".as_ref()),
+                );
+                std::fs::create_dir(&tmp_path)?;
+                // Generate
+                cornucopia::generate_live(
                     client,
                     &test.queries_path,
-                    None,
+                    &tmp_path,
                     CodegenSettings::from(&test),
                 )
                 .map_err(Error::report)?;
-                // Format the generated code string by piping to rustfmt
-                let new_codegen_formatted = rustfmt_string(&new_codegen);
+                // Format the generated crate
+                rustfmt_lib(&tmp_path);
 
-                // If the newly generated file differs from
+                // If the newly generated crate differs from
                 // the currently checked in one, return an error.
-                if old_codegen != new_codegen_formatted {
+                if dir_diff::is_different(&test.destination, &tmp_path).unwrap() {
+                    std::fs::rename(&tmp_path, "temp").unwrap();
                     Err(format!(
                         "\"{}\" is outdated",
                         test.destination.to_str().unwrap()

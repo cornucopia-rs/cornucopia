@@ -181,7 +181,7 @@ impl CornucopiaType {
         traits: &mut Vec<String>,
         ctx: &GenCtx,
     ) -> String {
-        let client_name = ctx.client_name();
+        let client_name = "crate::client";
         match self {
             CornucopiaType::Simple { pg_ty, .. } => match *pg_ty {
                 Type::BYTEA => {
@@ -279,7 +279,7 @@ impl CornucopiaType {
                 };
                 // Its more practical for users to use a slice
                 let lifetime = if has_lifetime { lifetime } else { "'_" };
-                let client_name = ctx.client_name();
+                let client_name = "crate::client";
                 format!("{client_name}::ArrayIterator<{lifetime}, {inner}>")
             }
             CornucopiaType::Domain { inner, .. } => inner.brw_ty(false, has_lifetime, ctx),

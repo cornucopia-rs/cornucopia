@@ -12,8 +12,9 @@ pub(crate) fn run_errors_test(
     apply: bool,
 ) -> Result<bool, Box<dyn std::error::Error>> {
     let mut successful = true;
-    let original_pwd = std::env::current_dir().unwrap();
+    let original_pwd = std::env::current_dir()?;
     let test_suites = TestSuite::<ErrorTest>::read("fixtures/errors");
+    let tmp = tempfile::tempdir()?;
 
     for mut suite in test_suites {
         println!("{} {}", "[error]".magenta(), suite.name.magenta());
@@ -50,8 +51,8 @@ pub(crate) fn run_errors_test(
                 .and_then(|_| {
                     cornucopia::generate_live(
                         client,
-                        "queries",
-                        None,
+                        "queries".as_ref(),
+                        tmp.path(),
                         CodegenSettings::from(&*test),
                     )
                 });

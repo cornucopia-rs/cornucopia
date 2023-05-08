@@ -6,14 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# Path dependencies
-cornucopia_sync = { path = "../crates/client_sync", features = [
-    "with-serde_json-1",
-] }
-cornucopia_async = { path = "../crates/client_async", features = [
-    "with-serde_json-1",
-] }
-
 # async
 futures = "0.3.25"
 
@@ -41,3 +33,5 @@ time = { version = "0.3.17", features = ["parsing", "serde"] }
 uuid = { version = "1.2.2", features = ["serde"] }
 eui48 = { version = "1.1.0", features = ["serde"] }
 rust_decimal = { version = "1.28.0", features = ["db-postgres"] }
+
+codegen = { path = "codegen" }

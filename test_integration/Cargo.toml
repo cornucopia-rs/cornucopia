@@ -12,6 +12,9 @@ cornucopia = { path = "../crates/cornucopia" }
 # Create temporary projects for error tests.
 tempfile = "3.3.0"
 
+# Compare directories
+dir-diff = "0.3.2"
+
 # Colored output
 owo-colors = "3.5.0"
 
