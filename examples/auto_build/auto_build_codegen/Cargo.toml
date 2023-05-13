@@ -3,6 +3,7 @@
 name = "auto_build_codegen"
 version = "0.9.0"
 edition = "2021"
+
 [features]
 default = ["deadpool"]
 deadpool = ["dep:deadpool-postgres"]
@@ -10,20 +11,19 @@ deadpool = ["dep:deadpool-postgres"]
 [dependencies]
 ## Core dependencies
 # Postgres types
-postgres-types = { version = "*", features = ["derive"] }
+postgres-types = { version = "0.2.5", features = ["derive"] }
 # Postgres interaction
-postgres-protocol = "0.6.4"
+postgres-protocol = "0.6.5"
 # Iterator utils required for working with `postgres_protocol::types::ArrayValues`
 fallible-iterator = "0.2.0"
 
 ## Async client dependencies
 # Postgres async client
-tokio-postgres = { version = "*", features = [] }
-# ??
-async-trait = "0.1.63"
-# ??
-futures = "*"
+tokio-postgres = { version = "0.7.8", features = [] }
+# Async utils
+async-trait = "0.1.68"
+futures = "0.3.28"
 
 ## Async features dependencies
 # Async connection pooling
-deadpool-postgres = { version = "*", optional = true }
+deadpool-postgres = { version = "0.10.5", optional = true }

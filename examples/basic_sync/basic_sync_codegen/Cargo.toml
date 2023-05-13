@@ -7,12 +7,12 @@ edition = "2021"
 [dependencies]
 ## Core dependencies
 # Postgres types
-postgres-types = { version = "*", features = ["derive"] }
+postgres-types = { version = "0.2.5", features = ["derive"] }
 # Postgres interaction
-postgres-protocol = "0.6.4"
+postgres-protocol = "0.6.5"
 # Iterator utils required for working with `postgres_protocol::types::ArrayValues`
 fallible-iterator = "0.2.0"
 
 ## Sync client dependencies
 # Postgres sync client
-postgres = { version = "*", features = [] }
+postgres = { version = "0.19.5", features = [] }

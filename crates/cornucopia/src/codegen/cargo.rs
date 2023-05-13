@@ -58,6 +58,7 @@ pub fn gen_cargo_file(
 
     if settings.gen_async {
         writedoc! { buf, r#"
+            
             [features]
             default = ["deadpool"]
             deadpool = ["dep:deadpool-postgres"]
@@ -70,9 +71,9 @@ pub fn gen_cargo_file(
         [dependencies]
         ## Core dependencies
         # Postgres types
-        postgres-types = {{ version = "*", features = ["derive"] }}
+        postgres-types = {{ version = "0.2.5", features = ["derive"] }}
         # Postgres interaction
-        postgres-protocol = "0.6.4"
+        postgres-protocol = "0.6.5"
         # Iterator utils required for working with `postgres_protocol::types::ArrayValues`
         fallible-iterator = "0.2.0"
     "#}
@@ -85,8 +86,8 @@ pub fn gen_cargo_file(
         if dependency_analysis.json {
             writedoc! { buf, r#"
                 # JSON or JSONB
-                serde_json = "*"
-                serde = {{ version = "*", features = ["derive"] }}
+                serde_json = {{ version = "1.0.96", features = ["raw_value"] }}
+                serde = {{ version = "1.0.163", features = ["derive"] }}
             "#}
             .unwrap();
             write!(client_features, r#""with-serde_json-1","#).unwrap();
@@ -94,7 +95,7 @@ pub fn gen_cargo_file(
         if dependency_analysis.time {
             writedoc! { buf, r#"
                 # TIME, DATE, TIMESTAMP or TIMESTAMPZ
-                time = "*"
+                time = "0.3.21"
             "#}
             .unwrap();
             write!(client_features, r#""with-time-0_3","#).unwrap();
@@ -102,7 +103,7 @@ pub fn gen_cargo_file(
         if dependency_analysis.uuid {
             writedoc! { buf, r#"
                 # UUID
-                 uuid = "*"
+                uuid = "1.3.2"
             "#}
             .unwrap();
             write!(client_features, r#""with-uuid-1","#).unwrap();
@@ -110,7 +111,7 @@ pub fn gen_cargo_file(
         if dependency_analysis.mac_addr {
             writedoc! { buf, r#"
                 # MAC ADDRESS
-                eui48 = "*"
+                eui48 = "1.1.0"
             "#}
             .unwrap();
             write!(client_features, r#""with-eui48-1","#).unwrap();
@@ -118,7 +119,7 @@ pub fn gen_cargo_file(
         if dependency_analysis.decimal {
             writedoc! { buf, r#"
                 # DECIMAL
-                rust_decimal = {{ version = "*", features = ["db-postgres"] }} 
+                rust_decimal = {{ version = "1.29.1", features = ["db-postgres"] }} 
             "#}
             .unwrap();
         }
@@ -129,7 +130,7 @@ pub fn gen_cargo_file(
 
             ## Sync client dependencies
             # Postgres sync client
-            postgres = {{ version = "*", features = [{client_features}] }}
+            postgres = {{ version = "0.19.5", features = [{client_features}] }}
         "#}
         .unwrap();
     }
@@ -139,15 +140,14 @@ pub fn gen_cargo_file(
 
             ## Async client dependencies
             # Postgres async client
-            tokio-postgres = {{ version = "*", features = [{client_features}] }}
-            # ??
-            async-trait = "0.1.63"
-            # ??
-            futures = "*"
+            tokio-postgres = {{ version = "0.7.8", features = [{client_features}] }}
+            # Async utils
+            async-trait = "0.1.68"
+            futures = "0.3.28"
 
             ## Async features dependencies
             # Async connection pooling
-            deadpool-postgres = {{ version = "*", optional = true }}
+            deadpool-postgres = {{ version = "0.10.5", optional = true }}
         "#}
         .unwrap();
     }

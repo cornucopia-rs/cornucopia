@@ -11,6 +11,7 @@ pub trait Params<'a, P, O, C> {
     fn params(&'a mut self, client: &'a C, params: &'a P) -> O;
 }
 /// Cached statement
+#[doc(hidden)]
 pub struct Stmt {
     query: &'static str,
     cached: Option<Statement>,

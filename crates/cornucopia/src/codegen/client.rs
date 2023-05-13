@@ -448,6 +448,7 @@ pub fn sync() -> String {
         }
 
         /// Cached statement
+        #[doc(hidden)]
         pub(crate) struct Stmt {
             query: &'static str,
             cached: Option<Statement>,
@@ -493,6 +494,7 @@ pub fn async_() -> String {
         }
 
         /// Cached statement
+        #[doc(hidden)]
         pub struct Stmt {
             query: &'static str,
             cached: Option<Statement>,
