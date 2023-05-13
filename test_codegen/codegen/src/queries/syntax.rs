@@ -22,53 +22,53 @@ pub struct ParamsSpace<T1: crate::client::StringSql> {
 }
 #[derive(Clone, Copy, Debug)]
 pub struct TrickySqlParams {
-    pub r#async: crate::types::public::SyntaxComposite,
-    pub r#enum: crate::types::public::SyntaxEnum,
+    pub r#async: crate::types::SyntaxComposite,
+    pub r#enum: crate::types::SyntaxEnum,
 }
 #[derive(Clone, Copy, Debug)]
 pub struct TrickySql1Params {
-    pub r#async: crate::types::public::SyntaxComposite,
-    pub r#enum: crate::types::public::SyntaxEnum,
+    pub r#async: crate::types::SyntaxComposite,
+    pub r#enum: crate::types::SyntaxEnum,
 }
 #[derive(Clone, Copy, Debug)]
 pub struct TrickySql2Params {
-    pub r#async: crate::types::public::SyntaxComposite,
-    pub r#enum: crate::types::public::SyntaxEnum,
+    pub r#async: crate::types::SyntaxComposite,
+    pub r#enum: crate::types::SyntaxEnum,
 }
 #[derive(Clone, Copy, Debug)]
 pub struct TrickySql3Params {
-    pub r#async: crate::types::public::SyntaxComposite,
-    pub r#enum: crate::types::public::SyntaxEnum,
+    pub r#async: crate::types::SyntaxComposite,
+    pub r#enum: crate::types::SyntaxEnum,
 }
 #[derive(Clone, Copy, Debug)]
 pub struct TrickySql4Params {
-    pub r#async: crate::types::public::SyntaxComposite,
-    pub r#enum: crate::types::public::SyntaxEnum,
+    pub r#async: crate::types::SyntaxComposite,
+    pub r#enum: crate::types::SyntaxEnum,
 }
 #[derive(Clone, Copy, Debug)]
 pub struct TrickySql6Params {
-    pub r#async: crate::types::public::SyntaxComposite,
-    pub r#enum: crate::types::public::SyntaxEnum,
+    pub r#async: crate::types::SyntaxComposite,
+    pub r#enum: crate::types::SyntaxEnum,
 }
 #[derive(Clone, Copy, Debug)]
 pub struct TrickySql7Params {
-    pub r#async: crate::types::public::SyntaxComposite,
-    pub r#enum: crate::types::public::SyntaxEnum,
+    pub r#async: crate::types::SyntaxComposite,
+    pub r#enum: crate::types::SyntaxEnum,
 }
 #[derive(Clone, Copy, Debug)]
 pub struct TrickySql8Params {
-    pub r#async: crate::types::public::SyntaxComposite,
-    pub r#enum: crate::types::public::SyntaxEnum,
+    pub r#async: crate::types::SyntaxComposite,
+    pub r#enum: crate::types::SyntaxEnum,
 }
 #[derive(Clone, Copy, Debug)]
 pub struct TrickySql9Params {
-    pub r#async: crate::types::public::SyntaxComposite,
-    pub r#enum: crate::types::public::SyntaxEnum,
+    pub r#async: crate::types::SyntaxComposite,
+    pub r#enum: crate::types::SyntaxEnum,
 }
 #[derive(Clone, Copy, Debug)]
 pub struct TrickySql10Params {
-    pub r#async: crate::types::public::SyntaxComposite,
-    pub r#enum: crate::types::public::SyntaxEnum,
+    pub r#async: crate::types::SyntaxComposite,
+    pub r#enum: crate::types::SyntaxEnum,
 }
 #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
 pub struct Row {
@@ -81,13 +81,13 @@ pub struct RowSpace {
 #[derive(serde::Serialize, Debug, Clone, PartialEq)]
 pub struct Typeof {
     pub trick_y: String,
-    pub r#async: crate::types::public::SyntaxComposite,
-    pub r#enum: crate::types::public::SyntaxEnum,
+    pub r#async: crate::types::SyntaxComposite,
+    pub r#enum: crate::types::SyntaxEnum,
 }
 pub struct TypeofBorrowed<'a> {
     pub trick_y: &'a str,
-    pub r#async: crate::types::public::SyntaxComposite,
-    pub r#enum: crate::types::public::SyntaxEnum,
+    pub r#async: crate::types::SyntaxComposite,
+    pub r#enum: crate::types::SyntaxEnum,
 }
 impl<'a> From<TypeofBorrowed<'a>> for Typeof {
     fn from(
@@ -106,22 +106,22 @@ impl<'a> From<TypeofBorrowed<'a>> for Typeof {
 }
 pub mod sync {
     use postgres::{fallible_iterator::FallibleIterator, GenericClient};
-    pub struct PublicCloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
+    pub struct CloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
         client: &'a mut C,
         params: [&'a (dyn postgres_types::ToSql + Sync); N],
         stmt: &'a mut crate::client::sync::Stmt,
-        extractor: fn(&postgres::Row) -> crate::types::public::CloneCompositeBorrowed,
-        mapper: fn(crate::types::public::CloneCompositeBorrowed) -> T,
+        extractor: fn(&postgres::Row) -> crate::types::CloneCompositeBorrowed,
+        mapper: fn(crate::types::CloneCompositeBorrowed) -> T,
     }
-    impl<'a, C, T: 'a, const N: usize> PublicCloneCompositeQuery<'a, C, T, N>
+    impl<'a, C, T: 'a, const N: usize> CloneCompositeQuery<'a, C, T, N>
     where
         C: GenericClient,
     {
         pub fn map<R>(
             self,
-            mapper: fn(crate::types::public::CloneCompositeBorrowed) -> R,
-        ) -> PublicCloneCompositeQuery<'a, C, R, N> {
-            PublicCloneCompositeQuery {
+            mapper: fn(crate::types::CloneCompositeBorrowed) -> R,
+        ) -> CloneCompositeQuery<'a, C, R, N> {
+            CloneCompositeQuery {
                 client: self.client,
                 params: self.params,
                 stmt: self.stmt,
@@ -357,8 +357,8 @@ pub mod sync {
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a mut C,
-        ) -> PublicCloneCompositeQuery<'a, C, crate::types::public::CloneComposite, 0> {
-            PublicCloneCompositeQuery {
+        ) -> CloneCompositeQuery<'a, C, crate::types::CloneComposite, 0> {
+            CloneCompositeQuery {
                 client,
                 params: [],
                 stmt: &mut self.0,
@@ -375,8 +375,8 @@ pub mod sync {
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a mut C,
-        ) -> PublicCloneCompositeQuery<'a, C, crate::types::public::CloneComposite, 0> {
-            PublicCloneCompositeQuery {
+        ) -> CloneCompositeQuery<'a, C, crate::types::CloneComposite, 0> {
+            CloneCompositeQuery {
                 client,
                 params: [],
                 stmt: &mut self.0,
@@ -541,8 +541,8 @@ pub mod sync {
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a mut C,
-            r#async: &'a crate::types::public::SyntaxComposite,
-            r#enum: &'a crate::types::public::SyntaxEnum,
+            r#async: &'a crate::types::SyntaxComposite,
+            r#enum: &'a crate::types::SyntaxEnum,
         ) -> Result<u64, postgres::Error> {
             let stmt = self.0.prepare(client)?;
             client.execute(stmt, &[r#async, r#enum])
@@ -568,8 +568,8 @@ pub mod sync {
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a mut C,
-            r#async: &'a crate::types::public::SyntaxComposite,
-            r#enum: &'a crate::types::public::SyntaxEnum,
+            r#async: &'a crate::types::SyntaxComposite,
+            r#enum: &'a crate::types::SyntaxEnum,
         ) -> Result<u64, postgres::Error> {
             let stmt = self.0.prepare(client)?;
             client.execute(stmt, &[r#async, r#enum])
@@ -595,8 +595,8 @@ pub mod sync {
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a mut C,
-            r#async: &'a crate::types::public::SyntaxComposite,
-            r#enum: &'a crate::types::public::SyntaxEnum,
+            r#async: &'a crate::types::SyntaxComposite,
+            r#enum: &'a crate::types::SyntaxEnum,
         ) -> Result<u64, postgres::Error> {
             let stmt = self.0.prepare(client)?;
             client.execute(stmt, &[r#async, r#enum])
@@ -622,8 +622,8 @@ pub mod sync {
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a mut C,
-            r#async: &'a crate::types::public::SyntaxComposite,
-            r#enum: &'a crate::types::public::SyntaxEnum,
+            r#async: &'a crate::types::SyntaxComposite,
+            r#enum: &'a crate::types::SyntaxEnum,
         ) -> Result<u64, postgres::Error> {
             let stmt = self.0.prepare(client)?;
             client.execute(stmt, &[r#async, r#enum])
@@ -649,8 +649,8 @@ pub mod sync {
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a mut C,
-            r#async: &'a crate::types::public::SyntaxComposite,
-            r#enum: &'a crate::types::public::SyntaxEnum,
+            r#async: &'a crate::types::SyntaxComposite,
+            r#enum: &'a crate::types::SyntaxEnum,
         ) -> Result<u64, postgres::Error> {
             let stmt = self.0.prepare(client)?;
             client.execute(stmt, &[r#async, r#enum])
@@ -676,8 +676,8 @@ pub mod sync {
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a mut C,
-            r#async: &'a crate::types::public::SyntaxComposite,
-            r#enum: &'a crate::types::public::SyntaxEnum,
+            r#async: &'a crate::types::SyntaxComposite,
+            r#enum: &'a crate::types::SyntaxEnum,
         ) -> Result<u64, postgres::Error> {
             let stmt = self.0.prepare(client)?;
             client.execute(stmt, &[r#async, r#enum])
@@ -703,8 +703,8 @@ pub mod sync {
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a mut C,
-            r#async: &'a crate::types::public::SyntaxComposite,
-            r#enum: &'a crate::types::public::SyntaxEnum,
+            r#async: &'a crate::types::SyntaxComposite,
+            r#enum: &'a crate::types::SyntaxEnum,
         ) -> Result<u64, postgres::Error> {
             let stmt = self.0.prepare(client)?;
             client.execute(stmt, &[r#async, r#enum])
@@ -730,8 +730,8 @@ pub mod sync {
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a mut C,
-            r#async: &'a crate::types::public::SyntaxComposite,
-            r#enum: &'a crate::types::public::SyntaxEnum,
+            r#async: &'a crate::types::SyntaxComposite,
+            r#enum: &'a crate::types::SyntaxEnum,
         ) -> Result<u64, postgres::Error> {
             let stmt = self.0.prepare(client)?;
             client.execute(stmt, &[r#async, r#enum])
@@ -757,8 +757,8 @@ pub mod sync {
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a mut C,
-            r#async: &'a crate::types::public::SyntaxComposite,
-            r#enum: &'a crate::types::public::SyntaxEnum,
+            r#async: &'a crate::types::SyntaxComposite,
+            r#enum: &'a crate::types::SyntaxEnum,
         ) -> Result<u64, postgres::Error> {
             let stmt = self.0.prepare(client)?;
             client.execute(stmt, &[r#async, r#enum])
@@ -784,8 +784,8 @@ pub mod sync {
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a mut C,
-            r#async: &'a crate::types::public::SyntaxComposite,
-            r#enum: &'a crate::types::public::SyntaxEnum,
+            r#async: &'a crate::types::SyntaxComposite,
+            r#enum: &'a crate::types::SyntaxEnum,
         ) -> Result<u64, postgres::Error> {
             let stmt = self.0.prepare(client)?;
             client.execute(stmt, &[r#async, r#enum])
@@ -829,22 +829,22 @@ pub mod sync {
 pub mod async_ {
     use crate::client::async_::GenericClient;
     use futures::{self, StreamExt, TryStreamExt};
-    pub struct PublicCloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
+    pub struct CloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
         client: &'a C,
         params: [&'a (dyn postgres_types::ToSql + Sync); N],
         stmt: &'a mut crate::client::async_::Stmt,
-        extractor: fn(&tokio_postgres::Row) -> crate::types::public::CloneCompositeBorrowed,
-        mapper: fn(crate::types::public::CloneCompositeBorrowed) -> T,
+        extractor: fn(&tokio_postgres::Row) -> crate::types::CloneCompositeBorrowed,
+        mapper: fn(crate::types::CloneCompositeBorrowed) -> T,
     }
-    impl<'a, C, T: 'a, const N: usize> PublicCloneCompositeQuery<'a, C, T, N>
+    impl<'a, C, T: 'a, const N: usize> CloneCompositeQuery<'a, C, T, N>
     where
         C: GenericClient,
     {
         pub fn map<R>(
             self,
-            mapper: fn(crate::types::public::CloneCompositeBorrowed) -> R,
-        ) -> PublicCloneCompositeQuery<'a, C, R, N> {
-            PublicCloneCompositeQuery {
+            mapper: fn(crate::types::CloneCompositeBorrowed) -> R,
+        ) -> CloneCompositeQuery<'a, C, R, N> {
+            CloneCompositeQuery {
                 client: self.client,
                 params: self.params,
                 stmt: self.stmt,
@@ -1100,8 +1100,8 @@ pub mod async_ {
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a C,
-        ) -> PublicCloneCompositeQuery<'a, C, crate::types::public::CloneComposite, 0> {
-            PublicCloneCompositeQuery {
+        ) -> CloneCompositeQuery<'a, C, crate::types::CloneComposite, 0> {
+            CloneCompositeQuery {
                 client,
                 params: [],
                 stmt: &mut self.0,
@@ -1120,8 +1120,8 @@ pub mod async_ {
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a C,
-        ) -> PublicCloneCompositeQuery<'a, C, crate::types::public::CloneComposite, 0> {
-            PublicCloneCompositeQuery {
+        ) -> CloneCompositeQuery<'a, C, crate::types::CloneComposite, 0> {
+            CloneCompositeQuery {
                 client,
                 params: [],
                 stmt: &mut self.0,
@@ -1286,8 +1286,8 @@ pub mod async_ {
         pub async fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a C,
-            r#async: &'a crate::types::public::SyntaxComposite,
-            r#enum: &'a crate::types::public::SyntaxEnum,
+            r#async: &'a crate::types::SyntaxComposite,
+            r#enum: &'a crate::types::SyntaxEnum,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = self.0.prepare(client).await?;
             client.execute(stmt, &[r#async, r#enum]).await
@@ -1321,8 +1321,8 @@ pub mod async_ {
         pub async fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a C,
-            r#async: &'a crate::types::public::SyntaxComposite,
-            r#enum: &'a crate::types::public::SyntaxEnum,
+            r#async: &'a crate::types::SyntaxComposite,
+            r#enum: &'a crate::types::SyntaxEnum,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = self.0.prepare(client).await?;
             client.execute(stmt, &[r#async, r#enum]).await
@@ -1356,8 +1356,8 @@ pub mod async_ {
         pub async fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a C,
-            r#async: &'a crate::types::public::SyntaxComposite,
-            r#enum: &'a crate::types::public::SyntaxEnum,
+            r#async: &'a crate::types::SyntaxComposite,
+            r#enum: &'a crate::types::SyntaxEnum,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = self.0.prepare(client).await?;
             client.execute(stmt, &[r#async, r#enum]).await
@@ -1391,8 +1391,8 @@ pub mod async_ {
         pub async fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a C,
-            r#async: &'a crate::types::public::SyntaxComposite,
-            r#enum: &'a crate::types::public::SyntaxEnum,
+            r#async: &'a crate::types::SyntaxComposite,
+            r#enum: &'a crate::types::SyntaxEnum,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = self.0.prepare(client).await?;
             client.execute(stmt, &[r#async, r#enum]).await
@@ -1426,8 +1426,8 @@ pub mod async_ {
         pub async fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a C,
-            r#async: &'a crate::types::public::SyntaxComposite,
-            r#enum: &'a crate::types::public::SyntaxEnum,
+            r#async: &'a crate::types::SyntaxComposite,
+            r#enum: &'a crate::types::SyntaxEnum,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = self.0.prepare(client).await?;
             client.execute(stmt, &[r#async, r#enum]).await
@@ -1461,8 +1461,8 @@ pub mod async_ {
         pub async fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a C,
-            r#async: &'a crate::types::public::SyntaxComposite,
-            r#enum: &'a crate::types::public::SyntaxEnum,
+            r#async: &'a crate::types::SyntaxComposite,
+            r#enum: &'a crate::types::SyntaxEnum,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = self.0.prepare(client).await?;
             client.execute(stmt, &[r#async, r#enum]).await
@@ -1496,8 +1496,8 @@ pub mod async_ {
         pub async fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a C,
-            r#async: &'a crate::types::public::SyntaxComposite,
-            r#enum: &'a crate::types::public::SyntaxEnum,
+            r#async: &'a crate::types::SyntaxComposite,
+            r#enum: &'a crate::types::SyntaxEnum,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = self.0.prepare(client).await?;
             client.execute(stmt, &[r#async, r#enum]).await
@@ -1531,8 +1531,8 @@ pub mod async_ {
         pub async fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a C,
-            r#async: &'a crate::types::public::SyntaxComposite,
-            r#enum: &'a crate::types::public::SyntaxEnum,
+            r#async: &'a crate::types::SyntaxComposite,
+            r#enum: &'a crate::types::SyntaxEnum,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = self.0.prepare(client).await?;
             client.execute(stmt, &[r#async, r#enum]).await
@@ -1566,8 +1566,8 @@ pub mod async_ {
         pub async fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a C,
-            r#async: &'a crate::types::public::SyntaxComposite,
-            r#enum: &'a crate::types::public::SyntaxEnum,
+            r#async: &'a crate::types::SyntaxComposite,
+            r#enum: &'a crate::types::SyntaxEnum,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = self.0.prepare(client).await?;
             client.execute(stmt, &[r#async, r#enum]).await
@@ -1601,8 +1601,8 @@ pub mod async_ {
         pub async fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a C,
-            r#async: &'a crate::types::public::SyntaxComposite,
-            r#enum: &'a crate::types::public::SyntaxEnum,
+            r#async: &'a crate::types::SyntaxComposite,
+            r#enum: &'a crate::types::SyntaxEnum,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = self.0.prepare(client).await?;
             client.execute(stmt, &[r#async, r#enum]).await

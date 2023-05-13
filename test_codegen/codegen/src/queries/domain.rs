@@ -12,7 +12,7 @@ pub struct InsertNightmareDomainParams<
     pub json: T2,
     pub nb: i32,
     pub arr: T4,
-    pub composite: Option<crate::types::public::DomainCompositeParams<'a>>,
+    pub composite: Option<crate::types::DomainCompositeParams<'a>>,
 }
 #[derive(serde::Serialize, Debug, Clone, PartialEq)]
 pub struct SelectNightmareDomain {
@@ -48,7 +48,7 @@ pub struct SelectNightmareDomainNull {
     pub json: Option<serde_json::Value>,
     pub nb: Option<i32>,
     pub arr: Option<Vec<Option<serde_json::Value>>>,
-    pub composite: Option<crate::types::public::DomainComposite>,
+    pub composite: Option<crate::types::DomainComposite>,
 }
 pub struct SelectNightmareDomainNullBorrowed<'a> {
     pub txt: Option<&'a str>,
@@ -60,7 +60,7 @@ pub struct SelectNightmareDomainNullBorrowed<'a> {
             Option<postgres_types::Json<&'a serde_json::value::RawValue>>,
         >,
     >,
-    pub composite: Option<crate::types::public::DomainCompositeBorrowed<'a>>,
+    pub composite: Option<crate::types::DomainCompositeBorrowed<'a>>,
 }
 impl<'a> From<SelectNightmareDomainNullBorrowed<'a>> for SelectNightmareDomainNull {
     fn from(
@@ -232,7 +232,7 @@ pub mod sync {
             json: &'a T2,
             nb: &'a i32,
             arr: &'a T4,
-            composite: &'a Option<crate::types::public::DomainCompositeParams<'a>>,
+            composite: &'a Option<crate::types::DomainCompositeParams<'a>>,
         ) -> Result<u64, postgres::Error> {
             let stmt = self.0.prepare(client)?;
             client.execute(
@@ -461,7 +461,7 @@ pub mod async_ {
             json: &'a T2,
             nb: &'a i32,
             arr: &'a T4,
-            composite: &'a Option<crate::types::public::DomainCompositeParams<'a>>,
+            composite: &'a Option<crate::types::DomainCompositeParams<'a>>,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = self.0.prepare(client).await?;
             client

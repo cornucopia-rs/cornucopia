@@ -153,7 +153,7 @@ fn gen_recursive(scan: &mut Scanner, s: &mut String, out: &str) {
                     s.push_str(out);
                     s.push_str(" = &mut *");
                     s.push_str(out);
-                    s.push_str(";");
+                    s.push(';');
                     s.push_str(ident);
                     s.push_str("(&mut *");
                     s.push_str(out);

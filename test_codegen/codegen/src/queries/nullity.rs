@@ -9,18 +9,18 @@ pub struct NullityParams<
 > {
     pub texts: T2,
     pub name: T3,
-    pub composite: Option<crate::types::public::NullityCompositeParams<'a>>,
+    pub composite: Option<crate::types::NullityCompositeParams<'a>>,
 }
 #[derive(serde::Serialize, Debug, Clone, PartialEq)]
 pub struct Nullity {
     pub texts: Vec<Option<String>>,
     pub name: String,
-    pub composite: Option<crate::types::public::NullityComposite>,
+    pub composite: Option<crate::types::NullityComposite>,
 }
 pub struct NullityBorrowed<'a> {
     pub texts: crate::client::ArrayIterator<'a, Option<&'a str>>,
     pub name: &'a str,
-    pub composite: Option<crate::types::public::NullityCompositeBorrowed<'a>>,
+    pub composite: Option<crate::types::NullityCompositeBorrowed<'a>>,
 }
 impl<'a> From<NullityBorrowed<'a>> for Nullity {
     fn from(
@@ -105,7 +105,7 @@ pub mod sync {
             client: &'a mut C,
             texts: &'a T2,
             name: &'a T3,
-            composite: &'a Option<crate::types::public::NullityCompositeParams<'a>>,
+            composite: &'a Option<crate::types::NullityCompositeParams<'a>>,
         ) -> Result<u64, postgres::Error> {
             let stmt = self.0.prepare(client)?;
             client.execute(stmt, &[texts, name, composite])
@@ -229,7 +229,7 @@ pub mod async_ {
             client: &'a C,
             texts: &'a T2,
             name: &'a T3,
-            composite: &'a Option<crate::types::public::NullityCompositeParams<'a>>,
+            composite: &'a Option<crate::types::NullityCompositeParams<'a>>,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = self.0.prepare(client).await?;
             client.execute(stmt, &[texts, name, composite]).await

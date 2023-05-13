@@ -3,7 +3,7 @@ use std::fmt::Write;
 use codegen_template::code;
 
 use crate::{
-    codegen::Hierarchy,
+    codegen::ModCtx,
     prepare_queries::{Preparation, PreparedItem, PreparedModule, PreparedQuery},
     CodegenSettings,
 };
@@ -338,11 +338,7 @@ fn gen_query_fn<W: Write>(w: &mut W, module: &PreparedModule, query: &PreparedQu
 }
 
 fn gen_query_module(module: &PreparedModule, settings: CodegenSettings) -> String {
-    let ctx = GenCtx::new(
-        Hierarchy::QueryModule,
-        settings.gen_async,
-        settings.derive_ser,
-    );
+    let ctx = GenCtx::new(ModCtx::Queries, settings.gen_async, settings.derive_ser);
     let params_string = module
         .params
         .values()
@@ -353,7 +349,7 @@ fn gen_query_module(module: &PreparedModule, settings: CodegenSettings) -> Strin
         .map(|row| |w: &mut String| gen_row_structs(w, row, &ctx));
 
     let sync_specific = |w: &mut String| {
-        let gen_specific = |hierarchy: Hierarchy, is_async: bool| {
+        let gen_specific = |hierarchy: ModCtx, is_async: bool| {
             move |w: &mut String| {
                 let ctx = GenCtx::new(hierarchy, is_async, settings.derive_ser);
                 let import = if is_async {
@@ -378,16 +374,16 @@ fn gen_query_module(module: &PreparedModule, settings: CodegenSettings) -> Strin
         };
 
         if settings.gen_async && settings.gen_sync {
-            let gen = gen_specific(Hierarchy::SpecificQueryModule, false);
+            let gen = gen_specific(ModCtx::CLientQueries, false);
             code!(w => pub mod sync { $!gen});
 
-            let gen = gen_specific(Hierarchy::SpecificQueryModule, true);
+            let gen = gen_specific(ModCtx::CLientQueries, true);
             code!(w => pub mod async_ { $!gen});
         } else if settings.gen_sync {
-            let gen = gen_specific(Hierarchy::QueryModule, false);
+            let gen = gen_specific(ModCtx::Queries, false);
             code!(w =>  $!gen);
         } else {
-            let gen = gen_specific(Hierarchy::QueryModule, true);
+            let gen = gen_specific(ModCtx::Queries, true);
             code!(w =>  $!gen);
         }
     };

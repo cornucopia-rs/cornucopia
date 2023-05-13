@@ -2,22 +2,22 @@
 
 pub mod sync {
     use postgres::{fallible_iterator::FallibleIterator, GenericClient};
-    pub struct PublicCloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
+    pub struct CloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
         client: &'a mut C,
         params: [&'a (dyn postgres_types::ToSql + Sync); N],
         stmt: &'a mut crate::client::sync::Stmt,
-        extractor: fn(&postgres::Row) -> crate::types::public::CloneCompositeBorrowed,
-        mapper: fn(crate::types::public::CloneCompositeBorrowed) -> T,
+        extractor: fn(&postgres::Row) -> crate::types::CloneCompositeBorrowed,
+        mapper: fn(crate::types::CloneCompositeBorrowed) -> T,
     }
-    impl<'a, C, T: 'a, const N: usize> PublicCloneCompositeQuery<'a, C, T, N>
+    impl<'a, C, T: 'a, const N: usize> CloneCompositeQuery<'a, C, T, N>
     where
         C: GenericClient,
     {
         pub fn map<R>(
             self,
-            mapper: fn(crate::types::public::CloneCompositeBorrowed) -> R,
-        ) -> PublicCloneCompositeQuery<'a, C, R, N> {
-            PublicCloneCompositeQuery {
+            mapper: fn(crate::types::CloneCompositeBorrowed) -> R,
+        ) -> CloneCompositeQuery<'a, C, R, N> {
+            CloneCompositeQuery {
                 client: self.client,
                 params: self.params,
                 stmt: self.stmt,
@@ -53,22 +53,22 @@ pub mod sync {
             Ok(it)
         }
     }
-    pub struct PublicCopyCompositeQuery<'a, C: GenericClient, T, const N: usize> {
+    pub struct CopyCompositeQuery<'a, C: GenericClient, T, const N: usize> {
         client: &'a mut C,
         params: [&'a (dyn postgres_types::ToSql + Sync); N],
         stmt: &'a mut crate::client::sync::Stmt,
-        extractor: fn(&postgres::Row) -> crate::types::public::CopyComposite,
-        mapper: fn(crate::types::public::CopyComposite) -> T,
+        extractor: fn(&postgres::Row) -> crate::types::CopyComposite,
+        mapper: fn(crate::types::CopyComposite) -> T,
     }
-    impl<'a, C, T: 'a, const N: usize> PublicCopyCompositeQuery<'a, C, T, N>
+    impl<'a, C, T: 'a, const N: usize> CopyCompositeQuery<'a, C, T, N>
     where
         C: GenericClient,
     {
         pub fn map<R>(
             self,
-            mapper: fn(crate::types::public::CopyComposite) -> R,
-        ) -> PublicCopyCompositeQuery<'a, C, R, N> {
-            PublicCopyCompositeQuery {
+            mapper: fn(crate::types::CopyComposite) -> R,
+        ) -> CopyCompositeQuery<'a, C, R, N> {
+            CopyCompositeQuery {
                 client: self.client,
                 params: self.params,
                 stmt: self.stmt,
@@ -114,7 +114,7 @@ pub mod sync {
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a mut C,
-            composite: &'a crate::types::public::CloneCompositeBorrowed<'a>,
+            composite: &'a crate::types::CloneCompositeBorrowed<'a>,
         ) -> Result<u64, postgres::Error> {
             let stmt = self.0.prepare(client)?;
             client.execute(stmt, &[composite])
@@ -128,8 +128,8 @@ pub mod sync {
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a mut C,
-        ) -> PublicCloneCompositeQuery<'a, C, crate::types::public::CloneComposite, 0> {
-            PublicCloneCompositeQuery {
+        ) -> CloneCompositeQuery<'a, C, crate::types::CloneComposite, 0> {
+            CloneCompositeQuery {
                 client,
                 params: [],
                 stmt: &mut self.0,
@@ -148,7 +148,7 @@ pub mod sync {
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a mut C,
-            composite: &'a crate::types::public::CopyComposite,
+            composite: &'a crate::types::CopyComposite,
         ) -> Result<u64, postgres::Error> {
             let stmt = self.0.prepare(client)?;
             client.execute(stmt, &[composite])
@@ -162,8 +162,8 @@ pub mod sync {
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a mut C,
-        ) -> PublicCopyCompositeQuery<'a, C, crate::types::public::CopyComposite, 0> {
-            PublicCopyCompositeQuery {
+        ) -> CopyCompositeQuery<'a, C, crate::types::CopyComposite, 0> {
+            CopyCompositeQuery {
                 client,
                 params: [],
                 stmt: &mut self.0,
@@ -176,22 +176,22 @@ pub mod sync {
 pub mod async_ {
     use crate::client::async_::GenericClient;
     use futures::{self, StreamExt, TryStreamExt};
-    pub struct PublicCloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
+    pub struct CloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
         client: &'a C,
         params: [&'a (dyn postgres_types::ToSql + Sync); N],
         stmt: &'a mut crate::client::async_::Stmt,
-        extractor: fn(&tokio_postgres::Row) -> crate::types::public::CloneCompositeBorrowed,
-        mapper: fn(crate::types::public::CloneCompositeBorrowed) -> T,
+        extractor: fn(&tokio_postgres::Row) -> crate::types::CloneCompositeBorrowed,
+        mapper: fn(crate::types::CloneCompositeBorrowed) -> T,
     }
-    impl<'a, C, T: 'a, const N: usize> PublicCloneCompositeQuery<'a, C, T, N>
+    impl<'a, C, T: 'a, const N: usize> CloneCompositeQuery<'a, C, T, N>
     where
         C: GenericClient,
     {
         pub fn map<R>(
             self,
-            mapper: fn(crate::types::public::CloneCompositeBorrowed) -> R,
-        ) -> PublicCloneCompositeQuery<'a, C, R, N> {
-            PublicCloneCompositeQuery {
+            mapper: fn(crate::types::CloneCompositeBorrowed) -> R,
+        ) -> CloneCompositeQuery<'a, C, R, N> {
+            CloneCompositeQuery {
                 client: self.client,
                 params: self.params,
                 stmt: self.stmt,
@@ -231,22 +231,22 @@ pub mod async_ {
             Ok(it)
         }
     }
-    pub struct PublicCopyCompositeQuery<'a, C: GenericClient, T, const N: usize> {
+    pub struct CopyCompositeQuery<'a, C: GenericClient, T, const N: usize> {
         client: &'a C,
         params: [&'a (dyn postgres_types::ToSql + Sync); N],
         stmt: &'a mut crate::client::async_::Stmt,
-        extractor: fn(&tokio_postgres::Row) -> crate::types::public::CopyComposite,
-        mapper: fn(crate::types::public::CopyComposite) -> T,
+        extractor: fn(&tokio_postgres::Row) -> crate::types::CopyComposite,
+        mapper: fn(crate::types::CopyComposite) -> T,
     }
-    impl<'a, C, T: 'a, const N: usize> PublicCopyCompositeQuery<'a, C, T, N>
+    impl<'a, C, T: 'a, const N: usize> CopyCompositeQuery<'a, C, T, N>
     where
         C: GenericClient,
     {
         pub fn map<R>(
             self,
-            mapper: fn(crate::types::public::CopyComposite) -> R,
-        ) -> PublicCopyCompositeQuery<'a, C, R, N> {
-            PublicCopyCompositeQuery {
+            mapper: fn(crate::types::CopyComposite) -> R,
+        ) -> CopyCompositeQuery<'a, C, R, N> {
+            CopyCompositeQuery {
                 client: self.client,
                 params: self.params,
                 stmt: self.stmt,
@@ -296,7 +296,7 @@ pub mod async_ {
         pub async fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a C,
-            composite: &'a crate::types::public::CloneCompositeBorrowed<'a>,
+            composite: &'a crate::types::CloneCompositeBorrowed<'a>,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = self.0.prepare(client).await?;
             client.execute(stmt, &[composite]).await
@@ -310,8 +310,8 @@ pub mod async_ {
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a C,
-        ) -> PublicCloneCompositeQuery<'a, C, crate::types::public::CloneComposite, 0> {
-            PublicCloneCompositeQuery {
+        ) -> CloneCompositeQuery<'a, C, crate::types::CloneComposite, 0> {
+            CloneCompositeQuery {
                 client,
                 params: [],
                 stmt: &mut self.0,
@@ -330,7 +330,7 @@ pub mod async_ {
         pub async fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a C,
-            composite: &'a crate::types::public::CopyComposite,
+            composite: &'a crate::types::CopyComposite,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = self.0.prepare(client).await?;
             client.execute(stmt, &[composite]).await
@@ -344,8 +344,8 @@ pub mod async_ {
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a C,
-        ) -> PublicCopyCompositeQuery<'a, C, crate::types::public::CopyComposite, 0> {
-            PublicCopyCompositeQuery {
+        ) -> CopyCompositeQuery<'a, C, crate::types::CopyComposite, 0> {
+            CopyCompositeQuery {
                 client,
                 params: [],
                 stmt: &mut self.0,

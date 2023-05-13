@@ -20,16 +20,17 @@ use self::{types::gen_type_modules, vfs::Vfs};
 
 const WARNING: &str = "// This file was generated with `cornucopia`. Do not modify.\n\n";
 
-pub enum Hierarchy {
-    Abstract,            // Nowhere
-    TypeModule,          // crate::type
-    QueryModule,         // crate::query
-    SpecificQueryModule, // crate::query::sync
+/// Module when codegen is happening
+pub enum ModCtx {
+    Types,         // crate::types
+    SchemaTypes,   // crate::types::schema
+    Queries,       // crate::queries
+    CLientQueries, // crate::queries::sync
 }
 
 pub struct GenCtx {
     // Generated module position in the hierarchy
-    pub hierarchy: Hierarchy,
+    pub hierarchy: ModCtx,
     // Should use async client and generate async code
     pub is_async: bool,
     // Should serializable struct
@@ -37,7 +38,7 @@ pub struct GenCtx {
 }
 
 impl GenCtx {
-    pub fn new(hierarchy: Hierarchy, is_async: bool, gen_derive: bool) -> Self {
+    pub fn new(hierarchy: ModCtx, is_async: bool, gen_derive: bool) -> Self {
         Self {
             hierarchy,
             is_async,
@@ -46,11 +47,21 @@ impl GenCtx {
     }
 
     pub fn custom_ty_path(&self, schema: &str, struct_name: &str) -> String {
-        match self.hierarchy {
-            Hierarchy::Abstract => format!("{schema}::{struct_name}"),
-            Hierarchy::TypeModule => format!("super::{schema}::{struct_name}"),
-            Hierarchy::QueryModule | Hierarchy::SpecificQueryModule => {
-                format!("crate::types::{schema}::{struct_name}")
+        if schema == "public" {
+            match self.hierarchy {
+                ModCtx::Types => struct_name.to_string(),
+                ModCtx::SchemaTypes => format!("super::{struct_name}"),
+                ModCtx::Queries | ModCtx::CLientQueries => {
+                    format!("crate::types::{struct_name}")
+                }
+            }
+        } else {
+            match self.hierarchy {
+                ModCtx::Types => format!("{schema}::{struct_name}"),
+                ModCtx::SchemaTypes => format!("super::{schema}::{struct_name}"),
+                ModCtx::Queries | ModCtx::CLientQueries => {
+                    format!("crate::types::{schema}::{struct_name}")
+                }
             }
         }
     }

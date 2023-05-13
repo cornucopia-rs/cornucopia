@@ -884,22 +884,22 @@ pub mod sync {
             Ok(it)
         }
     }
-    pub struct PublicNightmareCompositeQuery<'a, C: GenericClient, T, const N: usize> {
+    pub struct NightmareCompositeQuery<'a, C: GenericClient, T, const N: usize> {
         client: &'a mut C,
         params: [&'a (dyn postgres_types::ToSql + Sync); N],
         stmt: &'a mut crate::client::sync::Stmt,
-        extractor: fn(&postgres::Row) -> crate::types::public::NightmareCompositeBorrowed,
-        mapper: fn(crate::types::public::NightmareCompositeBorrowed) -> T,
+        extractor: fn(&postgres::Row) -> crate::types::NightmareCompositeBorrowed,
+        mapper: fn(crate::types::NightmareCompositeBorrowed) -> T,
     }
-    impl<'a, C, T: 'a, const N: usize> PublicNightmareCompositeQuery<'a, C, T, N>
+    impl<'a, C, T: 'a, const N: usize> NightmareCompositeQuery<'a, C, T, N>
     where
         C: GenericClient,
     {
         pub fn map<R>(
             self,
-            mapper: fn(crate::types::public::NightmareCompositeBorrowed) -> R,
-        ) -> PublicNightmareCompositeQuery<'a, C, R, N> {
-            PublicNightmareCompositeQuery {
+            mapper: fn(crate::types::NightmareCompositeBorrowed) -> R,
+        ) -> NightmareCompositeQuery<'a, C, R, N> {
+            NightmareCompositeQuery {
                 client: self.client,
                 params: self.params,
                 stmt: self.stmt,
@@ -1582,9 +1582,8 @@ FROM
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a mut C,
-        ) -> PublicNightmareCompositeQuery<'a, C, crate::types::public::NightmareComposite, 0>
-        {
-            PublicNightmareCompositeQuery {
+        ) -> NightmareCompositeQuery<'a, C, crate::types::NightmareComposite, 0> {
+            NightmareCompositeQuery {
                 client,
                 params: [],
                 stmt: &mut self.0,
@@ -1604,7 +1603,7 @@ FROM
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a mut C,
-            composite: &'a crate::types::public::NightmareCompositeParams<'a>,
+            composite: &'a crate::types::NightmareCompositeParams<'a>,
         ) -> Result<u64, postgres::Error> {
             let stmt = self.0.prepare(client)?;
             client.execute(stmt, &[composite])
@@ -1834,22 +1833,22 @@ pub mod async_ {
             Ok(it)
         }
     }
-    pub struct PublicNightmareCompositeQuery<'a, C: GenericClient, T, const N: usize> {
+    pub struct NightmareCompositeQuery<'a, C: GenericClient, T, const N: usize> {
         client: &'a C,
         params: [&'a (dyn postgres_types::ToSql + Sync); N],
         stmt: &'a mut crate::client::async_::Stmt,
-        extractor: fn(&tokio_postgres::Row) -> crate::types::public::NightmareCompositeBorrowed,
-        mapper: fn(crate::types::public::NightmareCompositeBorrowed) -> T,
+        extractor: fn(&tokio_postgres::Row) -> crate::types::NightmareCompositeBorrowed,
+        mapper: fn(crate::types::NightmareCompositeBorrowed) -> T,
     }
-    impl<'a, C, T: 'a, const N: usize> PublicNightmareCompositeQuery<'a, C, T, N>
+    impl<'a, C, T: 'a, const N: usize> NightmareCompositeQuery<'a, C, T, N>
     where
         C: GenericClient,
     {
         pub fn map<R>(
             self,
-            mapper: fn(crate::types::public::NightmareCompositeBorrowed) -> R,
-        ) -> PublicNightmareCompositeQuery<'a, C, R, N> {
-            PublicNightmareCompositeQuery {
+            mapper: fn(crate::types::NightmareCompositeBorrowed) -> R,
+        ) -> NightmareCompositeQuery<'a, C, R, N> {
+            NightmareCompositeQuery {
                 client: self.client,
                 params: self.params,
                 stmt: self.stmt,
@@ -2548,9 +2547,8 @@ FROM
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a C,
-        ) -> PublicNightmareCompositeQuery<'a, C, crate::types::public::NightmareComposite, 0>
-        {
-            PublicNightmareCompositeQuery {
+        ) -> NightmareCompositeQuery<'a, C, crate::types::NightmareComposite, 0> {
+            NightmareCompositeQuery {
                 client,
                 params: [],
                 stmt: &mut self.0,
@@ -2570,7 +2568,7 @@ FROM
         pub async fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a C,
-            composite: &'a crate::types::public::NightmareCompositeParams<'a>,
+            composite: &'a crate::types::NightmareCompositeParams<'a>,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = self.0.prepare(client).await?;
             client.execute(stmt, &[composite]).await

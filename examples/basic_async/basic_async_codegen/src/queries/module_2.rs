@@ -237,22 +237,22 @@ where
         Ok(it)
     }
 }
-pub struct PublicVoiceactorQuery<'a, C: GenericClient, T, const N: usize> {
+pub struct VoiceactorQuery<'a, C: GenericClient, T, const N: usize> {
     client: &'a C,
     params: [&'a (dyn postgres_types::ToSql + Sync); N],
     stmt: &'a mut crate::client::async_::Stmt,
-    extractor: fn(&tokio_postgres::Row) -> crate::types::public::VoiceactorBorrowed,
-    mapper: fn(crate::types::public::VoiceactorBorrowed) -> T,
+    extractor: fn(&tokio_postgres::Row) -> crate::types::VoiceactorBorrowed,
+    mapper: fn(crate::types::VoiceactorBorrowed) -> T,
 }
-impl<'a, C, T: 'a, const N: usize> PublicVoiceactorQuery<'a, C, T, N>
+impl<'a, C, T: 'a, const N: usize> VoiceactorQuery<'a, C, T, N>
 where
     C: GenericClient,
 {
     pub fn map<R>(
         self,
-        mapper: fn(crate::types::public::VoiceactorBorrowed) -> R,
-    ) -> PublicVoiceactorQuery<'a, C, R, N> {
-        PublicVoiceactorQuery {
+        mapper: fn(crate::types::VoiceactorBorrowed) -> R,
+    ) -> VoiceactorQuery<'a, C, R, N> {
+        VoiceactorQuery {
             client: self.client,
             params: self.params,
             stmt: self.stmt,
@@ -490,9 +490,9 @@ impl SelectVoiceActorWithCharacterStmt {
     pub fn bind<'a, C: GenericClient>(
         &'a mut self,
         client: &'a C,
-        spongebob_character: &'a crate::types::public::SpongeBobCharacter,
-    ) -> PublicVoiceactorQuery<'a, C, crate::types::public::Voiceactor, 1> {
-        PublicVoiceactorQuery {
+        spongebob_character: &'a crate::types::SpongeBobCharacter,
+    ) -> VoiceactorQuery<'a, C, crate::types::Voiceactor, 1> {
+        VoiceactorQuery {
             client,
             params: [spongebob_character],
             stmt: &mut self.0,

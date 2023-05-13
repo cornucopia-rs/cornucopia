@@ -44,7 +44,7 @@ use codegen::{
             TrickySql10Params,
         },
     },
-    types::public::{
+    types::{
         CloneCompositeBorrowed, CopyComposite, CustomComposite, CustomCompositeBorrowed,
         DomainComposite, DomainCompositeParams, EnumWithDot, NamedComposite,
         NamedCompositeBorrowed, NamedCompositeWithDot, NightmareComposite,

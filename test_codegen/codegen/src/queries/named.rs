@@ -7,8 +7,8 @@ pub struct NamedParams<T1: crate::client::StringSql> {
 }
 #[derive(Debug)]
 pub struct NamedComplexParams<'a> {
-    pub named: crate::types::public::NamedCompositeBorrowed<'a>,
-    pub named_with_dot: Option<crate::types::public::NamedCompositeWithDot>,
+    pub named: crate::types::NamedCompositeBorrowed<'a>,
+    pub named_with_dot: Option<crate::types::NamedCompositeWithDot>,
 }
 #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
 pub struct Id {
@@ -46,12 +46,12 @@ impl<'a> From<NamedBorrowed<'a>> for Named {
 }
 #[derive(serde::Serialize, Debug, Clone, PartialEq)]
 pub struct NamedComplex {
-    pub named: crate::types::public::NamedComposite,
-    pub named_with_dot: Option<crate::types::public::NamedCompositeWithDot>,
+    pub named: crate::types::NamedComposite,
+    pub named_with_dot: Option<crate::types::NamedCompositeWithDot>,
 }
 pub struct NamedComplexBorrowed<'a> {
-    pub named: crate::types::public::NamedCompositeBorrowed<'a>,
-    pub named_with_dot: Option<crate::types::public::NamedCompositeWithDot>,
+    pub named: crate::types::NamedCompositeBorrowed<'a>,
+    pub named_with_dot: Option<crate::types::NamedCompositeWithDot>,
 }
 impl<'a> From<NamedComplexBorrowed<'a>> for NamedComplex {
     fn from(
@@ -342,8 +342,8 @@ pub mod sync {
         pub fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a mut C,
-            named: &'a crate::types::public::NamedCompositeBorrowed<'a>,
-            named_with_dot: &'a Option<crate::types::public::NamedCompositeWithDot>,
+            named: &'a crate::types::NamedCompositeBorrowed<'a>,
+            named_with_dot: &'a Option<crate::types::NamedCompositeWithDot>,
         ) -> Result<u64, postgres::Error> {
             let stmt = self.0.prepare(client)?;
             client.execute(stmt, &[named, named_with_dot])
@@ -678,8 +678,8 @@ pub mod async_ {
         pub async fn bind<'a, C: GenericClient>(
             &'a mut self,
             client: &'a C,
-            named: &'a crate::types::public::NamedCompositeBorrowed<'a>,
-            named_with_dot: &'a Option<crate::types::public::NamedCompositeWithDot>,
+            named: &'a crate::types::NamedCompositeBorrowed<'a>,
+            named_with_dot: &'a Option<crate::types::NamedCompositeWithDot>,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = self.0.prepare(client).await?;
             client.execute(stmt, &[named, named_with_dot]).await

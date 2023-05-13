@@ -4,7 +4,7 @@ use codegen_template::code;
 use indexmap::IndexMap;
 
 use crate::{
-    codegen::{Hierarchy, WARNING},
+    codegen::{ModCtx, WARNING},
     prepare_queries::{Ident, PreparedContent, PreparedField, PreparedType},
     CodegenSettings,
 };
@@ -15,24 +15,26 @@ pub(crate) fn gen_type_modules(
     prepared: &IndexMap<String, Vec<PreparedType>>,
     settings: &CodegenSettings,
 ) -> String {
-    let ctx = &GenCtx::new(
-        Hierarchy::TypeModule,
-        settings.gen_async,
-        settings.derive_ser,
-    );
-
     let modules = prepared.iter().map(|(schema, types)| {
         move |w: &mut String| {
-            let lazy = |w: &mut String| {
-                for ty in types {
-                    gen_custom_type(w, schema, ty, ctx)
-                }
-            };
-
-            code!(w =>
-            pub mod $schema {
-                $!lazy
-            });
+            if schema == "public" {
+                let ctx = &GenCtx::new(ModCtx::Types, settings.gen_async, settings.derive_ser);
+                let lazy = |w: &mut String| {
+                    for ty in types {
+                        gen_custom_type(w, schema, ty, ctx)
+                    }
+                };
+                code!(w => $!lazy);
+            } else {
+                let ctx =
+                    &GenCtx::new(ModCtx::SchemaTypes, settings.gen_async, settings.derive_ser);
+                let lazy = |w: &mut String| {
+                    for ty in types {
+                        gen_custom_type(w, schema, ty, ctx)
+                    }
+                };
+                code!(w => pub mod $schema { $!lazy });
+            }
         }
     });
     code!($WARNING

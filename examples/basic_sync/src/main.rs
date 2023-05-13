@@ -9,7 +9,7 @@ use codegen::{
             select_voice_actor_with_character, AuthorNameStartingWithParams,
         },
     },
-    types::public::SpongeBobCharacter,
+    types::SpongeBobCharacter,
 };
 
 pub fn main() {
