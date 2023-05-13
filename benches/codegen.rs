@@ -9,7 +9,7 @@ fn bench(c: &mut Criterion) {
     cornucopia::load_schema(client, &["../test_codegen/schema.sql"]).unwrap();
     c.bench_function("codegen_sync", |b| {
         b.iter(|| {
-            cornucopia::generate_live(
+            cornucopia::gen_live(
                 client,
                 "../test_codegen/queries".as_ref(),
                 tmp.path(),
@@ -24,7 +24,7 @@ fn bench(c: &mut Criterion) {
     });
     c.bench_function("codegen_async", |b| {
         b.iter(|| {
-            cornucopia::generate_live(
+            cornucopia::gen_live(
                 client,
                 "../test_codegen/queries".as_ref(),
                 tmp.path(),

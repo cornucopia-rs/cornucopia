@@ -5,7 +5,7 @@ use crate::CodegenSettings;
 
 use super::{vfs::Vfs, DependencyAnalysis, WARNING};
 
-pub(crate) fn generate_clients(
+pub(crate) fn gen_clients(
     vfs: &mut Vfs,
     dependency_analysis: &DependencyAnalysis,
     settings: &CodegenSettings,

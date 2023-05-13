@@ -18,7 +18,6 @@ use std::path::Path;
 
 use postgres::Client;
 
-use codegen::generate as generate_internal;
 use parser::parse_query_module;
 use prepare_queries::prepare;
 use read_queries::read_query_modules;
@@ -40,7 +39,7 @@ pub struct CodegenSettings {
 /// Generates Rust queries from PostgreSQL queries located at `queries_path`,
 /// using a live database managed by you. Code generation settings are
 /// set using the `settings` parameter.
-pub fn generate_live<P: AsRef<Path>>(
+pub fn gen_live<P: AsRef<Path>>(
     client: &mut Client,
     queries_path: P,
     destination: P,
@@ -53,7 +52,7 @@ pub fn generate_live<P: AsRef<Path>>(
         .collect::<Result<_, parser::error::Error>>()?;
     // Generate
     let prepared_modules = prepare(client, modules)?;
-    let generated = generate_internal(
+    let generated = codegen::gen(
         extract_name(destination.as_ref()),
         prepared_modules,
         settings,
@@ -70,7 +69,7 @@ pub fn generate_live<P: AsRef<Path>>(
 ///
 /// By default, the container manager is Docker, but Podman can be used by setting the
 /// `podman` parameter to `true`.
-pub fn generate_managed<P: AsRef<Path>>(
+pub fn gen_managed<P: AsRef<Path>>(
     queries_path: P,
     schema_files: &[P],
     destination: P,
@@ -86,7 +85,7 @@ pub fn generate_managed<P: AsRef<Path>>(
     let mut client = conn::cornucopia_conn()?;
     load_schema(&mut client, schema_files)?;
     let prepared_modules = prepare(&mut client, modules)?;
-    let generated = generate_internal(
+    let generated = codegen::gen(
         extract_name(destination.as_ref()),
         prepared_modules,
         settings,

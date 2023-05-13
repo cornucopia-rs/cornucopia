@@ -42,7 +42,7 @@ impl DependencyAnalysis {
     }
 }
 
-pub fn generate_cargo_file(
+pub fn gen_cargo_file(
     name: &str,
     dependency_analysis: &DependencyAnalysis,
     settings: CodegenSettings,

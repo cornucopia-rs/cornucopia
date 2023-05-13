@@ -4,8 +4,8 @@ use codegen_template::code;
 use indexmap::IndexMap;
 
 use crate::{
-    codegen::{enum_sql, Hierarchy, WARNING},
-    prepare_queries::{PreparedContent, PreparedField, PreparedType},
+    codegen::{Hierarchy, WARNING},
+    prepare_queries::{Ident, PreparedContent, PreparedField, PreparedType},
     CodegenSettings,
 };
 
@@ -121,6 +121,84 @@ fn gen_custom_type(w: &mut String, schema: &str, prepared: &PreparedType, ctx: &
             }
         }
     }
+}
+
+fn enum_sql(w: &mut String, name: &str, enum_name: &str, variants: &[Ident]) {
+    let enum_names = std::iter::repeat(enum_name);
+    let db_variants_ident = variants.iter().map(|v| &v.db);
+    let rs_variants_ident = variants.iter().map(|v| &v.rs);
+
+    let nb_variants = variants.len();
+    code!(w =>
+        impl<'a> postgres_types::ToSql for $enum_name {
+            fn to_sql(
+                &self,
+                ty: &postgres_types::Type,
+                buf: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>,> {
+                let s = match *self {
+                    $($enum_names::$rs_variants_ident => "$db_variants_ident",)
+                };
+                buf.extend_from_slice(s.as_bytes());
+                std::result::Result::Ok(postgres_types::IsNull::No)
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() != "$name" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Enum(ref variants) => {
+                        if variants.len() != $nb_variants {
+                            return false;
+                        }
+                        variants.iter().all(|v| match &**v {
+                            $("$db_variants_ident" => true,)
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+            fn to_sql_checked(
+                &self,
+                ty: &postgres_types::Type,
+                out: &mut postgres_types::private::BytesMut,
+            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {
+                postgres_types::__to_sql_checked(self, ty, out)
+            }
+        }
+        impl<'a> postgres_types::FromSql<'a> for $enum_name {
+            fn from_sql(
+                ty: &postgres_types::Type,
+                buf: &'a [u8],
+            ) -> Result<$enum_name, Box<dyn std::error::Error + Sync + Send>,> {
+                match std::str::from_utf8(buf)? {
+                    $("$db_variants_ident" => Ok($enum_names::$rs_variants_ident),)
+                    s => Result::Err(Into::into(format!(
+                        "invalid variant `{}`",
+                        s
+                    ))),
+                }
+            }
+            fn accepts(ty: &postgres_types::Type) -> bool {
+                if ty.name() !=  "$name" {
+                    return false;
+                }
+                match *ty.kind() {
+                    postgres_types::Kind::Enum(ref variants) => {
+                        if variants.len() != $nb_variants {
+                            return false;
+                        }
+                        variants.iter().all(|v| match &**v {
+                            $("$db_variants_ident" => true,)
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
+        }
+    );
 }
 
 fn struct_tosql(

@@ -49,7 +49,7 @@ pub(crate) fn run_errors_test(
             let result = cornucopia::load_schema(client, &["schema.sql"])
                 .map_err(Error::from)
                 .and_then(|_| {
-                    cornucopia::generate_live(
+                    cornucopia::gen_live(
                         client,
                         "queries".as_ref(),
                         tmp.path(),

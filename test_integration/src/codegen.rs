@@ -35,7 +35,7 @@ pub(crate) fn run_codegen_test(
             // Otherwise, it is only checked.
             if apply {
                 // Generate
-                cornucopia::generate_live(
+                cornucopia::gen_live(
                     client,
                     &test.queries_path,
                     &test.destination,
@@ -52,7 +52,7 @@ pub(crate) fn run_codegen_test(
                 );
                 std::fs::create_dir(&tmp_path)?;
                 // Generate
-                cornucopia::generate_live(
+                cornucopia::gen_live(
                     client,
                     &test.queries_path,
                     &tmp_path,
