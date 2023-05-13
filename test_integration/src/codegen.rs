@@ -65,7 +65,6 @@ pub(crate) fn run_codegen_test(
                 // If the newly generated crate differs from
                 // the currently checked in one, return an error.
                 if dir_diff::is_different(&test.destination, &tmp_path).unwrap() {
-                    std::fs::rename(&tmp_path, "temp").unwrap();
                     Err(format!(
                         "\"{}\" is outdated",
                         test.destination.to_str().unwrap()

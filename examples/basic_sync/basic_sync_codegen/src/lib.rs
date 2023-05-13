@@ -211,12 +211,12 @@ pub mod queries {
     pub mod module_1 {
         use postgres::{fallible_iterator::FallibleIterator, GenericClient};
         pub fn insert_book() -> InsertBookStmt {
-            InsertBookStmt(crate::client::sync::private::Stmt::new(
+            InsertBookStmt(crate::client::sync::Stmt::new(
                 "INSERT INTO Book (title)
   VALUES ($1)",
             ))
         }
-        pub struct InsertBookStmt(crate::client::sync::private::Stmt);
+        pub struct InsertBookStmt(crate::client::sync::Stmt);
         impl InsertBookStmt {
             pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
                 &'a mut self,
@@ -309,7 +309,7 @@ pub mod queries {
         pub struct AuthorsQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut crate::client::sync::private::Stmt,
+            stmt: &'a mut crate::client::sync::Stmt,
             extractor: fn(&postgres::Row) -> AuthorsBorrowed,
             mapper: fn(AuthorsBorrowed) -> T,
         }
@@ -348,7 +348,7 @@ pub mod queries {
                 let stmt = self.stmt.prepare(self.client)?;
                 let it = self
                     .client
-                    .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                    .query_raw(stmt, crate::client::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(it)
@@ -357,7 +357,7 @@ pub mod queries {
         pub struct StringQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut crate::client::sync::private::Stmt,
+            stmt: &'a mut crate::client::sync::Stmt,
             extractor: fn(&postgres::Row) -> &str,
             mapper: fn(&str) -> T,
         }
@@ -396,7 +396,7 @@ pub mod queries {
                 let stmt = self.stmt.prepare(self.client)?;
                 let it = self
                     .client
-                    .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                    .query_raw(stmt, crate::client::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(it)
@@ -405,7 +405,7 @@ pub mod queries {
         pub struct AuthorNameStartingWithQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut crate::client::sync::private::Stmt,
+            stmt: &'a mut crate::client::sync::Stmt,
             extractor: fn(&postgres::Row) -> AuthorNameStartingWithBorrowed,
             mapper: fn(AuthorNameStartingWithBorrowed) -> T,
         }
@@ -447,7 +447,7 @@ pub mod queries {
                 let stmt = self.stmt.prepare(self.client)?;
                 let it = self
                     .client
-                    .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                    .query_raw(stmt, crate::client::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(it)
@@ -456,7 +456,7 @@ pub mod queries {
         pub struct PublicVoiceactorQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut crate::client::sync::private::Stmt,
+            stmt: &'a mut crate::client::sync::Stmt,
             extractor: fn(&postgres::Row) -> super::super::types::public::VoiceactorBorrowed,
             mapper: fn(super::super::types::public::VoiceactorBorrowed) -> T,
         }
@@ -498,7 +498,7 @@ pub mod queries {
                 let stmt = self.stmt.prepare(self.client)?;
                 let it = self
                     .client
-                    .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                    .query_raw(stmt, crate::client::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(it)
@@ -507,7 +507,7 @@ pub mod queries {
         pub struct SelectTranslationsQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut crate::client::sync::private::Stmt,
+            stmt: &'a mut crate::client::sync::Stmt,
             extractor: fn(&postgres::Row) -> SelectTranslationsBorrowed,
             mapper: fn(SelectTranslationsBorrowed) -> T,
         }
@@ -549,21 +549,21 @@ pub mod queries {
                 let stmt = self.stmt.prepare(self.client)?;
                 let it = self
                     .client
-                    .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                    .query_raw(stmt, crate::client::slice_iter(&self.params))?
                     .iterator()
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                 Ok(it)
             }
         }
         pub fn authors() -> AuthorsStmt {
-            AuthorsStmt(crate::client::sync::private::Stmt::new(
+            AuthorsStmt(crate::client::sync::Stmt::new(
                 "SELECT
     *
 FROM
     Author",
             ))
         }
-        pub struct AuthorsStmt(crate::client::sync::private::Stmt);
+        pub struct AuthorsStmt(crate::client::sync::Stmt);
         impl AuthorsStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -583,14 +583,14 @@ FROM
             }
         }
         pub fn books() -> BooksStmt {
-            BooksStmt(crate::client::sync::private::Stmt::new(
+            BooksStmt(crate::client::sync::Stmt::new(
                 "SELECT
     Title
 FROM
     Book",
             ))
         }
-        pub struct BooksStmt(crate::client::sync::private::Stmt);
+        pub struct BooksStmt(crate::client::sync::Stmt);
         impl BooksStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -606,7 +606,7 @@ FROM
             }
         }
         pub fn author_name_by_id() -> AuthorNameByIdStmt {
-            AuthorNameByIdStmt(crate::client::sync::private::Stmt::new(
+            AuthorNameByIdStmt(crate::client::sync::Stmt::new(
                 "SELECT
     Author.Name
 FROM
@@ -615,7 +615,7 @@ WHERE
     Author.Id = $1",
             ))
         }
-        pub struct AuthorNameByIdStmt(crate::client::sync::private::Stmt);
+        pub struct AuthorNameByIdStmt(crate::client::sync::Stmt);
         impl AuthorNameByIdStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -632,7 +632,7 @@ WHERE
             }
         }
         pub fn author_name_starting_with() -> AuthorNameStartingWithStmt {
-            AuthorNameStartingWithStmt(crate::client::sync::private::Stmt::new(
+            AuthorNameStartingWithStmt(crate::client::sync::Stmt::new(
                 "SELECT
     BookAuthor.AuthorId,
     Author.Name,
@@ -646,7 +646,7 @@ WHERE
     Author.Name LIKE CONCAT($1::text, '%')",
             ))
         }
-        pub struct AuthorNameStartingWithStmt(crate::client::sync::private::Stmt);
+        pub struct AuthorNameStartingWithStmt(crate::client::sync::Stmt);
         impl AuthorNameStartingWithStmt {
             pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
                 &'a mut self,
@@ -684,7 +684,7 @@ WHERE
             }
         }
         pub fn select_voice_actor_with_character() -> SelectVoiceActorWithCharacterStmt {
-            SelectVoiceActorWithCharacterStmt(crate::client::sync::private::Stmt::new(
+            SelectVoiceActorWithCharacterStmt(crate::client::sync::Stmt::new(
                 "SELECT
     voice_actor
 FROM
@@ -693,7 +693,7 @@ WHERE
     character = $1",
             ))
         }
-        pub struct SelectVoiceActorWithCharacterStmt(crate::client::sync::private::Stmt);
+        pub struct SelectVoiceActorWithCharacterStmt(crate::client::sync::Stmt);
         impl SelectVoiceActorWithCharacterStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
@@ -711,7 +711,7 @@ WHERE
             }
         }
         pub fn select_translations() -> SelectTranslationsStmt {
-            SelectTranslationsStmt(crate::client::sync::private::Stmt::new(
+            SelectTranslationsStmt(crate::client::sync::Stmt::new(
                 "SELECT
     Title,
     Translations
@@ -719,7 +719,7 @@ FROM
     Book",
             ))
         }
-        pub struct SelectTranslationsStmt(crate::client::sync::private::Stmt);
+        pub struct SelectTranslationsStmt(crate::client::sync::Stmt);
         impl SelectTranslationsStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,

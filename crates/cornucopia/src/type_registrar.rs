@@ -74,18 +74,14 @@ impl CornucopiaType {
 
     /// Wrap type to escape domains in parameters
     pub(crate) fn sql_wrapped(&self, name: &str, ctx: &GenCtx) -> String {
-        let client_name = ctx.client_name();
         match self {
             CornucopiaType::Domain { inner, .. } => {
-                format!(
-                    "&{client_name}::private::Domain({})",
-                    inner.sql_wrapped(name, ctx)
-                )
+                format!("&crate::client::Domain({})", inner.sql_wrapped(name, ctx))
             }
             CornucopiaType::Array { inner } => match inner.as_ref() {
                 CornucopiaType::Domain { inner, .. } => {
                     format!(
-                        "&{client_name}::private::DomainArray({})",
+                        "&crate::client::DomainArray({})",
                         inner.sql_wrapped(name, ctx)
                     )
                 }
@@ -97,16 +93,14 @@ impl CornucopiaType {
 
     /// Wrap type to escape domains when writing to sql
     pub(crate) fn accept_to_sql(&self, ctx: &GenCtx) -> String {
-        let client_name = ctx.client_name();
         match self {
-            CornucopiaType::Domain { inner, .. } => format!(
-                "{client_name}::private::Domain::<{}>",
-                inner.accept_to_sql(ctx)
-            ),
+            CornucopiaType::Domain { inner, .. } => {
+                format!("crate::client::Domain::<{}>", inner.accept_to_sql(ctx))
+            }
             CornucopiaType::Array { inner } => match inner.as_ref() {
                 CornucopiaType::Domain { inner, .. } => {
                     let ty = inner.accept_to_sql(ctx);
-                    format!("{client_name}::private::DomainArray::<{ty}, &[{ty}]>")
+                    format!("crate::client::DomainArray::<{ty}, &[{ty}]>")
                 }
                 _ => self.param_ty(false, ctx),
             },
@@ -181,19 +175,18 @@ impl CornucopiaType {
         traits: &mut Vec<String>,
         ctx: &GenCtx,
     ) -> String {
-        let client_name = "crate::client";
         match self {
             CornucopiaType::Simple { pg_ty, .. } => match *pg_ty {
                 Type::BYTEA => {
-                    traits.push(format!("{client_name}::BytesSql"));
+                    traits.push(format!("crate::client::BytesSql"));
                     idx_char(traits.len())
                 }
                 Type::TEXT | Type::VARCHAR => {
-                    traits.push(format!("{client_name}::StringSql"));
+                    traits.push(format!("crate::client::StringSql"));
                     idx_char(traits.len())
                 }
                 Type::JSON | Type::JSONB => {
-                    traits.push(format!("{client_name}::JsonSql"));
+                    traits.push(format!("crate::client::JsonSql"));
                     idx_char(traits.len())
                 }
                 _ => self.param_ty(is_inner_nullable, ctx),
@@ -205,7 +198,7 @@ impl CornucopiaType {
                 } else {
                     inner
                 };
-                traits.push(format!("{client_name}::ArraySql<Item = {inner}>"));
+                traits.push(format!("crate::client::ArraySql<Item = {inner}>"));
                 idx_char(traits.len())
             }
             CornucopiaType::Domain { inner, .. } => {
@@ -279,8 +272,7 @@ impl CornucopiaType {
                 };
                 // Its more practical for users to use a slice
                 let lifetime = if has_lifetime { lifetime } else { "'_" };
-                let client_name = "crate::client";
-                format!("{client_name}::ArrayIterator<{lifetime}, {inner}>")
+                format!("crate::client::ArrayIterator<{lifetime}, {inner}>")
             }
             CornucopiaType::Domain { inner, .. } => inner.brw_ty(false, has_lifetime, ctx),
             CornucopiaType::Custom {

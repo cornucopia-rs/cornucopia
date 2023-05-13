@@ -285,24 +285,22 @@ pub mod types {
                     out.extend_from_slice(&[0; 4]);
                     let r = match field.name() {
                         "txt" => postgres_types::ToSql::to_sql(
-                            &crate::client::async_::private::Domain(txt),
+                            &crate::client::Domain(txt),
                             field.type_(),
                             out,
                         ),
                         "json" => postgres_types::ToSql::to_sql(
-                            &crate::client::async_::private::Domain(json),
+                            &crate::client::Domain(json),
                             field.type_(),
                             out,
                         ),
                         "nb" => postgres_types::ToSql::to_sql(
-                            &crate::client::async_::private::Domain(nb),
+                            &crate::client::Domain(nb),
                             field.type_(),
                             out,
                         ),
                         "arr" => postgres_types::ToSql::to_sql(
-                            &crate::client::async_::private::Domain(
-                                &crate::client::async_::private::DomainArray(arr),
-                            ),
+                            &crate::client::Domain(&crate::client::DomainArray(arr)),
                             field.type_(),
                             out,
                         ),
@@ -333,10 +331,10 @@ pub mod types {
                         }
                         fields.iter().all(| f | match f.name()
                 {
-                    "txt" => < crate::client::async_::private::Domain::<&'a str> as postgres_types ::
-                    ToSql > :: accepts(f.type_()),"json" => < crate::client::async_::private::Domain::<&'a serde_json::value::Value> as postgres_types ::
-                    ToSql > :: accepts(f.type_()),"nb" => < crate::client::async_::private::Domain::<i32> as postgres_types ::
-                    ToSql > :: accepts(f.type_()),"arr" => < crate::client::async_::private::Domain::<crate::client::async_::private::DomainArray::<&'a serde_json::value::Value, &[&'a serde_json::value::Value]>> as postgres_types ::
+                    "txt" => < crate::client::Domain::<&'a str> as postgres_types ::
+                    ToSql > :: accepts(f.type_()),"json" => < crate::client::Domain::<&'a serde_json::value::Value> as postgres_types ::
+                    ToSql > :: accepts(f.type_()),"nb" => < crate::client::Domain::<i32> as postgres_types ::
+                    ToSql > :: accepts(f.type_()),"arr" => < crate::client::Domain::<crate::client::DomainArray::<&'a serde_json::value::Value, &[&'a serde_json::value::Value]>> as postgres_types ::
                     ToSql > :: accepts(f.type_()),_ => false,
                 })
                     }
@@ -1057,7 +1055,7 @@ pub mod types {
                         "custom" => postgres_types::ToSql::to_sql(custom, field.type_(), out),
                         "spongebob" => postgres_types::ToSql::to_sql(spongebob, field.type_(), out),
                         "domain" => postgres_types::ToSql::to_sql(
-                            &crate::client::async_::private::Domain(domain),
+                            &crate::client::Domain(domain),
                             field.type_(),
                             out,
                         ),
@@ -1090,7 +1088,7 @@ pub mod types {
                 {
                     "custom" => < &'a [super::public::CustomCompositeBorrowed<'a>] as postgres_types ::
                     ToSql > :: accepts(f.type_()),"spongebob" => < &'a [super::public::SpongebobCharacter] as postgres_types ::
-                    ToSql > :: accepts(f.type_()),"domain" => < crate::client::async_::private::Domain::<&'a str> as postgres_types ::
+                    ToSql > :: accepts(f.type_()),"domain" => < crate::client::Domain::<&'a str> as postgres_types ::
                     ToSql > :: accepts(f.type_()),_ => false,
                 })
                     }
@@ -1268,7 +1266,7 @@ pub mod queries {
             pub struct PublicCloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::sync::private::Stmt,
+                stmt: &'a mut crate::client::sync::Stmt,
                 extractor: fn(
                     &postgres::Row,
                 )
@@ -1313,7 +1311,7 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client)?;
                     let it = self
                         .client
-                        .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -1322,7 +1320,7 @@ pub mod queries {
             pub struct PublicCopyCompositeQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::sync::private::Stmt,
+                stmt: &'a mut crate::client::sync::Stmt,
                 extractor: fn(&postgres::Row) -> super::super::super::types::public::CopyComposite,
                 mapper: fn(super::super::super::types::public::CopyComposite) -> T,
             }
@@ -1364,18 +1362,18 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client)?;
                     let it = self
                         .client
-                        .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
                 }
             }
             pub fn insert_clone() -> InsertCloneStmt {
-                InsertCloneStmt(crate::client::sync::private::Stmt::new(
+                InsertCloneStmt(crate::client::sync::Stmt::new(
                     "INSERT INTO clone (composite) VALUES ($1)",
                 ))
             }
-            pub struct InsertCloneStmt(crate::client::sync::private::Stmt);
+            pub struct InsertCloneStmt(crate::client::sync::Stmt);
             impl InsertCloneStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -1387,11 +1385,9 @@ pub mod queries {
                 }
             }
             pub fn select_clone() -> SelectCloneStmt {
-                SelectCloneStmt(crate::client::sync::private::Stmt::new(
-                    "SELECT * FROM clone",
-                ))
+                SelectCloneStmt(crate::client::sync::Stmt::new("SELECT * FROM clone"))
             }
-            pub struct SelectCloneStmt(crate::client::sync::private::Stmt);
+            pub struct SelectCloneStmt(crate::client::sync::Stmt);
             impl SelectCloneStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -1412,11 +1408,11 @@ pub mod queries {
                 }
             }
             pub fn insert_copy() -> InsertCopyStmt {
-                InsertCopyStmt(crate::client::sync::private::Stmt::new(
+                InsertCopyStmt(crate::client::sync::Stmt::new(
                     "INSERT INTO copy (composite) VALUES ($1)",
                 ))
             }
-            pub struct InsertCopyStmt(crate::client::sync::private::Stmt);
+            pub struct InsertCopyStmt(crate::client::sync::Stmt);
             impl InsertCopyStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -1428,11 +1424,9 @@ pub mod queries {
                 }
             }
             pub fn select_copy() -> SelectCopyStmt {
-                SelectCopyStmt(crate::client::sync::private::Stmt::new(
-                    "SELECT * FROM copy",
-                ))
+                SelectCopyStmt(crate::client::sync::Stmt::new("SELECT * FROM copy"))
             }
-            pub struct SelectCopyStmt(crate::client::sync::private::Stmt);
+            pub struct SelectCopyStmt(crate::client::sync::Stmt);
             impl SelectCopyStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -1460,7 +1454,7 @@ pub mod queries {
             pub struct PublicCloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::async_::private::Stmt,
+                stmt: &'a mut crate::client::async_::Stmt,
                 extractor: fn(
                     &tokio_postgres::Row,
                 )
@@ -1508,10 +1502,7 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client).await?;
                     let it = self
                         .client
-                        .query_raw(
-                            stmt,
-                            crate::client::async_::private::slice_iter(&self.params),
-                        )
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -1521,7 +1512,7 @@ pub mod queries {
             pub struct PublicCopyCompositeQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::async_::private::Stmt,
+                stmt: &'a mut crate::client::async_::Stmt,
                 extractor:
                     fn(&tokio_postgres::Row) -> super::super::super::types::public::CopyComposite,
                 mapper: fn(super::super::super::types::public::CopyComposite) -> T,
@@ -1567,10 +1558,7 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client).await?;
                     let it = self
                         .client
-                        .query_raw(
-                            stmt,
-                            crate::client::async_::private::slice_iter(&self.params),
-                        )
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -1578,11 +1566,11 @@ pub mod queries {
                 }
             }
             pub fn insert_clone() -> InsertCloneStmt {
-                InsertCloneStmt(crate::client::async_::private::Stmt::new(
+                InsertCloneStmt(crate::client::async_::Stmt::new(
                     "INSERT INTO clone (composite) VALUES ($1)",
                 ))
             }
-            pub struct InsertCloneStmt(crate::client::async_::private::Stmt);
+            pub struct InsertCloneStmt(crate::client::async_::Stmt);
             impl InsertCloneStmt {
                 pub async fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -1594,11 +1582,9 @@ pub mod queries {
                 }
             }
             pub fn select_clone() -> SelectCloneStmt {
-                SelectCloneStmt(crate::client::async_::private::Stmt::new(
-                    "SELECT * FROM clone",
-                ))
+                SelectCloneStmt(crate::client::async_::Stmt::new("SELECT * FROM clone"))
             }
-            pub struct SelectCloneStmt(crate::client::async_::private::Stmt);
+            pub struct SelectCloneStmt(crate::client::async_::Stmt);
             impl SelectCloneStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -1619,11 +1605,11 @@ pub mod queries {
                 }
             }
             pub fn insert_copy() -> InsertCopyStmt {
-                InsertCopyStmt(crate::client::async_::private::Stmt::new(
+                InsertCopyStmt(crate::client::async_::Stmt::new(
                     "INSERT INTO copy (composite) VALUES ($1)",
                 ))
             }
-            pub struct InsertCopyStmt(crate::client::async_::private::Stmt);
+            pub struct InsertCopyStmt(crate::client::async_::Stmt);
             impl InsertCopyStmt {
                 pub async fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -1635,11 +1621,9 @@ pub mod queries {
                 }
             }
             pub fn select_copy() -> SelectCopyStmt {
-                SelectCopyStmt(crate::client::async_::private::Stmt::new(
-                    "SELECT * FROM copy",
-                ))
+                SelectCopyStmt(crate::client::async_::Stmt::new("SELECT * FROM copy"))
             }
-            pub struct SelectCopyStmt(crate::client::async_::private::Stmt);
+            pub struct SelectCopyStmt(crate::client::async_::Stmt);
             impl SelectCopyStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -1755,7 +1739,7 @@ pub mod queries {
             pub struct SelectNightmareDomainQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::sync::private::Stmt,
+                stmt: &'a mut crate::client::sync::Stmt,
                 extractor: fn(&postgres::Row) -> super::SelectNightmareDomainBorrowed,
                 mapper: fn(super::SelectNightmareDomainBorrowed) -> T,
             }
@@ -1797,7 +1781,7 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client)?;
                     let it = self
                         .client
-                        .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -1806,7 +1790,7 @@ pub mod queries {
             pub struct SelectNightmareDomainNullQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::sync::private::Stmt,
+                stmt: &'a mut crate::client::sync::Stmt,
                 extractor: fn(&postgres::Row) -> super::SelectNightmareDomainNullBorrowed,
                 mapper: fn(super::SelectNightmareDomainNullBorrowed) -> T,
             }
@@ -1848,18 +1832,18 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client)?;
                     let it = self
                         .client
-                        .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
                 }
             }
             pub fn select_nightmare_domain() -> SelectNightmareDomainStmt {
-                SelectNightmareDomainStmt(crate::client::sync::private::Stmt::new(
+                SelectNightmareDomainStmt(crate::client::sync::Stmt::new(
                     "SELECT txt, json, nb, arr FROM nightmare_domain",
                 ))
             }
-            pub struct SelectNightmareDomainStmt(crate::client::sync::private::Stmt);
+            pub struct SelectNightmareDomainStmt(crate::client::sync::Stmt);
             impl SelectNightmareDomainStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -1881,9 +1865,9 @@ pub mod queries {
                 }
             }
             pub fn insert_nightmare_domain() -> InsertNightmareDomainStmt {
-                InsertNightmareDomainStmt(crate::client::sync :: private :: Stmt :: new("INSERT INTO nightmare_domain (txt, json, nb, arr, composite) VALUES ($1, $2, $3, $4, $5)"))
+                InsertNightmareDomainStmt(crate::client::sync :: Stmt :: new("INSERT INTO nightmare_domain (txt, json, nb, arr, composite) VALUES ($1, $2, $3, $4, $5)"))
             }
-            pub struct InsertNightmareDomainStmt(crate::client::sync::private::Stmt);
+            pub struct InsertNightmareDomainStmt(crate::client::sync::Stmt);
             impl InsertNightmareDomainStmt {
                 pub fn bind<
                     'a,
@@ -1907,12 +1891,10 @@ pub mod queries {
                     client.execute(
                         stmt,
                         &[
-                            &crate::client::sync::private::Domain(txt),
-                            &crate::client::sync::private::Domain(json),
-                            &crate::client::sync::private::Domain(nb),
-                            &crate::client::sync::private::Domain(
-                                &crate::client::sync::private::DomainArray(arr),
-                            ),
+                            &crate::client::Domain(txt),
+                            &crate::client::Domain(json),
+                            &crate::client::Domain(nb),
+                            &crate::client::Domain(&crate::client::DomainArray(arr)),
                             composite,
                         ],
                     )
@@ -1949,11 +1931,11 @@ pub mod queries {
                 }
             }
             pub fn select_nightmare_domain_null() -> SelectNightmareDomainNullStmt {
-                SelectNightmareDomainNullStmt(crate::client::sync::private::Stmt::new(
+                SelectNightmareDomainNullStmt(crate::client::sync::Stmt::new(
                     "SELECT * FROM nightmare_domain",
                 ))
             }
-            pub struct SelectNightmareDomainNullStmt(crate::client::sync::private::Stmt);
+            pub struct SelectNightmareDomainNullStmt(crate::client::sync::Stmt);
             impl SelectNightmareDomainNullStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -1983,7 +1965,7 @@ pub mod queries {
             pub struct SelectNightmareDomainQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::async_::private::Stmt,
+                stmt: &'a mut crate::client::async_::Stmt,
                 extractor: fn(&tokio_postgres::Row) -> super::SelectNightmareDomainBorrowed,
                 mapper: fn(super::SelectNightmareDomainBorrowed) -> T,
             }
@@ -2028,10 +2010,7 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client).await?;
                     let it = self
                         .client
-                        .query_raw(
-                            stmt,
-                            crate::client::async_::private::slice_iter(&self.params),
-                        )
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -2041,7 +2020,7 @@ pub mod queries {
             pub struct SelectNightmareDomainNullQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::async_::private::Stmt,
+                stmt: &'a mut crate::client::async_::Stmt,
                 extractor: fn(&tokio_postgres::Row) -> super::SelectNightmareDomainNullBorrowed,
                 mapper: fn(super::SelectNightmareDomainNullBorrowed) -> T,
             }
@@ -2086,10 +2065,7 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client).await?;
                     let it = self
                         .client
-                        .query_raw(
-                            stmt,
-                            crate::client::async_::private::slice_iter(&self.params),
-                        )
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -2097,11 +2073,11 @@ pub mod queries {
                 }
             }
             pub fn select_nightmare_domain() -> SelectNightmareDomainStmt {
-                SelectNightmareDomainStmt(crate::client::async_::private::Stmt::new(
+                SelectNightmareDomainStmt(crate::client::async_::Stmt::new(
                     "SELECT txt, json, nb, arr FROM nightmare_domain",
                 ))
             }
-            pub struct SelectNightmareDomainStmt(crate::client::async_::private::Stmt);
+            pub struct SelectNightmareDomainStmt(crate::client::async_::Stmt);
             impl SelectNightmareDomainStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -2123,9 +2099,9 @@ pub mod queries {
                 }
             }
             pub fn insert_nightmare_domain() -> InsertNightmareDomainStmt {
-                InsertNightmareDomainStmt(crate::client::async_ :: private :: Stmt :: new("INSERT INTO nightmare_domain (txt, json, nb, arr, composite) VALUES ($1, $2, $3, $4, $5)"))
+                InsertNightmareDomainStmt(crate::client::async_ :: Stmt :: new("INSERT INTO nightmare_domain (txt, json, nb, arr, composite) VALUES ($1, $2, $3, $4, $5)"))
             }
-            pub struct InsertNightmareDomainStmt(crate::client::async_::private::Stmt);
+            pub struct InsertNightmareDomainStmt(crate::client::async_::Stmt);
             impl InsertNightmareDomainStmt {
                 pub async fn bind<
                     'a,
@@ -2150,12 +2126,10 @@ pub mod queries {
                         .execute(
                             stmt,
                             &[
-                                &crate::client::async_::private::Domain(txt),
-                                &crate::client::async_::private::Domain(json),
-                                &crate::client::async_::private::Domain(nb),
-                                &crate::client::async_::private::Domain(
-                                    &crate::client::async_::private::DomainArray(arr),
-                                ),
+                                &crate::client::Domain(txt),
+                                &crate::client::Domain(json),
+                                &crate::client::Domain(nb),
+                                &crate::client::Domain(&crate::client::DomainArray(arr)),
                                 composite,
                             ],
                         )
@@ -2205,11 +2179,11 @@ pub mod queries {
                 }
             }
             pub fn select_nightmare_domain_null() -> SelectNightmareDomainNullStmt {
-                SelectNightmareDomainNullStmt(crate::client::async_::private::Stmt::new(
+                SelectNightmareDomainNullStmt(crate::client::async_::Stmt::new(
                     "SELECT * FROM nightmare_domain",
                 ))
             }
-            pub struct SelectNightmareDomainNullStmt(crate::client::async_::private::Stmt);
+            pub struct SelectNightmareDomainNullStmt(crate::client::async_::Stmt);
             impl SelectNightmareDomainNullStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -2305,7 +2279,7 @@ pub mod queries {
             pub struct IdQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::sync::private::Stmt,
+                stmt: &'a mut crate::client::sync::Stmt,
                 extractor: fn(&postgres::Row) -> super::Id,
                 mapper: fn(super::Id) -> T,
             }
@@ -2344,7 +2318,7 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client)?;
                     let it = self
                         .client
-                        .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -2353,7 +2327,7 @@ pub mod queries {
             pub struct NamedQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::sync::private::Stmt,
+                stmt: &'a mut crate::client::sync::Stmt,
                 extractor: fn(&postgres::Row) -> super::NamedBorrowed,
                 mapper: fn(super::NamedBorrowed) -> T,
             }
@@ -2395,7 +2369,7 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client)?;
                     let it = self
                         .client
-                        .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -2404,7 +2378,7 @@ pub mod queries {
             pub struct NamedComplexQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::sync::private::Stmt,
+                stmt: &'a mut crate::client::sync::Stmt,
                 extractor: fn(&postgres::Row) -> super::NamedComplexBorrowed,
                 mapper: fn(super::NamedComplexBorrowed) -> T,
             }
@@ -2446,18 +2420,18 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client)?;
                     let it = self
                         .client
-                        .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
                 }
             }
             pub fn new_named_visible() -> NewNamedVisibleStmt {
-                NewNamedVisibleStmt(crate::client::sync::private::Stmt::new(
+                NewNamedVisibleStmt(crate::client::sync::Stmt::new(
                     "INSERT INTO named (name, price, show) VALUES ($1, $2, true) RETURNING id ",
                 ))
             }
-            pub struct NewNamedVisibleStmt(crate::client::sync::private::Stmt);
+            pub struct NewNamedVisibleStmt(crate::client::sync::Stmt);
             impl NewNamedVisibleStmt {
                 pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
                     &'a mut self,
@@ -2491,11 +2465,11 @@ pub mod queries {
                 }
             }
             pub fn new_named_hidden() -> NewNamedHiddenStmt {
-                NewNamedHiddenStmt(crate::client::sync::private::Stmt::new(
+                NewNamedHiddenStmt(crate::client::sync::Stmt::new(
                     "INSERT INTO named (price, name, show) VALUES ($1, $2, false) RETURNING id",
                 ))
             }
-            pub struct NewNamedHiddenStmt(crate::client::sync::private::Stmt);
+            pub struct NewNamedHiddenStmt(crate::client::sync::Stmt);
             impl NewNamedHiddenStmt {
                 pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
                     &'a mut self,
@@ -2529,11 +2503,9 @@ pub mod queries {
                 }
             }
             pub fn named() -> NamedStmt {
-                NamedStmt(crate::client::sync::private::Stmt::new(
-                    "SELECT * FROM named",
-                ))
+                NamedStmt(crate::client::sync::Stmt::new("SELECT * FROM named"))
             }
-            pub struct NamedStmt(crate::client::sync::private::Stmt);
+            pub struct NamedStmt(crate::client::sync::Stmt);
             impl NamedStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -2554,11 +2526,11 @@ pub mod queries {
                 }
             }
             pub fn named_by_id() -> NamedByIdStmt {
-                NamedByIdStmt(crate::client::sync::private::Stmt::new(
+                NamedByIdStmt(crate::client::sync::Stmt::new(
                     "SELECT * FROM named WHERE id = $1",
                 ))
             }
-            pub struct NamedByIdStmt(crate::client::sync::private::Stmt);
+            pub struct NamedByIdStmt(crate::client::sync::Stmt);
             impl NamedByIdStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -2580,11 +2552,11 @@ pub mod queries {
                 }
             }
             pub fn new_named_complex() -> NewNamedComplexStmt {
-                NewNamedComplexStmt(crate::client::sync::private::Stmt::new(
+                NewNamedComplexStmt(crate::client::sync::Stmt::new(
                     "INSERT INTO named_complex (named, \"named.with_dot\") VALUES ($1, $2)",
                 ))
             }
-            pub struct NewNamedComplexStmt(crate::client::sync::private::Stmt);
+            pub struct NewNamedComplexStmt(crate::client::sync::Stmt);
             impl NewNamedComplexStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -2615,11 +2587,11 @@ pub mod queries {
                 }
             }
             pub fn named_complex() -> NamedComplexStmt {
-                NamedComplexStmt(crate::client::sync::private::Stmt::new(
+                NamedComplexStmt(crate::client::sync::Stmt::new(
                     "SELECT * FROM named_complex",
                 ))
             }
-            pub struct NamedComplexStmt(crate::client::sync::private::Stmt);
+            pub struct NamedComplexStmt(crate::client::sync::Stmt);
             impl NamedComplexStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -2645,7 +2617,7 @@ pub mod queries {
             pub struct IdQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::async_::private::Stmt,
+                stmt: &'a mut crate::client::async_::Stmt,
                 extractor: fn(&tokio_postgres::Row) -> super::Id,
                 mapper: fn(super::Id) -> T,
             }
@@ -2687,10 +2659,7 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client).await?;
                     let it = self
                         .client
-                        .query_raw(
-                            stmt,
-                            crate::client::async_::private::slice_iter(&self.params),
-                        )
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -2700,7 +2669,7 @@ pub mod queries {
             pub struct NamedQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::async_::private::Stmt,
+                stmt: &'a mut crate::client::async_::Stmt,
                 extractor: fn(&tokio_postgres::Row) -> super::NamedBorrowed,
                 mapper: fn(super::NamedBorrowed) -> T,
             }
@@ -2745,10 +2714,7 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client).await?;
                     let it = self
                         .client
-                        .query_raw(
-                            stmt,
-                            crate::client::async_::private::slice_iter(&self.params),
-                        )
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -2758,7 +2724,7 @@ pub mod queries {
             pub struct NamedComplexQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::async_::private::Stmt,
+                stmt: &'a mut crate::client::async_::Stmt,
                 extractor: fn(&tokio_postgres::Row) -> super::NamedComplexBorrowed,
                 mapper: fn(super::NamedComplexBorrowed) -> T,
             }
@@ -2803,10 +2769,7 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client).await?;
                     let it = self
                         .client
-                        .query_raw(
-                            stmt,
-                            crate::client::async_::private::slice_iter(&self.params),
-                        )
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -2814,11 +2777,11 @@ pub mod queries {
                 }
             }
             pub fn new_named_visible() -> NewNamedVisibleStmt {
-                NewNamedVisibleStmt(crate::client::async_::private::Stmt::new(
+                NewNamedVisibleStmt(crate::client::async_::Stmt::new(
                     "INSERT INTO named (name, price, show) VALUES ($1, $2, true) RETURNING id ",
                 ))
             }
-            pub struct NewNamedVisibleStmt(crate::client::async_::private::Stmt);
+            pub struct NewNamedVisibleStmt(crate::client::async_::Stmt);
             impl NewNamedVisibleStmt {
                 pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
                     &'a mut self,
@@ -2852,11 +2815,11 @@ pub mod queries {
                 }
             }
             pub fn new_named_hidden() -> NewNamedHiddenStmt {
-                NewNamedHiddenStmt(crate::client::async_::private::Stmt::new(
+                NewNamedHiddenStmt(crate::client::async_::Stmt::new(
                     "INSERT INTO named (price, name, show) VALUES ($1, $2, false) RETURNING id",
                 ))
             }
-            pub struct NewNamedHiddenStmt(crate::client::async_::private::Stmt);
+            pub struct NewNamedHiddenStmt(crate::client::async_::Stmt);
             impl NewNamedHiddenStmt {
                 pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
                     &'a mut self,
@@ -2890,11 +2853,9 @@ pub mod queries {
                 }
             }
             pub fn named() -> NamedStmt {
-                NamedStmt(crate::client::async_::private::Stmt::new(
-                    "SELECT * FROM named",
-                ))
+                NamedStmt(crate::client::async_::Stmt::new("SELECT * FROM named"))
             }
-            pub struct NamedStmt(crate::client::async_::private::Stmt);
+            pub struct NamedStmt(crate::client::async_::Stmt);
             impl NamedStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -2915,11 +2876,11 @@ pub mod queries {
                 }
             }
             pub fn named_by_id() -> NamedByIdStmt {
-                NamedByIdStmt(crate::client::async_::private::Stmt::new(
+                NamedByIdStmt(crate::client::async_::Stmt::new(
                     "SELECT * FROM named WHERE id = $1",
                 ))
             }
-            pub struct NamedByIdStmt(crate::client::async_::private::Stmt);
+            pub struct NamedByIdStmt(crate::client::async_::Stmt);
             impl NamedByIdStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -2941,11 +2902,11 @@ pub mod queries {
                 }
             }
             pub fn new_named_complex() -> NewNamedComplexStmt {
-                NewNamedComplexStmt(crate::client::async_::private::Stmt::new(
+                NewNamedComplexStmt(crate::client::async_::Stmt::new(
                     "INSERT INTO named_complex (named, \"named.with_dot\") VALUES ($1, $2)",
                 ))
             }
-            pub struct NewNamedComplexStmt(crate::client::async_::private::Stmt);
+            pub struct NewNamedComplexStmt(crate::client::async_::Stmt);
             impl NewNamedComplexStmt {
                 pub async fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -2988,11 +2949,11 @@ pub mod queries {
                 }
             }
             pub fn named_complex() -> NamedComplexStmt {
-                NamedComplexStmt(crate::client::async_::private::Stmt::new(
+                NamedComplexStmt(crate::client::async_::Stmt::new(
                     "SELECT * FROM named_complex",
                 ))
             }
-            pub struct NamedComplexStmt(crate::client::async_::private::Stmt);
+            pub struct NamedComplexStmt(crate::client::async_::Stmt);
             impl NamedComplexStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -3055,7 +3016,7 @@ pub mod queries {
             pub struct NullityQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::sync::private::Stmt,
+                stmt: &'a mut crate::client::sync::Stmt,
                 extractor: fn(&postgres::Row) -> super::NullityBorrowed,
                 mapper: fn(super::NullityBorrowed) -> T,
             }
@@ -3097,18 +3058,18 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client)?;
                     let it = self
                         .client
-                        .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
                 }
             }
             pub fn new_nullity() -> NewNullityStmt {
-                NewNullityStmt(crate::client::sync::private::Stmt::new(
+                NewNullityStmt(crate::client::sync::Stmt::new(
                     "INSERT INTO nullity(texts, name, composite) VALUES ($1, $2, $3)",
                 ))
             }
-            pub struct NewNullityStmt(crate::client::sync::private::Stmt);
+            pub struct NewNullityStmt(crate::client::sync::Stmt);
             impl NewNullityStmt {
                 pub fn bind<
                     'a,
@@ -3152,11 +3113,9 @@ pub mod queries {
                 }
             }
             pub fn nullity() -> NullityStmt {
-                NullityStmt(crate::client::sync::private::Stmt::new(
-                    "SELECT * FROM nullity",
-                ))
+                NullityStmt(crate::client::sync::Stmt::new("SELECT * FROM nullity"))
             }
-            pub struct NullityStmt(crate::client::sync::private::Stmt);
+            pub struct NullityStmt(crate::client::sync::Stmt);
             impl NullityStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -3183,7 +3142,7 @@ pub mod queries {
             pub struct NullityQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::async_::private::Stmt,
+                stmt: &'a mut crate::client::async_::Stmt,
                 extractor: fn(&tokio_postgres::Row) -> super::NullityBorrowed,
                 mapper: fn(super::NullityBorrowed) -> T,
             }
@@ -3228,10 +3187,7 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client).await?;
                     let it = self
                         .client
-                        .query_raw(
-                            stmt,
-                            crate::client::async_::private::slice_iter(&self.params),
-                        )
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -3239,11 +3195,11 @@ pub mod queries {
                 }
             }
             pub fn new_nullity() -> NewNullityStmt {
-                NewNullityStmt(crate::client::async_::private::Stmt::new(
+                NewNullityStmt(crate::client::async_::Stmt::new(
                     "INSERT INTO nullity(texts, name, composite) VALUES ($1, $2, $3)",
                 ))
             }
-            pub struct NewNullityStmt(crate::client::async_::private::Stmt);
+            pub struct NewNullityStmt(crate::client::async_::Stmt);
             impl NewNullityStmt {
                 pub async fn bind<
                     'a,
@@ -3299,11 +3255,9 @@ pub mod queries {
                 }
             }
             pub fn nullity() -> NullityStmt {
-                NullityStmt(crate::client::async_::private::Stmt::new(
-                    "SELECT * FROM nullity",
-                ))
+                NullityStmt(crate::client::async_::Stmt::new("SELECT * FROM nullity"))
             }
-            pub struct NullityStmt(crate::client::async_::private::Stmt);
+            pub struct NullityStmt(crate::client::async_::Stmt);
             impl NullityStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -3374,7 +3328,7 @@ pub mod queries {
             pub struct SelectBookQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::sync::private::Stmt,
+                stmt: &'a mut crate::client::sync::Stmt,
                 extractor: fn(&postgres::Row) -> super::SelectBookBorrowed,
                 mapper: fn(super::SelectBookBorrowed) -> T,
             }
@@ -3416,7 +3370,7 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client)?;
                     let it = self
                         .client
-                        .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -3425,7 +3379,7 @@ pub mod queries {
             pub struct FindBooksQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::sync::private::Stmt,
+                stmt: &'a mut crate::client::sync::Stmt,
                 extractor: fn(&postgres::Row) -> super::FindBooksBorrowed,
                 mapper: fn(super::FindBooksBorrowed) -> T,
             }
@@ -3467,18 +3421,18 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client)?;
                     let it = self
                         .client
-                        .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
                 }
             }
             pub fn insert_book() -> InsertBookStmt {
-                InsertBookStmt(crate::client::sync::private::Stmt::new(
+                InsertBookStmt(crate::client::sync::Stmt::new(
                     "INSERT INTO book (author, name) VALUES ($1, $2)",
                 ))
             }
-            pub struct InsertBookStmt(crate::client::sync::private::Stmt);
+            pub struct InsertBookStmt(crate::client::sync::Stmt);
             impl InsertBookStmt {
                 pub fn bind<
                     'a,
@@ -3517,11 +3471,9 @@ pub mod queries {
                 }
             }
             pub fn select_book() -> SelectBookStmt {
-                SelectBookStmt(crate::client::sync::private::Stmt::new(
-                    "SELECT * FROM book",
-                ))
+                SelectBookStmt(crate::client::sync::Stmt::new("SELECT * FROM book"))
             }
-            pub struct SelectBookStmt(crate::client::sync::private::Stmt);
+            pub struct SelectBookStmt(crate::client::sync::Stmt);
             impl SelectBookStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -3540,11 +3492,11 @@ pub mod queries {
                 }
             }
             pub fn find_books() -> FindBooksStmt {
-                FindBooksStmt(crate::client::sync::private::Stmt::new(
+                FindBooksStmt(crate::client::sync::Stmt::new(
                     "SELECT * FROM book WHERE name = ANY ($1)",
                 ))
             }
-            pub struct FindBooksStmt(crate::client::sync::private::Stmt);
+            pub struct FindBooksStmt(crate::client::sync::Stmt);
             impl FindBooksStmt {
                 pub fn bind<
                     'a,
@@ -3569,11 +3521,11 @@ pub mod queries {
                 }
             }
             pub fn params_use_twice() -> ParamsUseTwiceStmt {
-                ParamsUseTwiceStmt(crate::client::sync::private::Stmt::new(
+                ParamsUseTwiceStmt(crate::client::sync::Stmt::new(
                     "UPDATE book SET name = $1 WHERE length(name) > 42 AND length($1) < 42",
                 ))
             }
-            pub struct ParamsUseTwiceStmt(crate::client::sync::private::Stmt);
+            pub struct ParamsUseTwiceStmt(crate::client::sync::Stmt);
             impl ParamsUseTwiceStmt {
                 pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
                     &'a mut self,
@@ -3585,11 +3537,11 @@ pub mod queries {
                 }
             }
             pub fn params_order() -> ParamsOrderStmt {
-                ParamsOrderStmt(crate::client::sync::private::Stmt::new(
+                ParamsOrderStmt(crate::client::sync::Stmt::new(
                     "UPDATE imaginary SET c=$1, a=$2, z=$2, r=$1",
                 ))
             }
-            pub struct ParamsOrderStmt(crate::client::sync::private::Stmt);
+            pub struct ParamsOrderStmt(crate::client::sync::Stmt);
             impl ParamsOrderStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -3625,7 +3577,7 @@ pub mod queries {
             pub struct SelectBookQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::async_::private::Stmt,
+                stmt: &'a mut crate::client::async_::Stmt,
                 extractor: fn(&tokio_postgres::Row) -> super::SelectBookBorrowed,
                 mapper: fn(super::SelectBookBorrowed) -> T,
             }
@@ -3670,10 +3622,7 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client).await?;
                     let it = self
                         .client
-                        .query_raw(
-                            stmt,
-                            crate::client::async_::private::slice_iter(&self.params),
-                        )
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -3683,7 +3632,7 @@ pub mod queries {
             pub struct FindBooksQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::async_::private::Stmt,
+                stmt: &'a mut crate::client::async_::Stmt,
                 extractor: fn(&tokio_postgres::Row) -> super::FindBooksBorrowed,
                 mapper: fn(super::FindBooksBorrowed) -> T,
             }
@@ -3728,10 +3677,7 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client).await?;
                     let it = self
                         .client
-                        .query_raw(
-                            stmt,
-                            crate::client::async_::private::slice_iter(&self.params),
-                        )
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -3739,11 +3685,11 @@ pub mod queries {
                 }
             }
             pub fn insert_book() -> InsertBookStmt {
-                InsertBookStmt(crate::client::async_::private::Stmt::new(
+                InsertBookStmt(crate::client::async_::Stmt::new(
                     "INSERT INTO book (author, name) VALUES ($1, $2)",
                 ))
             }
-            pub struct InsertBookStmt(crate::client::async_::private::Stmt);
+            pub struct InsertBookStmt(crate::client::async_::Stmt);
             impl InsertBookStmt {
                 pub async fn bind<
                     'a,
@@ -3794,11 +3740,9 @@ pub mod queries {
                 }
             }
             pub fn select_book() -> SelectBookStmt {
-                SelectBookStmt(crate::client::async_::private::Stmt::new(
-                    "SELECT * FROM book",
-                ))
+                SelectBookStmt(crate::client::async_::Stmt::new("SELECT * FROM book"))
             }
-            pub struct SelectBookStmt(crate::client::async_::private::Stmt);
+            pub struct SelectBookStmt(crate::client::async_::Stmt);
             impl SelectBookStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -3817,11 +3761,11 @@ pub mod queries {
                 }
             }
             pub fn find_books() -> FindBooksStmt {
-                FindBooksStmt(crate::client::async_::private::Stmt::new(
+                FindBooksStmt(crate::client::async_::Stmt::new(
                     "SELECT * FROM book WHERE name = ANY ($1)",
                 ))
             }
-            pub struct FindBooksStmt(crate::client::async_::private::Stmt);
+            pub struct FindBooksStmt(crate::client::async_::Stmt);
             impl FindBooksStmt {
                 pub fn bind<
                     'a,
@@ -3846,11 +3790,11 @@ pub mod queries {
                 }
             }
             pub fn params_use_twice() -> ParamsUseTwiceStmt {
-                ParamsUseTwiceStmt(crate::client::async_::private::Stmt::new(
+                ParamsUseTwiceStmt(crate::client::async_::Stmt::new(
                     "UPDATE book SET name = $1 WHERE length(name) > 42 AND length($1) < 42",
                 ))
             }
-            pub struct ParamsUseTwiceStmt(crate::client::async_::private::Stmt);
+            pub struct ParamsUseTwiceStmt(crate::client::async_::Stmt);
             impl ParamsUseTwiceStmt {
                 pub async fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
                     &'a mut self,
@@ -3862,11 +3806,11 @@ pub mod queries {
                 }
             }
             pub fn params_order() -> ParamsOrderStmt {
-                ParamsOrderStmt(crate::client::async_::private::Stmt::new(
+                ParamsOrderStmt(crate::client::async_::Stmt::new(
                     "UPDATE imaginary SET c=$1, a=$2, z=$2, r=$1",
                 ))
             }
-            pub struct ParamsOrderStmt(crate::client::async_::private::Stmt);
+            pub struct ParamsOrderStmt(crate::client::async_::Stmt);
             impl ParamsOrderStmt {
                 pub async fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -4605,7 +4549,7 @@ pub mod queries {
             pub struct EverythingQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::sync::private::Stmt,
+                stmt: &'a mut crate::client::sync::Stmt,
                 extractor: fn(&postgres::Row) -> super::EverythingBorrowed,
                 mapper: fn(super::EverythingBorrowed) -> T,
             }
@@ -4647,7 +4591,7 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client)?;
                     let it = self
                         .client
-                        .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -4656,7 +4600,7 @@ pub mod queries {
             pub struct EverythingNullQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::sync::private::Stmt,
+                stmt: &'a mut crate::client::sync::Stmt,
                 extractor: fn(&postgres::Row) -> super::EverythingNullBorrowed,
                 mapper: fn(super::EverythingNullBorrowed) -> T,
             }
@@ -4698,7 +4642,7 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client)?;
                     let it = self
                         .client
-                        .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -4707,7 +4651,7 @@ pub mod queries {
             pub struct EverythingArrayQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::sync::private::Stmt,
+                stmt: &'a mut crate::client::sync::Stmt,
                 extractor: fn(&postgres::Row) -> super::EverythingArrayBorrowed,
                 mapper: fn(super::EverythingArrayBorrowed) -> T,
             }
@@ -4749,7 +4693,7 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client)?;
                     let it = self
                         .client
-                        .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -4758,7 +4702,7 @@ pub mod queries {
             pub struct EverythingArrayNullQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::sync::private::Stmt,
+                stmt: &'a mut crate::client::sync::Stmt,
                 extractor: fn(&postgres::Row) -> super::EverythingArrayNullBorrowed,
                 mapper: fn(super::EverythingArrayNullBorrowed) -> T,
             }
@@ -4800,7 +4744,7 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client)?;
                     let it = self
                         .client
-                        .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -4809,7 +4753,7 @@ pub mod queries {
             pub struct PublicNightmareCompositeQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::sync::private::Stmt,
+                stmt: &'a mut crate::client::sync::Stmt,
                 extractor: fn(
                     &postgres::Row,
                 )
@@ -4854,21 +4798,21 @@ pub mod queries {
                     let stmt = self.stmt.prepare(self.client)?;
                     let it = self
                         .client
-                        .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
                 }
             }
             pub fn select_everything() -> SelectEverythingStmt {
-                SelectEverythingStmt(crate::client::sync::private::Stmt::new(
+                SelectEverythingStmt(crate::client::sync::Stmt::new(
                     "SELECT
     *
 FROM
     Everything",
                 ))
             }
-            pub struct SelectEverythingStmt(crate::client::sync::private::Stmt);
+            pub struct SelectEverythingStmt(crate::client::sync::Stmt);
             impl SelectEverythingStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -4919,14 +4863,14 @@ FROM
                 }
             }
             pub fn select_everything_null() -> SelectEverythingNullStmt {
-                SelectEverythingNullStmt(crate::client::sync::private::Stmt::new(
+                SelectEverythingNullStmt(crate::client::sync::Stmt::new(
                     "SELECT
     *
 FROM
     Everything",
                 ))
             }
-            pub struct SelectEverythingNullStmt(crate::client::sync::private::Stmt);
+            pub struct SelectEverythingNullStmt(crate::client::sync::Stmt);
             impl SelectEverythingNullStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -4977,10 +4921,10 @@ FROM
                 }
             }
             pub fn insert_everything() -> InsertEverythingStmt {
-                InsertEverythingStmt(crate::client::sync :: private :: Stmt :: new("INSERT INTO Everything (bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_, numeric_)
+                InsertEverythingStmt(crate::client::sync :: Stmt :: new("INSERT INTO Everything (bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_, numeric_)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34)"))
             }
-            pub struct InsertEverythingStmt(crate::client::sync::private::Stmt);
+            pub struct InsertEverythingStmt(crate::client::sync::Stmt);
             impl InsertEverythingStmt {
                 pub fn bind<
                     'a,
@@ -5131,14 +5075,14 @@ FROM
                 }
             }
             pub fn select_everything_array() -> SelectEverythingArrayStmt {
-                SelectEverythingArrayStmt(crate::client::sync::private::Stmt::new(
+                SelectEverythingArrayStmt(crate::client::sync::Stmt::new(
                     "SELECT
     *
 FROM
     EverythingArray",
                 ))
             }
-            pub struct SelectEverythingArrayStmt(crate::client::sync::private::Stmt);
+            pub struct SelectEverythingArrayStmt(crate::client::sync::Stmt);
             impl SelectEverythingArrayStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -5183,14 +5127,14 @@ FROM
                 }
             }
             pub fn select_everything_array_null() -> SelectEverythingArrayNullStmt {
-                SelectEverythingArrayNullStmt(crate::client::sync::private::Stmt::new(
+                SelectEverythingArrayNullStmt(crate::client::sync::Stmt::new(
                     "SELECT
     *
 FROM
     EverythingArray",
                 ))
             }
-            pub struct SelectEverythingArrayNullStmt(crate::client::sync::private::Stmt);
+            pub struct SelectEverythingArrayNullStmt(crate::client::sync::Stmt);
             impl SelectEverythingArrayNullStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -5236,10 +5180,10 @@ FROM
                 }
             }
             pub fn insert_everything_array() -> InsertEverythingArrayStmt {
-                InsertEverythingArrayStmt(crate::client::sync :: private :: Stmt :: new("INSERT INTO EverythingArray (bool_, boolean_, char_, smallint_, int2_, int_, int4_, bingint_, int8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_, numeric_)
+                InsertEverythingArrayStmt(crate::client::sync :: Stmt :: new("INSERT INTO EverythingArray (bool_, boolean_, char_, smallint_, int2_, int_, int4_, bingint_, int8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_, numeric_)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)"))
             }
-            pub struct InsertEverythingArrayStmt(crate::client::sync::private::Stmt);
+            pub struct InsertEverythingArrayStmt(crate::client::sync::Stmt);
             impl InsertEverythingArrayStmt {
                 pub fn bind<
                     'a,
@@ -5496,14 +5440,14 @@ FROM
                 }
             }
             pub fn select_nightmare() -> SelectNightmareStmt {
-                SelectNightmareStmt(crate::client::sync::private::Stmt::new(
+                SelectNightmareStmt(crate::client::sync::Stmt::new(
                     "SELECT
     *
 FROM
     nightmare",
                 ))
             }
-            pub struct SelectNightmareStmt(crate::client::sync::private::Stmt);
+            pub struct SelectNightmareStmt(crate::client::sync::Stmt);
             impl SelectNightmareStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -5524,12 +5468,12 @@ FROM
                 }
             }
             pub fn insert_nightmare() -> InsertNightmareStmt {
-                InsertNightmareStmt(crate::client::sync::private::Stmt::new(
+                InsertNightmareStmt(crate::client::sync::Stmt::new(
                     "INSERT INTO nightmare (composite)
     VALUES ($1)",
                 ))
             }
-            pub struct InsertNightmareStmt(crate::client::sync::private::Stmt);
+            pub struct InsertNightmareStmt(crate::client::sync::Stmt);
             impl InsertNightmareStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -5548,7 +5492,7 @@ FROM
             pub struct EverythingQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::async_::private::Stmt,
+                stmt: &'a mut crate::client::async_::Stmt,
                 extractor: fn(&tokio_postgres::Row) -> super::EverythingBorrowed,
                 mapper: fn(super::EverythingBorrowed) -> T,
             }
@@ -5593,10 +5537,7 @@ FROM
                     let stmt = self.stmt.prepare(self.client).await?;
                     let it = self
                         .client
-                        .query_raw(
-                            stmt,
-                            crate::client::async_::private::slice_iter(&self.params),
-                        )
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -5606,7 +5547,7 @@ FROM
             pub struct EverythingNullQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::async_::private::Stmt,
+                stmt: &'a mut crate::client::async_::Stmt,
                 extractor: fn(&tokio_postgres::Row) -> super::EverythingNullBorrowed,
                 mapper: fn(super::EverythingNullBorrowed) -> T,
             }
@@ -5651,10 +5592,7 @@ FROM
                     let stmt = self.stmt.prepare(self.client).await?;
                     let it = self
                         .client
-                        .query_raw(
-                            stmt,
-                            crate::client::async_::private::slice_iter(&self.params),
-                        )
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -5664,7 +5602,7 @@ FROM
             pub struct EverythingArrayQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::async_::private::Stmt,
+                stmt: &'a mut crate::client::async_::Stmt,
                 extractor: fn(&tokio_postgres::Row) -> super::EverythingArrayBorrowed,
                 mapper: fn(super::EverythingArrayBorrowed) -> T,
             }
@@ -5709,10 +5647,7 @@ FROM
                     let stmt = self.stmt.prepare(self.client).await?;
                     let it = self
                         .client
-                        .query_raw(
-                            stmt,
-                            crate::client::async_::private::slice_iter(&self.params),
-                        )
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -5722,7 +5657,7 @@ FROM
             pub struct EverythingArrayNullQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::async_::private::Stmt,
+                stmt: &'a mut crate::client::async_::Stmt,
                 extractor: fn(&tokio_postgres::Row) -> super::EverythingArrayNullBorrowed,
                 mapper: fn(super::EverythingArrayNullBorrowed) -> T,
             }
@@ -5767,10 +5702,7 @@ FROM
                     let stmt = self.stmt.prepare(self.client).await?;
                     let it = self
                         .client
-                        .query_raw(
-                            stmt,
-                            crate::client::async_::private::slice_iter(&self.params),
-                        )
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -5780,7 +5712,7 @@ FROM
             pub struct PublicNightmareCompositeQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::async_::private::Stmt,
+                stmt: &'a mut crate::client::async_::Stmt,
                 extractor: fn(
                     &tokio_postgres::Row,
                 )
@@ -5828,10 +5760,7 @@ FROM
                     let stmt = self.stmt.prepare(self.client).await?;
                     let it = self
                         .client
-                        .query_raw(
-                            stmt,
-                            crate::client::async_::private::slice_iter(&self.params),
-                        )
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -5839,14 +5768,14 @@ FROM
                 }
             }
             pub fn select_everything() -> SelectEverythingStmt {
-                SelectEverythingStmt(crate::client::async_::private::Stmt::new(
+                SelectEverythingStmt(crate::client::async_::Stmt::new(
                     "SELECT
     *
 FROM
     Everything",
                 ))
             }
-            pub struct SelectEverythingStmt(crate::client::async_::private::Stmt);
+            pub struct SelectEverythingStmt(crate::client::async_::Stmt);
             impl SelectEverythingStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -5897,14 +5826,14 @@ FROM
                 }
             }
             pub fn select_everything_null() -> SelectEverythingNullStmt {
-                SelectEverythingNullStmt(crate::client::async_::private::Stmt::new(
+                SelectEverythingNullStmt(crate::client::async_::Stmt::new(
                     "SELECT
     *
 FROM
     Everything",
                 ))
             }
-            pub struct SelectEverythingNullStmt(crate::client::async_::private::Stmt);
+            pub struct SelectEverythingNullStmt(crate::client::async_::Stmt);
             impl SelectEverythingNullStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -5955,10 +5884,10 @@ FROM
                 }
             }
             pub fn insert_everything() -> InsertEverythingStmt {
-                InsertEverythingStmt(crate::client::async_ :: private :: Stmt :: new("INSERT INTO Everything (bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_, numeric_)
+                InsertEverythingStmt(crate::client::async_ :: Stmt :: new("INSERT INTO Everything (bool_, boolean_, char_, smallint_, int2_, smallserial_, serial2_, int_, int4_, serial_, serial4_, bingint_, int8_, bigserial_, serial8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_, numeric_)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34)"))
             }
-            pub struct InsertEverythingStmt(crate::client::async_::private::Stmt);
+            pub struct InsertEverythingStmt(crate::client::async_::Stmt);
             impl InsertEverythingStmt {
                 pub async fn bind<
                     'a,
@@ -6123,14 +6052,14 @@ FROM
                 }
             }
             pub fn select_everything_array() -> SelectEverythingArrayStmt {
-                SelectEverythingArrayStmt(crate::client::async_::private::Stmt::new(
+                SelectEverythingArrayStmt(crate::client::async_::Stmt::new(
                     "SELECT
     *
 FROM
     EverythingArray",
                 ))
             }
-            pub struct SelectEverythingArrayStmt(crate::client::async_::private::Stmt);
+            pub struct SelectEverythingArrayStmt(crate::client::async_::Stmt);
             impl SelectEverythingArrayStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -6175,14 +6104,14 @@ FROM
                 }
             }
             pub fn select_everything_array_null() -> SelectEverythingArrayNullStmt {
-                SelectEverythingArrayNullStmt(crate::client::async_::private::Stmt::new(
+                SelectEverythingArrayNullStmt(crate::client::async_::Stmt::new(
                     "SELECT
     *
 FROM
     EverythingArray",
                 ))
             }
-            pub struct SelectEverythingArrayNullStmt(crate::client::async_::private::Stmt);
+            pub struct SelectEverythingArrayNullStmt(crate::client::async_::Stmt);
             impl SelectEverythingArrayNullStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -6228,10 +6157,10 @@ FROM
                 }
             }
             pub fn insert_everything_array() -> InsertEverythingArrayStmt {
-                InsertEverythingArrayStmt(crate::client::async_ :: private :: Stmt :: new("INSERT INTO EverythingArray (bool_, boolean_, char_, smallint_, int2_, int_, int4_, bingint_, int8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_, numeric_)
+                InsertEverythingArrayStmt(crate::client::async_ :: Stmt :: new("INSERT INTO EverythingArray (bool_, boolean_, char_, smallint_, int2_, int_, int4_, bingint_, int8_, float4_, real_, float8_, double_precision_, text_, varchar_, bytea_, timestamp_, timestamp_without_time_zone_, timestamptz_, timestamp_with_time_zone_, date_, time_, json_, jsonb_, uuid_, inet_, macaddr_, numeric_)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)"))
             }
-            pub struct InsertEverythingArrayStmt(crate::client::async_::private::Stmt);
+            pub struct InsertEverythingArrayStmt(crate::client::async_::Stmt);
             impl InsertEverythingArrayStmt {
                 pub async fn bind<
                     'a,
@@ -6502,14 +6431,14 @@ FROM
                 }
             }
             pub fn select_nightmare() -> SelectNightmareStmt {
-                SelectNightmareStmt(crate::client::async_::private::Stmt::new(
+                SelectNightmareStmt(crate::client::async_::Stmt::new(
                     "SELECT
     *
 FROM
     nightmare",
                 ))
             }
-            pub struct SelectNightmareStmt(crate::client::async_::private::Stmt);
+            pub struct SelectNightmareStmt(crate::client::async_::Stmt);
             impl SelectNightmareStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -6530,12 +6459,12 @@ FROM
                 }
             }
             pub fn insert_nightmare() -> InsertNightmareStmt {
-                InsertNightmareStmt(crate::client::async_::private::Stmt::new(
+                InsertNightmareStmt(crate::client::async_::Stmt::new(
                     "INSERT INTO nightmare (composite)
     VALUES ($1)",
                 ))
             }
-            pub struct InsertNightmareStmt(crate::client::async_::private::Stmt);
+            pub struct InsertNightmareStmt(crate::client::async_::Stmt);
             impl InsertNightmareStmt {
                 pub async fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -6658,7 +6587,7 @@ FROM
             pub struct PublicCloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::sync::private::Stmt,
+                stmt: &'a mut crate::client::sync::Stmt,
                 extractor: fn(
                     &postgres::Row,
                 )
@@ -6703,7 +6632,7 @@ FROM
                     let stmt = self.stmt.prepare(self.client)?;
                     let it = self
                         .client
-                        .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -6712,7 +6641,7 @@ FROM
             pub struct Optioni32Query<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::sync::private::Stmt,
+                stmt: &'a mut crate::client::sync::Stmt,
                 extractor: fn(&postgres::Row) -> Option<i32>,
                 mapper: fn(Option<i32>) -> T,
             }
@@ -6751,7 +6680,7 @@ FROM
                     let stmt = self.stmt.prepare(self.client)?;
                     let it = self
                         .client
-                        .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -6760,7 +6689,7 @@ FROM
             pub struct RowQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::sync::private::Stmt,
+                stmt: &'a mut crate::client::sync::Stmt,
                 extractor: fn(&postgres::Row) -> super::Row,
                 mapper: fn(super::Row) -> T,
             }
@@ -6799,7 +6728,7 @@ FROM
                     let stmt = self.stmt.prepare(self.client)?;
                     let it = self
                         .client
-                        .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -6808,7 +6737,7 @@ FROM
             pub struct RowSpaceQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::sync::private::Stmt,
+                stmt: &'a mut crate::client::sync::Stmt,
                 extractor: fn(&postgres::Row) -> super::RowSpace,
                 mapper: fn(super::RowSpace) -> T,
             }
@@ -6850,7 +6779,7 @@ FROM
                     let stmt = self.stmt.prepare(self.client)?;
                     let it = self
                         .client
-                        .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
@@ -6859,7 +6788,7 @@ FROM
             pub struct TypeofQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::sync::private::Stmt,
+                stmt: &'a mut crate::client::sync::Stmt,
                 extractor: fn(&postgres::Row) -> super::TypeofBorrowed,
                 mapper: fn(super::TypeofBorrowed) -> T,
             }
@@ -6901,18 +6830,16 @@ FROM
                     let stmt = self.stmt.prepare(self.client)?;
                     let it = self
                         .client
-                        .query_raw(stmt, crate::client::sync::private::slice_iter(&self.params))?
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))?
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
                     Ok(it)
                 }
             }
             pub fn select_compact() -> SelectCompactStmt {
-                SelectCompactStmt(crate::client::sync::private::Stmt::new(
-                    "SELECT * FROM clone",
-                ))
+                SelectCompactStmt(crate::client::sync::Stmt::new("SELECT * FROM clone"))
             }
-            pub struct SelectCompactStmt(crate::client::sync::private::Stmt);
+            pub struct SelectCompactStmt(crate::client::sync::Stmt);
             impl SelectCompactStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -6933,11 +6860,9 @@ FROM
                 }
             }
             pub fn select_spaced() -> SelectSpacedStmt {
-                SelectSpacedStmt(crate::client::sync::private::Stmt::new(
-                    "      SELECT * FROM clone ",
-                ))
+                SelectSpacedStmt(crate::client::sync::Stmt::new("      SELECT * FROM clone "))
             }
-            pub struct SelectSpacedStmt(crate::client::sync::private::Stmt);
+            pub struct SelectSpacedStmt(crate::client::sync::Stmt);
             impl SelectSpacedStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -6958,11 +6883,11 @@ FROM
                 }
             }
             pub fn implicit_compact() -> ImplicitCompactStmt {
-                ImplicitCompactStmt(crate::client::sync::private::Stmt::new(
+                ImplicitCompactStmt(crate::client::sync::Stmt::new(
                     "INSERT INTO named (name, price, show) VALUES ($1, $2, false) RETURNING id",
                 ))
             }
-            pub struct ImplicitCompactStmt(crate::client::sync::private::Stmt);
+            pub struct ImplicitCompactStmt(crate::client::sync::Stmt);
             impl ImplicitCompactStmt {
                 pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
                     &'a mut self,
@@ -6996,11 +6921,11 @@ FROM
                 }
             }
             pub fn implicit_spaced() -> ImplicitSpacedStmt {
-                ImplicitSpacedStmt(crate::client::sync::private::Stmt::new(
+                ImplicitSpacedStmt(crate::client::sync::Stmt::new(
                     "INSERT INTO named (name, price, show) VALUES ($1, $2, false) RETURNING id",
                 ))
             }
-            pub struct ImplicitSpacedStmt(crate::client::sync::private::Stmt);
+            pub struct ImplicitSpacedStmt(crate::client::sync::Stmt);
             impl ImplicitSpacedStmt {
                 pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
                     &'a mut self,
@@ -7034,11 +6959,11 @@ FROM
                 }
             }
             pub fn named_compact() -> NamedCompactStmt {
-                NamedCompactStmt(crate::client::sync::private::Stmt::new(
+                NamedCompactStmt(crate::client::sync::Stmt::new(
                     "INSERT INTO named (name, price, show) VALUES ($1, $2, false) RETURNING id",
                 ))
             }
-            pub struct NamedCompactStmt(crate::client::sync::private::Stmt);
+            pub struct NamedCompactStmt(crate::client::sync::Stmt);
             impl NamedCompactStmt {
                 pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
                     &'a mut self,
@@ -7072,11 +6997,11 @@ FROM
                 }
             }
             pub fn named_spaced() -> NamedSpacedStmt {
-                NamedSpacedStmt(crate::client::sync::private::Stmt::new(
+                NamedSpacedStmt(crate::client::sync::Stmt::new(
                     "INSERT INTO named (name, price, show) VALUES ($1, $2, false) RETURNING id",
                 ))
             }
-            pub struct NamedSpacedStmt(crate::client::sync::private::Stmt);
+            pub struct NamedSpacedStmt(crate::client::sync::Stmt);
             impl NamedSpacedStmt {
                 pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
                     &'a mut self,
@@ -7110,9 +7035,9 @@ FROM
                 }
             }
             pub fn tricky_sql() -> TrickySqlStmt {
-                TrickySqlStmt(crate::client::sync :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a bind_param\', $1, $2)"))
+                TrickySqlStmt(crate::client::sync :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a bind_param\', $1, $2)"))
             }
-            pub struct TrickySqlStmt(crate::client::sync::private::Stmt);
+            pub struct TrickySqlStmt(crate::client::sync::Stmt);
             impl TrickySqlStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -7141,9 +7066,9 @@ FROM
                 }
             }
             pub fn tricky_sql1() -> TrickySql1Stmt {
-                TrickySql1Stmt(crate::client::sync :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a :bind_param', $1, $2)"))
+                TrickySql1Stmt(crate::client::sync :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a :bind_param', $1, $2)"))
             }
-            pub struct TrickySql1Stmt(crate::client::sync::private::Stmt);
+            pub struct TrickySql1Stmt(crate::client::sync::Stmt);
             impl TrickySql1Stmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -7172,9 +7097,9 @@ FROM
                 }
             }
             pub fn tricky_sql2() -> TrickySql2Stmt {
-                TrickySql2Stmt(crate::client::sync :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a '':bind_param''', $1, $2)"))
+                TrickySql2Stmt(crate::client::sync :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a '':bind_param''', $1, $2)"))
             }
-            pub struct TrickySql2Stmt(crate::client::sync::private::Stmt);
+            pub struct TrickySql2Stmt(crate::client::sync::Stmt);
             impl TrickySql2Stmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -7203,9 +7128,9 @@ FROM
                 }
             }
             pub fn tricky_sql3() -> TrickySql3Stmt {
-                TrickySql3Stmt(crate::client::sync :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum)  VALUES ($$this is not a :bind_param$$, $1, $2)"))
+                TrickySql3Stmt(crate::client::sync :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum)  VALUES ($$this is not a :bind_param$$, $1, $2)"))
             }
-            pub struct TrickySql3Stmt(crate::client::sync::private::Stmt);
+            pub struct TrickySql3Stmt(crate::client::sync::Stmt);
             impl TrickySql3Stmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -7234,9 +7159,9 @@ FROM
                 }
             }
             pub fn tricky_sql4() -> TrickySql4Stmt {
-                TrickySql4Stmt(crate::client::sync :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ($tag$this is not a :bind_param$tag$, $1, $2)"))
+                TrickySql4Stmt(crate::client::sync :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ($tag$this is not a :bind_param$tag$, $1, $2)"))
             }
-            pub struct TrickySql4Stmt(crate::client::sync::private::Stmt);
+            pub struct TrickySql4Stmt(crate::client::sync::Stmt);
             impl TrickySql4Stmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -7265,9 +7190,9 @@ FROM
                 }
             }
             pub fn tricky_sql6() -> TrickySql6Stmt {
-                TrickySql6Stmt(crate::client::sync :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (e'this is not a '':bind_param''', $1, $2)"))
+                TrickySql6Stmt(crate::client::sync :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (e'this is not a '':bind_param''', $1, $2)"))
             }
-            pub struct TrickySql6Stmt(crate::client::sync::private::Stmt);
+            pub struct TrickySql6Stmt(crate::client::sync::Stmt);
             impl TrickySql6Stmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -7296,9 +7221,9 @@ FROM
                 }
             }
             pub fn tricky_sql7() -> TrickySql7Stmt {
-                TrickySql7Stmt(crate::client::sync :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (E'this is not a \':bind_param\'', $1, $2)"))
+                TrickySql7Stmt(crate::client::sync :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (E'this is not a \':bind_param\'', $1, $2)"))
             }
-            pub struct TrickySql7Stmt(crate::client::sync::private::Stmt);
+            pub struct TrickySql7Stmt(crate::client::sync::Stmt);
             impl TrickySql7Stmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -7327,9 +7252,9 @@ FROM
                 }
             }
             pub fn tricky_sql8() -> TrickySql8Stmt {
-                TrickySql8Stmt(crate::client::sync :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (e'this is ''not'' a \':bind_param\'', $1, $2)"))
+                TrickySql8Stmt(crate::client::sync :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (e'this is ''not'' a \':bind_param\'', $1, $2)"))
             }
-            pub struct TrickySql8Stmt(crate::client::sync::private::Stmt);
+            pub struct TrickySql8Stmt(crate::client::sync::Stmt);
             impl TrickySql8Stmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -7358,9 +7283,9 @@ FROM
                 }
             }
             pub fn tricky_sql9() -> TrickySql9Stmt {
-                TrickySql9Stmt(crate::client::sync :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (E'this is \'not\' a \':bind_param\'', $1, $2)"))
+                TrickySql9Stmt(crate::client::sync :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (E'this is \'not\' a \':bind_param\'', $1, $2)"))
             }
-            pub struct TrickySql9Stmt(crate::client::sync::private::Stmt);
+            pub struct TrickySql9Stmt(crate::client::sync::Stmt);
             impl TrickySql9Stmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -7389,9 +7314,9 @@ FROM
                 }
             }
             pub fn tricky_sql10() -> TrickySql10Stmt {
-                TrickySql10Stmt(crate::client::sync :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is just a cast'::text, $1, $2)"))
+                TrickySql10Stmt(crate::client::sync :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is just a cast'::text, $1, $2)"))
             }
-            pub struct TrickySql10Stmt(crate::client::sync::private::Stmt);
+            pub struct TrickySql10Stmt(crate::client::sync::Stmt);
             impl TrickySql10Stmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -7420,11 +7345,9 @@ FROM
                 }
             }
             pub fn r#typeof() -> RTypeofStmt {
-                RTypeofStmt(crate::client::sync::private::Stmt::new(
-                    "SELECT * FROM syntax",
-                ))
+                RTypeofStmt(crate::client::sync::Stmt::new("SELECT * FROM syntax"))
             }
-            pub struct RTypeofStmt(crate::client::sync::private::Stmt);
+            pub struct RTypeofStmt(crate::client::sync::Stmt);
             impl RTypeofStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -7451,7 +7374,7 @@ FROM
             pub struct PublicCloneCompositeQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::async_::private::Stmt,
+                stmt: &'a mut crate::client::async_::Stmt,
                 extractor: fn(
                     &tokio_postgres::Row,
                 )
@@ -7499,10 +7422,7 @@ FROM
                     let stmt = self.stmt.prepare(self.client).await?;
                     let it = self
                         .client
-                        .query_raw(
-                            stmt,
-                            crate::client::async_::private::slice_iter(&self.params),
-                        )
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -7512,7 +7432,7 @@ FROM
             pub struct Optioni32Query<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::async_::private::Stmt,
+                stmt: &'a mut crate::client::async_::Stmt,
                 extractor: fn(&tokio_postgres::Row) -> Option<i32>,
                 mapper: fn(Option<i32>) -> T,
             }
@@ -7554,10 +7474,7 @@ FROM
                     let stmt = self.stmt.prepare(self.client).await?;
                     let it = self
                         .client
-                        .query_raw(
-                            stmt,
-                            crate::client::async_::private::slice_iter(&self.params),
-                        )
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -7567,7 +7484,7 @@ FROM
             pub struct RowQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::async_::private::Stmt,
+                stmt: &'a mut crate::client::async_::Stmt,
                 extractor: fn(&tokio_postgres::Row) -> super::Row,
                 mapper: fn(super::Row) -> T,
             }
@@ -7609,10 +7526,7 @@ FROM
                     let stmt = self.stmt.prepare(self.client).await?;
                     let it = self
                         .client
-                        .query_raw(
-                            stmt,
-                            crate::client::async_::private::slice_iter(&self.params),
-                        )
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -7622,7 +7536,7 @@ FROM
             pub struct RowSpaceQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::async_::private::Stmt,
+                stmt: &'a mut crate::client::async_::Stmt,
                 extractor: fn(&tokio_postgres::Row) -> super::RowSpace,
                 mapper: fn(super::RowSpace) -> T,
             }
@@ -7667,10 +7581,7 @@ FROM
                     let stmt = self.stmt.prepare(self.client).await?;
                     let it = self
                         .client
-                        .query_raw(
-                            stmt,
-                            crate::client::async_::private::slice_iter(&self.params),
-                        )
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -7680,7 +7591,7 @@ FROM
             pub struct TypeofQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut crate::client::async_::private::Stmt,
+                stmt: &'a mut crate::client::async_::Stmt,
                 extractor: fn(&tokio_postgres::Row) -> super::TypeofBorrowed,
                 mapper: fn(super::TypeofBorrowed) -> T,
             }
@@ -7725,10 +7636,7 @@ FROM
                     let stmt = self.stmt.prepare(self.client).await?;
                     let it = self
                         .client
-                        .query_raw(
-                            stmt,
-                            crate::client::async_::private::slice_iter(&self.params),
-                        )
+                        .query_raw(stmt, crate::client::slice_iter(&self.params))
                         .await?
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
@@ -7736,11 +7644,9 @@ FROM
                 }
             }
             pub fn select_compact() -> SelectCompactStmt {
-                SelectCompactStmt(crate::client::async_::private::Stmt::new(
-                    "SELECT * FROM clone",
-                ))
+                SelectCompactStmt(crate::client::async_::Stmt::new("SELECT * FROM clone"))
             }
-            pub struct SelectCompactStmt(crate::client::async_::private::Stmt);
+            pub struct SelectCompactStmt(crate::client::async_::Stmt);
             impl SelectCompactStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -7761,11 +7667,11 @@ FROM
                 }
             }
             pub fn select_spaced() -> SelectSpacedStmt {
-                SelectSpacedStmt(crate::client::async_::private::Stmt::new(
+                SelectSpacedStmt(crate::client::async_::Stmt::new(
                     "      SELECT * FROM clone ",
                 ))
             }
-            pub struct SelectSpacedStmt(crate::client::async_::private::Stmt);
+            pub struct SelectSpacedStmt(crate::client::async_::Stmt);
             impl SelectSpacedStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -7786,11 +7692,11 @@ FROM
                 }
             }
             pub fn implicit_compact() -> ImplicitCompactStmt {
-                ImplicitCompactStmt(crate::client::async_::private::Stmt::new(
+                ImplicitCompactStmt(crate::client::async_::Stmt::new(
                     "INSERT INTO named (name, price, show) VALUES ($1, $2, false) RETURNING id",
                 ))
             }
-            pub struct ImplicitCompactStmt(crate::client::async_::private::Stmt);
+            pub struct ImplicitCompactStmt(crate::client::async_::Stmt);
             impl ImplicitCompactStmt {
                 pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
                     &'a mut self,
@@ -7824,11 +7730,11 @@ FROM
                 }
             }
             pub fn implicit_spaced() -> ImplicitSpacedStmt {
-                ImplicitSpacedStmt(crate::client::async_::private::Stmt::new(
+                ImplicitSpacedStmt(crate::client::async_::Stmt::new(
                     "INSERT INTO named (name, price, show) VALUES ($1, $2, false) RETURNING id",
                 ))
             }
-            pub struct ImplicitSpacedStmt(crate::client::async_::private::Stmt);
+            pub struct ImplicitSpacedStmt(crate::client::async_::Stmt);
             impl ImplicitSpacedStmt {
                 pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
                     &'a mut self,
@@ -7862,11 +7768,11 @@ FROM
                 }
             }
             pub fn named_compact() -> NamedCompactStmt {
-                NamedCompactStmt(crate::client::async_::private::Stmt::new(
+                NamedCompactStmt(crate::client::async_::Stmt::new(
                     "INSERT INTO named (name, price, show) VALUES ($1, $2, false) RETURNING id",
                 ))
             }
-            pub struct NamedCompactStmt(crate::client::async_::private::Stmt);
+            pub struct NamedCompactStmt(crate::client::async_::Stmt);
             impl NamedCompactStmt {
                 pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
                     &'a mut self,
@@ -7900,11 +7806,11 @@ FROM
                 }
             }
             pub fn named_spaced() -> NamedSpacedStmt {
-                NamedSpacedStmt(crate::client::async_::private::Stmt::new(
+                NamedSpacedStmt(crate::client::async_::Stmt::new(
                     "INSERT INTO named (name, price, show) VALUES ($1, $2, false) RETURNING id",
                 ))
             }
-            pub struct NamedSpacedStmt(crate::client::async_::private::Stmt);
+            pub struct NamedSpacedStmt(crate::client::async_::Stmt);
             impl NamedSpacedStmt {
                 pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
                     &'a mut self,
@@ -7938,9 +7844,9 @@ FROM
                 }
             }
             pub fn tricky_sql() -> TrickySqlStmt {
-                TrickySqlStmt(crate::client::async_ :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a bind_param\', $1, $2)"))
+                TrickySqlStmt(crate::client::async_ :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a bind_param\', $1, $2)"))
             }
-            pub struct TrickySqlStmt(crate::client::async_::private::Stmt);
+            pub struct TrickySqlStmt(crate::client::async_::Stmt);
             impl TrickySqlStmt {
                 pub async fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -7981,9 +7887,9 @@ FROM
                 }
             }
             pub fn tricky_sql1() -> TrickySql1Stmt {
-                TrickySql1Stmt(crate::client::async_ :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a :bind_param', $1, $2)"))
+                TrickySql1Stmt(crate::client::async_ :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a :bind_param', $1, $2)"))
             }
-            pub struct TrickySql1Stmt(crate::client::async_::private::Stmt);
+            pub struct TrickySql1Stmt(crate::client::async_::Stmt);
             impl TrickySql1Stmt {
                 pub async fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -8024,9 +7930,9 @@ FROM
                 }
             }
             pub fn tricky_sql2() -> TrickySql2Stmt {
-                TrickySql2Stmt(crate::client::async_ :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a '':bind_param''', $1, $2)"))
+                TrickySql2Stmt(crate::client::async_ :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is not a '':bind_param''', $1, $2)"))
             }
-            pub struct TrickySql2Stmt(crate::client::async_::private::Stmt);
+            pub struct TrickySql2Stmt(crate::client::async_::Stmt);
             impl TrickySql2Stmt {
                 pub async fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -8067,9 +7973,9 @@ FROM
                 }
             }
             pub fn tricky_sql3() -> TrickySql3Stmt {
-                TrickySql3Stmt(crate::client::async_ :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum)  VALUES ($$this is not a :bind_param$$, $1, $2)"))
+                TrickySql3Stmt(crate::client::async_ :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum)  VALUES ($$this is not a :bind_param$$, $1, $2)"))
             }
-            pub struct TrickySql3Stmt(crate::client::async_::private::Stmt);
+            pub struct TrickySql3Stmt(crate::client::async_::Stmt);
             impl TrickySql3Stmt {
                 pub async fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -8110,9 +8016,9 @@ FROM
                 }
             }
             pub fn tricky_sql4() -> TrickySql4Stmt {
-                TrickySql4Stmt(crate::client::async_ :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ($tag$this is not a :bind_param$tag$, $1, $2)"))
+                TrickySql4Stmt(crate::client::async_ :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ($tag$this is not a :bind_param$tag$, $1, $2)"))
             }
-            pub struct TrickySql4Stmt(crate::client::async_::private::Stmt);
+            pub struct TrickySql4Stmt(crate::client::async_::Stmt);
             impl TrickySql4Stmt {
                 pub async fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -8153,9 +8059,9 @@ FROM
                 }
             }
             pub fn tricky_sql6() -> TrickySql6Stmt {
-                TrickySql6Stmt(crate::client::async_ :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (e'this is not a '':bind_param''', $1, $2)"))
+                TrickySql6Stmt(crate::client::async_ :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (e'this is not a '':bind_param''', $1, $2)"))
             }
-            pub struct TrickySql6Stmt(crate::client::async_::private::Stmt);
+            pub struct TrickySql6Stmt(crate::client::async_::Stmt);
             impl TrickySql6Stmt {
                 pub async fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -8196,9 +8102,9 @@ FROM
                 }
             }
             pub fn tricky_sql7() -> TrickySql7Stmt {
-                TrickySql7Stmt(crate::client::async_ :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (E'this is not a \':bind_param\'', $1, $2)"))
+                TrickySql7Stmt(crate::client::async_ :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (E'this is not a \':bind_param\'', $1, $2)"))
             }
-            pub struct TrickySql7Stmt(crate::client::async_::private::Stmt);
+            pub struct TrickySql7Stmt(crate::client::async_::Stmt);
             impl TrickySql7Stmt {
                 pub async fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -8239,9 +8145,9 @@ FROM
                 }
             }
             pub fn tricky_sql8() -> TrickySql8Stmt {
-                TrickySql8Stmt(crate::client::async_ :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (e'this is ''not'' a \':bind_param\'', $1, $2)"))
+                TrickySql8Stmt(crate::client::async_ :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (e'this is ''not'' a \':bind_param\'', $1, $2)"))
             }
-            pub struct TrickySql8Stmt(crate::client::async_::private::Stmt);
+            pub struct TrickySql8Stmt(crate::client::async_::Stmt);
             impl TrickySql8Stmt {
                 pub async fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -8282,9 +8188,9 @@ FROM
                 }
             }
             pub fn tricky_sql9() -> TrickySql9Stmt {
-                TrickySql9Stmt(crate::client::async_ :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (E'this is \'not\' a \':bind_param\'', $1, $2)"))
+                TrickySql9Stmt(crate::client::async_ :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES (E'this is \'not\' a \':bind_param\'', $1, $2)"))
             }
-            pub struct TrickySql9Stmt(crate::client::async_::private::Stmt);
+            pub struct TrickySql9Stmt(crate::client::async_::Stmt);
             impl TrickySql9Stmt {
                 pub async fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -8325,9 +8231,9 @@ FROM
                 }
             }
             pub fn tricky_sql10() -> TrickySql10Stmt {
-                TrickySql10Stmt(crate::client::async_ :: private :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is just a cast'::text, $1, $2)"))
+                TrickySql10Stmt(crate::client::async_ :: Stmt :: new("INSERT INTO syntax (\"trick:y\", async, enum) VALUES ('this is just a cast'::text, $1, $2)"))
             }
-            pub struct TrickySql10Stmt(crate::client::async_::private::Stmt);
+            pub struct TrickySql10Stmt(crate::client::async_::Stmt);
             impl TrickySql10Stmt {
                 pub async fn bind<'a, C: GenericClient>(
                     &'a mut self,
@@ -8368,11 +8274,9 @@ FROM
                 }
             }
             pub fn r#typeof() -> RTypeofStmt {
-                RTypeofStmt(crate::client::async_::private::Stmt::new(
-                    "SELECT * FROM syntax",
-                ))
+                RTypeofStmt(crate::client::async_::Stmt::new("SELECT * FROM syntax"))
             }
-            pub struct RTypeofStmt(crate::client::async_::private::Stmt);
+            pub struct RTypeofStmt(crate::client::async_::Stmt);
             impl RTypeofStmt {
                 pub fn bind<'a, C: GenericClient>(
                     &'a mut self,

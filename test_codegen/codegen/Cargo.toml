@@ -3,6 +3,9 @@
 name = "codegen"
 version = "0.9.0"
 edition = "2021"
+[features]
+default = ["deadpool"]
+deadpool = ["dep:deadpool-postgres"]
 
 [dependencies]
 ## Core dependencies
@@ -10,6 +13,8 @@ edition = "2021"
 postgres-types = { version = "*", features = ["derive"] }
 # Postgres interaction
 postgres-protocol = "0.6.4"
+# Iterator utils required for working with `postgres_protocol::types::ArrayValues`
+fallible-iterator = "0.2.0"
 
 ## Types dependencies
 # JSON or JSONB
@@ -27,8 +32,6 @@ rust_decimal = { version = "*", features = ["db-postgres"] }
 ## Sync client dependencies
 # Postgres sync client
 postgres = { version = "*", features = ["with-serde_json-1","with-time-0_3","with-uuid-1","with-eui48-1",] }
-# Iterator utils required for working with `postgres_protocol::types::ArrayValues`
-fallible-iterator = "0.2.0"
 
 ## Async client dependencies
 # Postgres async client
@@ -40,4 +43,4 @@ futures = "*"
 
 ## Async features dependencies
 # Async connection pooling
-deadpool-postgres = { version = "*" }
+deadpool-postgres = { version = "*", optional = true }

@@ -8,11 +8,11 @@ use crate::CodegenSettings;
 /// Register use of typed requiring specific dependencies
 #[derive(Debug, Clone, Default)]
 pub struct DependencyAnalysis {
-    time: bool,
-    json: bool,
-    uuid: bool,
-    mac_addr: bool,
-    decimal: bool,
+    pub time: bool,
+    pub json: bool,
+    pub uuid: bool,
+    pub mac_addr: bool,
+    pub decimal: bool,
 }
 
 impl DependencyAnalysis {
@@ -55,6 +55,18 @@ pub fn generate_cargo_file(
         name = "{name}"
         version = "{VERSION}"
         edition = "2021"
+    "#};
+
+    if settings.gen_async {
+        writedoc! { buf, r#"
+            [features]
+            default = ["deadpool"]
+            deadpool = ["dep:deadpool-postgres"]
+        "#}
+        .unwrap()
+    }
+
+    writedoc! { buf, r#"
 
         [dependencies]
         ## Core dependencies
@@ -62,12 +74,16 @@ pub fn generate_cargo_file(
         postgres-types = {{ version = "*", features = ["derive"] }}
         # Postgres interaction
         postgres-protocol = "0.6.4"
-    "#};
+        # Iterator utils required for working with `postgres_protocol::types::ArrayValues`
+        fallible-iterator = "0.2.0"
+    "#}
+    .unwrap();
+
     let mut client_features = String::new();
 
-    if dependency_analysis.has_dependency() | true {
+    if dependency_analysis.has_dependency() {
         writeln!(buf, "\n## Types dependencies").unwrap();
-        if dependency_analysis.json | true {
+        if dependency_analysis.json {
             writedoc! { buf, r#"
                 # JSON or JSONB
                 serde_json = "*"
@@ -109,19 +125,17 @@ pub fn generate_cargo_file(
         }
     }
 
-    if settings.gen_sync | true {
+    if settings.gen_sync {
         writedoc! { buf, r#"
 
             ## Sync client dependencies
             # Postgres sync client
             postgres = {{ version = "*", features = [{client_features}] }}
-            # Iterator utils required for working with `postgres_protocol::types::ArrayValues`
-            fallible-iterator = "0.2.0"
         "#}
         .unwrap();
     }
 
-    if settings.gen_async | true {
+    if settings.gen_async {
         writedoc! { buf, r#"
 
             ## Async client dependencies
@@ -134,7 +148,7 @@ pub fn generate_cargo_file(
 
             ## Async features dependencies
             # Async connection pooling
-            deadpool-postgres = {{ version = "*" }}
+            deadpool-postgres = {{ version = "*", optional = true }}
         "#}
         .unwrap();
     }

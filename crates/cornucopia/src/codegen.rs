@@ -1,8 +1,5 @@
 use core::str;
-use std::{
-    fmt::{Display, Write},
-    path::PathBuf,
-};
+use std::fmt::{Display, Write};
 
 use codegen_template::code;
 use indexmap::IndexMap;
@@ -16,11 +13,14 @@ use crate::{
 };
 
 mod cargo;
+mod client;
 mod vfs;
 
 pub use cargo::DependencyAnalysis;
 
 use self::vfs::Vfs;
+
+const WARNING: &str = "// This file was generated with `cornucopia`. Do not modify.\n\n";
 
 pub struct GenCtx {
     // Current module depth
@@ -434,7 +434,7 @@ fn gen_row_query(w: &mut impl Write, row: &PreparedItem, ctx: &GenCtx) {
     pub struct ${name}Query<'a, C: GenericClient, T, const N: usize> {
         client: &'a $client_mut C,
         params: [&'a (dyn postgres_types::ToSql + Sync); N],
-        stmt: &'a mut $client::private::Stmt,
+        stmt: &'a mut $client::Stmt,
         extractor: fn(&$backend::Row) -> $row_struct,
         mapper: fn($row_struct) -> T,
     }
@@ -474,7 +474,7 @@ fn gen_row_query(w: &mut impl Write, row: &PreparedItem, ctx: &GenCtx) {
             let stmt = self.stmt.prepare(self.client)$fn_await?;
             let it = self
                 .client
-                .query_raw(stmt, $client::private::slice_iter(&self.params))
+                .query_raw(stmt, crate::client::slice_iter(&self.params))
                 $fn_await?
                 $raw_pre
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
@@ -587,9 +587,9 @@ fn gen_query_fn<W: Write>(w: &mut W, module: &PreparedModule, query: &PreparedQu
         let name = &ident.rs;
         code!(w =>
             pub fn $name() -> ${struct_name}Stmt {
-                ${struct_name}Stmt($client::private::Stmt::new("$sql"))
+                ${struct_name}Stmt($client::Stmt::new("$sql"))
             }
-            pub struct ${struct_name}Stmt($client::private::Stmt);
+            pub struct ${struct_name}Stmt($client::Stmt);
             impl ${struct_name}Stmt {
                 $!lazy_impl
             }
@@ -759,7 +759,7 @@ fn gen_type_modules<W: Write>(
 }
 
 fn generate_lib_code(preparation: &Preparation, settings: CodegenSettings) -> String {
-    let mut buff = "// This file was generated with `cornucopia`. Do not modify.\n\n".to_string();
+    let mut buff = WARNING.to_string();
     let w = &mut buff;
     // Generate database type
     gen_type_modules(
@@ -850,54 +850,12 @@ fn generate_lib_code(preparation: &Preparation, settings: CodegenSettings) -> St
     buff
 }
 
-const CLIENT_CORE: &[(&str, &[u8])] = &[
-    ("mod.rs", include_bytes!("clients/mod.rs")),
-    ("domain.rs", include_bytes!("clients/domain.rs")),
-    (
-        "array_iterator.rs",
-        include_bytes!("clients/array_iterator.rs"),
-    ),
-    ("type_traits.rs", include_bytes!("clients/type_traits.rs")),
-    ("utils.rs", include_bytes!("clients/utils.rs")),
-];
-const CLIENT_ASYNC: &[(&str, &[u8])] = &[
-    ("mod.rs", include_bytes!("clients/client_async/mod.rs")),
-    (
-        "private.rs",
-        include_bytes!("clients/client_async/private.rs"),
-    ),
-    (
-        "deadpool.rs",
-        include_bytes!("clients/client_async/deadpool.rs"),
-    ),
-    (
-        "generic_client.rs",
-        include_bytes!("clients/client_async/generic_client.rs"),
-    ),
-];
-const CLIENT_SYNC: &[(&str, &[u8])] = &[
-    ("mod.rs", include_bytes!("clients/client_sync/mod.rs")),
-    (
-        "private.rs",
-        include_bytes!("clients/client_sync/private.rs"),
-    ),
-];
-
 pub(crate) fn generate(name: &str, preparation: Preparation, settings: CodegenSettings) -> Vfs {
     let lib = generate_lib_code(&preparation, settings);
     let cargo = cargo::generate_cargo_file(name, &preparation.dependency_analysis, settings);
     let mut vfs = Vfs::empty();
     vfs.add("Cargo.toml", cargo);
     vfs.add("src/lib.rs", lib);
-    for (path, files) in [
-        ("", CLIENT_CORE),
-        ("sync", CLIENT_SYNC),
-        ("async_", CLIENT_ASYNC),
-    ] {
-        let dir = Into::<PathBuf>::into("src/client").join(path);
-        for (name, content) in files {
-            vfs.add(dir.join(name), content.to_vec());
-        }
-    }
+    client::generate_clients(&mut vfs, &preparation.dependency_analysis, &settings);
     vfs
 }

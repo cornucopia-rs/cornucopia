@@ -1,7 +1,7 @@
 // Take a look at the generated `cornucopia.rs` file if you want to
 // see what it looks like under the hood.
 use codegen::{
-    client::sync::Params,
+    client::Params,
     queries::{
         module_1::insert_book,
         module_2::{

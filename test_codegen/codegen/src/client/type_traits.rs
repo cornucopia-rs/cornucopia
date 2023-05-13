@@ -1,30 +1,23 @@
-use std::borrow::Cow;
+// This file was generated with `cornucopia`. Do not modify.
 
 use super::domain::escape_domain_to_sql;
 use postgres_protocol::types::{self, ArrayDimension};
 use postgres_types::{private::BytesMut, to_sql_checked, IsNull, Kind, ToSql, Type};
-
+use std::borrow::Cow;
 pub trait StringSql: std::fmt::Debug + ToSql + Sync {}
 impl<T: StringSql> StringSql for &T {}
 impl StringSql for String {}
 impl StringSql for &str {}
 impl StringSql for Cow<'_, str> {}
 impl StringSql for Box<str> {}
-
 pub trait BytesSql: std::fmt::Debug + ToSql + Send + Sync {}
 impl<T: BytesSql> BytesSql for &T {}
 impl BytesSql for Vec<u8> {}
 impl BytesSql for &[u8] {}
-
-//#[cfg(feature = "with-serde_json-1")]
 pub trait JsonSql: std::fmt::Debug + ToSql + Sync + Send {}
-//#[cfg(feature = "with-serde_json-1")]
 impl<T: JsonSql> JsonSql for &T {}
-//#[cfg(feature = "with-serde_json-1")]
 impl JsonSql for serde_json::value::Value {}
-//#[cfg(feature = "with-serde_json-1")]
 impl<T: serde::ser::Serialize + std::fmt::Debug + Sync + Send> JsonSql for postgres_types::Json<T> {}
-
 pub trait ArraySql: std::fmt::Debug + ToSql + Send + Sync {
     type Item;
     fn escape_domain_to_sql(
@@ -35,7 +28,6 @@ pub trait ArraySql: std::fmt::Debug + ToSql + Send + Sync {
 }
 impl<T: std::fmt::Debug + ToSql + Sync, A: ArraySql<Item = T>> ArraySql for &A {
     type Item = T;
-
     fn escape_domain_to_sql(
         &self,
         ty: &Type,
@@ -46,7 +38,6 @@ impl<T: std::fmt::Debug + ToSql + Sync, A: ArraySql<Item = T>> ArraySql for &A {
 }
 impl<T: std::fmt::Debug + ToSql + Send + Sync> ArraySql for Vec<T> {
     type Item = T;
-
     fn escape_domain_to_sql(
         &self,
         ty: &Type,
@@ -55,10 +46,8 @@ impl<T: std::fmt::Debug + ToSql + Send + Sync> ArraySql for Vec<T> {
         escape_domain_to_sql(ty, w, self.iter())
     }
 }
-
 impl<T: std::fmt::Debug + ToSql + Sync> ArraySql for &[T] {
     type Item = T;
-
     fn escape_domain_to_sql(
         &self,
         ty: &Type,
@@ -67,7 +56,6 @@ impl<T: std::fmt::Debug + ToSql + Sync> ArraySql for &[T] {
         escape_domain_to_sql(ty, w, self.iter())
     }
 }
-
 impl<
         T: std::fmt::Debug + ToSql + Send + Sync,
         I: Iterator<Item = T> + ExactSizeIterator,
@@ -75,7 +63,6 @@ impl<
     > ArraySql for IterSql<T, I, F>
 {
     type Item = T;
-
     fn escape_domain_to_sql(
         &self,
         ty: &Type,
@@ -84,9 +71,7 @@ impl<
         escape_domain_to_sql(ty, w, (self.0)())
     }
 }
-
 pub struct IterSql<T: ToSql, I: Iterator<Item = T> + ExactSizeIterator, F: Fn() -> I + Sync>(pub F);
-
 impl<T: ToSql, I: Iterator<Item = T> + ExactSizeIterator, F: Fn() -> I + Sync> std::fmt::Debug
     for IterSql<T, I, F>
 {
@@ -94,8 +79,6 @@ impl<T: ToSql, I: Iterator<Item = T> + ExactSizeIterator, F: Fn() -> I + Sync> s
         f.debug_tuple("ArrayFn").finish()
     }
 }
-
-// Taken from `postgres`
 impl<T: ToSql, I: Iterator<Item = T> + ExactSizeIterator, F: Fn() -> I + Sync> ToSql
     for IterSql<T, I, F>
 {
@@ -108,14 +91,11 @@ impl<T: ToSql, I: Iterator<Item = T> + ExactSizeIterator, F: Fn() -> I + Sync> T
             Kind::Array(ref member) => member,
             _ => panic!("expected array type"),
         };
-
         let iter = (self.0)();
-
         let dimension = ArrayDimension {
             len: downcast(iter.len())?,
             lower_bound: 1,
         };
-
         types::array_to_sql(
             Some(dimension),
             member_type.oid(),
@@ -128,18 +108,14 @@ impl<T: ToSql, I: Iterator<Item = T> + ExactSizeIterator, F: Fn() -> I + Sync> T
         )?;
         Ok(IsNull::No)
     }
-
     fn accepts(ty: &Type) -> bool {
         match *ty.kind() {
             Kind::Array(ref member) => T::accepts(member),
             _ => false,
         }
     }
-
     to_sql_checked!();
 }
-
-// https://github.com/sfackler/rust-postgres/blob/765395f288861209a644c621bf72172acd482515/postgres-types/src/lib.rs
 fn downcast(len: usize) -> Result<i32, Box<dyn std::error::Error + Sync + Send>> {
     if len > i32::max_value() as usize {
         Err("value too large to transmit".into())

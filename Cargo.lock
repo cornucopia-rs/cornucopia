@@ -101,11 +101,8 @@ dependencies = [
  "deadpool-postgres",
  "fallible-iterator",
  "futures",
- "postgres",
  "postgres-protocol",
  "postgres-types",
- "serde",
- "serde_json",
  "tokio-postgres",
 ]
 
@@ -155,11 +152,8 @@ dependencies = [
  "deadpool-postgres",
  "fallible-iterator",
  "futures",
- "postgres",
  "postgres-protocol",
  "postgres-types",
- "serde",
- "serde_json",
  "tokio-postgres",
 ]
 
@@ -175,16 +169,10 @@ dependencies = [
 name = "basic_sync_codegen"
 version = "0.9.0"
 dependencies = [
- "async-trait",
- "deadpool-postgres",
  "fallible-iterator",
- "futures",
  "postgres",
  "postgres-protocol",
  "postgres-types",
- "serde",
- "serde_json",
- "tokio-postgres",
 ]
 
 [[package]]
@@ -801,8 +789,6 @@ dependencies = [
  "postgres",
  "postgres-protocol",
  "postgres-types",
- "serde",
- "serde_json",
  "tokio-postgres",
 ]
 

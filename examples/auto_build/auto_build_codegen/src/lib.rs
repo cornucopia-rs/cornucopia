@@ -17,7 +17,7 @@ pub mod queries {
         pub struct StringQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut crate::client::async_::private::Stmt,
+            stmt: &'a mut crate::client::async_::Stmt,
             extractor: fn(&tokio_postgres::Row) -> &str,
             mapper: fn(&str) -> T,
         }
@@ -59,10 +59,7 @@ pub mod queries {
                 let stmt = self.stmt.prepare(self.client).await?;
                 let it = self
                     .client
-                    .query_raw(
-                        stmt,
-                        crate::client::async_::private::slice_iter(&self.params),
-                    )
+                    .query_raw(stmt, crate::client::slice_iter(&self.params))
                     .await?
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
@@ -70,14 +67,14 @@ pub mod queries {
             }
         }
         pub fn example_query() -> ExampleQueryStmt {
-            ExampleQueryStmt(crate::client::async_::private::Stmt::new(
+            ExampleQueryStmt(crate::client::async_::Stmt::new(
                 "SELECT
     *
 FROM
     example_table",
             ))
         }
-        pub struct ExampleQueryStmt(crate::client::async_::private::Stmt);
+        pub struct ExampleQueryStmt(crate::client::async_::Stmt);
         impl ExampleQueryStmt {
             pub fn bind<'a, C: GenericClient>(
                 &'a mut self,
