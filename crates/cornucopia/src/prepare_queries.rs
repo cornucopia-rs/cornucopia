@@ -6,7 +6,7 @@ use postgres::Client;
 use postgres_types::{Kind, Type};
 
 use crate::{
-    codegen::{DependencyAnalysis, GenCtx},
+    codegen::{DependencyAnalysis, GenCtx, Hierarchy},
     parser::{Module, NullableIdent, Query, Span, TypeAnnotation},
     read_queries::ModuleInfo,
     type_registrar::CornucopiaType,
@@ -88,7 +88,7 @@ impl PreparedField {
 
 impl PreparedField {
     pub fn unwrapped_name(&self) -> String {
-        self.own_struct(&GenCtx::new(0, false, false))
+        self.own_struct(&GenCtx::new(Hierarchy::Abstract, false, false))
             .replace(['<', '>', '_'], "")
             .to_upper_camel_case()
     }
@@ -115,7 +115,11 @@ impl PreparedItem {
     }
 
     pub fn path(&self, ctx: &GenCtx) -> String {
-        ctx.path(ctx.depth - 2, &self.name)
+        match ctx.hierarchy {
+            Hierarchy::TypeModule | Hierarchy::Abstract => unreachable!(),
+            Hierarchy::QueryModule => self.name.to_string(),
+            Hierarchy::SpecificQueryModule => format!("super::{}", self.name),
+        }
     }
 }
 

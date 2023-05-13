@@ -161,7 +161,7 @@ impl CornucopiaType {
             CornucopiaType::Domain { inner, .. } => inner.own_ty(false, ctx),
             CornucopiaType::Custom {
                 struct_name, pg_ty, ..
-            } => custom_ty_path(pg_ty.schema(), struct_name, ctx),
+            } => ctx.custom_ty_path(pg_ty.schema(), struct_name),
         }
     }
 
@@ -231,7 +231,7 @@ impl CornucopiaType {
                 ..
             } => {
                 if !is_copy && !is_params {
-                    let path = custom_ty_path(pg_ty.schema(), struct_name, ctx);
+                    let path = ctx.custom_ty_path(pg_ty.schema(), struct_name);
                     format!("{path}Params<'a>")
                 } else {
                     self.brw_ty(is_inner_nullable, true, ctx)
@@ -278,7 +278,7 @@ impl CornucopiaType {
                 struct_name,
                 ..
             } => {
-                let path = custom_ty_path(pg_ty.schema(), struct_name, ctx);
+                let path = ctx.custom_ty_path(pg_ty.schema(), struct_name);
                 if *is_copy {
                     path
                 } else {
@@ -286,16 +286,6 @@ impl CornucopiaType {
                 }
             }
         }
-    }
-}
-
-pub fn custom_ty_path(schema: &str, struct_name: &str, ctx: &GenCtx) -> String {
-    if ctx.depth == 0 {
-        format!("{schema}::{struct_name}")
-    } else if ctx.depth == 1 {
-        format!("super::{schema}::{struct_name}")
-    } else {
-        ctx.path(ctx.depth, format_args!("types::{schema}::{struct_name}"))
     }
 }
 

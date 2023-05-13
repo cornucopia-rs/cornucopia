@@ -1,30 +1,36 @@
 use core::str;
-use std::fmt::{Display, Write};
+use std::fmt::Write;
 
 use codegen_template::code;
-use indexmap::IndexMap;
 
 use crate::{
     prepare_queries::{
-        Ident, Preparation, PreparedContent, PreparedField, PreparedItem, PreparedModule,
-        PreparedQuery, PreparedType,
+        Ident, Preparation, PreparedField, PreparedItem, PreparedModule, PreparedQuery,
     },
     CodegenSettings,
 };
 
 mod cargo;
 mod client;
+mod types;
 mod vfs;
 
 pub use cargo::DependencyAnalysis;
 
-use self::vfs::Vfs;
+use self::{types::gen_type_modules, vfs::Vfs};
 
 const WARNING: &str = "// This file was generated with `cornucopia`. Do not modify.\n\n";
 
+pub enum Hierarchy {
+    Abstract,            // Nowhere
+    TypeModule,          // crate::type
+    QueryModule,         // crate::query
+    SpecificQueryModule, // crate::query::sync
+}
+
 pub struct GenCtx {
-    // Current module depth
-    pub depth: u8,
+    // Generated module position in the hierarchy
+    pub hierarchy: Hierarchy,
     // Should use async client and generate async code
     pub is_async: bool,
     // Should serializable struct
@@ -32,17 +38,22 @@ pub struct GenCtx {
 }
 
 impl GenCtx {
-    pub fn new(depth: u8, is_async: bool, gen_derive: bool) -> Self {
+    pub fn new(hierarchy: Hierarchy, is_async: bool, gen_derive: bool) -> Self {
         Self {
-            depth,
+            hierarchy,
             is_async,
             gen_derive,
         }
     }
 
-    pub fn path(&self, depth: u8, name: impl Display) -> String {
-        let depth = std::iter::repeat("super::").take(depth as usize);
-        code!($($depth)$name)
+    pub fn custom_ty_path(&self, schema: &str, struct_name: &str) -> String {
+        match self.hierarchy {
+            Hierarchy::Abstract => format!("{schema}::{struct_name}"),
+            Hierarchy::TypeModule => format!("super::{schema}::{struct_name}"),
+            Hierarchy::QueryModule | Hierarchy::SpecificQueryModule => {
+                format!("crate::types::{schema}::{struct_name}")
+            }
+        }
     }
 
     pub fn client_name(&self) -> &'static str {
@@ -182,133 +193,6 @@ fn enum_sql(w: &mut impl Write, name: &str, enum_name: &str, variants: &[Ident])
                     }
                     _ => false,
                 }
-            }
-        }
-    );
-}
-
-fn struct_tosql(
-    w: &mut impl Write,
-    struct_name: &str,
-    fields: &[PreparedField],
-    name: &str,
-    is_borrow: bool,
-    is_params: bool,
-    ctx: &GenCtx,
-) {
-    let (post, lifetime) = if is_borrow {
-        if is_params {
-            ("Borrowed", "<'a>")
-        } else {
-            ("Params", "<'a>")
-        }
-    } else {
-        ("", "")
-    };
-    let db_fields_ident = fields.iter().map(|p| &p.ident.db);
-    let rs_fields_ident = fields.iter().map(|p| &p.ident.rs);
-    let write_ty = fields.iter().map(|p| p.ty.sql_wrapped(&p.ident.rs));
-    let accept_ty = fields.iter().map(|p| p.ty.accept_to_sql(ctx));
-    let nb_fields = fields.len();
-
-    code!(w =>
-        impl<'a> postgres_types::ToSql for $struct_name$post $lifetime {
-            fn to_sql(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>,> {
-                let $struct_name$post {
-                    $($rs_fields_ident,)
-                } = self;
-                let fields = match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
-                for field in fields {
-                    out.extend_from_slice(&field.type_().oid().to_be_bytes());
-                    let base = out.len();
-                    out.extend_from_slice(&[0; 4]);
-                    let r = match field.name() {
-                        $("$db_fields_ident" => postgres_types::ToSql::to_sql($write_ty,field.type_(), out),)
-                        _ => unreachable!()
-                    };
-                    let count = match r? {
-                        postgres_types::IsNull::Yes => -1,
-                        postgres_types::IsNull::No => {
-                            let len = out.len() - base - 4;
-                            if len > i32::max_value() as usize {
-                                return Err(Into::into("value too large to transmit"));
-                            }
-                            len as i32
-                        }
-                    };
-                    out[base..base + 4].copy_from_slice(&count.to_be_bytes());
-                }
-                Ok(postgres_types::IsNull::No)
-            }
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                if ty.name() != "$name" {
-                    return false;
-                }
-                match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => {
-                        if fields.len() != $nb_fields {
-                            return false;
-                        }
-                        fields.iter().all(|f| match f.name() {
-                            $("$db_fields_ident" => <$accept_ty as postgres_types::ToSql>::accepts(f.type_()),)
-                            _ => false,
-                        })
-                    }
-                    _ => false,
-                }
-            }
-            fn to_sql_checked(
-                &self,
-                ty: &postgres_types::Type,
-                out: &mut postgres_types::private::BytesMut,
-            ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {
-                postgres_types::__to_sql_checked(self, ty, out)
-            }
-        }
-    );
-}
-
-fn composite_fromsql(
-    w: &mut impl Write,
-    struct_name: &str,
-    fields: &[PreparedField],
-    name: &str,
-    schema: &str,
-) {
-    let field_names = fields.iter().map(|p| &p.ident.rs);
-    let read_idx = 0..fields.len();
-    code!(w =>
-        impl<'a> postgres_types::FromSql<'a> for ${struct_name}Borrowed<'a> {
-            fn from_sql(ty: &postgres_types::Type, out: &'a [u8]) ->
-                Result<${struct_name}Borrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
-            {
-                let fields = match *ty.kind() {
-                    postgres_types::Kind::Composite(ref fields) => fields,
-                    _ => unreachable!(),
-                };
-                let mut out = out;
-                let num_fields = postgres_types::private::read_be_i32(&mut out)?;
-                if num_fields as usize != fields.len() {
-                    return std::result::Result::Err(
-                        std::convert::Into::into(format!("invalid field count: {} vs {}", num_fields, fields.len())));
-                }
-                $(
-                    let _oid = postgres_types::private::read_be_i32(&mut out)?;
-                    let $field_names = postgres_types::private::read_value(fields[$read_idx].type_(), &mut out)?;
-                )
-                Ok(${struct_name}Borrowed { $($field_names,) })
-            }
-
-            fn accepts(ty: &postgres_types::Type) -> bool {
-                ty.name() == "$name" && ty.schema() == "$schema"
             }
         }
     );
@@ -645,217 +529,102 @@ fn gen_query_fn<W: Write>(w: &mut W, module: &PreparedModule, query: &PreparedQu
     }
 }
 
-/// Generates type definitions for custom user types. This includes domains, composites and enums.
-/// If the type is not `Copy`, then a Borrowed version will be generated.
-fn gen_custom_type(w: &mut impl Write, schema: &str, prepared: &PreparedType, ctx: &GenCtx) {
-    let PreparedType {
-        struct_name,
-        content,
-        is_copy,
-        is_params,
-        name,
-    } = prepared;
-    let copy = if *is_copy { "Copy," } else { "" };
-    let ser_str = if ctx.gen_derive {
-        "serde::Serialize,"
-    } else {
-        ""
-    };
-    match content {
-        PreparedContent::Enum(variants) => {
-            let variants_ident = variants.iter().map(|v| &v.rs);
-            code!(w =>
-                #[derive($ser_str Debug, Clone, Copy, PartialEq, Eq)]
-                #[allow(non_camel_case_types)]
-                pub enum $struct_name {
-                    $($variants_ident,)
-                }
-            );
-            enum_sql(w, name, struct_name, variants);
-        }
-        PreparedContent::Composite(fields) => {
-            let fields_original_name = fields.iter().map(|p| &p.ident.db);
-            let fields_name = fields.iter().map(|p| &p.ident.rs);
-            {
-                let fields_ty = fields.iter().map(|p| p.own_struct(ctx));
-                code!(w =>
-                    #[derive($ser_str Debug,postgres_types::FromSql,$copy Clone, PartialEq)]
-                    #[postgres(name = "$name")]
-                    pub struct $struct_name {
-                        $(
-                            #[postgres(name = "$fields_original_name")]
-                            pub $fields_name: $fields_ty,
-                        )
-                    }
-                );
-            }
-            if *is_copy {
-                struct_tosql(w, struct_name, fields, name, false, *is_params, ctx);
-            } else {
-                let fields_owning = fields.iter().map(|p| p.owning_assign());
-                let fields_brw = fields.iter().map(|p| p.brw_ty(true, ctx));
-                code!(w =>
-                    #[derive(Debug)]
-                    pub struct ${struct_name}Borrowed<'a> {
-                        $(pub $fields_name: $fields_brw,)
-                    }
-                    impl<'a> From<${struct_name}Borrowed<'a>> for $struct_name {
-                        fn from(
-                            ${struct_name}Borrowed {
-                            $($fields_name,)
-                            }: ${struct_name}Borrowed<'a>,
-                        ) -> Self {
-                            Self {
-                                $($fields_owning,)
-                            }
-                        }
-                    }
-                );
-                composite_fromsql(w, struct_name, fields, name, schema);
-                if !is_params {
-                    let fields_ty = fields.iter().map(|p| p.param_ty(ctx));
-                    let derive = if *is_copy { ",Copy,Clone" } else { "" };
-                    code!(w =>
-                        #[derive(Debug $derive)]
-                        pub struct ${struct_name}Params<'a> {
-                            $(pub $fields_name: $fields_ty,)
-                        }
-                    );
-                }
-                struct_tosql(w, struct_name, fields, name, true, *is_params, ctx);
-            }
-        }
-    }
-}
-
-fn gen_type_modules<W: Write>(
-    w: &mut W,
-    prepared: &IndexMap<String, Vec<PreparedType>>,
-    ctx: &GenCtx,
-) {
-    let modules = prepared.iter().map(|(schema, types)| {
-        move |w: &mut W| {
-            let lazy = |w: &mut W| {
-                for ty in types {
-                    gen_custom_type(w, schema, ty, ctx)
-                }
-            };
-
-            code!(w =>
-            pub mod $schema {
-                $!lazy
-            });
-        }
-    });
-    code!(w =>
-        #[allow(clippy::all, clippy::pedantic)]
-        #[allow(unused_variables)]
-        #[allow(unused_imports)]
-        #[allow(dead_code)]
-        pub mod types {
-            $($!modules)
-        }
+fn gen_query_module(module: &PreparedModule, settings: CodegenSettings) -> String {
+    let ctx = GenCtx::new(
+        Hierarchy::QueryModule,
+        settings.gen_async,
+        settings.derive_ser,
     );
-}
+    let params_string = module
+        .params
+        .values()
+        .map(|params| |w: &mut String| gen_params_struct(w, params, &ctx));
+    let rows_struct_string = module
+        .rows
+        .values()
+        .map(|row| |w: &mut String| gen_row_structs(w, row, &ctx));
 
-fn generate_lib_code(preparation: &Preparation, settings: CodegenSettings) -> String {
-    let mut buff = WARNING.to_string();
-    let w = &mut buff;
-    // Generate database type
-    gen_type_modules(
-        w,
-        &preparation.types,
-        &GenCtx::new(1, settings.gen_async, settings.derive_ser),
-    );
-    // Generate queries
-    let query_modules = preparation.modules.iter().map(|module| {
-        move |w: &mut String| {
-            let name = &module.info.name;
-            let ctx = GenCtx::new(2, settings.gen_async, settings.derive_ser);
-            let params_string = module
-                .params
-                .values()
-                .map(|params| |w: &mut String| gen_params_struct(w, params,  &ctx));
-            let rows_struct_string = module
-                .rows
-                .values()
-                .map(|row| |w: &mut String| gen_row_structs(w, row,  &ctx));
-
-            let sync_specific = |w: &mut String| {
-                let gen_specific = |depth: u8, is_async: bool| {
-                    move |w: &mut String| {
-                        let ctx = GenCtx::new(depth, is_async, settings.derive_ser);
-                        let import = if is_async {
-                            "use futures::{StreamExt, TryStreamExt};use futures; use crate::client::async_::GenericClient;"
-                        } else {
-                            "use postgres::{fallible_iterator::FallibleIterator,GenericClient};"
-                        };
-                        let rows_query_string = module
-                            .rows
-                            .values()
-                            .map(|row| |w: &mut String| gen_row_query(w, row, &ctx));
-                        let queries_string = module.queries.values().map(|query| {
-                            |w: &mut String| gen_query_fn(w, module, query, &ctx)
-                        });
-                        code!(w =>
-                            $import
-                            $($!rows_query_string)
-                            $($!queries_string)
-                        )
-                    }
-                };
-
-                if settings.gen_async != settings.gen_sync {
-                    if settings.gen_async {
-                        let gen =  gen_specific(2, true);
-                        code!(w => $!gen)
-                    } else {
-                        let gen =  gen_specific(2, false);
-                        code!(w => $!gen)
-                    }
+    let sync_specific = |w: &mut String| {
+        let gen_specific = |hierarchy: Hierarchy, is_async: bool| {
+            move |w: &mut String| {
+                let ctx = GenCtx::new(hierarchy, is_async, settings.derive_ser);
+                let import = if is_async {
+                    "use futures::{self, StreamExt, TryStreamExt}; use crate::client::async_::GenericClient;"
                 } else {
-                    let sync = gen_specific(3, false);
-                    let async_ = gen_specific(3, true);
-                    code!(w =>
-                        pub mod sync {
-                            $!sync
-                        }
-                        pub mod async_ {
-                            $!async_
-                        }
-                    )
+                    "use postgres::{fallible_iterator::FallibleIterator,GenericClient};"
+                };
+                let rows_query_string = module
+                    .rows
+                    .values()
+                    .map(|row| |w: &mut String| gen_row_query(w, row, &ctx));
+                let queries_string = module
+                    .queries
+                    .values()
+                    .map(|query| |w: &mut String| gen_query_fn(w, module, query, &ctx));
+                code!(w =>
+                    $import
+                    $($!rows_query_string)
+                    $($!queries_string)
+                )
+            }
+        };
 
-                }
-            };
+        if settings.gen_async && settings.gen_sync {
+            let gen = gen_specific(Hierarchy::SpecificQueryModule, false);
+            code!(w => pub mod sync { $!gen});
 
-            code!(w =>
-                pub mod $name {
-                    $($!params_string)
-                    $($!rows_struct_string)
-                    $!sync_specific
-                }
-            );
+            let gen = gen_specific(Hierarchy::SpecificQueryModule, true);
+            code!(w => pub mod async_ { $!gen});
+        } else if settings.gen_sync {
+            let gen = gen_specific(Hierarchy::QueryModule, false);
+            code!(w =>  $!gen);
+        } else {
+            let gen = gen_specific(Hierarchy::QueryModule, true);
+            code!(w =>  $!gen);
         }
-    });
-    code!(w =>
+    };
+
+    code!($WARNING
+        $($!params_string)
+        $($!rows_struct_string)
+        $!sync_specific
+    )
+}
+
+fn gen_queries(vfs: &mut Vfs, preparation: &Preparation, settings: CodegenSettings) {
+    for module in &preparation.modules {
+        let gen = gen_query_module(module, settings);
+        vfs.add(format!("src/queries/{}.rs", module.info.name), gen);
+    }
+
+    let modules_name = preparation.modules.iter().map(|module| &module.info.name);
+    let content = code!($WARNING
+        $(pub mod $modules_name;)
+    );
+    vfs.add("src/queries.rs", content);
+}
+
+fn gen_lib() -> String {
+    code!($WARNING
         #[allow(clippy::all, clippy::pedantic)]
         #[allow(unused_variables)]
         #[allow(unused_imports)]
         #[allow(dead_code)]
-        pub mod queries {
-            $($!query_modules)
-        }
+        pub mod types;
+        pub mod queries;
         pub mod client;
-    );
-    buff
+    )
 }
 
 pub(crate) fn generate(name: &str, preparation: Preparation, settings: CodegenSettings) -> Vfs {
-    let lib = generate_lib_code(&preparation, settings);
-    let cargo = cargo::generate_cargo_file(name, &preparation.dependency_analysis, settings);
     let mut vfs = Vfs::empty();
+    let cargo = cargo::generate_cargo_file(name, &preparation.dependency_analysis, settings);
     vfs.add("Cargo.toml", cargo);
-    vfs.add("src/lib.rs", lib);
+    vfs.add("src/lib.rs", gen_lib());
+    let types = gen_type_modules(&preparation.types, &settings);
+    vfs.add("src/types.rs", types);
+    gen_queries(&mut vfs, &preparation, settings);
+
     client::generate_clients(&mut vfs, &preparation.dependency_analysis, &settings);
     vfs
 }
