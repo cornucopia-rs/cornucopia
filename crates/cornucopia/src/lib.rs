@@ -28,7 +28,6 @@ pub use cli::run;
 
 pub use error::Error;
 pub use load_schema::load_schema;
-use tempfile::TempDir;
 
 /// Struct containing the settings for code generation.
 #[derive(Clone, Copy)]
@@ -58,10 +57,9 @@ pub fn generate_live<P: AsRef<Path>>(
         extract_name(destination.as_ref()),
         prepared_modules,
         settings,
-    )
-    .expect("TODO handle error");
+    );
     // Write
-    write_generated_code(destination.as_ref(), generated)?;
+    generated.persist(destination).expect("TODO error handling");
 
     Ok(())
 }
@@ -92,11 +90,10 @@ pub fn generate_managed<P: AsRef<Path>>(
         extract_name(destination.as_ref()),
         prepared_modules,
         settings,
-    )
-    .expect("TODO handle error");
+    );
     container::cleanup(podman)?;
-
-    write_generated_code(destination.as_ref(), generated)?;
+    // Write
+    generated.persist(destination).expect("TODO error handling");
 
     Ok(())
 }
@@ -106,12 +103,4 @@ fn extract_name(destination: &Path) -> &str {
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("cornucopia")
-}
-
-fn write_generated_code(destination: &Path, generated: TempDir) -> Result<(), Error> {
-    // TODO is it possible to do this atomically ?
-    std::fs::remove_dir_all(destination).ok();
-    std::fs::create_dir_all(destination).ok();
-    std::fs::rename(generated.into_path(), destination).expect("TODO handle error");
-    Ok(())
 }

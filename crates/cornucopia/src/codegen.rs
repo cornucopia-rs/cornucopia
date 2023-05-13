@@ -1,10 +1,11 @@
 use core::str;
-use std::fmt::{Display, Write};
+use std::{
+    fmt::{Display, Write},
+    path::PathBuf,
+};
 
 use codegen_template::code;
 use indexmap::IndexMap;
-
-use tempfile::TempDir;
 
 use crate::{
     prepare_queries::{
@@ -15,8 +16,11 @@ use crate::{
 };
 
 mod cargo;
+mod vfs;
 
 pub use cargo::DependencyAnalysis;
+
+use self::vfs::Vfs;
 
 pub struct GenCtx {
     // Current module depth
@@ -879,27 +883,21 @@ const CLIENT_SYNC: &[(&str, &[u8])] = &[
     ),
 ];
 
-pub(crate) fn generate(
-    name: &str,
-    preparation: Preparation,
-    settings: CodegenSettings,
-) -> Result<TempDir, std::io::Error> {
+pub(crate) fn generate(name: &str, preparation: Preparation, settings: CodegenSettings) -> Vfs {
     let lib = generate_lib_code(&preparation, settings);
     let cargo = cargo::generate_cargo_file(name, &preparation.dependency_analysis, settings);
-    let tmp = tempfile::tempdir()?;
-    std::fs::write(tmp.path().join("Cargo.toml"), cargo)?;
-    std::fs::create_dir(tmp.path().join("src"))?;
-    std::fs::write(tmp.path().join("src/lib.rs"), lib)?;
+    let mut vfs = Vfs::empty();
+    vfs.add("Cargo.toml", cargo);
+    vfs.add("src/lib.rs", lib);
     for (path, files) in [
         ("", CLIENT_CORE),
         ("sync", CLIENT_SYNC),
         ("async_", CLIENT_ASYNC),
     ] {
-        let dir = tmp.path().join("src/client").join(path);
-        std::fs::create_dir(&dir)?;
+        let dir = Into::<PathBuf>::into("src/client").join(path);
         for (name, content) in files {
-            std::fs::write(dir.join(name), content)?;
+            vfs.add(dir.join(name), content.to_vec());
         }
     }
-    Ok(tmp)
+    vfs
 }
