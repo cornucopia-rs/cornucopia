@@ -11,8 +11,9 @@ categories = ["database"]
 keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 
 [dependencies]
-# Path dependencies
+# Ergonomic codegen tools
 codegen_template = { path = "../codegen_template", version = "0.1.0" }
+indoc = "2.0.1"
 
 # Postgres interaction
 postgres = "0.19.4"

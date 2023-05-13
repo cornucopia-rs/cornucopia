@@ -6,7 +6,7 @@ use postgres::Client;
 use postgres_types::{Kind, Type};
 
 use crate::{
-    codegen::GenCtx,
+    codegen::{DependencyAnalysis, GenCtx},
     parser::{Module, NullableIdent, Query, Span, TypeAnnotation},
     read_queries::ModuleInfo,
     type_registrar::CornucopiaType,
@@ -148,6 +148,7 @@ pub(crate) struct PreparedModule {
 pub(crate) struct Preparation {
     pub(crate) modules: Vec<PreparedModule>,
     pub(crate) types: IndexMap<String, Vec<PreparedType>>,
+    pub(crate) dependency_analysis: DependencyAnalysis,
 }
 
 impl PreparedModule {
@@ -228,10 +229,9 @@ impl PreparedModule {
 /// Prepares all modules
 pub(crate) fn prepare(client: &mut Client, modules: Vec<Module>) -> Result<Preparation, Error> {
     let mut registrar = TypeRegistrar::default();
-    let mut tmp = Preparation {
-        modules: Vec::new(),
-        types: IndexMap::new(),
-    };
+    let mut prepared_types: IndexMap<String, Vec<PreparedType>> = IndexMap::new();
+    let mut prepared_modules = Vec::new();
+
     let declared: Vec<_> = modules
         .iter()
         .flat_map(|it| &it.types)
@@ -239,14 +239,13 @@ pub(crate) fn prepare(client: &mut Client, modules: Vec<Module>) -> Result<Prepa
         .collect();
 
     for module in modules {
-        tmp.modules
-            .push(prepare_module(client, module, &mut registrar)?);
+        prepared_modules.push(prepare_module(client, module, &mut registrar)?);
     }
 
     // Prepare types grouped by schema
     for ((schema, name), ty) in &registrar.types {
         if let Some(ty) = prepare_type(&registrar, name, ty, &declared) {
-            match tmp.types.entry(schema.clone()) {
+            match prepared_types.entry(schema.clone()) {
                 Entry::Occupied(mut entry) => {
                     entry.get_mut().push(ty);
                 }
@@ -256,7 +255,11 @@ pub(crate) fn prepare(client: &mut Client, modules: Vec<Module>) -> Result<Prepa
             }
         }
     }
-    Ok(tmp)
+    Ok(Preparation {
+        modules: prepared_modules,
+        types: prepared_types,
+        dependency_analysis: registrar.dependency_analysis,
+    })
 }
 
 fn normalize_rust_name(name: &str) -> String {

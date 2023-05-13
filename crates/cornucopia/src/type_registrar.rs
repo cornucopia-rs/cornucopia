@@ -5,7 +5,7 @@ use indexmap::{map::Entry, IndexMap};
 use postgres_types::{Kind, Type};
 
 use crate::{
-    codegen::{idx_char, GenCtx},
+    codegen::{idx_char, DependencyAnalysis, GenCtx},
     parser::Span,
     read_queries::ModuleInfo,
     utils::SchemaKey,
@@ -314,6 +314,7 @@ pub fn custom_ty_path(schema: &str, struct_name: &str, ctx: &GenCtx) -> String {
 #[derive(Debug, Clone, Default)]
 pub(crate) struct TypeRegistrar {
     pub types: IndexMap<(String, String), Rc<CornucopiaType>>,
+    pub dependency_analysis: DependencyAnalysis,
 }
 
 impl TypeRegistrar {
@@ -324,6 +325,7 @@ impl TypeRegistrar {
         query_name: &Span<String>,
         module_info: &ModuleInfo,
     ) -> Result<&Rc<CornucopiaType>, Error> {
+        self.dependency_analysis.analyse(ty);
         fn custom(ty: &Type, is_copy: bool, is_params: bool) -> CornucopiaType {
             let rust_ty_name = ty.name().to_upper_camel_case();
             CornucopiaType::Custom {

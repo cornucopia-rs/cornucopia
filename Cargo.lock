@@ -99,18 +99,14 @@ version = "0.9.0"
 dependencies = [
  "async-trait",
  "deadpool-postgres",
- "eui48",
  "fallible-iterator",
  "futures",
  "postgres",
  "postgres-protocol",
  "postgres-types",
- "rust_decimal",
  "serde",
  "serde_json",
- "time",
  "tokio-postgres",
- "uuid",
 ]
 
 [[package]]
@@ -157,18 +153,14 @@ version = "0.9.0"
 dependencies = [
  "async-trait",
  "deadpool-postgres",
- "eui48",
  "fallible-iterator",
  "futures",
  "postgres",
  "postgres-protocol",
  "postgres-types",
- "rust_decimal",
  "serde",
  "serde_json",
- "time",
  "tokio-postgres",
- "uuid",
 ]
 
 [[package]]
@@ -185,18 +177,14 @@ version = "0.9.0"
 dependencies = [
  "async-trait",
  "deadpool-postgres",
- "eui48",
  "fallible-iterator",
  "futures",
  "postgres",
  "postgres-protocol",
  "postgres-types",
- "rust_decimal",
  "serde",
  "serde_json",
- "time",
  "tokio-postgres",
- "uuid",
 ]
 
 [[package]]
@@ -464,6 +452,7 @@ dependencies = [
  "codegen_template",
  "heck",
  "indexmap",
+ "indoc",
  "miette",
  "postgres",
  "postgres-types",
@@ -807,18 +796,14 @@ version = "0.9.0"
 dependencies = [
  "async-trait",
  "deadpool-postgres",
- "eui48",
  "fallible-iterator",
  "futures",
  "postgres",
  "postgres-protocol",
  "postgres-types",
- "rust_decimal",
  "serde",
  "serde_json",
- "time",
  "tokio-postgres",
- "uuid",
 ]
 
 [[package]]
@@ -920,6 +905,12 @@ dependencies = [
  "autocfg",
  "hashbrown 0.12.3",
 ]
+
+[[package]]
+name = "indoc"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9f2cb48b81b1dc9f39676bf99f5499babfec7cd8fe14307f7b3d747208fb5690"
 
 [[package]]
 name = "instant"

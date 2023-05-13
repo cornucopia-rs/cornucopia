@@ -3,6 +3,7 @@ use std::fmt::{Display, Write};
 
 use codegen_template::code;
 use indexmap::IndexMap;
+
 use tempfile::TempDir;
 
 use crate::{
@@ -12,6 +13,10 @@ use crate::{
     },
     CodegenSettings,
 };
+
+mod cargo;
+
+pub use cargo::DependencyAnalysis;
 
 pub struct GenCtx {
     // Current module depth
@@ -841,61 +846,6 @@ fn generate_lib_code(preparation: &Preparation, settings: CodegenSettings) -> St
     buff
 }
 
-fn generate_cargo_file(name: &str, preparation: &Preparation, settings: CodegenSettings) -> String {
-    const VERSION: &str = env!("CARGO_PKG_VERSION");
-    format!(
-        r#"# This file was generated with `cornucopia`. Do not modify
-[package]
-name = "{name}"
-version = "{VERSION}"
-edition = "2021"
-
-[dependencies]
-## Core dependencies
-# Postgres sync client
-postgres = "*"
-# Postgres async client
-tokio-postgres = {{ version = "*", features = [
-    "with-serde_json-1",
-    "with-time-0_3",
-    "with-uuid-1",
-    "with-eui48-1",
-] }}
-# Postgres types
-postgres-types = {{ version = "*", features = ["derive"] }}
-# Postgres interaction
-postgres-protocol = "0.6.4"
-
-## Features dependencies
-# Async connection pooling
-deadpool-postgres = {{ version = "*" }}
-   
-## Extra types dependencies
-# JSON
-serde_json = "*"
-serde = {{ version = "*", features = ["derive"] }}
-# TIMESTAMP
-time = "*"
-# UUID
-uuid = "*"
-# ??
-eui48 = "*"
-# DECIMAL
-rust_decimal = {{ version = "*", features = ["db-postgres"] }} 
-
-## Sync client dependencies
-# Iterator utils required for working with `postgres_protocol::types::ArrayValues`
-fallible-iterator = "0.2.0"
-
-## Async client dependencies
-# ??
-async-trait = "0.1.63"
-# ??
-futures = "*"
-"#
-    )
-}
-
 const CLIENT_CORE: &[(&str, &[u8])] = &[
     ("mod.rs", include_bytes!("clients/mod.rs")),
     ("domain.rs", include_bytes!("clients/domain.rs")),
@@ -935,7 +885,7 @@ pub(crate) fn generate(
     settings: CodegenSettings,
 ) -> Result<TempDir, std::io::Error> {
     let lib = generate_lib_code(&preparation, settings);
-    let cargo = generate_cargo_file(name, &preparation, settings);
+    let cargo = cargo::generate_cargo_file(name, &preparation.dependency_analysis, settings);
     let tmp = tempfile::tempdir()?;
     std::fs::write(tmp.path().join("Cargo.toml"), cargo)?;
     std::fs::create_dir(tmp.path().join("src"))?;

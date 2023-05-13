@@ -6,43 +6,30 @@ edition = "2021"
 
 [dependencies]
 ## Core dependencies
-# Postgres sync client
-postgres = "*"
-# Postgres async client
-tokio-postgres = { version = "*", features = [
-    "with-serde_json-1",
-    "with-time-0_3",
-    "with-uuid-1",
-    "with-eui48-1",
-] }
 # Postgres types
 postgres-types = { version = "*", features = ["derive"] }
 # Postgres interaction
 postgres-protocol = "0.6.4"
 
-## Features dependencies
-# Async connection pooling
-deadpool-postgres = { version = "*" }
-   
-## Extra types dependencies
-# JSON
+## Types dependencies
+# JSON or JSONB
 serde_json = "*"
 serde = { version = "*", features = ["derive"] }
-# TIMESTAMP
-time = "*"
-# UUID
-uuid = "*"
-# ??
-eui48 = "*"
-# DECIMAL
-rust_decimal = { version = "*", features = ["db-postgres"] } 
 
 ## Sync client dependencies
+# Postgres sync client
+postgres = { version = "*", features = ["with-serde_json-1",] }
 # Iterator utils required for working with `postgres_protocol::types::ArrayValues`
 fallible-iterator = "0.2.0"
 
 ## Async client dependencies
+# Postgres async client
+tokio-postgres = { version = "*", features = ["with-serde_json-1",] }
 # ??
 async-trait = "0.1.63"
 # ??
 futures = "*"
+
+## Async features dependencies
+# Async connection pooling
+deadpool-postgres = { version = "*" }
