@@ -5,10 +5,9 @@ use cornucopia::{CodegenSettings, Error};
 // we could also generate it elsewhere and embed the generated
 // file with a `include_str` statement in your project.
 fn main() -> Result<(), Error> {
-    /* TODO replace with cargo-px
     let queries_path = "queries";
     let schema_file = "schema.sql";
-    let destination = "cornucopia";
+    let destination = "auto_build_codegen";
     let settings = CodegenSettings {
         is_async: true,
         derive_ser: false,
@@ -16,14 +15,13 @@ fn main() -> Result<(), Error> {
 
     println!("cargo:rerun-if-changed={queries_path}");
     println!("cargo:rerun-if-changed={schema_file}");
-    cornucopia::generate_managed(
+    cornucopia::gen_managed(
         queries_path,
         &[schema_file],
-        Some(destination),
+        destination,
         false,
         settings,
     )?;
-    */
 
     Ok(())
 }

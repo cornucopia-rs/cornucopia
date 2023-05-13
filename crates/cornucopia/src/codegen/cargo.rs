@@ -47,7 +47,6 @@ pub fn gen_cargo_file(
     dependency_analysis: &DependencyAnalysis,
     settings: CodegenSettings,
 ) -> String {
-    // TODO rework client codegen to make more dependencies optionals
     const VERSION: &str = env!("CARGO_PKG_VERSION");
     let mut buf = formatdoc! {r#"
         # This file was generated with `cornucopia`. Do not modify
