@@ -73,17 +73,14 @@ impl CornucopiaType {
     }
 
     /// Wrap type to escape domains in parameters
-    pub(crate) fn sql_wrapped(&self, name: &str, ctx: &GenCtx) -> String {
+    pub(crate) fn sql_wrapped(&self, name: &str) -> String {
         match self {
             CornucopiaType::Domain { inner, .. } => {
-                format!("&crate::client::Domain({})", inner.sql_wrapped(name, ctx))
+                format!("&crate::client::Domain({})", inner.sql_wrapped(name))
             }
             CornucopiaType::Array { inner } => match inner.as_ref() {
                 CornucopiaType::Domain { inner, .. } => {
-                    format!(
-                        "&crate::client::DomainArray({})",
-                        inner.sql_wrapped(name, ctx)
-                    )
+                    format!("&crate::client::DomainArray({})", inner.sql_wrapped(name))
                 }
                 _ => name.to_string(),
             },
@@ -178,15 +175,15 @@ impl CornucopiaType {
         match self {
             CornucopiaType::Simple { pg_ty, .. } => match *pg_ty {
                 Type::BYTEA => {
-                    traits.push(format!("crate::client::BytesSql"));
+                    traits.push("crate::client::BytesSql".to_string());
                     idx_char(traits.len())
                 }
                 Type::TEXT | Type::VARCHAR => {
-                    traits.push(format!("crate::client::StringSql"));
+                    traits.push("crate::client::StringSql".to_string());
                     idx_char(traits.len())
                 }
                 Type::JSON | Type::JSONB => {
-                    traits.push(format!("crate::client::JsonSql"));
+                    traits.push("crate::client::JsonSql".to_string());
                     idx_char(traits.len())
                 }
                 _ => self.param_ty(is_inner_nullable, ctx),

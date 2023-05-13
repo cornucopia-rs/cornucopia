@@ -207,7 +207,7 @@ fn struct_tosql(
     };
     let db_fields_ident = fields.iter().map(|p| &p.ident.db);
     let rs_fields_ident = fields.iter().map(|p| &p.ident.rs);
-    let write_ty = fields.iter().map(|p| p.ty.sql_wrapped(&p.ident.rs, ctx));
+    let write_ty = fields.iter().map(|p| p.ty.sql_wrapped(&p.ident.rs));
     let accept_ty = fields.iter().map(|p| p.ty.accept_to_sql(ctx));
     let nb_fields = fields.len();
 
@@ -333,7 +333,7 @@ fn gen_params_struct(w: &mut impl Write, params: &PreparedItem, ctx: &GenCtx) {
             .map(|p| p.param_ergo_ty(traits, ctx))
             .collect::<Vec<_>>();
         let fields_name = fields.iter().map(|p| &p.ident.rs);
-        let traits_idx = (1..=traits.len()).into_iter().map(idx_char);
+        let traits_idx = (1..=traits.len()).map(idx_char);
         code!(w =>
             #[derive($copy Debug)]
             pub struct $name<$lifetime $($traits_idx: $traits,)> {
@@ -517,7 +517,7 @@ fn gen_query_fn<W: Write>(w: &mut W, module: &PreparedModule, query: &PreparedQu
         .map(|idx| param_field[*idx].param_ergo_ty(traits, ctx))
         .collect();
     let params_name = order.iter().map(|idx| &param_field[*idx].ident.rs);
-    let traits_idx = (1..=traits.len()).into_iter().map(idx_char);
+    let traits_idx = (1..=traits.len()).map(idx_char);
     let lazy_impl = |w: &mut W| {
         if let Some((idx, index)) = row {
             let item = module.rows.get_index(*idx).unwrap().1;
@@ -571,7 +571,7 @@ fn gen_query_fn<W: Write>(w: &mut W, module: &PreparedModule, query: &PreparedQu
             // Execute fn
             let params_wrap = order.iter().map(|idx| {
                 let p = &param_field[*idx];
-                p.ty.sql_wrapped(&p.ident.rs, ctx)
+                p.ty.sql_wrapped(&p.ident.rs)
             });
             code!(w =>
                 pub $fn_async fn bind<'a, C: GenericClient,$($traits_idx: $traits,)>(&'a mut self, client: &'a $client_mut C, $($params_name: &'a $params_ty,)) -> Result<u64, $backend::Error> {
