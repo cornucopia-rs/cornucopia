@@ -189,6 +189,20 @@ CREATE TABLE nightmare (
     composite nightmare_composite NOT NULL
 );
 
+-- Schema
+
+CREATE SCHEMA schema;
+
+CREATE TYPE schema.nightmare_composite AS (
+    custom custom_composite[],
+    spongebob spongebob_character[],
+    domain my_domain
+);
+
+CREATE TABLE schema.nightmare (
+    composite schema.nightmare_composite NOT NULL
+);
+
 -- Syntax
 
 CREATE TYPE syntax_composite AS (

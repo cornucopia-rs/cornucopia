@@ -1199,3 +1199,147 @@ impl<'a> postgres_types::FromSql<'a> for SyntaxEnum {
         }
     }
 }
+pub mod schema {
+    #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Clone, PartialEq)]
+    #[postgres(name = "nightmare_composite")]
+    pub struct NightmareComposite {
+        #[postgres(name = "custom")]
+        pub custom: Vec<super::CustomComposite>,
+        #[postgres(name = "spongebob")]
+        pub spongebob: Vec<super::SpongebobCharacter>,
+        #[postgres(name = "domain")]
+        pub domain: String,
+    }
+    #[derive(Debug)]
+    pub struct NightmareCompositeBorrowed<'a> {
+        pub custom: crate::ArrayIterator<'a, super::CustomCompositeBorrowed<'a>>,
+        pub spongebob: crate::ArrayIterator<'a, super::SpongebobCharacter>,
+        pub domain: &'a str,
+    }
+    impl<'a> From<NightmareCompositeBorrowed<'a>> for NightmareComposite {
+        fn from(
+            NightmareCompositeBorrowed {
+                custom,
+                spongebob,
+                domain,
+            }: NightmareCompositeBorrowed<'a>,
+        ) -> Self {
+            Self {
+                custom: custom.map(|v| v.into()).collect(),
+                spongebob: spongebob.map(|v| v).collect(),
+                domain: domain.into(),
+            }
+        }
+    }
+    impl<'a> postgres_types::FromSql<'a> for NightmareCompositeBorrowed<'a> {
+        fn from_sql(
+            ty: &postgres_types::Type,
+            out: &'a [u8],
+        ) -> Result<NightmareCompositeBorrowed<'a>, Box<dyn std::error::Error + Sync + Send>>
+        {
+            let fields = match *ty.kind() {
+                postgres_types::Kind::Composite(ref fields) => fields,
+                _ => unreachable!(),
+            };
+            let mut out = out;
+            let num_fields = postgres_types::private::read_be_i32(&mut out)?;
+            if num_fields as usize != fields.len() {
+                return std::result::Result::Err(std::convert::Into::into(format!(
+                    "invalid field count: {} vs {}",
+                    num_fields,
+                    fields.len()
+                )));
+            }
+            let _oid = postgres_types::private::read_be_i32(&mut out)?;
+            let custom = postgres_types::private::read_value(fields[0].type_(), &mut out)?;
+            let _oid = postgres_types::private::read_be_i32(&mut out)?;
+            let spongebob = postgres_types::private::read_value(fields[1].type_(), &mut out)?;
+            let _oid = postgres_types::private::read_be_i32(&mut out)?;
+            let domain = postgres_types::private::read_value(fields[2].type_(), &mut out)?;
+            Ok(NightmareCompositeBorrowed {
+                custom,
+                spongebob,
+                domain,
+            })
+        }
+        fn accepts(ty: &postgres_types::Type) -> bool {
+            ty.name() == "nightmare_composite" && ty.schema() == "schema"
+        }
+    }
+    #[derive(Debug)]
+    pub struct NightmareCompositeParams<'a> {
+        pub custom: &'a [super::CustomCompositeBorrowed<'a>],
+        pub spongebob: &'a [super::SpongebobCharacter],
+        pub domain: &'a str,
+    }
+    impl<'a> postgres_types::ToSql for NightmareCompositeParams<'a> {
+        fn to_sql(
+            &self,
+            ty: &postgres_types::Type,
+            out: &mut postgres_types::private::BytesMut,
+        ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {
+            let NightmareCompositeParams {
+                custom,
+                spongebob,
+                domain,
+            } = self;
+            let fields = match *ty.kind() {
+                postgres_types::Kind::Composite(ref fields) => fields,
+                _ => unreachable!(),
+            };
+            out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+            for field in fields {
+                out.extend_from_slice(&field.type_().oid().to_be_bytes());
+                let base = out.len();
+                out.extend_from_slice(&[0; 4]);
+                let r = match field.name() {
+                    "custom" => postgres_types::ToSql::to_sql(custom, field.type_(), out),
+                    "spongebob" => postgres_types::ToSql::to_sql(spongebob, field.type_(), out),
+                    "domain" => {
+                        postgres_types::ToSql::to_sql(&crate::Domain(domain), field.type_(), out)
+                    }
+                    _ => unreachable!(),
+                };
+                let count = match r? {
+                    postgres_types::IsNull::Yes => -1,
+                    postgres_types::IsNull::No => {
+                        let len = out.len() - base - 4;
+                        if len > i32::max_value() as usize {
+                            return Err(Into::into("value too large to transmit"));
+                        }
+                        len as i32
+                    }
+                };
+                out[base..base + 4].copy_from_slice(&count.to_be_bytes());
+            }
+            Ok(postgres_types::IsNull::No)
+        }
+        fn accepts(ty: &postgres_types::Type) -> bool {
+            if ty.name() != "nightmare_composite" {
+                return false;
+            }
+            match *ty.kind() {
+                postgres_types::Kind::Composite(ref fields) => {
+                    if fields.len() != 3 {
+                        return false;
+                    }
+                    fields.iter().all(| f | match f.name()
+                {
+                    "custom" => < &'a [super::CustomCompositeBorrowed<'a>] as postgres_types ::
+                    ToSql > :: accepts(f.type_()),"spongebob" => < &'a [super::SpongebobCharacter] as postgres_types ::
+                    ToSql > :: accepts(f.type_()),"domain" => < crate::Domain::<&'a str> as postgres_types ::
+                    ToSql > :: accepts(f.type_()),_ => false,
+                })
+                }
+                _ => false,
+            }
+        }
+        fn to_sql_checked(
+            &self,
+            ty: &postgres_types::Type,
+            out: &mut postgres_types::private::BytesMut,
+        ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {
+            postgres_types::__to_sql_checked(self, ty, out)
+        }
+    }
+}

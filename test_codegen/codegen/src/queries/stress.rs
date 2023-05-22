@@ -930,6 +930,57 @@ pub mod sync {
             Ok(it)
         }
     }
+    pub struct SchemaNightmareCompositeQuery<'a, C: GenericClient, T, const N: usize> {
+        client: &'a mut C,
+        params: [&'a (dyn postgres_types::ToSql + Sync); N],
+        stmt: &'a mut crate::client::sync::Stmt,
+        extractor: fn(&postgres::Row) -> crate::types::schema::NightmareCompositeBorrowed,
+        mapper: fn(crate::types::schema::NightmareCompositeBorrowed) -> T,
+    }
+    impl<'a, C, T: 'a, const N: usize> SchemaNightmareCompositeQuery<'a, C, T, N>
+    where
+        C: GenericClient,
+    {
+        pub fn map<R>(
+            self,
+            mapper: fn(crate::types::schema::NightmareCompositeBorrowed) -> R,
+        ) -> SchemaNightmareCompositeQuery<'a, C, R, N> {
+            SchemaNightmareCompositeQuery {
+                client: self.client,
+                params: self.params,
+                stmt: self.stmt,
+                extractor: self.extractor,
+                mapper,
+            }
+        }
+        pub fn one(self) -> Result<T, postgres::Error> {
+            let stmt = self.stmt.prepare(self.client)?;
+            let row = self.client.query_one(stmt, &self.params)?;
+            Ok((self.mapper)((self.extractor)(&row)))
+        }
+        pub fn all(self) -> Result<Vec<T>, postgres::Error> {
+            self.iter()?.collect()
+        }
+        pub fn opt(self) -> Result<Option<T>, postgres::Error> {
+            let stmt = self.stmt.prepare(self.client)?;
+            Ok(self
+                .client
+                .query_opt(stmt, &self.params)?
+                .map(|row| (self.mapper)((self.extractor)(&row))))
+        }
+        pub fn iter(
+            self,
+        ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
+        {
+            let stmt = self.stmt.prepare(self.client)?;
+            let it = self
+                .client
+                .query_raw(stmt, crate::slice_iter(&self.params))?
+                .iterator()
+                .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
+            Ok(it)
+        }
+    }
     pub fn select_everything() -> SelectEverythingStmt {
         SelectEverythingStmt(crate::client::sync::Stmt::new(
             "SELECT
@@ -1604,6 +1655,47 @@ FROM
             client.execute(stmt, &[composite])
         }
     }
+    pub fn select_schema_nightmare() -> SelectSchemaNightmareStmt {
+        SelectSchemaNightmareStmt(crate::client::sync::Stmt::new(
+            "SELECT
+    *
+FROM
+    schema.nightmare",
+        ))
+    }
+    pub struct SelectSchemaNightmareStmt(crate::client::sync::Stmt);
+    impl SelectSchemaNightmareStmt {
+        pub fn bind<'a, C: GenericClient>(
+            &'a mut self,
+            client: &'a mut C,
+        ) -> SchemaNightmareCompositeQuery<'a, C, crate::types::schema::NightmareComposite, 0>
+        {
+            SchemaNightmareCompositeQuery {
+                client,
+                params: [],
+                stmt: &mut self.0,
+                extractor: |row| row.get(0),
+                mapper: |it| it.into(),
+            }
+        }
+    }
+    pub fn insert_schema_nightmare() -> InsertSchemaNightmareStmt {
+        InsertSchemaNightmareStmt(crate::client::sync::Stmt::new(
+            "INSERT INTO schema.nightmare (composite)
+    VALUES ($1)",
+        ))
+    }
+    pub struct InsertSchemaNightmareStmt(crate::client::sync::Stmt);
+    impl InsertSchemaNightmareStmt {
+        pub fn bind<'a, C: GenericClient>(
+            &'a mut self,
+            client: &'a mut C,
+            composite: &'a crate::types::schema::NightmareCompositeParams<'a>,
+        ) -> Result<u64, postgres::Error> {
+            let stmt = self.0.prepare(client)?;
+            client.execute(stmt, &[composite])
+        }
+    }
 }
 pub mod async_ {
     use crate::client::async_::GenericClient;
@@ -1844,6 +1936,61 @@ pub mod async_ {
             mapper: fn(crate::types::NightmareCompositeBorrowed) -> R,
         ) -> NightmareCompositeQuery<'a, C, R, N> {
             NightmareCompositeQuery {
+                client: self.client,
+                params: self.params,
+                stmt: self.stmt,
+                extractor: self.extractor,
+                mapper,
+            }
+        }
+        pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+            let stmt = self.stmt.prepare(self.client).await?;
+            let row = self.client.query_one(stmt, &self.params).await?;
+            Ok((self.mapper)((self.extractor)(&row)))
+        }
+        pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
+            self.iter().await?.try_collect().await
+        }
+        pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+            let stmt = self.stmt.prepare(self.client).await?;
+            Ok(self
+                .client
+                .query_opt(stmt, &self.params)
+                .await?
+                .map(|row| (self.mapper)((self.extractor)(&row))))
+        }
+        pub async fn iter(
+            self,
+        ) -> Result<
+            impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
+            tokio_postgres::Error,
+        > {
+            let stmt = self.stmt.prepare(self.client).await?;
+            let it = self
+                .client
+                .query_raw(stmt, crate::slice_iter(&self.params))
+                .await?
+                .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
+                .into_stream();
+            Ok(it)
+        }
+    }
+    pub struct SchemaNightmareCompositeQuery<'a, C: GenericClient, T, const N: usize> {
+        client: &'a C,
+        params: [&'a (dyn postgres_types::ToSql + Sync); N],
+        stmt: &'a mut crate::client::async_::Stmt,
+        extractor: fn(&tokio_postgres::Row) -> crate::types::schema::NightmareCompositeBorrowed,
+        mapper: fn(crate::types::schema::NightmareCompositeBorrowed) -> T,
+    }
+    impl<'a, C, T: 'a, const N: usize> SchemaNightmareCompositeQuery<'a, C, T, N>
+    where
+        C: GenericClient,
+    {
+        pub fn map<R>(
+            self,
+            mapper: fn(crate::types::schema::NightmareCompositeBorrowed) -> R,
+        ) -> SchemaNightmareCompositeQuery<'a, C, R, N> {
+            SchemaNightmareCompositeQuery {
                 client: self.client,
                 params: self.params,
                 stmt: self.stmt,
@@ -2564,6 +2711,47 @@ FROM
             &'a mut self,
             client: &'a C,
             composite: &'a crate::types::NightmareCompositeParams<'a>,
+        ) -> Result<u64, tokio_postgres::Error> {
+            let stmt = self.0.prepare(client).await?;
+            client.execute(stmt, &[composite]).await
+        }
+    }
+    pub fn select_schema_nightmare() -> SelectSchemaNightmareStmt {
+        SelectSchemaNightmareStmt(crate::client::async_::Stmt::new(
+            "SELECT
+    *
+FROM
+    schema.nightmare",
+        ))
+    }
+    pub struct SelectSchemaNightmareStmt(crate::client::async_::Stmt);
+    impl SelectSchemaNightmareStmt {
+        pub fn bind<'a, C: GenericClient>(
+            &'a mut self,
+            client: &'a C,
+        ) -> SchemaNightmareCompositeQuery<'a, C, crate::types::schema::NightmareComposite, 0>
+        {
+            SchemaNightmareCompositeQuery {
+                client,
+                params: [],
+                stmt: &mut self.0,
+                extractor: |row| row.get(0),
+                mapper: |it| it.into(),
+            }
+        }
+    }
+    pub fn insert_schema_nightmare() -> InsertSchemaNightmareStmt {
+        InsertSchemaNightmareStmt(crate::client::async_::Stmt::new(
+            "INSERT INTO schema.nightmare (composite)
+    VALUES ($1)",
+        ))
+    }
+    pub struct InsertSchemaNightmareStmt(crate::client::async_::Stmt);
+    impl InsertSchemaNightmareStmt {
+        pub async fn bind<'a, C: GenericClient>(
+            &'a mut self,
+            client: &'a C,
+            composite: &'a crate::types::schema::NightmareCompositeParams<'a>,
         ) -> Result<u64, tokio_postgres::Error> {
             let stmt = self.0.prepare(client).await?;
             client.execute(stmt, &[composite]).await

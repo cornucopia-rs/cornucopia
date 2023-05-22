@@ -34,8 +34,9 @@ use codegen::{
         },
         stress::{
             sync::{
-                insert_everything, insert_everything_array, insert_nightmare, select_everything,
-                select_everything_array, select_nightmare,
+                insert_everything, insert_everything_array, insert_nightmare,
+                insert_schema_nightmare, select_everything, select_everything_array,
+                select_nightmare, select_schema_nightmare,
             },
             Everything, EverythingArray, EverythingArrayParams, EverythingParams,
         },
@@ -45,12 +46,13 @@ use codegen::{
         },
     },
     types::{
-        CloneCompositeBorrowed, CopyComposite, CustomComposite, CustomCompositeBorrowed,
+        schema, CloneCompositeBorrowed, CopyComposite, CustomComposite, CustomCompositeBorrowed,
         DomainComposite, DomainCompositeParams, EnumWithDot, NamedComposite,
         NamedCompositeBorrowed, NamedCompositeWithDot, NightmareComposite,
         NightmareCompositeParams, NullityComposite, NullityCompositeParams, SpongebobCharacter,
         SyntaxComposite, SyntaxEnum,
-    }, IterSql,
+    },
+    IterSql,
 };
 
 pub fn main() {
@@ -555,6 +557,30 @@ pub fn test_stress(client: &mut Client) {
 
     assert_eq!(1, insert_nightmare().bind(client, &params).unwrap());
     let actual = select_nightmare().bind(client).one().unwrap();
+    assert_eq!(expected, actual);
+
+    // In a named schema
+    let expected = schema::NightmareComposite {
+        custom: vec![CustomComposite {
+            wow: "Bob".to_string(),
+            such_cool: 42,
+            nice: SpongebobCharacter::Squidward,
+        }],
+        spongebob: vec![SpongebobCharacter::Bob, SpongebobCharacter::Patrick],
+        domain: "Hello".to_string(),
+    };
+    let params = schema::NightmareCompositeParams {
+        custom: &[CustomCompositeBorrowed {
+            wow: "Bob",
+            such_cool: 42,
+            nice: SpongebobCharacter::Squidward,
+        }],
+        spongebob: &[SpongebobCharacter::Bob, SpongebobCharacter::Patrick],
+        domain: "Hello",
+    };
+
+    assert_eq!(1, insert_schema_nightmare().bind(client, &params).unwrap());
+    let actual = select_schema_nightmare().bind(client).one().unwrap();
     assert_eq!(expected, actual);
 }
 

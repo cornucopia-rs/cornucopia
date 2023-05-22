@@ -40,3 +40,14 @@ FROM
 INSERT INTO nightmare (composite)
     VALUES (:composite);
 
+
+--! select_schema_nightmare
+SELECT
+    *
+FROM
+    schema.nightmare;
+
+--! insert_schema_nightmare
+INSERT INTO schema.nightmare (composite)
+    VALUES (:composite);
+
