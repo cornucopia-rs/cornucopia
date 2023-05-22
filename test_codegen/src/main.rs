@@ -11,7 +11,7 @@ use time::{OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;
 
 use codegen::{
-    client::{sync::Params, IterSql},
+    client::sync::Params,
     queries::{
         copy::sync::{insert_clone, insert_copy, select_copy},
         domain::{
@@ -50,7 +50,7 @@ use codegen::{
         NamedCompositeBorrowed, NamedCompositeWithDot, NightmareComposite,
         NightmareCompositeParams, NullityComposite, NullityCompositeParams, SpongebobCharacter,
         SyntaxComposite, SyntaxEnum,
-    },
+    }, IterSql,
 };
 
 pub fn main() {

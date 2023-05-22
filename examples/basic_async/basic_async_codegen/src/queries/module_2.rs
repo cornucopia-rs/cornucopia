@@ -1,7 +1,7 @@
 // This file was generated with `cornucopia`. Do not modify.
 
 #[derive(Debug)]
-pub struct AuthorNameStartingWithParams<T1: crate::client::StringSql> {
+pub struct AuthorNameStartingWithParams<T1: crate::StringSql> {
     pub start_str: T1,
 }
 #[derive(Debug, Clone, PartialEq)]
@@ -61,7 +61,7 @@ pub struct SelectTranslations {
 }
 pub struct SelectTranslationsBorrowed<'a> {
     pub title: &'a str,
-    pub translations: crate::client::ArrayIterator<'a, &'a str>,
+    pub translations: crate::ArrayIterator<'a, &'a str>,
 }
 impl<'a> From<SelectTranslationsBorrowed<'a>> for SelectTranslations {
     fn from(
@@ -123,7 +123,7 @@ where
         let stmt = self.stmt.prepare(self.client).await?;
         let it = self
             .client
-            .query_raw(stmt, crate::client::slice_iter(&self.params))
+            .query_raw(stmt, crate::slice_iter(&self.params))
             .await?
             .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
             .into_stream();
@@ -175,7 +175,7 @@ where
         let stmt = self.stmt.prepare(self.client).await?;
         let it = self
             .client
-            .query_raw(stmt, crate::client::slice_iter(&self.params))
+            .query_raw(stmt, crate::slice_iter(&self.params))
             .await?
             .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
             .into_stream();
@@ -230,7 +230,7 @@ where
         let stmt = self.stmt.prepare(self.client).await?;
         let it = self
             .client
-            .query_raw(stmt, crate::client::slice_iter(&self.params))
+            .query_raw(stmt, crate::slice_iter(&self.params))
             .await?
             .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
             .into_stream();
@@ -285,7 +285,7 @@ where
         let stmt = self.stmt.prepare(self.client).await?;
         let it = self
             .client
-            .query_raw(stmt, crate::client::slice_iter(&self.params))
+            .query_raw(stmt, crate::slice_iter(&self.params))
             .await?
             .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
             .into_stream();
@@ -340,7 +340,7 @@ where
         let stmt = self.stmt.prepare(self.client).await?;
         let it = self
             .client
-            .query_raw(stmt, crate::client::slice_iter(&self.params))
+            .query_raw(stmt, crate::slice_iter(&self.params))
             .await?
             .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
             .into_stream();
@@ -440,7 +440,7 @@ WHERE
 }
 pub struct AuthorNameStartingWithStmt(crate::client::async_::Stmt);
 impl AuthorNameStartingWithStmt {
-    pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
+    pub fn bind<'a, C: GenericClient, T1: crate::StringSql>(
         &'a mut self,
         client: &'a C,
         start_str: &'a T1,
@@ -459,7 +459,7 @@ impl AuthorNameStartingWithStmt {
         }
     }
 }
-impl<'a, C: GenericClient, T1: crate::client::StringSql>
+impl<'a, C: GenericClient, T1: crate::StringSql>
     crate::client::async_::Params<
         'a,
         AuthorNameStartingWithParams<T1>,

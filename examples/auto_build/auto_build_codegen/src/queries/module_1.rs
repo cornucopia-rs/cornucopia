@@ -47,7 +47,7 @@ where
         let stmt = self.stmt.prepare(self.client).await?;
         let it = self
             .client
-            .query_raw(stmt, crate::client::slice_iter(&self.params))
+            .query_raw(stmt, crate::slice_iter(&self.params))
             .await?
             .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
             .into_stream();

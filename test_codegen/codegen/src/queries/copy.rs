@@ -47,7 +47,7 @@ pub mod sync {
             let stmt = self.stmt.prepare(self.client)?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))?
+                .query_raw(stmt, crate::slice_iter(&self.params))?
                 .iterator()
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
             Ok(it)
@@ -98,7 +98,7 @@ pub mod sync {
             let stmt = self.stmt.prepare(self.client)?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))?
+                .query_raw(stmt, crate::slice_iter(&self.params))?
                 .iterator()
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
             Ok(it)
@@ -224,7 +224,7 @@ pub mod async_ {
             let stmt = self.stmt.prepare(self.client).await?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))
+                .query_raw(stmt, crate::slice_iter(&self.params))
                 .await?
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                 .into_stream();
@@ -279,7 +279,7 @@ pub mod async_ {
             let stmt = self.stmt.prepare(self.client).await?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))
+                .query_raw(stmt, crate::slice_iter(&self.params))
                 .await?
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                 .into_stream();

@@ -3,10 +3,10 @@
 #[derive(Debug)]
 pub struct InsertNightmareDomainParams<
     'a,
-    T1: crate::client::StringSql,
-    T2: crate::client::JsonSql,
-    T3: crate::client::JsonSql,
-    T4: crate::client::ArraySql<Item = T3>,
+    T1: crate::StringSql,
+    T2: crate::JsonSql,
+    T3: crate::JsonSql,
+    T4: crate::ArraySql<Item = T3>,
 > {
     pub txt: T1,
     pub json: T2,
@@ -25,8 +25,7 @@ pub struct SelectNightmareDomainBorrowed<'a> {
     pub txt: &'a str,
     pub json: postgres_types::Json<&'a serde_json::value::RawValue>,
     pub nb: i32,
-    pub arr:
-        crate::client::ArrayIterator<'a, postgres_types::Json<&'a serde_json::value::RawValue>>,
+    pub arr: crate::ArrayIterator<'a, postgres_types::Json<&'a serde_json::value::RawValue>>,
 }
 impl<'a> From<SelectNightmareDomainBorrowed<'a>> for SelectNightmareDomain {
     fn from(
@@ -55,10 +54,7 @@ pub struct SelectNightmareDomainNullBorrowed<'a> {
     pub json: Option<postgres_types::Json<&'a serde_json::value::RawValue>>,
     pub nb: Option<i32>,
     pub arr: Option<
-        crate::client::ArrayIterator<
-            'a,
-            Option<postgres_types::Json<&'a serde_json::value::RawValue>>,
-        >,
+        crate::ArrayIterator<'a, Option<postgres_types::Json<&'a serde_json::value::RawValue>>>,
     >,
     pub composite: Option<crate::types::DomainCompositeBorrowed<'a>>,
 }
@@ -131,7 +127,7 @@ pub mod sync {
             let stmt = self.stmt.prepare(self.client)?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))?
+                .query_raw(stmt, crate::slice_iter(&self.params))?
                 .iterator()
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
             Ok(it)
@@ -182,7 +178,7 @@ pub mod sync {
             let stmt = self.stmt.prepare(self.client)?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))?
+                .query_raw(stmt, crate::slice_iter(&self.params))?
                 .iterator()
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
             Ok(it)
@@ -221,10 +217,10 @@ pub mod sync {
         pub fn bind<
             'a,
             C: GenericClient,
-            T1: crate::client::StringSql,
-            T2: crate::client::JsonSql,
-            T3: crate::client::JsonSql,
-            T4: crate::client::ArraySql<Item = T3>,
+            T1: crate::StringSql,
+            T2: crate::JsonSql,
+            T3: crate::JsonSql,
+            T4: crate::ArraySql<Item = T3>,
         >(
             &'a mut self,
             client: &'a mut C,
@@ -238,10 +234,10 @@ pub mod sync {
             client.execute(
                 stmt,
                 &[
-                    &crate::client::Domain(txt),
-                    &crate::client::Domain(json),
-                    &crate::client::Domain(nb),
-                    &crate::client::Domain(&crate::client::DomainArray(arr)),
+                    &crate::Domain(txt),
+                    &crate::Domain(json),
+                    &crate::Domain(nb),
+                    &crate::Domain(&crate::DomainArray(arr)),
                     composite,
                 ],
             )
@@ -250,10 +246,10 @@ pub mod sync {
     impl<
             'a,
             C: GenericClient,
-            T1: crate::client::StringSql,
-            T2: crate::client::JsonSql,
-            T3: crate::client::JsonSql,
-            T4: crate::client::ArraySql<Item = T3>,
+            T1: crate::StringSql,
+            T2: crate::JsonSql,
+            T3: crate::JsonSql,
+            T4: crate::ArraySql<Item = T3>,
         >
         crate::client::sync::Params<
             'a,
@@ -355,7 +351,7 @@ pub mod async_ {
             let stmt = self.stmt.prepare(self.client).await?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))
+                .query_raw(stmt, crate::slice_iter(&self.params))
                 .await?
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                 .into_stream();
@@ -410,7 +406,7 @@ pub mod async_ {
             let stmt = self.stmt.prepare(self.client).await?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))
+                .query_raw(stmt, crate::slice_iter(&self.params))
                 .await?
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                 .into_stream();
@@ -450,10 +446,10 @@ pub mod async_ {
         pub async fn bind<
             'a,
             C: GenericClient,
-            T1: crate::client::StringSql,
-            T2: crate::client::JsonSql,
-            T3: crate::client::JsonSql,
-            T4: crate::client::ArraySql<Item = T3>,
+            T1: crate::StringSql,
+            T2: crate::JsonSql,
+            T3: crate::JsonSql,
+            T4: crate::ArraySql<Item = T3>,
         >(
             &'a mut self,
             client: &'a C,
@@ -468,10 +464,10 @@ pub mod async_ {
                 .execute(
                     stmt,
                     &[
-                        &crate::client::Domain(txt),
-                        &crate::client::Domain(json),
-                        &crate::client::Domain(nb),
-                        &crate::client::Domain(&crate::client::DomainArray(arr)),
+                        &crate::Domain(txt),
+                        &crate::Domain(json),
+                        &crate::Domain(nb),
+                        &crate::Domain(&crate::DomainArray(arr)),
                         composite,
                     ],
                 )
@@ -481,10 +477,10 @@ pub mod async_ {
     impl<
             'a,
             C: GenericClient + Send + Sync,
-            T1: crate::client::StringSql,
-            T2: crate::client::JsonSql,
-            T3: crate::client::JsonSql,
-            T4: crate::client::ArraySql<Item = T3>,
+            T1: crate::StringSql,
+            T2: crate::JsonSql,
+            T3: crate::JsonSql,
+            T4: crate::ArraySql<Item = T3>,
         >
         crate::client::async_::Params<
             'a,

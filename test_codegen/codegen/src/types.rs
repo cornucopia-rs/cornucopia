@@ -196,8 +196,7 @@ pub struct DomainCompositeBorrowed<'a> {
     pub txt: &'a str,
     pub json: postgres_types::Json<&'a serde_json::value::RawValue>,
     pub nb: i32,
-    pub arr:
-        crate::client::ArrayIterator<'a, postgres_types::Json<&'a serde_json::value::RawValue>>,
+    pub arr: crate::ArrayIterator<'a, postgres_types::Json<&'a serde_json::value::RawValue>>,
 }
 impl<'a> From<DomainCompositeBorrowed<'a>> for DomainComposite {
     fn from(DomainCompositeBorrowed { txt, json, nb, arr }: DomainCompositeBorrowed<'a>) -> Self {
@@ -267,17 +266,11 @@ impl<'a> postgres_types::ToSql for DomainCompositeParams<'a> {
             let base = out.len();
             out.extend_from_slice(&[0; 4]);
             let r = match field.name() {
-                "txt" => {
-                    postgres_types::ToSql::to_sql(&crate::client::Domain(txt), field.type_(), out)
-                }
-                "json" => {
-                    postgres_types::ToSql::to_sql(&crate::client::Domain(json), field.type_(), out)
-                }
-                "nb" => {
-                    postgres_types::ToSql::to_sql(&crate::client::Domain(nb), field.type_(), out)
-                }
+                "txt" => postgres_types::ToSql::to_sql(&crate::Domain(txt), field.type_(), out),
+                "json" => postgres_types::ToSql::to_sql(&crate::Domain(json), field.type_(), out),
+                "nb" => postgres_types::ToSql::to_sql(&crate::Domain(nb), field.type_(), out),
                 "arr" => postgres_types::ToSql::to_sql(
-                    &crate::client::Domain(&crate::client::DomainArray(arr)),
+                    &crate::Domain(&crate::DomainArray(arr)),
                     field.type_(),
                     out,
                 ),
@@ -308,10 +301,10 @@ impl<'a> postgres_types::ToSql for DomainCompositeParams<'a> {
                 }
                 fields.iter().all(| f | match f.name()
                 {
-                    "txt" => < crate::client::Domain::<&'a str> as postgres_types ::
-                    ToSql > :: accepts(f.type_()),"json" => < crate::client::Domain::<&'a serde_json::value::Value> as postgres_types ::
-                    ToSql > :: accepts(f.type_()),"nb" => < crate::client::Domain::<i32> as postgres_types ::
-                    ToSql > :: accepts(f.type_()),"arr" => < crate::client::Domain::<crate::client::DomainArray::<&'a serde_json::value::Value, &[&'a serde_json::value::Value]>> as postgres_types ::
+                    "txt" => < crate::Domain::<&'a str> as postgres_types ::
+                    ToSql > :: accepts(f.type_()),"json" => < crate::Domain::<&'a serde_json::value::Value> as postgres_types ::
+                    ToSql > :: accepts(f.type_()),"nb" => < crate::Domain::<i32> as postgres_types ::
+                    ToSql > :: accepts(f.type_()),"arr" => < crate::Domain::<crate::DomainArray::<&'a serde_json::value::Value, &[&'a serde_json::value::Value]>> as postgres_types ::
                     ToSql > :: accepts(f.type_()),_ => false,
                 })
             }
@@ -588,10 +581,7 @@ pub struct NullityComposite {
 #[derive(Debug)]
 pub struct NullityCompositeBorrowed<'a> {
     pub jsons: Option<
-        crate::client::ArrayIterator<
-            'a,
-            Option<postgres_types::Json<&'a serde_json::value::RawValue>>,
-        >,
+        crate::ArrayIterator<'a, Option<postgres_types::Json<&'a serde_json::value::RawValue>>>,
     >,
     pub id: i32,
 }
@@ -928,8 +918,8 @@ pub struct NightmareComposite {
 }
 #[derive(Debug)]
 pub struct NightmareCompositeBorrowed<'a> {
-    pub custom: crate::client::ArrayIterator<'a, CustomCompositeBorrowed<'a>>,
-    pub spongebob: crate::client::ArrayIterator<'a, SpongebobCharacter>,
+    pub custom: crate::ArrayIterator<'a, CustomCompositeBorrowed<'a>>,
+    pub spongebob: crate::ArrayIterator<'a, SpongebobCharacter>,
     pub domain: &'a str,
 }
 impl<'a> From<NightmareCompositeBorrowed<'a>> for NightmareComposite {
@@ -1010,11 +1000,9 @@ impl<'a> postgres_types::ToSql for NightmareCompositeParams<'a> {
             let r = match field.name() {
                 "custom" => postgres_types::ToSql::to_sql(custom, field.type_(), out),
                 "spongebob" => postgres_types::ToSql::to_sql(spongebob, field.type_(), out),
-                "domain" => postgres_types::ToSql::to_sql(
-                    &crate::client::Domain(domain),
-                    field.type_(),
-                    out,
-                ),
+                "domain" => {
+                    postgres_types::ToSql::to_sql(&crate::Domain(domain), field.type_(), out)
+                }
                 _ => unreachable!(),
             };
             let count = match r? {
@@ -1049,9 +1037,9 @@ impl<'a> postgres_types::ToSql for NightmareCompositeParams<'a> {
                     "spongebob" => {
                         <&'a [SpongebobCharacter] as postgres_types::ToSql>::accepts(f.type_())
                     }
-                    "domain" => <crate::client::Domain<&'a str> as postgres_types::ToSql>::accepts(
-                        f.type_(),
-                    ),
+                    "domain" => {
+                        <crate::Domain<&'a str> as postgres_types::ToSql>::accepts(f.type_())
+                    }
                     _ => false,
                 })
             }

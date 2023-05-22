@@ -3,9 +3,9 @@
 #[derive(Debug)]
 pub struct NullityParams<
     'a,
-    T1: crate::client::StringSql,
-    T2: crate::client::ArraySql<Item = Option<T1>>,
-    T3: crate::client::StringSql,
+    T1: crate::StringSql,
+    T2: crate::ArraySql<Item = Option<T1>>,
+    T3: crate::StringSql,
 > {
     pub texts: T2,
     pub name: T3,
@@ -18,7 +18,7 @@ pub struct Nullity {
     pub composite: Option<crate::types::NullityComposite>,
 }
 pub struct NullityBorrowed<'a> {
-    pub texts: crate::client::ArrayIterator<'a, Option<&'a str>>,
+    pub texts: crate::ArrayIterator<'a, Option<&'a str>>,
     pub name: &'a str,
     pub composite: Option<crate::types::NullityCompositeBorrowed<'a>>,
 }
@@ -81,7 +81,7 @@ pub mod sync {
             let stmt = self.stmt.prepare(self.client)?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))?
+                .query_raw(stmt, crate::slice_iter(&self.params))?
                 .iterator()
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
             Ok(it)
@@ -97,9 +97,9 @@ pub mod sync {
         pub fn bind<
             'a,
             C: GenericClient,
-            T1: crate::client::StringSql,
-            T2: crate::client::ArraySql<Item = Option<T1>>,
-            T3: crate::client::StringSql,
+            T1: crate::StringSql,
+            T2: crate::ArraySql<Item = Option<T1>>,
+            T3: crate::StringSql,
         >(
             &'a mut self,
             client: &'a mut C,
@@ -114,9 +114,9 @@ pub mod sync {
     impl<
             'a,
             C: GenericClient,
-            T1: crate::client::StringSql,
-            T2: crate::client::ArraySql<Item = Option<T1>>,
-            T3: crate::client::StringSql,
+            T1: crate::StringSql,
+            T2: crate::ArraySql<Item = Option<T1>>,
+            T3: crate::StringSql,
         >
         crate::client::sync::Params<
             'a,
@@ -204,7 +204,7 @@ pub mod async_ {
             let stmt = self.stmt.prepare(self.client).await?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))
+                .query_raw(stmt, crate::slice_iter(&self.params))
                 .await?
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                 .into_stream();
@@ -221,9 +221,9 @@ pub mod async_ {
         pub async fn bind<
             'a,
             C: GenericClient,
-            T1: crate::client::StringSql,
-            T2: crate::client::ArraySql<Item = Option<T1>>,
-            T3: crate::client::StringSql,
+            T1: crate::StringSql,
+            T2: crate::ArraySql<Item = Option<T1>>,
+            T3: crate::StringSql,
         >(
             &'a mut self,
             client: &'a C,
@@ -238,9 +238,9 @@ pub mod async_ {
     impl<
             'a,
             C: GenericClient + Send + Sync,
-            T1: crate::client::StringSql,
-            T2: crate::client::ArraySql<Item = Option<T1>>,
-            T3: crate::client::StringSql,
+            T1: crate::StringSql,
+            T2: crate::ArraySql<Item = Option<T1>>,
+            T3: crate::StringSql,
         >
         crate::client::async_::Params<
             'a,

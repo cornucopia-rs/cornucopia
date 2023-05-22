@@ -10,7 +10,7 @@ pub fn insert_book() -> InsertBookStmt {
 }
 pub struct InsertBookStmt(crate::client::async_::Stmt);
 impl InsertBookStmt {
-    pub async fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
+    pub async fn bind<'a, C: GenericClient, T1: crate::StringSql>(
         &'a mut self,
         client: &'a C,
         title: &'a T1,

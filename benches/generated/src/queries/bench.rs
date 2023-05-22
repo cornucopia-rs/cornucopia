@@ -1,7 +1,7 @@
 // This file was generated with `cornucopia`. Do not modify.
 
 #[derive(Debug)]
-pub struct InsertUserParams<T1: crate::client::StringSql, T2: crate::client::StringSql> {
+pub struct InsertUserParams<T1: crate::StringSql, T2: crate::StringSql> {
     pub name: T1,
     pub hair_color: Option<T2>,
 }
@@ -167,7 +167,7 @@ pub mod sync {
             let stmt = self.stmt.prepare(self.client)?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))?
+                .query_raw(stmt, crate::slice_iter(&self.params))?
                 .iterator()
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
             Ok(it)
@@ -215,7 +215,7 @@ pub mod sync {
             let stmt = self.stmt.prepare(self.client)?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))?
+                .query_raw(stmt, crate::slice_iter(&self.params))?
                 .iterator()
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
             Ok(it)
@@ -263,7 +263,7 @@ pub mod sync {
             let stmt = self.stmt.prepare(self.client)?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))?
+                .query_raw(stmt, crate::slice_iter(&self.params))?
                 .iterator()
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
             Ok(it)
@@ -314,7 +314,7 @@ pub mod sync {
             let stmt = self.stmt.prepare(self.client)?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))?
+                .query_raw(stmt, crate::slice_iter(&self.params))?
                 .iterator()
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
             Ok(it)
@@ -349,12 +349,7 @@ pub mod sync {
     }
     pub struct InsertUserStmt(crate::client::sync::Stmt);
     impl InsertUserStmt {
-        pub fn bind<
-            'a,
-            C: GenericClient,
-            T1: crate::client::StringSql,
-            T2: crate::client::StringSql,
-        >(
+        pub fn bind<'a, C: GenericClient, T1: crate::StringSql, T2: crate::StringSql>(
             &'a mut self,
             client: &'a mut C,
             name: &'a T1,
@@ -364,7 +359,7 @@ pub mod sync {
             client.execute(stmt, &[name, hair_color])
         }
     }
-    impl<'a, C: GenericClient, T1: crate::client::StringSql, T2: crate::client::StringSql>
+    impl<'a, C: GenericClient, T1: crate::StringSql, T2: crate::StringSql>
         crate::client::sync::Params<
             'a,
             super::InsertUserParams<T1, T2>,
@@ -410,7 +405,7 @@ pub mod sync {
     }
     pub struct PostByUserIdsStmt(crate::client::sync::Stmt);
     impl PostByUserIdsStmt {
-        pub fn bind<'a, C: GenericClient, T1: crate::client::ArraySql<Item = i32>>(
+        pub fn bind<'a, C: GenericClient, T1: crate::ArraySql<Item = i32>>(
             &'a mut self,
             client: &'a mut C,
             ids: &'a T1,
@@ -458,7 +453,7 @@ pub mod sync {
     }
     pub struct CommentsByPostIdStmt(crate::client::sync::Stmt);
     impl CommentsByPostIdStmt {
-        pub fn bind<'a, C: GenericClient, T1: crate::client::ArraySql<Item = i32>>(
+        pub fn bind<'a, C: GenericClient, T1: crate::ArraySql<Item = i32>>(
             &'a mut self,
             client: &'a mut C,
             ids: &'a T1,
@@ -551,7 +546,7 @@ pub mod async_ {
             let stmt = self.stmt.prepare(self.client).await?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))
+                .query_raw(stmt, crate::slice_iter(&self.params))
                 .await?
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                 .into_stream();
@@ -603,7 +598,7 @@ pub mod async_ {
             let stmt = self.stmt.prepare(self.client).await?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))
+                .query_raw(stmt, crate::slice_iter(&self.params))
                 .await?
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                 .into_stream();
@@ -655,7 +650,7 @@ pub mod async_ {
             let stmt = self.stmt.prepare(self.client).await?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))
+                .query_raw(stmt, crate::slice_iter(&self.params))
                 .await?
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                 .into_stream();
@@ -710,7 +705,7 @@ pub mod async_ {
             let stmt = self.stmt.prepare(self.client).await?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))
+                .query_raw(stmt, crate::slice_iter(&self.params))
                 .await?
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                 .into_stream();
@@ -746,12 +741,7 @@ pub mod async_ {
     }
     pub struct InsertUserStmt(crate::client::async_::Stmt);
     impl InsertUserStmt {
-        pub async fn bind<
-            'a,
-            C: GenericClient,
-            T1: crate::client::StringSql,
-            T2: crate::client::StringSql,
-        >(
+        pub async fn bind<'a, C: GenericClient, T1: crate::StringSql, T2: crate::StringSql>(
             &'a mut self,
             client: &'a C,
             name: &'a T1,
@@ -761,12 +751,7 @@ pub mod async_ {
             client.execute(stmt, &[name, hair_color]).await
         }
     }
-    impl<
-            'a,
-            C: GenericClient + Send + Sync,
-            T1: crate::client::StringSql,
-            T2: crate::client::StringSql,
-        >
+    impl<'a, C: GenericClient + Send + Sync, T1: crate::StringSql, T2: crate::StringSql>
         crate::client::async_::Params<
             'a,
             super::InsertUserParams<T1, T2>,
@@ -816,7 +801,7 @@ pub mod async_ {
     }
     pub struct PostByUserIdsStmt(crate::client::async_::Stmt);
     impl PostByUserIdsStmt {
-        pub fn bind<'a, C: GenericClient, T1: crate::client::ArraySql<Item = i32>>(
+        pub fn bind<'a, C: GenericClient, T1: crate::ArraySql<Item = i32>>(
             &'a mut self,
             client: &'a C,
             ids: &'a T1,
@@ -864,7 +849,7 @@ pub mod async_ {
     }
     pub struct CommentsByPostIdStmt(crate::client::async_::Stmt);
     impl CommentsByPostIdStmt {
-        pub fn bind<'a, C: GenericClient, T1: crate::client::ArraySql<Item = i32>>(
+        pub fn bind<'a, C: GenericClient, T1: crate::ArraySql<Item = i32>>(
             &'a mut self,
             client: &'a C,
             ids: &'a T1,

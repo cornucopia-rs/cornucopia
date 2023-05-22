@@ -2,11 +2,11 @@
 
 #[derive(Debug)]
 pub struct EverythingParams<
-    T1: crate::client::StringSql,
-    T2: crate::client::StringSql,
-    T3: crate::client::BytesSql,
-    T4: crate::client::JsonSql,
-    T5: crate::client::JsonSql,
+    T1: crate::StringSql,
+    T2: crate::StringSql,
+    T3: crate::BytesSql,
+    T4: crate::JsonSql,
+    T5: crate::JsonSql,
 > {
     pub bool_: bool,
     pub boolean_: bool,
@@ -45,39 +45,39 @@ pub struct EverythingParams<
 }
 #[derive(Debug)]
 pub struct EverythingArrayParams<
-    T1: crate::client::ArraySql<Item = bool>,
-    T2: crate::client::ArraySql<Item = bool>,
-    T3: crate::client::ArraySql<Item = i8>,
-    T4: crate::client::ArraySql<Item = i16>,
-    T5: crate::client::ArraySql<Item = i16>,
-    T6: crate::client::ArraySql<Item = i32>,
-    T7: crate::client::ArraySql<Item = i32>,
-    T8: crate::client::ArraySql<Item = i64>,
-    T9: crate::client::ArraySql<Item = i64>,
-    T10: crate::client::ArraySql<Item = f32>,
-    T11: crate::client::ArraySql<Item = f32>,
-    T12: crate::client::ArraySql<Item = f64>,
-    T13: crate::client::ArraySql<Item = f64>,
-    T14: crate::client::StringSql,
-    T15: crate::client::ArraySql<Item = T14>,
-    T16: crate::client::StringSql,
-    T17: crate::client::ArraySql<Item = T16>,
-    T18: crate::client::BytesSql,
-    T19: crate::client::ArraySql<Item = T18>,
-    T20: crate::client::ArraySql<Item = time::PrimitiveDateTime>,
-    T21: crate::client::ArraySql<Item = time::PrimitiveDateTime>,
-    T22: crate::client::ArraySql<Item = time::OffsetDateTime>,
-    T23: crate::client::ArraySql<Item = time::OffsetDateTime>,
-    T24: crate::client::ArraySql<Item = time::Date>,
-    T25: crate::client::ArraySql<Item = time::Time>,
-    T26: crate::client::JsonSql,
-    T27: crate::client::ArraySql<Item = T26>,
-    T28: crate::client::JsonSql,
-    T29: crate::client::ArraySql<Item = T28>,
-    T30: crate::client::ArraySql<Item = uuid::Uuid>,
-    T31: crate::client::ArraySql<Item = std::net::IpAddr>,
-    T32: crate::client::ArraySql<Item = eui48::MacAddress>,
-    T33: crate::client::ArraySql<Item = rust_decimal::Decimal>,
+    T1: crate::ArraySql<Item = bool>,
+    T2: crate::ArraySql<Item = bool>,
+    T3: crate::ArraySql<Item = i8>,
+    T4: crate::ArraySql<Item = i16>,
+    T5: crate::ArraySql<Item = i16>,
+    T6: crate::ArraySql<Item = i32>,
+    T7: crate::ArraySql<Item = i32>,
+    T8: crate::ArraySql<Item = i64>,
+    T9: crate::ArraySql<Item = i64>,
+    T10: crate::ArraySql<Item = f32>,
+    T11: crate::ArraySql<Item = f32>,
+    T12: crate::ArraySql<Item = f64>,
+    T13: crate::ArraySql<Item = f64>,
+    T14: crate::StringSql,
+    T15: crate::ArraySql<Item = T14>,
+    T16: crate::StringSql,
+    T17: crate::ArraySql<Item = T16>,
+    T18: crate::BytesSql,
+    T19: crate::ArraySql<Item = T18>,
+    T20: crate::ArraySql<Item = time::PrimitiveDateTime>,
+    T21: crate::ArraySql<Item = time::PrimitiveDateTime>,
+    T22: crate::ArraySql<Item = time::OffsetDateTime>,
+    T23: crate::ArraySql<Item = time::OffsetDateTime>,
+    T24: crate::ArraySql<Item = time::Date>,
+    T25: crate::ArraySql<Item = time::Time>,
+    T26: crate::JsonSql,
+    T27: crate::ArraySql<Item = T26>,
+    T28: crate::JsonSql,
+    T29: crate::ArraySql<Item = T28>,
+    T30: crate::ArraySql<Item = uuid::Uuid>,
+    T31: crate::ArraySql<Item = std::net::IpAddr>,
+    T32: crate::ArraySql<Item = eui48::MacAddress>,
+    T33: crate::ArraySql<Item = rust_decimal::Decimal>,
 > {
     pub bool_: T1,
     pub boolean_: T2,
@@ -440,36 +440,34 @@ pub struct EverythingArray {
     pub numeric_: Vec<rust_decimal::Decimal>,
 }
 pub struct EverythingArrayBorrowed<'a> {
-    pub bool_: crate::client::ArrayIterator<'a, bool>,
-    pub boolean_: crate::client::ArrayIterator<'a, bool>,
-    pub char_: crate::client::ArrayIterator<'a, i8>,
-    pub smallint_: crate::client::ArrayIterator<'a, i16>,
-    pub int2_: crate::client::ArrayIterator<'a, i16>,
-    pub int_: crate::client::ArrayIterator<'a, i32>,
-    pub int4_: crate::client::ArrayIterator<'a, i32>,
-    pub bingint_: crate::client::ArrayIterator<'a, i64>,
-    pub int8_: crate::client::ArrayIterator<'a, i64>,
-    pub float4_: crate::client::ArrayIterator<'a, f32>,
-    pub real_: crate::client::ArrayIterator<'a, f32>,
-    pub float8_: crate::client::ArrayIterator<'a, f64>,
-    pub double_precision_: crate::client::ArrayIterator<'a, f64>,
-    pub text_: crate::client::ArrayIterator<'a, &'a str>,
-    pub varchar_: crate::client::ArrayIterator<'a, &'a str>,
-    pub bytea_: crate::client::ArrayIterator<'a, &'a [u8]>,
-    pub timestamp_: crate::client::ArrayIterator<'a, time::PrimitiveDateTime>,
-    pub timestamp_without_time_zone_: crate::client::ArrayIterator<'a, time::PrimitiveDateTime>,
-    pub timestamptz_: crate::client::ArrayIterator<'a, time::OffsetDateTime>,
-    pub timestamp_with_time_zone_: crate::client::ArrayIterator<'a, time::OffsetDateTime>,
-    pub date_: crate::client::ArrayIterator<'a, time::Date>,
-    pub time_: crate::client::ArrayIterator<'a, time::Time>,
-    pub json_:
-        crate::client::ArrayIterator<'a, postgres_types::Json<&'a serde_json::value::RawValue>>,
-    pub jsonb_:
-        crate::client::ArrayIterator<'a, postgres_types::Json<&'a serde_json::value::RawValue>>,
-    pub uuid_: crate::client::ArrayIterator<'a, uuid::Uuid>,
-    pub inet_: crate::client::ArrayIterator<'a, std::net::IpAddr>,
-    pub macaddr_: crate::client::ArrayIterator<'a, eui48::MacAddress>,
-    pub numeric_: crate::client::ArrayIterator<'a, rust_decimal::Decimal>,
+    pub bool_: crate::ArrayIterator<'a, bool>,
+    pub boolean_: crate::ArrayIterator<'a, bool>,
+    pub char_: crate::ArrayIterator<'a, i8>,
+    pub smallint_: crate::ArrayIterator<'a, i16>,
+    pub int2_: crate::ArrayIterator<'a, i16>,
+    pub int_: crate::ArrayIterator<'a, i32>,
+    pub int4_: crate::ArrayIterator<'a, i32>,
+    pub bingint_: crate::ArrayIterator<'a, i64>,
+    pub int8_: crate::ArrayIterator<'a, i64>,
+    pub float4_: crate::ArrayIterator<'a, f32>,
+    pub real_: crate::ArrayIterator<'a, f32>,
+    pub float8_: crate::ArrayIterator<'a, f64>,
+    pub double_precision_: crate::ArrayIterator<'a, f64>,
+    pub text_: crate::ArrayIterator<'a, &'a str>,
+    pub varchar_: crate::ArrayIterator<'a, &'a str>,
+    pub bytea_: crate::ArrayIterator<'a, &'a [u8]>,
+    pub timestamp_: crate::ArrayIterator<'a, time::PrimitiveDateTime>,
+    pub timestamp_without_time_zone_: crate::ArrayIterator<'a, time::PrimitiveDateTime>,
+    pub timestamptz_: crate::ArrayIterator<'a, time::OffsetDateTime>,
+    pub timestamp_with_time_zone_: crate::ArrayIterator<'a, time::OffsetDateTime>,
+    pub date_: crate::ArrayIterator<'a, time::Date>,
+    pub time_: crate::ArrayIterator<'a, time::Time>,
+    pub json_: crate::ArrayIterator<'a, postgres_types::Json<&'a serde_json::value::RawValue>>,
+    pub jsonb_: crate::ArrayIterator<'a, postgres_types::Json<&'a serde_json::value::RawValue>>,
+    pub uuid_: crate::ArrayIterator<'a, uuid::Uuid>,
+    pub inet_: crate::ArrayIterator<'a, std::net::IpAddr>,
+    pub macaddr_: crate::ArrayIterator<'a, eui48::MacAddress>,
+    pub numeric_: crate::ArrayIterator<'a, rust_decimal::Decimal>,
 }
 impl<'a> From<EverythingArrayBorrowed<'a>> for EverythingArray {
     fn from(
@@ -572,39 +570,36 @@ pub struct EverythingArrayNull {
     pub numeric_: Option<Vec<rust_decimal::Decimal>>,
 }
 pub struct EverythingArrayNullBorrowed<'a> {
-    pub bool_: Option<crate::client::ArrayIterator<'a, bool>>,
-    pub boolean_: Option<crate::client::ArrayIterator<'a, bool>>,
-    pub char_: Option<crate::client::ArrayIterator<'a, i8>>,
-    pub smallint_: Option<crate::client::ArrayIterator<'a, i16>>,
-    pub int2_: Option<crate::client::ArrayIterator<'a, i16>>,
-    pub int_: Option<crate::client::ArrayIterator<'a, i32>>,
-    pub int4_: Option<crate::client::ArrayIterator<'a, i32>>,
-    pub bingint_: Option<crate::client::ArrayIterator<'a, i64>>,
-    pub int8_: Option<crate::client::ArrayIterator<'a, i64>>,
-    pub float4_: Option<crate::client::ArrayIterator<'a, f32>>,
-    pub real_: Option<crate::client::ArrayIterator<'a, f32>>,
-    pub float8_: Option<crate::client::ArrayIterator<'a, f64>>,
-    pub double_precision_: Option<crate::client::ArrayIterator<'a, f64>>,
-    pub text_: Option<crate::client::ArrayIterator<'a, &'a str>>,
-    pub varchar_: Option<crate::client::ArrayIterator<'a, &'a str>>,
-    pub bytea_: Option<crate::client::ArrayIterator<'a, &'a [u8]>>,
-    pub timestamp_: Option<crate::client::ArrayIterator<'a, time::PrimitiveDateTime>>,
-    pub timestamp_without_time_zone_:
-        Option<crate::client::ArrayIterator<'a, time::PrimitiveDateTime>>,
-    pub timestamptz_: Option<crate::client::ArrayIterator<'a, time::OffsetDateTime>>,
-    pub timestamp_with_time_zone_: Option<crate::client::ArrayIterator<'a, time::OffsetDateTime>>,
-    pub date_: Option<crate::client::ArrayIterator<'a, time::Date>>,
-    pub time_: Option<crate::client::ArrayIterator<'a, time::Time>>,
-    pub json_: Option<
-        crate::client::ArrayIterator<'a, postgres_types::Json<&'a serde_json::value::RawValue>>,
-    >,
-    pub jsonb_: Option<
-        crate::client::ArrayIterator<'a, postgres_types::Json<&'a serde_json::value::RawValue>>,
-    >,
-    pub uuid_: Option<crate::client::ArrayIterator<'a, uuid::Uuid>>,
-    pub inet_: Option<crate::client::ArrayIterator<'a, std::net::IpAddr>>,
-    pub macaddr_: Option<crate::client::ArrayIterator<'a, eui48::MacAddress>>,
-    pub numeric_: Option<crate::client::ArrayIterator<'a, rust_decimal::Decimal>>,
+    pub bool_: Option<crate::ArrayIterator<'a, bool>>,
+    pub boolean_: Option<crate::ArrayIterator<'a, bool>>,
+    pub char_: Option<crate::ArrayIterator<'a, i8>>,
+    pub smallint_: Option<crate::ArrayIterator<'a, i16>>,
+    pub int2_: Option<crate::ArrayIterator<'a, i16>>,
+    pub int_: Option<crate::ArrayIterator<'a, i32>>,
+    pub int4_: Option<crate::ArrayIterator<'a, i32>>,
+    pub bingint_: Option<crate::ArrayIterator<'a, i64>>,
+    pub int8_: Option<crate::ArrayIterator<'a, i64>>,
+    pub float4_: Option<crate::ArrayIterator<'a, f32>>,
+    pub real_: Option<crate::ArrayIterator<'a, f32>>,
+    pub float8_: Option<crate::ArrayIterator<'a, f64>>,
+    pub double_precision_: Option<crate::ArrayIterator<'a, f64>>,
+    pub text_: Option<crate::ArrayIterator<'a, &'a str>>,
+    pub varchar_: Option<crate::ArrayIterator<'a, &'a str>>,
+    pub bytea_: Option<crate::ArrayIterator<'a, &'a [u8]>>,
+    pub timestamp_: Option<crate::ArrayIterator<'a, time::PrimitiveDateTime>>,
+    pub timestamp_without_time_zone_: Option<crate::ArrayIterator<'a, time::PrimitiveDateTime>>,
+    pub timestamptz_: Option<crate::ArrayIterator<'a, time::OffsetDateTime>>,
+    pub timestamp_with_time_zone_: Option<crate::ArrayIterator<'a, time::OffsetDateTime>>,
+    pub date_: Option<crate::ArrayIterator<'a, time::Date>>,
+    pub time_: Option<crate::ArrayIterator<'a, time::Time>>,
+    pub json_:
+        Option<crate::ArrayIterator<'a, postgres_types::Json<&'a serde_json::value::RawValue>>>,
+    pub jsonb_:
+        Option<crate::ArrayIterator<'a, postgres_types::Json<&'a serde_json::value::RawValue>>>,
+    pub uuid_: Option<crate::ArrayIterator<'a, uuid::Uuid>>,
+    pub inet_: Option<crate::ArrayIterator<'a, std::net::IpAddr>>,
+    pub macaddr_: Option<crate::ArrayIterator<'a, eui48::MacAddress>>,
+    pub numeric_: Option<crate::ArrayIterator<'a, rust_decimal::Decimal>>,
 }
 impl<'a> From<EverythingArrayNullBorrowed<'a>> for EverythingArrayNull {
     fn from(
@@ -725,7 +720,7 @@ pub mod sync {
             let stmt = self.stmt.prepare(self.client)?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))?
+                .query_raw(stmt, crate::slice_iter(&self.params))?
                 .iterator()
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
             Ok(it)
@@ -776,7 +771,7 @@ pub mod sync {
             let stmt = self.stmt.prepare(self.client)?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))?
+                .query_raw(stmt, crate::slice_iter(&self.params))?
                 .iterator()
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
             Ok(it)
@@ -827,7 +822,7 @@ pub mod sync {
             let stmt = self.stmt.prepare(self.client)?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))?
+                .query_raw(stmt, crate::slice_iter(&self.params))?
                 .iterator()
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
             Ok(it)
@@ -878,7 +873,7 @@ pub mod sync {
             let stmt = self.stmt.prepare(self.client)?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))?
+                .query_raw(stmt, crate::slice_iter(&self.params))?
                 .iterator()
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
             Ok(it)
@@ -929,7 +924,7 @@ pub mod sync {
             let stmt = self.stmt.prepare(self.client)?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))?
+                .query_raw(stmt, crate::slice_iter(&self.params))?
                 .iterator()
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
             Ok(it)
@@ -1060,11 +1055,11 @@ FROM
         pub fn bind<
             'a,
             C: GenericClient,
-            T1: crate::client::StringSql,
-            T2: crate::client::StringSql,
-            T3: crate::client::BytesSql,
-            T4: crate::client::JsonSql,
-            T5: crate::client::JsonSql,
+            T1: crate::StringSql,
+            T2: crate::StringSql,
+            T3: crate::BytesSql,
+            T4: crate::JsonSql,
+            T5: crate::JsonSql,
         >(
             &'a mut self,
             client: &'a mut C,
@@ -1148,11 +1143,11 @@ FROM
     impl<
             'a,
             C: GenericClient,
-            T1: crate::client::StringSql,
-            T2: crate::client::StringSql,
-            T3: crate::client::BytesSql,
-            T4: crate::client::JsonSql,
-            T5: crate::client::JsonSql,
+            T1: crate::StringSql,
+            T2: crate::StringSql,
+            T3: crate::BytesSql,
+            T4: crate::JsonSql,
+            T5: crate::JsonSql,
         >
         crate::client::sync::Params<
             'a,
@@ -1318,39 +1313,39 @@ FROM
         pub fn bind<
             'a,
             C: GenericClient,
-            T1: crate::client::ArraySql<Item = bool>,
-            T2: crate::client::ArraySql<Item = bool>,
-            T3: crate::client::ArraySql<Item = i8>,
-            T4: crate::client::ArraySql<Item = i16>,
-            T5: crate::client::ArraySql<Item = i16>,
-            T6: crate::client::ArraySql<Item = i32>,
-            T7: crate::client::ArraySql<Item = i32>,
-            T8: crate::client::ArraySql<Item = i64>,
-            T9: crate::client::ArraySql<Item = i64>,
-            T10: crate::client::ArraySql<Item = f32>,
-            T11: crate::client::ArraySql<Item = f32>,
-            T12: crate::client::ArraySql<Item = f64>,
-            T13: crate::client::ArraySql<Item = f64>,
-            T14: crate::client::StringSql,
-            T15: crate::client::ArraySql<Item = T14>,
-            T16: crate::client::StringSql,
-            T17: crate::client::ArraySql<Item = T16>,
-            T18: crate::client::BytesSql,
-            T19: crate::client::ArraySql<Item = T18>,
-            T20: crate::client::ArraySql<Item = time::PrimitiveDateTime>,
-            T21: crate::client::ArraySql<Item = time::PrimitiveDateTime>,
-            T22: crate::client::ArraySql<Item = time::OffsetDateTime>,
-            T23: crate::client::ArraySql<Item = time::OffsetDateTime>,
-            T24: crate::client::ArraySql<Item = time::Date>,
-            T25: crate::client::ArraySql<Item = time::Time>,
-            T26: crate::client::JsonSql,
-            T27: crate::client::ArraySql<Item = T26>,
-            T28: crate::client::JsonSql,
-            T29: crate::client::ArraySql<Item = T28>,
-            T30: crate::client::ArraySql<Item = uuid::Uuid>,
-            T31: crate::client::ArraySql<Item = std::net::IpAddr>,
-            T32: crate::client::ArraySql<Item = eui48::MacAddress>,
-            T33: crate::client::ArraySql<Item = rust_decimal::Decimal>,
+            T1: crate::ArraySql<Item = bool>,
+            T2: crate::ArraySql<Item = bool>,
+            T3: crate::ArraySql<Item = i8>,
+            T4: crate::ArraySql<Item = i16>,
+            T5: crate::ArraySql<Item = i16>,
+            T6: crate::ArraySql<Item = i32>,
+            T7: crate::ArraySql<Item = i32>,
+            T8: crate::ArraySql<Item = i64>,
+            T9: crate::ArraySql<Item = i64>,
+            T10: crate::ArraySql<Item = f32>,
+            T11: crate::ArraySql<Item = f32>,
+            T12: crate::ArraySql<Item = f64>,
+            T13: crate::ArraySql<Item = f64>,
+            T14: crate::StringSql,
+            T15: crate::ArraySql<Item = T14>,
+            T16: crate::StringSql,
+            T17: crate::ArraySql<Item = T16>,
+            T18: crate::BytesSql,
+            T19: crate::ArraySql<Item = T18>,
+            T20: crate::ArraySql<Item = time::PrimitiveDateTime>,
+            T21: crate::ArraySql<Item = time::PrimitiveDateTime>,
+            T22: crate::ArraySql<Item = time::OffsetDateTime>,
+            T23: crate::ArraySql<Item = time::OffsetDateTime>,
+            T24: crate::ArraySql<Item = time::Date>,
+            T25: crate::ArraySql<Item = time::Time>,
+            T26: crate::JsonSql,
+            T27: crate::ArraySql<Item = T26>,
+            T28: crate::JsonSql,
+            T29: crate::ArraySql<Item = T28>,
+            T30: crate::ArraySql<Item = uuid::Uuid>,
+            T31: crate::ArraySql<Item = std::net::IpAddr>,
+            T32: crate::ArraySql<Item = eui48::MacAddress>,
+            T33: crate::ArraySql<Item = rust_decimal::Decimal>,
         >(
             &'a mut self,
             client: &'a mut C,
@@ -1422,39 +1417,39 @@ FROM
     impl<
             'a,
             C: GenericClient,
-            T1: crate::client::ArraySql<Item = bool>,
-            T2: crate::client::ArraySql<Item = bool>,
-            T3: crate::client::ArraySql<Item = i8>,
-            T4: crate::client::ArraySql<Item = i16>,
-            T5: crate::client::ArraySql<Item = i16>,
-            T6: crate::client::ArraySql<Item = i32>,
-            T7: crate::client::ArraySql<Item = i32>,
-            T8: crate::client::ArraySql<Item = i64>,
-            T9: crate::client::ArraySql<Item = i64>,
-            T10: crate::client::ArraySql<Item = f32>,
-            T11: crate::client::ArraySql<Item = f32>,
-            T12: crate::client::ArraySql<Item = f64>,
-            T13: crate::client::ArraySql<Item = f64>,
-            T14: crate::client::StringSql,
-            T15: crate::client::ArraySql<Item = T14>,
-            T16: crate::client::StringSql,
-            T17: crate::client::ArraySql<Item = T16>,
-            T18: crate::client::BytesSql,
-            T19: crate::client::ArraySql<Item = T18>,
-            T20: crate::client::ArraySql<Item = time::PrimitiveDateTime>,
-            T21: crate::client::ArraySql<Item = time::PrimitiveDateTime>,
-            T22: crate::client::ArraySql<Item = time::OffsetDateTime>,
-            T23: crate::client::ArraySql<Item = time::OffsetDateTime>,
-            T24: crate::client::ArraySql<Item = time::Date>,
-            T25: crate::client::ArraySql<Item = time::Time>,
-            T26: crate::client::JsonSql,
-            T27: crate::client::ArraySql<Item = T26>,
-            T28: crate::client::JsonSql,
-            T29: crate::client::ArraySql<Item = T28>,
-            T30: crate::client::ArraySql<Item = uuid::Uuid>,
-            T31: crate::client::ArraySql<Item = std::net::IpAddr>,
-            T32: crate::client::ArraySql<Item = eui48::MacAddress>,
-            T33: crate::client::ArraySql<Item = rust_decimal::Decimal>,
+            T1: crate::ArraySql<Item = bool>,
+            T2: crate::ArraySql<Item = bool>,
+            T3: crate::ArraySql<Item = i8>,
+            T4: crate::ArraySql<Item = i16>,
+            T5: crate::ArraySql<Item = i16>,
+            T6: crate::ArraySql<Item = i32>,
+            T7: crate::ArraySql<Item = i32>,
+            T8: crate::ArraySql<Item = i64>,
+            T9: crate::ArraySql<Item = i64>,
+            T10: crate::ArraySql<Item = f32>,
+            T11: crate::ArraySql<Item = f32>,
+            T12: crate::ArraySql<Item = f64>,
+            T13: crate::ArraySql<Item = f64>,
+            T14: crate::StringSql,
+            T15: crate::ArraySql<Item = T14>,
+            T16: crate::StringSql,
+            T17: crate::ArraySql<Item = T16>,
+            T18: crate::BytesSql,
+            T19: crate::ArraySql<Item = T18>,
+            T20: crate::ArraySql<Item = time::PrimitiveDateTime>,
+            T21: crate::ArraySql<Item = time::PrimitiveDateTime>,
+            T22: crate::ArraySql<Item = time::OffsetDateTime>,
+            T23: crate::ArraySql<Item = time::OffsetDateTime>,
+            T24: crate::ArraySql<Item = time::Date>,
+            T25: crate::ArraySql<Item = time::Time>,
+            T26: crate::JsonSql,
+            T27: crate::ArraySql<Item = T26>,
+            T28: crate::JsonSql,
+            T29: crate::ArraySql<Item = T28>,
+            T30: crate::ArraySql<Item = uuid::Uuid>,
+            T31: crate::ArraySql<Item = std::net::IpAddr>,
+            T32: crate::ArraySql<Item = eui48::MacAddress>,
+            T33: crate::ArraySql<Item = rust_decimal::Decimal>,
         >
         crate::client::sync::Params<
             'a,
@@ -1661,7 +1656,7 @@ pub mod async_ {
             let stmt = self.stmt.prepare(self.client).await?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))
+                .query_raw(stmt, crate::slice_iter(&self.params))
                 .await?
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                 .into_stream();
@@ -1716,7 +1711,7 @@ pub mod async_ {
             let stmt = self.stmt.prepare(self.client).await?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))
+                .query_raw(stmt, crate::slice_iter(&self.params))
                 .await?
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                 .into_stream();
@@ -1771,7 +1766,7 @@ pub mod async_ {
             let stmt = self.stmt.prepare(self.client).await?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))
+                .query_raw(stmt, crate::slice_iter(&self.params))
                 .await?
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                 .into_stream();
@@ -1826,7 +1821,7 @@ pub mod async_ {
             let stmt = self.stmt.prepare(self.client).await?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))
+                .query_raw(stmt, crate::slice_iter(&self.params))
                 .await?
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                 .into_stream();
@@ -1881,7 +1876,7 @@ pub mod async_ {
             let stmt = self.stmt.prepare(self.client).await?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))
+                .query_raw(stmt, crate::slice_iter(&self.params))
                 .await?
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                 .into_stream();
@@ -2013,11 +2008,11 @@ FROM
         pub async fn bind<
             'a,
             C: GenericClient,
-            T1: crate::client::StringSql,
-            T2: crate::client::StringSql,
-            T3: crate::client::BytesSql,
-            T4: crate::client::JsonSql,
-            T5: crate::client::JsonSql,
+            T1: crate::StringSql,
+            T2: crate::StringSql,
+            T3: crate::BytesSql,
+            T4: crate::JsonSql,
+            T5: crate::JsonSql,
         >(
             &'a mut self,
             client: &'a C,
@@ -2103,11 +2098,11 @@ FROM
     impl<
             'a,
             C: GenericClient + Send + Sync,
-            T1: crate::client::StringSql,
-            T2: crate::client::StringSql,
-            T3: crate::client::BytesSql,
-            T4: crate::client::JsonSql,
-            T5: crate::client::JsonSql,
+            T1: crate::StringSql,
+            T2: crate::StringSql,
+            T3: crate::BytesSql,
+            T4: crate::JsonSql,
+            T5: crate::JsonSql,
         >
         crate::client::async_::Params<
             'a,
@@ -2277,39 +2272,39 @@ FROM
         pub async fn bind<
             'a,
             C: GenericClient,
-            T1: crate::client::ArraySql<Item = bool>,
-            T2: crate::client::ArraySql<Item = bool>,
-            T3: crate::client::ArraySql<Item = i8>,
-            T4: crate::client::ArraySql<Item = i16>,
-            T5: crate::client::ArraySql<Item = i16>,
-            T6: crate::client::ArraySql<Item = i32>,
-            T7: crate::client::ArraySql<Item = i32>,
-            T8: crate::client::ArraySql<Item = i64>,
-            T9: crate::client::ArraySql<Item = i64>,
-            T10: crate::client::ArraySql<Item = f32>,
-            T11: crate::client::ArraySql<Item = f32>,
-            T12: crate::client::ArraySql<Item = f64>,
-            T13: crate::client::ArraySql<Item = f64>,
-            T14: crate::client::StringSql,
-            T15: crate::client::ArraySql<Item = T14>,
-            T16: crate::client::StringSql,
-            T17: crate::client::ArraySql<Item = T16>,
-            T18: crate::client::BytesSql,
-            T19: crate::client::ArraySql<Item = T18>,
-            T20: crate::client::ArraySql<Item = time::PrimitiveDateTime>,
-            T21: crate::client::ArraySql<Item = time::PrimitiveDateTime>,
-            T22: crate::client::ArraySql<Item = time::OffsetDateTime>,
-            T23: crate::client::ArraySql<Item = time::OffsetDateTime>,
-            T24: crate::client::ArraySql<Item = time::Date>,
-            T25: crate::client::ArraySql<Item = time::Time>,
-            T26: crate::client::JsonSql,
-            T27: crate::client::ArraySql<Item = T26>,
-            T28: crate::client::JsonSql,
-            T29: crate::client::ArraySql<Item = T28>,
-            T30: crate::client::ArraySql<Item = uuid::Uuid>,
-            T31: crate::client::ArraySql<Item = std::net::IpAddr>,
-            T32: crate::client::ArraySql<Item = eui48::MacAddress>,
-            T33: crate::client::ArraySql<Item = rust_decimal::Decimal>,
+            T1: crate::ArraySql<Item = bool>,
+            T2: crate::ArraySql<Item = bool>,
+            T3: crate::ArraySql<Item = i8>,
+            T4: crate::ArraySql<Item = i16>,
+            T5: crate::ArraySql<Item = i16>,
+            T6: crate::ArraySql<Item = i32>,
+            T7: crate::ArraySql<Item = i32>,
+            T8: crate::ArraySql<Item = i64>,
+            T9: crate::ArraySql<Item = i64>,
+            T10: crate::ArraySql<Item = f32>,
+            T11: crate::ArraySql<Item = f32>,
+            T12: crate::ArraySql<Item = f64>,
+            T13: crate::ArraySql<Item = f64>,
+            T14: crate::StringSql,
+            T15: crate::ArraySql<Item = T14>,
+            T16: crate::StringSql,
+            T17: crate::ArraySql<Item = T16>,
+            T18: crate::BytesSql,
+            T19: crate::ArraySql<Item = T18>,
+            T20: crate::ArraySql<Item = time::PrimitiveDateTime>,
+            T21: crate::ArraySql<Item = time::PrimitiveDateTime>,
+            T22: crate::ArraySql<Item = time::OffsetDateTime>,
+            T23: crate::ArraySql<Item = time::OffsetDateTime>,
+            T24: crate::ArraySql<Item = time::Date>,
+            T25: crate::ArraySql<Item = time::Time>,
+            T26: crate::JsonSql,
+            T27: crate::ArraySql<Item = T26>,
+            T28: crate::JsonSql,
+            T29: crate::ArraySql<Item = T28>,
+            T30: crate::ArraySql<Item = uuid::Uuid>,
+            T31: crate::ArraySql<Item = std::net::IpAddr>,
+            T32: crate::ArraySql<Item = eui48::MacAddress>,
+            T33: crate::ArraySql<Item = rust_decimal::Decimal>,
         >(
             &'a mut self,
             client: &'a C,
@@ -2383,39 +2378,39 @@ FROM
     impl<
             'a,
             C: GenericClient + Send + Sync,
-            T1: crate::client::ArraySql<Item = bool>,
-            T2: crate::client::ArraySql<Item = bool>,
-            T3: crate::client::ArraySql<Item = i8>,
-            T4: crate::client::ArraySql<Item = i16>,
-            T5: crate::client::ArraySql<Item = i16>,
-            T6: crate::client::ArraySql<Item = i32>,
-            T7: crate::client::ArraySql<Item = i32>,
-            T8: crate::client::ArraySql<Item = i64>,
-            T9: crate::client::ArraySql<Item = i64>,
-            T10: crate::client::ArraySql<Item = f32>,
-            T11: crate::client::ArraySql<Item = f32>,
-            T12: crate::client::ArraySql<Item = f64>,
-            T13: crate::client::ArraySql<Item = f64>,
-            T14: crate::client::StringSql,
-            T15: crate::client::ArraySql<Item = T14>,
-            T16: crate::client::StringSql,
-            T17: crate::client::ArraySql<Item = T16>,
-            T18: crate::client::BytesSql,
-            T19: crate::client::ArraySql<Item = T18>,
-            T20: crate::client::ArraySql<Item = time::PrimitiveDateTime>,
-            T21: crate::client::ArraySql<Item = time::PrimitiveDateTime>,
-            T22: crate::client::ArraySql<Item = time::OffsetDateTime>,
-            T23: crate::client::ArraySql<Item = time::OffsetDateTime>,
-            T24: crate::client::ArraySql<Item = time::Date>,
-            T25: crate::client::ArraySql<Item = time::Time>,
-            T26: crate::client::JsonSql,
-            T27: crate::client::ArraySql<Item = T26>,
-            T28: crate::client::JsonSql,
-            T29: crate::client::ArraySql<Item = T28>,
-            T30: crate::client::ArraySql<Item = uuid::Uuid>,
-            T31: crate::client::ArraySql<Item = std::net::IpAddr>,
-            T32: crate::client::ArraySql<Item = eui48::MacAddress>,
-            T33: crate::client::ArraySql<Item = rust_decimal::Decimal>,
+            T1: crate::ArraySql<Item = bool>,
+            T2: crate::ArraySql<Item = bool>,
+            T3: crate::ArraySql<Item = i8>,
+            T4: crate::ArraySql<Item = i16>,
+            T5: crate::ArraySql<Item = i16>,
+            T6: crate::ArraySql<Item = i32>,
+            T7: crate::ArraySql<Item = i32>,
+            T8: crate::ArraySql<Item = i64>,
+            T9: crate::ArraySql<Item = i64>,
+            T10: crate::ArraySql<Item = f32>,
+            T11: crate::ArraySql<Item = f32>,
+            T12: crate::ArraySql<Item = f64>,
+            T13: crate::ArraySql<Item = f64>,
+            T14: crate::StringSql,
+            T15: crate::ArraySql<Item = T14>,
+            T16: crate::StringSql,
+            T17: crate::ArraySql<Item = T16>,
+            T18: crate::BytesSql,
+            T19: crate::ArraySql<Item = T18>,
+            T20: crate::ArraySql<Item = time::PrimitiveDateTime>,
+            T21: crate::ArraySql<Item = time::PrimitiveDateTime>,
+            T22: crate::ArraySql<Item = time::OffsetDateTime>,
+            T23: crate::ArraySql<Item = time::OffsetDateTime>,
+            T24: crate::ArraySql<Item = time::Date>,
+            T25: crate::ArraySql<Item = time::Time>,
+            T26: crate::JsonSql,
+            T27: crate::ArraySql<Item = T26>,
+            T28: crate::JsonSql,
+            T29: crate::ArraySql<Item = T28>,
+            T30: crate::ArraySql<Item = uuid::Uuid>,
+            T31: crate::ArraySql<Item = std::net::IpAddr>,
+            T32: crate::ArraySql<Item = eui48::MacAddress>,
+            T33: crate::ArraySql<Item = rust_decimal::Decimal>,
         >
         crate::client::async_::Params<
             'a,

@@ -1,22 +1,22 @@
 // This file was generated with `cornucopia`. Do not modify.
 
 #[derive(Debug)]
-pub struct ImplicitCompactParams<T1: crate::client::StringSql> {
+pub struct ImplicitCompactParams<T1: crate::StringSql> {
     pub name: Option<T1>,
     pub price: Option<f64>,
 }
 #[derive(Debug)]
-pub struct ImplicitSpacedParams<T1: crate::client::StringSql> {
+pub struct ImplicitSpacedParams<T1: crate::StringSql> {
     pub name: Option<T1>,
     pub price: Option<f64>,
 }
 #[derive(Debug)]
-pub struct Params<T1: crate::client::StringSql> {
+pub struct Params<T1: crate::StringSql> {
     pub name: T1,
     pub price: f64,
 }
 #[derive(Debug)]
-pub struct ParamsSpace<T1: crate::client::StringSql> {
+pub struct ParamsSpace<T1: crate::StringSql> {
     pub name: T1,
     pub price: f64,
 }
@@ -151,7 +151,7 @@ pub mod sync {
             let stmt = self.stmt.prepare(self.client)?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))?
+                .query_raw(stmt, crate::slice_iter(&self.params))?
                 .iterator()
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
             Ok(it)
@@ -199,7 +199,7 @@ pub mod sync {
             let stmt = self.stmt.prepare(self.client)?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))?
+                .query_raw(stmt, crate::slice_iter(&self.params))?
                 .iterator()
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
             Ok(it)
@@ -247,7 +247,7 @@ pub mod sync {
             let stmt = self.stmt.prepare(self.client)?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))?
+                .query_raw(stmt, crate::slice_iter(&self.params))?
                 .iterator()
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
             Ok(it)
@@ -295,7 +295,7 @@ pub mod sync {
             let stmt = self.stmt.prepare(self.client)?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))?
+                .query_raw(stmt, crate::slice_iter(&self.params))?
                 .iterator()
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
             Ok(it)
@@ -343,7 +343,7 @@ pub mod sync {
             let stmt = self.stmt.prepare(self.client)?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))?
+                .query_raw(stmt, crate::slice_iter(&self.params))?
                 .iterator()
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
             Ok(it)
@@ -392,7 +392,7 @@ pub mod sync {
     }
     pub struct ImplicitCompactStmt(crate::client::sync::Stmt);
     impl ImplicitCompactStmt {
-        pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
+        pub fn bind<'a, C: GenericClient, T1: crate::StringSql>(
             &'a mut self,
             client: &'a mut C,
             name: &'a Option<T1>,
@@ -407,7 +407,7 @@ pub mod sync {
             }
         }
     }
-    impl<'a, C: GenericClient, T1: crate::client::StringSql>
+    impl<'a, C: GenericClient, T1: crate::StringSql>
         crate::client::sync::Params<
             'a,
             super::ImplicitCompactParams<T1>,
@@ -430,7 +430,7 @@ pub mod sync {
     }
     pub struct ImplicitSpacedStmt(crate::client::sync::Stmt);
     impl ImplicitSpacedStmt {
-        pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
+        pub fn bind<'a, C: GenericClient, T1: crate::StringSql>(
             &'a mut self,
             client: &'a mut C,
             name: &'a Option<T1>,
@@ -445,7 +445,7 @@ pub mod sync {
             }
         }
     }
-    impl<'a, C: GenericClient, T1: crate::client::StringSql>
+    impl<'a, C: GenericClient, T1: crate::StringSql>
         crate::client::sync::Params<
             'a,
             super::ImplicitSpacedParams<T1>,
@@ -468,7 +468,7 @@ pub mod sync {
     }
     pub struct NamedCompactStmt(crate::client::sync::Stmt);
     impl NamedCompactStmt {
-        pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
+        pub fn bind<'a, C: GenericClient, T1: crate::StringSql>(
             &'a mut self,
             client: &'a mut C,
             name: &'a T1,
@@ -483,7 +483,7 @@ pub mod sync {
             }
         }
     }
-    impl<'a, C: GenericClient, T1: crate::client::StringSql>
+    impl<'a, C: GenericClient, T1: crate::StringSql>
         crate::client::sync::Params<'a, super::Params<T1>, RowQuery<'a, C, super::Row, 2>, C>
         for NamedCompactStmt
     {
@@ -502,7 +502,7 @@ pub mod sync {
     }
     pub struct NamedSpacedStmt(crate::client::sync::Stmt);
     impl NamedSpacedStmt {
-        pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
+        pub fn bind<'a, C: GenericClient, T1: crate::StringSql>(
             &'a mut self,
             client: &'a mut C,
             name: &'a T1,
@@ -517,7 +517,7 @@ pub mod sync {
             }
         }
     }
-    impl<'a, C: GenericClient, T1: crate::client::StringSql>
+    impl<'a, C: GenericClient, T1: crate::StringSql>
         crate::client::sync::Params<
             'a,
             super::ParamsSpace<T1>,
@@ -877,7 +877,7 @@ pub mod async_ {
             let stmt = self.stmt.prepare(self.client).await?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))
+                .query_raw(stmt, crate::slice_iter(&self.params))
                 .await?
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                 .into_stream();
@@ -929,7 +929,7 @@ pub mod async_ {
             let stmt = self.stmt.prepare(self.client).await?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))
+                .query_raw(stmt, crate::slice_iter(&self.params))
                 .await?
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                 .into_stream();
@@ -981,7 +981,7 @@ pub mod async_ {
             let stmt = self.stmt.prepare(self.client).await?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))
+                .query_raw(stmt, crate::slice_iter(&self.params))
                 .await?
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                 .into_stream();
@@ -1033,7 +1033,7 @@ pub mod async_ {
             let stmt = self.stmt.prepare(self.client).await?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))
+                .query_raw(stmt, crate::slice_iter(&self.params))
                 .await?
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                 .into_stream();
@@ -1085,7 +1085,7 @@ pub mod async_ {
             let stmt = self.stmt.prepare(self.client).await?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))
+                .query_raw(stmt, crate::slice_iter(&self.params))
                 .await?
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                 .into_stream();
@@ -1137,7 +1137,7 @@ pub mod async_ {
     }
     pub struct ImplicitCompactStmt(crate::client::async_::Stmt);
     impl ImplicitCompactStmt {
-        pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
+        pub fn bind<'a, C: GenericClient, T1: crate::StringSql>(
             &'a mut self,
             client: &'a C,
             name: &'a Option<T1>,
@@ -1152,7 +1152,7 @@ pub mod async_ {
             }
         }
     }
-    impl<'a, C: GenericClient, T1: crate::client::StringSql>
+    impl<'a, C: GenericClient, T1: crate::StringSql>
         crate::client::async_::Params<
             'a,
             super::ImplicitCompactParams<T1>,
@@ -1175,7 +1175,7 @@ pub mod async_ {
     }
     pub struct ImplicitSpacedStmt(crate::client::async_::Stmt);
     impl ImplicitSpacedStmt {
-        pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
+        pub fn bind<'a, C: GenericClient, T1: crate::StringSql>(
             &'a mut self,
             client: &'a C,
             name: &'a Option<T1>,
@@ -1190,7 +1190,7 @@ pub mod async_ {
             }
         }
     }
-    impl<'a, C: GenericClient, T1: crate::client::StringSql>
+    impl<'a, C: GenericClient, T1: crate::StringSql>
         crate::client::async_::Params<
             'a,
             super::ImplicitSpacedParams<T1>,
@@ -1213,7 +1213,7 @@ pub mod async_ {
     }
     pub struct NamedCompactStmt(crate::client::async_::Stmt);
     impl NamedCompactStmt {
-        pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
+        pub fn bind<'a, C: GenericClient, T1: crate::StringSql>(
             &'a mut self,
             client: &'a C,
             name: &'a T1,
@@ -1228,7 +1228,7 @@ pub mod async_ {
             }
         }
     }
-    impl<'a, C: GenericClient, T1: crate::client::StringSql>
+    impl<'a, C: GenericClient, T1: crate::StringSql>
         crate::client::async_::Params<'a, super::Params<T1>, RowQuery<'a, C, super::Row, 2>, C>
         for NamedCompactStmt
     {
@@ -1247,7 +1247,7 @@ pub mod async_ {
     }
     pub struct NamedSpacedStmt(crate::client::async_::Stmt);
     impl NamedSpacedStmt {
-        pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
+        pub fn bind<'a, C: GenericClient, T1: crate::StringSql>(
             &'a mut self,
             client: &'a C,
             name: &'a T1,
@@ -1262,7 +1262,7 @@ pub mod async_ {
             }
         }
     }
-    impl<'a, C: GenericClient, T1: crate::client::StringSql>
+    impl<'a, C: GenericClient, T1: crate::StringSql>
         crate::client::async_::Params<
             'a,
             super::ParamsSpace<T1>,

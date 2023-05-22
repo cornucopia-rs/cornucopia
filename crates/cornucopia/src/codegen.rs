@@ -1,7 +1,4 @@
 use core::str;
-use std::fmt::Write;
-
-use codegen_template::code;
 
 use crate::{
     prepare_queries::{Preparation, PreparedField},
@@ -134,27 +131,14 @@ pub fn idx_char(idx: usize) -> String {
     format!("T{idx}")
 }
 
-fn gen_lib() -> String {
-    code!($WARNING
-        #[allow(clippy::all, clippy::pedantic)]
-        #[allow(unused_variables)]
-        #[allow(unused_imports)]
-        #[allow(dead_code)]
-        pub mod types;
-        #[allow(clippy::all, clippy::pedantic)]
-        #[allow(unused_variables)]
-        #[allow(unused_imports)]
-        #[allow(dead_code)]
-        pub mod queries;
-        pub mod client;
-    )
-}
-
 pub(crate) fn gen(name: &str, preparation: Preparation, settings: CodegenSettings) -> Vfs {
     let mut vfs = Vfs::empty();
     let cargo = cargo::gen_cargo_file(name, &preparation.dependency_analysis, settings);
     vfs.add("Cargo.toml", cargo);
-    vfs.add("src/lib.rs", gen_lib());
+    vfs.add(
+        "src/lib.rs",
+        client::gen_lib(&preparation.dependency_analysis),
+    );
     let types = gen_type_modules(&preparation.types, &settings);
     vfs.add("src/types.rs", types);
     queries::gen_queries(&mut vfs, &preparation, settings);

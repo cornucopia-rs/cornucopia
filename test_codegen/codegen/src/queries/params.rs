@@ -1,7 +1,7 @@
 // This file was generated with `cornucopia`. Do not modify.
 
 #[derive(Debug)]
-pub struct InsertBookParams<T1: crate::client::StringSql, T2: crate::client::StringSql> {
+pub struct InsertBookParams<T1: crate::StringSql, T2: crate::StringSql> {
     pub author: Option<T1>,
     pub name: T2,
 }
@@ -91,7 +91,7 @@ pub mod sync {
             let stmt = self.stmt.prepare(self.client)?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))?
+                .query_raw(stmt, crate::slice_iter(&self.params))?
                 .iterator()
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
             Ok(it)
@@ -142,7 +142,7 @@ pub mod sync {
             let stmt = self.stmt.prepare(self.client)?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))?
+                .query_raw(stmt, crate::slice_iter(&self.params))?
                 .iterator()
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
             Ok(it)
@@ -155,12 +155,7 @@ pub mod sync {
     }
     pub struct InsertBookStmt(crate::client::sync::Stmt);
     impl InsertBookStmt {
-        pub fn bind<
-            'a,
-            C: GenericClient,
-            T1: crate::client::StringSql,
-            T2: crate::client::StringSql,
-        >(
+        pub fn bind<'a, C: GenericClient, T1: crate::StringSql, T2: crate::StringSql>(
             &'a mut self,
             client: &'a mut C,
             author: &'a Option<T1>,
@@ -170,7 +165,7 @@ pub mod sync {
             client.execute(stmt, &[author, name])
         }
     }
-    impl<'a, C: GenericClient, T1: crate::client::StringSql, T2: crate::client::StringSql>
+    impl<'a, C: GenericClient, T1: crate::StringSql, T2: crate::StringSql>
         crate::client::sync::Params<
             'a,
             super::InsertBookParams<T1, T2>,
@@ -214,12 +209,7 @@ pub mod sync {
     }
     pub struct FindBooksStmt(crate::client::sync::Stmt);
     impl FindBooksStmt {
-        pub fn bind<
-            'a,
-            C: GenericClient,
-            T1: crate::client::StringSql,
-            T2: crate::client::ArraySql<Item = T1>,
-        >(
+        pub fn bind<'a, C: GenericClient, T1: crate::StringSql, T2: crate::ArraySql<Item = T1>>(
             &'a mut self,
             client: &'a mut C,
             title: &'a T2,
@@ -243,7 +233,7 @@ pub mod sync {
     }
     pub struct ParamsUseTwiceStmt(crate::client::sync::Stmt);
     impl ParamsUseTwiceStmt {
-        pub fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
+        pub fn bind<'a, C: GenericClient, T1: crate::StringSql>(
             &'a mut self,
             client: &'a mut C,
             name: &'a T1,
@@ -333,7 +323,7 @@ pub mod async_ {
             let stmt = self.stmt.prepare(self.client).await?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))
+                .query_raw(stmt, crate::slice_iter(&self.params))
                 .await?
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                 .into_stream();
@@ -388,7 +378,7 @@ pub mod async_ {
             let stmt = self.stmt.prepare(self.client).await?;
             let it = self
                 .client
-                .query_raw(stmt, crate::client::slice_iter(&self.params))
+                .query_raw(stmt, crate::slice_iter(&self.params))
                 .await?
                 .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                 .into_stream();
@@ -402,12 +392,7 @@ pub mod async_ {
     }
     pub struct InsertBookStmt(crate::client::async_::Stmt);
     impl InsertBookStmt {
-        pub async fn bind<
-            'a,
-            C: GenericClient,
-            T1: crate::client::StringSql,
-            T2: crate::client::StringSql,
-        >(
+        pub async fn bind<'a, C: GenericClient, T1: crate::StringSql, T2: crate::StringSql>(
             &'a mut self,
             client: &'a C,
             author: &'a Option<T1>,
@@ -417,12 +402,7 @@ pub mod async_ {
             client.execute(stmt, &[author, name]).await
         }
     }
-    impl<
-            'a,
-            C: GenericClient + Send + Sync,
-            T1: crate::client::StringSql,
-            T2: crate::client::StringSql,
-        >
+    impl<'a, C: GenericClient + Send + Sync, T1: crate::StringSql, T2: crate::StringSql>
         crate::client::async_::Params<
             'a,
             super::InsertBookParams<T1, T2>,
@@ -470,12 +450,7 @@ pub mod async_ {
     }
     pub struct FindBooksStmt(crate::client::async_::Stmt);
     impl FindBooksStmt {
-        pub fn bind<
-            'a,
-            C: GenericClient,
-            T1: crate::client::StringSql,
-            T2: crate::client::ArraySql<Item = T1>,
-        >(
+        pub fn bind<'a, C: GenericClient, T1: crate::StringSql, T2: crate::ArraySql<Item = T1>>(
             &'a mut self,
             client: &'a C,
             title: &'a T2,
@@ -499,7 +474,7 @@ pub mod async_ {
     }
     pub struct ParamsUseTwiceStmt(crate::client::async_::Stmt);
     impl ParamsUseTwiceStmt {
-        pub async fn bind<'a, C: GenericClient, T1: crate::client::StringSql>(
+        pub async fn bind<'a, C: GenericClient, T1: crate::StringSql>(
             &'a mut self,
             client: &'a C,
             name: &'a T1,

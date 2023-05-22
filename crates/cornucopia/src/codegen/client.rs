@@ -5,35 +5,20 @@ use crate::CodegenSettings;
 
 use super::{vfs::Vfs, DependencyAnalysis, WARNING};
 
-pub(crate) fn gen_clients(
-    vfs: &mut Vfs,
-    dependency_analysis: &DependencyAnalysis,
-    settings: &CodegenSettings,
-) {
-    // Generate common client files
-    vfs.add("src/client/utils.rs", core_utils());
-    vfs.add("src/client/domain.rs", core_domain());
-    vfs.add("src/client/array_iterator.rs", core_array());
-    vfs.add(
-        "src/client/type_traits.rs",
-        core_type_traits(dependency_analysis),
-    );
-    if settings.gen_sync {
-        vfs.add("src/client/sync.rs", sync());
-    }
-    if settings.gen_async {
-        vfs.add("src/client/async_.rs", async_());
-        vfs.add(
-            "src/client/async_/generic_client.rs",
-            async_generic_client(),
-        );
-        vfs.add("src/client/async_/deadpool.rs", async_deadpool());
-    }
-    vfs.add("src/client.rs", client(settings, dependency_analysis))
-}
-
-pub fn client(settings: &CodegenSettings, dependency_analysis: &DependencyAnalysis) -> String {
+pub(crate) fn gen_lib(dependency_analysis: &DependencyAnalysis) -> String {
     let mut w = code!($WARNING
+        #[allow(clippy::all, clippy::pedantic)]
+        #[allow(unused_variables)]
+        #[allow(unused_imports)]
+        #[allow(dead_code)]
+        pub mod types;
+        #[allow(clippy::all, clippy::pedantic)]
+        #[allow(unused_variables)]
+        #[allow(unused_imports)]
+        #[allow(dead_code)]
+        pub mod queries;
+        pub mod client;
+
         mod array_iterator;
         mod domain;
         mod type_traits;
@@ -45,32 +30,52 @@ pub fn client(settings: &CodegenSettings, dependency_analysis: &DependencyAnalys
         pub use domain::{Domain, DomainArray};
         pub use type_traits::{ArraySql, BytesSql, IterSql, StringSql};
     );
-
     if dependency_analysis.json {
         code!(w => pub use type_traits::JsonSql; )
     }
 
-    match (settings.gen_async, settings.gen_sync) {
-        (true, false) => {
-            code!(w =>
-                pub(crate) mod async_;
-                pub use async_::*;
-            )
-        }
-        (false, true) => {
-            code!(w =>
-                pub(crate) mod sync;
-                pub use sync::*;
-            )
-        }
-        _ => {
-            code!(w =>
-                pub mod sync;
-                pub mod async_;
-            )
-        }
-    };
     w
+}
+
+pub(crate) fn gen_clients(
+    vfs: &mut Vfs,
+    dependency_analysis: &DependencyAnalysis,
+    settings: &CodegenSettings,
+) {
+    // Generate common files
+    vfs.add("src/utils.rs", core_utils());
+    vfs.add("src/domain.rs", core_domain());
+    vfs.add("src/array_iterator.rs", core_array());
+    vfs.add("src/type_traits.rs", core_type_traits(dependency_analysis));
+    if settings.gen_sync {
+        vfs.add("src/client/sync.rs", sync());
+    }
+    if settings.gen_async {
+        vfs.add("src/client/async_.rs", async_());
+        vfs.add(
+            "src/client/async_/generic_client.rs",
+            async_generic_client(),
+        );
+        vfs.add("src/client/async_/deadpool.rs", async_deadpool());
+    }
+    vfs.add("src/client.rs", client(settings))
+}
+
+pub fn client(settings: &CodegenSettings) -> String {
+    match (settings.gen_async, settings.gen_sync) {
+        (true, false) => code!(
+            pub(crate) mod async_;
+            pub use async_::*;
+        ),
+        (false, true) => code!(
+            pub(crate) mod sync;
+            pub use sync::*;
+        ),
+        _ => code!(
+            pub mod sync;
+            pub mod async_;
+        ),
+    }
 }
 
 pub fn core_utils() -> String {
