@@ -58,7 +58,7 @@ pub fn gen_live<P: AsRef<Path>>(
         settings,
     );
     // Write
-    generated.persist(destination).expect("TODO error handling");
+    generated.persist(destination)?;
 
     Ok(())
 }
@@ -92,7 +92,7 @@ pub fn gen_managed<P: AsRef<Path>>(
     );
     container::cleanup(podman)?;
     // Write
-    generated.persist(destination).expect("TODO error handling");
+    generated.persist(destination)?;
 
     Ok(())
 }
