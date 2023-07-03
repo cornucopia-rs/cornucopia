@@ -10,7 +10,7 @@ edition = "2021"
 cornucopia = { path = "../crates/cornucopia" }
 
 # benchmarking
-criterion = { version = "0.4.0", features = ["html_reports"] }
+criterion = { version = "0.5.1", features = ["html_reports"] }
 
 # async
 tokio = { version = "1.28.1", features = ["macros", "rt-multi-thread"] }
