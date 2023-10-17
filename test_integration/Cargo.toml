@@ -25,4 +25,4 @@ postgres = { version = "0.19.4" }
 ## Test fixtures ser/de
 serde = { version = "1.0.148", features = ["derive"] }
 ## Read/write fixture files
-toml = "0.7.2"
+toml = "0.8.2"
