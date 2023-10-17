@@ -53,7 +53,7 @@ impl<'a, T: FromSql<'a>> FromSql<'a> for ArrayIterator<'a, T> {
         Ok(ArrayIterator {
             ty: member_type.clone(),
             values: array.values(),
-            _type: PhantomData::default(),
+            _type: PhantomData,
         })
     }
 

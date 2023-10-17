@@ -224,7 +224,8 @@ impl Query {
                     .iter()
                     .enumerate()
                     .rev()
-                    .filter_map(|(i, u)| (!bind_params[..i].contains(u)).then(|| u.clone()))
+                    .filter(|(i, u)| !bind_params[..*i].contains(u))
+                    .map(|(_, u)| u.clone())
                     .rev()
                     .collect();
 
