@@ -147,7 +147,7 @@ pub fn gen_cargo_file(
 
             ## Async features dependencies
             # Async connection pooling
-            deadpool-postgres = {{ version = "0.10.5", optional = true }}
+            deadpool-postgres = {{ version = "0.11.0", optional = true }}
         "#}
         .unwrap();
     }

@@ -10,6 +10,6 @@ codegen = { path = "basic_async_codegen", package = "basic_async_codegen" }
 tokio = { version = "1.28.1", features = ["macros", "rt-multi-thread"] }
 futures = "0.3.28"
 # Postgres interaction
-tokio-postgres = "0.7.8"
-# Connection pooling
-deadpool-postgres = "0.10.5"
+tokio-postgres = "0.7.7"
+## Connection pooling
+deadpool-postgres = "0.11.0"

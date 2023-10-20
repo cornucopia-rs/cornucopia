@@ -129,8 +129,7 @@ pub fn test_trait_sql(client: &mut Client) {
         .unwrap();
     find_books().bind(client, &vec![cow]).all().unwrap();
 
-    let map: HashMap<&str, &str> =
-        HashMap::from_iter([("one", "1"), ("two", "2"), ("three", "3")].into_iter());
+    let map: HashMap<&str, &str> = HashMap::from_iter([("one", "1"), ("two", "2"), ("three", "3")]);
 
     // Old way with allocation
     let vec: Vec<_> = map.values().collect();
@@ -297,7 +296,7 @@ pub fn test_named(client: &mut Client) {
 }
 
 // Test we correctly implement borrowed version and copy derive
-#[allow(clippy::drop_copy)]
+#[allow(dropping_copy_types)]
 pub fn test_copy(client: &mut Client) {
     // Test copy
     let copy_params = CopyComposite {

@@ -273,7 +273,7 @@ pub fn core_array() -> String {
                 Ok(ArrayIterator {
                     ty: member_type.clone(),
                     values: array.values(),
-                    _type: PhantomData::default(),
+                    _type: PhantomData,
                 })
             }
 
