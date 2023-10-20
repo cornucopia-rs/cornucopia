@@ -32,4 +32,4 @@ clap = { version = "4.1.1", features = ["derive"] }
 heck = "0.4.0"
 
 # Order-preserving map to work around borrowing issues
-indexmap = "1.9.2"
+indexmap = "2.0.2"
