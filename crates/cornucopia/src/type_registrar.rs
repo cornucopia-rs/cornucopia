@@ -455,7 +455,7 @@ pub(crate) mod error {
     #[derive(Debug, ThisError, Diagnostic)]
     #[error("Couldn't register SQL type.")]
     pub enum Error {
-        Db(#[from] postgres::Error),
+        Db(#[from] tokio_postgres::Error),
         UnsupportedPostgresType {
             #[source_code]
             src: NamedSource,

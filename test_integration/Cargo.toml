@@ -20,6 +20,8 @@ clap = { version = "4.0.29", features = ["derive"] }
 
 # Postgres interaction
 postgres = { version = "0.19.4" }
+tokio-postgres = "0.7.8"
+futures = "0.3.28"
 
 # serde
 ## Test fixtures ser/de

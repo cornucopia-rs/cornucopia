@@ -15,8 +15,12 @@ keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
 codegen_template = { path = "../codegen_template", version = "0.1.0" }
 
 # Postgres interaction
-postgres = "0.19.4"
+tokio-postgres = "0.7.8"
 postgres-types = "0.2.4"
+
+# Async
+tokio = { version = "1.28.1", features = ["rt-multi-thread"] }
+futures = "0.3.28"
 
 # Error handling and reporting
 thiserror = "1.0.38"

@@ -64,8 +64,8 @@ pub fn run() -> Result<(), Error> {
 
     match action {
         Action::Live { url } => {
-            let mut client = conn::from_url(&url)?;
-            generate_live(&mut client, &queries_path, Some(&destination), settings)?;
+            let client = conn::from_url(&url)?;
+            generate_live(&client, &queries_path, Some(&destination), settings)?;
         }
         Action::Schema { schema_files } => {
             // Run the generate command. If the command is unsuccessful, cleanup Cornucopia's container

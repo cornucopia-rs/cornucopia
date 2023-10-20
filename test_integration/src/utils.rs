@@ -5,8 +5,10 @@ use std::{
 };
 
 /// Reset the current database
-pub(crate) fn reset_db(client: &mut postgres::Client) -> Result<(), postgres::Error> {
-    client.batch_execute("DROP SCHEMA public CASCADE;CREATE SCHEMA public;")
+pub(crate) fn reset_db(client: &tokio_postgres::Client) -> Result<(), postgres::Error> {
+    futures::executor::block_on(
+        client.batch_execute("DROP SCHEMA public CASCADE;CREATE SCHEMA public;"),
+    )
 }
 
 pub(crate) fn rustfmt_file(path: &Path) {

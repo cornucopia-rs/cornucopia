@@ -1,6 +1,6 @@
 use indexmap::Equivalent;
-use postgres::error::ErrorPosition;
 use postgres_types::Type;
+use tokio_postgres::error::ErrorPosition;
 
 /// Allows us to query a map using type schema as key without having to own the key strings
 #[derive(PartialEq, Eq, Hash)]
@@ -34,7 +34,7 @@ pub fn find_duplicate<T>(slice: &[T], eq: fn(&T, &T) -> bool) -> Option<(&T, &T)
 }
 
 /// Extracts useful info from a `postgres`-generated error.
-pub(crate) fn db_err(err: &postgres::Error) -> Option<(u32, String, Option<String>)> {
+pub(crate) fn db_err(err: &tokio_postgres::Error) -> Option<(u32, String, Option<String>)> {
     if let Some(db_err) = err.as_db_error() {
         if let Some(ErrorPosition::Original(position)) = db_err.position() {
             Some((

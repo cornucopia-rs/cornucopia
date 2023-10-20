@@ -1,9 +1,10 @@
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 
+use futures::{stream::FuturesUnordered, StreamExt};
 use heck::ToUpperCamelCase;
 use indexmap::{map::Entry, IndexMap};
-use postgres::Client;
 use postgres_types::{Kind, Type};
+use tokio_postgres::{Client, Statement};
 
 use crate::{
     codegen::GenCtx,
@@ -226,7 +227,8 @@ impl PreparedModule {
 }
 
 /// Prepares all modules
-pub(crate) fn prepare(client: &mut Client, modules: Vec<Module>) -> Result<Preparation, Error> {
+pub(crate) fn prepare(client: &Client, modules: Vec<Module>) -> Result<Preparation, Error> {
+    let stmts = prepare_sql(client, &modules);
     let mut registrar = TypeRegistrar::default();
     let mut tmp = Preparation {
         modules: Vec::new(),
@@ -240,7 +242,7 @@ pub(crate) fn prepare(client: &mut Client, modules: Vec<Module>) -> Result<Prepa
 
     for module in modules {
         tmp.modules
-            .push(prepare_module(client, module, &mut registrar)?);
+            .push(prepare_module(&stmts, module, &mut registrar)?);
     }
 
     // Prepare types grouped by schema
@@ -315,9 +317,25 @@ fn prepare_type(
     }
 }
 
+fn prepare_sql(
+    client: &Client,
+    modules: &[Module],
+) -> HashMap<String, Result<Statement, tokio_postgres::Error>> {
+    let queries: FuturesUnordered<_> = modules
+        .iter()
+        .flat_map(|m| m.queries.iter().map(|q| q.sql_str.clone()))
+        .map(|query| async move {
+            let stmt = client.prepare(&query).await;
+            (query, stmt)
+        })
+        .collect();
+    let results: HashMap<_, _> = futures::executor::block_on(queries.collect());
+    results
+}
+
 /// Prepares all queries in this module
 fn prepare_module(
-    client: &mut Client,
+    stmts: &HashMap<String, Result<Statement, tokio_postgres::Error>>,
     module: Module,
     registrar: &mut TypeRegistrar,
 ) -> Result<PreparedModule, Error> {
@@ -332,7 +350,7 @@ fn prepare_module(
 
     for query in module.queries {
         prepare_query(
-            client,
+            stmts,
             &mut tmp_prepared_module,
             registrar,
             &module.types,
@@ -348,7 +366,7 @@ fn prepare_module(
 
 /// Prepares a query
 fn prepare_query(
-    client: &mut Client,
+    stmts: &HashMap<String, Result<Statement, tokio_postgres::Error>>,
     module: &mut PreparedModule,
     registrar: &mut TypeRegistrar,
     types: &[TypeAnnotation],
@@ -363,9 +381,9 @@ fn prepare_query(
     module_info: &ModuleInfo,
 ) -> Result<(), Error> {
     // Prepare the statement
-    let stmt = client
-        .prepare(&sql_str)
-        .map_err(|e| Error::new_db_err(&e, module_info, &sql_span, &name))?;
+    let stmt = stmts[&sql_str]
+        .as_ref()
+        .map_err(|e| Error::new_db_err(e, module_info, &sql_span, &name))?;
 
     let (nullable_params_fields, params_name) = param.name_and_fields(types, &name, Some("Params"));
     let (nullable_row_fields, row_name) = row.name_and_fields(types, &name, None);
@@ -477,7 +495,7 @@ pub(crate) mod error {
 
     impl Error {
         pub(crate) fn new_db_err(
-            err: &postgres::Error,
+            err: &tokio_postgres::Error,
             module_info: &ModuleInfo,
             query_span: &SourceSpan,
             query_name: &Span<String>,

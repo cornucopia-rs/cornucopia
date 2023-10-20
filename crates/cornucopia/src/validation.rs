@@ -9,8 +9,8 @@ use crate::{
 
 use error::Error;
 use miette::SourceSpan;
-use postgres::Column;
 use postgres_types::Type;
+use tokio_postgres::Column;
 
 pub(crate) fn duplicate_nullable_ident(
     info: &ModuleInfo,

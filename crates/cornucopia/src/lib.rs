@@ -16,7 +16,7 @@ pub mod container;
 
 use std::path::Path;
 
-use postgres::Client;
+use tokio_postgres::Client;
 
 use codegen::generate as generate_internal;
 use error::WriteOutputError;
@@ -43,7 +43,7 @@ pub struct CodegenSettings {
 /// the generated code will be written at that path. Code generation settings are
 /// set using the `settings` parameter.
 pub fn generate_live<P: AsRef<Path>>(
-    client: &mut Client,
+    client: &Client,
     queries_path: P,
     destination: Option<P>,
     settings: CodegenSettings,
@@ -84,9 +84,9 @@ pub fn generate_managed<P: AsRef<Path>>(
         .map(parse_query_module)
         .collect::<Result<_, parser::error::Error>>()?;
     container::setup(podman)?;
-    let mut client = conn::cornucopia_conn()?;
-    load_schema(&mut client, schema_files)?;
-    let prepared_modules = prepare(&mut client, modules)?;
+    let client = conn::cornucopia_conn()?;
+    load_schema(&client, schema_files)?;
+    let prepared_modules = prepare(&client, modules)?;
     let generated_code = generate_internal(prepared_modules, settings);
     container::cleanup(podman)?;
 
