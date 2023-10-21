@@ -10,19 +10,22 @@ edition = "2021"
 cornucopia = { path = "../crates/cornucopia" }
 
 # Create temporary projects for error tests.
-tempfile = "3.3.0"
+tempfile = "3.5.0"
+
+# Compare directories
+dir-diff = "0.3.2"
 
 # Colored output
 owo-colors = "3.5.0"
 
 # CLI handling
-clap = { version = "4.0.29", features = ["derive"] }
+clap = { version = "4.3.5", features = ["derive"] }
 
 # Postgres interaction
-postgres = { version = "0.19.4" }
+postgres = "0.19.5"
 
 # serde
 ## Test fixtures ser/de
-serde = { version = "1.0.148", features = ["derive"] }
+serde = { version = "1.0.163", features = ["derive"] }
 ## Read/write fixture files
 toml = "0.8.2"

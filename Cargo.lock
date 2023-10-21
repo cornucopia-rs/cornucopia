@@ -123,12 +123,23 @@ dependencies = [
 name = "auto-build"
 version = "0.1.0"
 dependencies = [
- "cornucopia",
- "cornucopia_async",
+ "auto_build_codegen",
  "deadpool-postgres",
  "futures",
- "postgres-types",
  "tokio",
+ "tokio-postgres",
+]
+
+[[package]]
+name = "auto_build_codegen"
+version = "0.9.0"
+dependencies = [
+ "async-trait",
+ "deadpool-postgres",
+ "fallible-iterator",
+ "futures",
+ "postgres-protocol",
+ "postgres-types",
  "tokio-postgres",
 ]
 
@@ -172,11 +183,23 @@ checksum = "9ba43ea6f343b788c8764558649e08df62f86c6ef251fdaeb1ffd010a9ae50a2"
 name = "basic-async"
 version = "0.1.0"
 dependencies = [
- "cornucopia_async",
+ "basic_async_codegen",
  "deadpool-postgres",
  "futures",
- "postgres-types",
  "tokio",
+ "tokio-postgres",
+]
+
+[[package]]
+name = "basic_async_codegen"
+version = "0.9.0"
+dependencies = [
+ "async-trait",
+ "deadpool-postgres",
+ "fallible-iterator",
+ "futures",
+ "postgres-protocol",
+ "postgres-types",
  "tokio-postgres",
 ]
 
@@ -184,8 +207,17 @@ dependencies = [
 name = "basic_sync"
 version = "0.1.0"
 dependencies = [
- "cornucopia_sync",
+ "basic_sync_codegen",
  "postgres",
+]
+
+[[package]]
+name = "basic_sync_codegen"
+version = "0.9.0"
+dependencies = [
+ "fallible-iterator",
+ "postgres",
+ "postgres-protocol",
  "postgres-types",
 ]
 
@@ -194,13 +226,13 @@ name = "benches"
 version = "0.1.0"
 dependencies = [
  "cornucopia",
- "cornucopia_async",
- "cornucopia_sync",
  "criterion",
  "diesel",
  "futures",
+ "generated",
  "postgres",
  "postgres-types",
+ "tempfile",
  "tokio",
  "tokio-postgres",
 ]
@@ -422,6 +454,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd7cc57abe963c6d3b9d8be5b06ba7c8957a930305ca90304f24ef040aa6f961"
 
 [[package]]
+name = "codegen"
+version = "0.9.0"
+dependencies = [
+ "async-trait",
+ "deadpool-postgres",
+ "eui48",
+ "fallible-iterator",
+ "futures",
+ "postgres",
+ "postgres-protocol",
+ "postgres-types",
+ "rust_decimal",
+ "serde",
+ "serde_json",
+ "time",
+ "tokio-postgres",
+ "uuid",
+]
+
+[[package]]
 name = "codegen_template"
 version = "0.1.0"
 dependencies = [
@@ -444,46 +496,19 @@ dependencies = [
  "codegen_template",
  "heck",
  "indexmap",
+ "indoc",
  "miette",
  "postgres",
  "postgres-types",
+ "tempfile",
  "thiserror",
 ]
 
 [[package]]
-name = "cornucopia_async"
-version = "0.4.0"
-dependencies = [
- "async-trait",
- "cornucopia_client_core",
- "deadpool-postgres",
- "tokio-postgres",
-]
-
-[[package]]
-name = "cornucopia_client_core"
-version = "0.4.0"
-dependencies = [
- "fallible-iterator",
- "postgres-protocol",
- "postgres-types",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "cornucopia_sync"
-version = "0.4.0"
-dependencies = [
- "cornucopia_client_core",
- "postgres",
-]
-
-[[package]]
 name = "cpufeatures"
-version = "0.2.9"
+version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a17b76ff3a4162b0b27f354a0c87015ddad39d35f9c0c36607a3bdd175dde1f1"
+checksum = "3fbc60abd742b35f2492f808e1abbb83d45f72db402e14c55057edc9c7b1e9e4"
 dependencies = [
  "libc",
 ]
@@ -656,6 +681,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "dir-diff"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2860407d7d7e2e004bb2128510ad9e8d669e76fa005ccf567977b5d71b8b4a0b"
+dependencies = [
+ "walkdir",
+]
+
+[[package]]
 name = "either"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -802,6 +836,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "generated"
+version = "0.9.0"
+dependencies = [
+ "async-trait",
+ "deadpool-postgres",
+ "fallible-iterator",
+ "futures",
+ "postgres",
+ "postgres-protocol",
+ "postgres-types",
+ "tokio-postgres",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -854,9 +902,9 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.14.1"
+version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7dfda62a12f55daeae5015f81b0baea145391cb4520f86c248fc615d72640d12"
+checksum = "f93e7192158dbcda357bdec5fb5788eebf8bbac027f3f33e719d29135ae84156"
 
 [[package]]
 name = "heck"
@@ -886,8 +934,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8adf3ddd720272c6ea8bf59463c04e0f93d0bbf7c5439b691bca2987e0270897"
 dependencies = [
  "equivalent",
- "hashbrown 0.14.1",
+ "hashbrown 0.14.2",
 ]
+
+[[package]]
+name = "indoc"
+version = "2.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e186cfbae8084e513daff4240b4797e342f988cecda4fb6c939150f96315fd8"
 
 [[package]]
 name = "is-terminal"
@@ -944,9 +998,9 @@ checksum = "da2479e8c062e40bf0066ffa0bc823de0a9368974af99c9f6df941d2c231e03f"
 
 [[package]]
 name = "lock_api"
-version = "0.4.10"
+version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1cc9717a20b1bb222f333e6a92fd32f7d8a18ddc5a3191a11af45dcbf4dcd16"
+checksum = "3c168f8615b12bc01f9c17e2eb0cc07dcae1940121185446edc3744920e8ef45"
 dependencies = [
  "autocfg",
  "scopeguard",
@@ -1093,13 +1147,13 @@ dependencies = [
 
 [[package]]
 name = "parking_lot_core"
-version = "0.9.8"
+version = "0.9.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93f00c865fe7cabf650081affecd3871070f26767e7b2070a3ffae14c654b447"
+checksum = "4c42a9226546d68acdd9c0a280d17ce19bfe27a46bf68784e4066115788d008e"
 dependencies = [
  "cfg-if",
  "libc",
- "redox_syscall",
+ "redox_syscall 0.4.1",
  "smallvec",
  "windows-targets",
 ]
@@ -1372,6 +1426,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "redox_syscall"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4722d768eff46b75989dd134e5c353f0d6296e5aaa3132e776cbdb56be7731aa"
+dependencies = [
+ "bitflags 1.3.2",
+]
+
+[[package]]
 name = "regex"
 version = "1.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1468,9 +1531,9 @@ checksum = "dcf128d1287d2ea9d80910b5f1120d0b8eede3fbf1abe91c40d39ea7d51e6fda"
 
 [[package]]
 name = "rustix"
-version = "0.38.19"
+version = "0.38.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "745ecfa778e66b2b63c88a61cb36e0eea109e803b0b86bf9879fbc77c70e86ed"
+checksum = "67ce50cb2e16c2903e30d1cbccfd8387a74b9d4c938b6a4c5ec6cc7556f7a8a0"
 dependencies = [
  "bitflags 2.4.1",
  "errno",
@@ -1558,15 +1621,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "signal-hook-registry"
-version = "1.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8229b473baa5980ac72ef434c4415e70c4b5e71b423043adb4ba059f89c99a1"
-dependencies = [
- "libc",
-]
-
-[[package]]
 name = "simdutf8"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1601,9 +1655,9 @@ checksum = "b7c388c1b5e93756d0c740965c41e8822f866621d41acbdf6336a6a168f8840c"
 
 [[package]]
 name = "socket2"
-version = "0.5.4"
+version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4031e820eb552adee9295814c0ced9e5cf38ddf1e8b7d566d6de8e2538ea989e"
+checksum = "7b5fac59a5cb5dd637972e5fca70daf0523c9067fcdc4842f053dae04a18f8e9"
 dependencies = [
  "libc",
  "windows-sys",
@@ -1709,7 +1763,7 @@ checksum = "cb94d2f3cc536af71caac6b6fcebf65860b347e7ce0cc9ebe8f70d3e521054ef"
 dependencies = [
  "cfg-if",
  "fastrand",
- "redox_syscall",
+ "redox_syscall 0.3.5",
  "rustix",
  "windows-sys",
 ]
@@ -1728,12 +1782,10 @@ dependencies = [
 name = "test_codegen"
 version = "0.1.0"
 dependencies = [
- "cornucopia_async",
- "cornucopia_sync",
+ "codegen",
  "eui48",
  "futures",
  "postgres",
- "postgres-types",
  "rust_decimal",
  "serde",
  "serde_json",
@@ -1748,6 +1800,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "cornucopia",
+ "dir-diff",
  "owo-colors",
  "postgres",
  "serde",
@@ -1768,18 +1821,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.49"
+version = "1.0.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1177e8c6d7ede7afde3585fd2513e611227efd6481bd78d2e82ba1ce16557ed4"
+checksum = "f9a7210f5c9a7156bb50aa36aed4c95afb51df0df00713949448cf9e97d382d2"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.49"
+version = "1.0.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10712f02019e9288794769fba95cd6847df9874d49d871d062172f9dd41bc4cc"
+checksum = "266b2e40bc00e5a6c09c3584011e08b06f123c00362c92b975ba9843aaaa14b8"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1850,9 +1903,7 @@ dependencies = [
  "libc",
  "mio",
  "num_cpus",
- "parking_lot",
  "pin-project-lite",
- "signal-hook-registry",
  "socket2",
  "tokio-macros",
  "windows-sys",
@@ -1954,9 +2005,9 @@ dependencies = [
 
 [[package]]
 name = "tracing"
-version = "0.1.39"
+version = "0.1.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee2ef2af84856a50c1d430afce2fdded0a4ec7eda868db86409b4543df0797f9"
+checksum = "c3523ab5a71916ccf420eebdf5521fcef02141234bbc0b8a49f2fdc4544364ef"
 dependencies = [
  "pin-project-lite",
  "tracing-attributes",
@@ -2042,9 +2093,9 @@ checksum = "711b9620af191e0cdc7468a8d14e709c3dcdb115b36f838e601583af800a370a"
 
 [[package]]
 name = "uuid"
-version = "1.4.1"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79daa5ed5740825c40b389c5e50312b9c86df53fccd33f281df655642b43869d"
+checksum = "88ad59a7560b41a70d191093a945f0b87bc1deeda46fb237479708a1d6b6cdfc"
 dependencies = [
  "serde",
 ]

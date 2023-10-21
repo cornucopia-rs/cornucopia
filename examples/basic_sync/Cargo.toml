@@ -6,11 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+# Cornucopia
+codegen = { path = "basic_sync_codegen", package = "basic_sync_codegen" }
 # Postgres interaction
 postgres = "0.19.4"
-postgres-types = { version = "0.2.4", features = ["derive"] }
 
-# Cornucopia async client
-## If you're trying this example as a standalone crate, 
-## replace the path with the latest current version
-cornucopia_sync = { path = "../../crates/client_sync" }

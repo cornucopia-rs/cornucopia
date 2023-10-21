@@ -1,8 +1,7 @@
 // Take a look at the generated `cornucopia.rs` file if you want to
 // see what it looks like under the hood.
-mod cornucopia;
-
-use crate::cornucopia::{
+use codegen::{
+    client::Params,
     queries::{
         module_1::insert_book,
         module_2::{
@@ -10,9 +9,8 @@ use crate::cornucopia::{
             select_voice_actor_with_character, AuthorNameStartingWithParams,
         },
     },
-    types::public::SpongeBobCharacter,
+    types::SpongeBobCharacter,
 };
-use cornucopia_sync::Params;
 
 pub fn main() {
     // You can learn which database connection types are compatible with Cornucopia in the book

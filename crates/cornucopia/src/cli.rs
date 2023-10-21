@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
-use crate::{conn, container, error::Error, generate_live, generate_managed, CodegenSettings};
+use crate::{conn, container, error::Error, gen_live, gen_managed, CodegenSettings};
 
 /// Command line interface to interact with Cornucopia SQL.
 #[derive(Parser, Debug)]
@@ -15,7 +15,7 @@ struct Args {
     #[clap(short, long, default_value = "queries/")]
     queries_path: PathBuf,
     /// Destination folder for generated modules
-    #[clap(short, long, default_value = "src/cornucopia.rs")]
+    #[clap(short, long, default_value = "cornucopia")]
     destination: PathBuf,
     #[clap(subcommand)]
     action: Action,
@@ -65,17 +65,12 @@ pub fn run() -> Result<(), Error> {
     match action {
         Action::Live { url } => {
             let mut client = conn::from_url(&url)?;
-            generate_live(&mut client, &queries_path, Some(&destination), settings)?;
+            gen_live(&mut client, &queries_path, &destination, settings)?;
         }
         Action::Schema { schema_files } => {
             // Run the generate command. If the command is unsuccessful, cleanup Cornucopia's container
-            if let Err(e) = generate_managed(
-                queries_path,
-                &schema_files,
-                Some(destination),
-                podman,
-                settings,
-            ) {
+            if let Err(e) = gen_managed(queries_path, &schema_files, destination, podman, settings)
+            {
                 container::cleanup(podman).ok();
                 return Err(e);
             }

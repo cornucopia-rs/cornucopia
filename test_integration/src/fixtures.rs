@@ -51,7 +51,6 @@ pub(crate) struct CodegenTest {
     pub(crate) base_path: String,
     #[serde(default = "default_queries_path")]
     pub(crate) queries_path: PathBuf,
-    #[serde(default = "default_destination_path")]
     pub(crate) destination: PathBuf,
     #[serde(default)]
     pub(crate) sync: bool,
@@ -65,10 +64,6 @@ pub(crate) struct CodegenTest {
 
 fn default_queries_path() -> PathBuf {
     PathBuf::from("queries/")
-}
-
-fn default_destination_path() -> PathBuf {
-    PathBuf::from("src/cornucopia.rs")
 }
 
 impl From<&CodegenTest> for CodegenSettings {

@@ -1,7 +1,7 @@
 [[test]]
 name = "Codegen"
 base_path = "test_codegen"
-destination = "src/cornucopia.rs"
+destination = "codegen"
 sync = true
 async = true
 derive_ser = true

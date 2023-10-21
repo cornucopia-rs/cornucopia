@@ -5,14 +5,14 @@ fn bench(c: &mut Criterion) {
     cornucopia::container::cleanup(false).ok();
     cornucopia::container::setup(false).unwrap();
     let client = &mut cornucopia_conn().unwrap();
-
-    cornucopia::load_schema(client, &["../codegen_test/schema.sql"]).unwrap();
+    let tmp = tempfile::tempdir().unwrap();
+    cornucopia::load_schema(client, &["../test_codegen/schema.sql"]).unwrap();
     c.bench_function("codegen_sync", |b| {
         b.iter(|| {
-            cornucopia::generate_live(
+            cornucopia::gen_live(
                 client,
-                "../test_codegen/queries",
-                None,
+                "../test_codegen/queries".as_ref(),
+                tmp.path(),
                 CodegenSettings {
                     gen_sync: true,
                     gen_async: false,
@@ -24,10 +24,10 @@ fn bench(c: &mut Criterion) {
     });
     c.bench_function("codegen_async", |b| {
         b.iter(|| {
-            cornucopia::generate_live(
+            cornucopia::gen_live(
                 client,
-                "../test_codegen/queries",
-                None,
+                "../test_codegen/queries".as_ref(),
+                tmp.path(),
                 CodegenSettings {
                     gen_sync: true,
                     gen_async: false,

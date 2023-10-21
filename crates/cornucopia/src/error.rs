@@ -22,8 +22,8 @@ pub enum Error {
     PrepareQueries(#[from] crate::prepare_queries::error::Error),
     /// An error while reading PostgreSQL schema files.
     LoadSchema(#[from] crate::load_schema::error::Error),
-    /// An error while trying to write the generated code to its destination file.
-    WriteCodeGenFile(#[from] WriteOutputError),
+    /// An error while trying to write the generated crate to its destination.
+    PersistCrate(#[from] PersistError),
 }
 
 impl Error {
@@ -39,8 +39,17 @@ impl Error {
 }
 
 #[derive(Debug, ThisError, Diagnostic)]
-#[error("Could not write your queries to destination file `{file_path}`: ({err})")]
-pub struct WriteOutputError {
+#[error("Could not perform IO on file `{file_path}`: ({err})")]
+pub struct PersistError {
     pub(crate) file_path: PathBuf,
     pub(crate) err: std::io::Error,
+}
+
+impl PersistError {
+    pub fn wrap(path: impl Into<PathBuf>) -> impl FnOnce(std::io::Error) -> PersistError {
+        |err| PersistError {
+            file_path: path.into(),
+            err,
+        }
+    }
 }

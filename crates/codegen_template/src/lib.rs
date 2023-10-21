@@ -149,7 +149,11 @@ fn gen_recursive(scan: &mut Scanner, s: &mut String, out: &str) {
             match pattern {
                 Kind::Display(ident) => gen_disp(s, out, ident),
                 Kind::Call(ident) => {
-                    s.push_str("let w = &mut*w;");
+                    s.push_str("let ");
+                    s.push_str(out);
+                    s.push_str(" = &mut *");
+                    s.push_str(out);
+                    s.push(';');
                     s.push_str(ident);
                     s.push_str("(&mut *");
                     s.push_str(out);
@@ -224,8 +228,8 @@ pub fn code(pattern: TokenStream) -> TokenStream {
     if let Some(out) = out {
         gen_recursive(&mut scan, &mut s, out);
     } else {
-        s.push_str("let mut out = String::new();\n");
-        gen_recursive(&mut scan, &mut s, "out");
+        s.push_str("let mut out = String::new();\nlet w = &mut out;");
+        gen_recursive(&mut scan, &mut s, "w");
         s.push_str("out")
     }
     s.push('}');

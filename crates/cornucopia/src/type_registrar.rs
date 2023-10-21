@@ -5,7 +5,7 @@ use indexmap::{map::Entry, IndexMap};
 use postgres_types::{Kind, Type};
 
 use crate::{
-    codegen::{idx_char, GenCtx},
+    codegen::{idx_char, DependencyAnalysis, GenCtx},
     parser::Span,
     read_queries::ModuleInfo,
     utils::SchemaKey,
@@ -73,21 +73,14 @@ impl CornucopiaType {
     }
 
     /// Wrap type to escape domains in parameters
-    pub(crate) fn sql_wrapped(&self, name: &str, ctx: &GenCtx) -> String {
-        let client_name = ctx.client_name();
+    pub(crate) fn sql_wrapped(&self, name: &str) -> String {
         match self {
             CornucopiaType::Domain { inner, .. } => {
-                format!(
-                    "&{client_name}::private::Domain({})",
-                    inner.sql_wrapped(name, ctx)
-                )
+                format!("&crate::Domain({})", inner.sql_wrapped(name))
             }
             CornucopiaType::Array { inner } => match inner.as_ref() {
                 CornucopiaType::Domain { inner, .. } => {
-                    format!(
-                        "&{client_name}::private::DomainArray({})",
-                        inner.sql_wrapped(name, ctx)
-                    )
+                    format!("&crate::DomainArray({})", inner.sql_wrapped(name))
                 }
                 _ => name.to_string(),
             },
@@ -97,16 +90,14 @@ impl CornucopiaType {
 
     /// Wrap type to escape domains when writing to sql
     pub(crate) fn accept_to_sql(&self, ctx: &GenCtx) -> String {
-        let client_name = ctx.client_name();
         match self {
-            CornucopiaType::Domain { inner, .. } => format!(
-                "{client_name}::private::Domain::<{}>",
-                inner.accept_to_sql(ctx)
-            ),
+            CornucopiaType::Domain { inner, .. } => {
+                format!("crate::Domain::<{}>", inner.accept_to_sql(ctx))
+            }
             CornucopiaType::Array { inner } => match inner.as_ref() {
                 CornucopiaType::Domain { inner, .. } => {
                     let ty = inner.accept_to_sql(ctx);
-                    format!("{client_name}::private::DomainArray::<{ty}, &[{ty}]>")
+                    format!("crate::DomainArray::<{ty}, &[{ty}]>")
                 }
                 _ => self.param_ty(false, ctx),
             },
@@ -170,7 +161,7 @@ impl CornucopiaType {
             CornucopiaType::Domain { inner, .. } => inner.own_ty(false, ctx),
             CornucopiaType::Custom {
                 struct_name, pg_ty, ..
-            } => custom_ty_path(pg_ty.schema(), struct_name, ctx),
+            } => ctx.custom_ty_path(pg_ty.schema(), struct_name),
         }
     }
 
@@ -181,19 +172,18 @@ impl CornucopiaType {
         traits: &mut Vec<String>,
         ctx: &GenCtx,
     ) -> String {
-        let client_name = ctx.client_name();
         match self {
             CornucopiaType::Simple { pg_ty, .. } => match *pg_ty {
                 Type::BYTEA => {
-                    traits.push(format!("{client_name}::BytesSql"));
+                    traits.push("crate::BytesSql".to_string());
                     idx_char(traits.len())
                 }
                 Type::TEXT | Type::VARCHAR => {
-                    traits.push(format!("{client_name}::StringSql"));
+                    traits.push("crate::StringSql".to_string());
                     idx_char(traits.len())
                 }
                 Type::JSON | Type::JSONB => {
-                    traits.push(format!("{client_name}::JsonSql"));
+                    traits.push("crate::JsonSql".to_string());
                     idx_char(traits.len())
                 }
                 _ => self.param_ty(is_inner_nullable, ctx),
@@ -205,7 +195,7 @@ impl CornucopiaType {
                 } else {
                     inner
                 };
-                traits.push(format!("{client_name}::ArraySql<Item = {inner}>"));
+                traits.push(format!("crate::ArraySql<Item = {inner}>"));
                 idx_char(traits.len())
             }
             CornucopiaType::Domain { inner, .. } => {
@@ -241,7 +231,7 @@ impl CornucopiaType {
                 ..
             } => {
                 if !is_copy && !is_params {
-                    let path = custom_ty_path(pg_ty.schema(), struct_name, ctx);
+                    let path = ctx.custom_ty_path(pg_ty.schema(), struct_name);
                     format!("{path}Params<'a>")
                 } else {
                     self.brw_ty(is_inner_nullable, true, ctx)
@@ -279,8 +269,7 @@ impl CornucopiaType {
                 };
                 // Its more practical for users to use a slice
                 let lifetime = if has_lifetime { lifetime } else { "'_" };
-                let client_name = ctx.client_name();
-                format!("{client_name}::ArrayIterator<{lifetime}, {inner}>")
+                format!("crate::ArrayIterator<{lifetime}, {inner}>")
             }
             CornucopiaType::Domain { inner, .. } => inner.brw_ty(false, has_lifetime, ctx),
             CornucopiaType::Custom {
@@ -289,7 +278,7 @@ impl CornucopiaType {
                 struct_name,
                 ..
             } => {
-                let path = custom_ty_path(pg_ty.schema(), struct_name, ctx);
+                let path = ctx.custom_ty_path(pg_ty.schema(), struct_name);
                 if *is_copy {
                     path
                 } else {
@@ -300,20 +289,11 @@ impl CornucopiaType {
     }
 }
 
-pub fn custom_ty_path(schema: &str, struct_name: &str, ctx: &GenCtx) -> String {
-    if ctx.depth == 0 {
-        format!("{schema}::{struct_name}")
-    } else if ctx.depth == 1 {
-        format!("super::{schema}::{struct_name}")
-    } else {
-        ctx.path(ctx.depth, format_args!("types::{schema}::{struct_name}"))
-    }
-}
-
 /// Data structure holding all types known to this particular run of Cornucopia.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct TypeRegistrar {
     pub types: IndexMap<(String, String), Rc<CornucopiaType>>,
+    pub dependency_analysis: DependencyAnalysis,
 }
 
 impl TypeRegistrar {
@@ -324,6 +304,7 @@ impl TypeRegistrar {
         query_name: &Span<String>,
         module_info: &ModuleInfo,
     ) -> Result<&Rc<CornucopiaType>, Error> {
+        self.dependency_analysis.analyse(ty);
         fn custom(ty: &Type, is_copy: bool, is_params: bool) -> CornucopiaType {
             let rust_ty_name = ty.name().to_upper_camel_case();
             CornucopiaType::Custom {
