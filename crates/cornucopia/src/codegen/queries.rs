@@ -402,8 +402,43 @@ pub(crate) fn gen_queries(vfs: &mut Vfs, preparation: &Preparation, settings: Co
     }
 
     let modules_name = preparation.modules.iter().map(|module| &module.info.name);
-    let content = code!($WARNING
+
+    let mut content = code!($WARNING
         $(pub mod $modules_name;)
     );
+    if settings.gen_async && settings.gen_sync {
+        let sync = |w: &mut String| {
+            for module in &preparation.modules {
+                let name = &module.info.name;
+                code!(w =>
+                    pub mod ${name} {
+                        pub use super::super::${name}::*;
+                        pub use super::super::${name}::sync::*;
+                    }
+                );
+            }
+        };
+        let async_ = |w: &mut String| {
+            for module in &preparation.modules {
+                let name = &module.info.name;
+                code!(w =>
+                    pub mod ${name} {
+                        pub use super::super::${name}::*;
+                        pub use super::super::${name}::async_::*;
+                    }
+                );
+            }
+        };
+        let content = &mut content;
+        code!(content =>
+            pub mod sync {
+                $!sync
+            }
+            pub mod async_ {
+                $!async_
+            }
+        )
+    }
+
     vfs.add("src/queries.rs", content);
 }
