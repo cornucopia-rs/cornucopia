@@ -44,9 +44,9 @@ fn test(
     container::cleanup(podman).ok();
     container::setup(podman).unwrap();
     let successful = std::panic::catch_unwind(|| {
-        let mut client = cornucopia::conn::cornucopia_conn().unwrap();
-        display(run_errors_test(&mut client, apply_errors)).unwrap()
-            && display(run_codegen_test(&mut client, apply_codegen)).unwrap()
+        let client = cornucopia::conn::cornucopia_conn().unwrap();
+        display(run_errors_test(&client, apply_errors)).unwrap()
+            && display(run_codegen_test(&client, apply_codegen)).unwrap()
     });
     container::cleanup(podman).unwrap();
     successful.unwrap()

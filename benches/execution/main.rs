@@ -4,7 +4,6 @@ use cornucopia::conn::cornucopia_conn;
 use criterion::{BenchmarkId, Criterion};
 use diesel::{Connection, PgConnection};
 use postgres::{fallible_iterator::FallibleIterator, Client, NoTls};
-use tokio::runtime::Runtime;
 
 const QUERY_SIZE: &[usize] = &[1, 100, 10_000];
 const INSERT_SIZE: &[usize] = &[1, 100, 1000];
@@ -128,23 +127,16 @@ fn prepare_full(client: &mut Client) {
 fn bench(c: &mut Criterion) {
     cornucopia::container::cleanup(false).ok();
     cornucopia::container::setup(false).unwrap();
-    let client = &mut cornucopia_conn().unwrap();
-    let rt: &'static Runtime = Box::leak(Box::new(Runtime::new().unwrap()));
-    let async_client = &mut rt.block_on(async {
-        let (client, conn) = tokio_postgres::connect(
-            "postgresql://postgres:postgres@127.0.0.1:5435/postgres",
-            NoTls,
-        )
-        .await
-        .unwrap();
-        rt.spawn(conn);
-        client
-    });
+    let client = &mut postgres::Client::connect(
+        "postgresql://postgres:postgres@127.0.0.1:5435/postgres",
+        NoTls,
+    )
+    .unwrap();
+    let async_client = &mut cornucopia_conn().unwrap();
     let conn =
         &mut PgConnection::establish("postgresql://postgres:postgres@127.0.0.1:5435/postgres")
             .unwrap();
-
-    cornucopia::load_schema(client, &["usage/cornucopia_benches/schema.sql"]).unwrap();
+    cornucopia::load_schema(async_client, &["execution/cornucopia_benches/schema.sql"]).unwrap();
     {
         let mut group = c.benchmark_group("bench_trivial_query");
         for size in QUERY_SIZE {

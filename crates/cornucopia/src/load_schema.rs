@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use miette::NamedSource;
-use postgres::Client;
+use tokio_postgres::Client;
 
 use crate::utils::db_err;
 
@@ -10,14 +10,14 @@ use self::error::Error;
 /// Loads PostgreSQL schemas into a database.
 ///
 /// Takes a list of file paths as parameter and loads them in their given order.
-pub fn load_schema<P: AsRef<Path>>(client: &mut Client, paths: &[P]) -> Result<(), Error> {
+pub fn load_schema<P: AsRef<Path>>(client: &Client, paths: &[P]) -> Result<(), Error> {
     for path in paths {
         let path = path.as_ref();
         let sql = std::fs::read_to_string(path).map_err(|err| Error::Io {
             path: path.to_string_lossy().to_string(),
             err,
         })?;
-        client.batch_execute(&sql).map_err(|err| {
+        futures::executor::block_on(client.batch_execute(&sql)).map_err(|err| {
             let msg = format!("{err:#}");
             let src = NamedSource::new(path.to_string_lossy(), sql);
             if let Some((position, msg, help)) = db_err(&err) {
