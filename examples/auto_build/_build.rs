@@ -15,7 +15,7 @@ fn main() -> Result<(), Error> {
 
     println!("cargo:rerun-if-changed={queries_path}");
     println!("cargo:rerun-if-changed={schema_file}");
-    cornucopia::generate_managed(
+    cornucopia::generate_against(
         queries_path,
         &[schema_file],
         Some(destination),

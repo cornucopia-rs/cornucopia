@@ -71,7 +71,7 @@ pub fn generate_live<P: AsRef<Path>>(
 ///
 /// By default, the container manager is Docker, but Podman can be used by setting the
 /// `podman` parameter to `true`.
-pub fn generate_managed<P: AsRef<Path>>(
+pub fn generate_against<P: AsRef<Path>>(
     queries_path: P,
     schema_files: &[P],
     destination: Option<P>,
