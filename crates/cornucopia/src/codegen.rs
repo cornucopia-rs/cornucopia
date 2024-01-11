@@ -347,7 +347,7 @@ fn gen_row_structs(w: &mut impl Write, row: &PreparedItem, ctx: &GenCtx) {
         let fields_ty = fields.iter().map(|p| p.own_struct(ctx));
         let copy = if *is_copy { "Copy" } else { "" };
         let ser_str = if ctx.gen_derive {
-            "serde::Serialize,"
+            "serde::Serialize,serde::Deserialize,"
         } else {
             ""
         };
@@ -647,7 +647,7 @@ fn gen_custom_type(w: &mut impl Write, schema: &str, prepared: &PreparedType, ct
     } = prepared;
     let copy = if *is_copy { "Copy," } else { "" };
     let ser_str = if ctx.gen_derive {
-        "serde::Serialize,"
+        "serde::Serialize,serde::Deserialize,"
     } else {
         ""
     };

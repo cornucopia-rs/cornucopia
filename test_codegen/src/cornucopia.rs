@@ -6,7 +6,9 @@
 #[allow(dead_code)]
 pub mod types {
     pub mod public {
-        #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Clone, PartialEq)]
+        #[derive(
+            serde::Serialize, serde::Deserialize, Debug, postgres_types :: FromSql, Clone, PartialEq,
+        )]
         #[postgres(name = "clone_composite")]
         pub struct CloneComposite {
             #[postgres(name = "first")]
@@ -119,7 +121,15 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Copy, Clone, PartialEq)]
+        #[derive(
+            serde::Serialize,
+            serde::Deserialize,
+            Debug,
+            postgres_types :: FromSql,
+            Copy,
+            Clone,
+            PartialEq,
+        )]
         #[postgres(name = "copy_composite")]
         pub struct CopyComposite {
             #[postgres(name = "first")]
@@ -190,7 +200,9 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Clone, PartialEq)]
+        #[derive(
+            serde::Serialize, serde::Deserialize, Debug, postgres_types :: FromSql, Clone, PartialEq,
+        )]
         #[postgres(name = "domain_composite")]
         pub struct DomainComposite {
             #[postgres(name = "txt")]
@@ -352,7 +364,9 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Clone, PartialEq)]
+        #[derive(
+            serde::Serialize, serde::Deserialize, Debug, postgres_types :: FromSql, Clone, PartialEq,
+        )]
         #[postgres(name = "named_composite")]
         pub struct NamedComposite {
             #[postgres(name = "wow")]
@@ -465,7 +479,7 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, Copy, PartialEq, Eq)]
+        #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
         #[allow(non_camel_case_types)]
         pub enum EnumWithDot {
             variant_with_dot,
@@ -537,7 +551,15 @@ pub mod types {
                 }
             }
         }
-        #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Copy, Clone, PartialEq)]
+        #[derive(
+            serde::Serialize,
+            serde::Deserialize,
+            Debug,
+            postgres_types :: FromSql,
+            Copy,
+            Clone,
+            PartialEq,
+        )]
         #[postgres(name = "named_composite.with_dot")]
         pub struct NamedCompositeWithDot {
             #[postgres(name = "this.is.inconceivable")]
@@ -612,7 +634,9 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Clone, PartialEq)]
+        #[derive(
+            serde::Serialize, serde::Deserialize, Debug, postgres_types :: FromSql, Clone, PartialEq,
+        )]
         #[postgres(name = "nullity_composite")]
         pub struct NullityComposite {
             #[postgres(name = "jsons")]
@@ -741,7 +765,7 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, Copy, PartialEq, Eq)]
+        #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
         #[allow(non_camel_case_types)]
         pub enum SpongebobCharacter {
             Bob,
@@ -823,7 +847,9 @@ pub mod types {
                 }
             }
         }
-        #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Clone, PartialEq)]
+        #[derive(
+            serde::Serialize, serde::Deserialize, Debug, postgres_types :: FromSql, Clone, PartialEq,
+        )]
         #[postgres(name = "custom_composite")]
         pub struct CustomComposite {
             #[postgres(name = "wow")]
@@ -959,7 +985,9 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Clone, PartialEq)]
+        #[derive(
+            serde::Serialize, serde::Deserialize, Debug, postgres_types :: FromSql, Clone, PartialEq,
+        )]
         #[postgres(name = "nightmare_composite")]
         pub struct NightmareComposite {
             #[postgres(name = "custom")]
@@ -1106,7 +1134,15 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(serde::Serialize, Debug, postgres_types :: FromSql, Copy, Clone, PartialEq)]
+        #[derive(
+            serde::Serialize,
+            serde::Deserialize,
+            Debug,
+            postgres_types :: FromSql,
+            Copy,
+            Clone,
+            PartialEq,
+        )]
         #[postgres(name = "syntax_composite")]
         pub struct SyntaxComposite {
             #[postgres(name = "async")]
@@ -1173,7 +1209,7 @@ pub mod types {
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, Copy, PartialEq, Eq)]
+        #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
         #[allow(non_camel_case_types)]
         pub enum SyntaxEnum {
             r#async,
@@ -1662,7 +1698,7 @@ pub mod queries {
             pub arr: T4,
             pub composite: Option<super::super::types::public::DomainCompositeParams<'a>>,
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
         pub struct SelectNightmareDomain {
             pub txt: String,
             pub json: serde_json::Value,
@@ -1694,7 +1730,7 @@ pub mod queries {
                 }
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
         pub struct SelectNightmareDomainNull {
             pub txt: Option<String>,
             pub json: Option<serde_json::Value>,
@@ -2224,11 +2260,11 @@ pub mod queries {
             pub named: super::super::types::public::NamedCompositeBorrowed<'a>,
             pub named_with_dot: Option<super::super::types::public::NamedCompositeWithDot>,
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
+        #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Copy)]
         pub struct Id {
             pub id: i32,
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
         pub struct Named {
             pub id: i32,
             pub name: String,
@@ -2258,7 +2294,7 @@ pub mod queries {
                 }
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
         pub struct NamedComplex {
             pub named: super::super::types::public::NamedComposite,
             pub named_with_dot: Option<super::super::types::public::NamedCompositeWithDot>,
@@ -2983,7 +3019,7 @@ pub mod queries {
             pub name: T3,
             pub composite: Option<super::super::types::public::NullityCompositeParams<'a>>,
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
         pub struct Nullity {
             pub texts: Vec<Option<String>>,
             pub name: String,
@@ -3292,7 +3328,7 @@ pub mod queries {
             pub c: i32,
             pub a: i32,
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
         pub struct SelectBook {
             pub name: String,
             pub author: Option<String>,
@@ -3309,7 +3345,7 @@ pub mod queries {
                 }
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
         pub struct FindBooks {
             pub name: String,
             pub author: Option<String>,
@@ -3964,7 +4000,7 @@ pub mod queries {
             pub macaddr_: T32,
             pub numeric_: T33,
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
         pub struct Everything {
             pub bool_: bool,
             pub boolean_: bool,
@@ -4114,7 +4150,7 @@ pub mod queries {
                 }
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
         pub struct EverythingNull {
             pub bool_: Option<bool>,
             pub boolean_: Option<bool>,
@@ -4264,7 +4300,7 @@ pub mod queries {
                 }
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
         pub struct EverythingArray {
             pub bool_: Vec<bool>,
             pub boolean_: Vec<bool>,
@@ -4402,7 +4438,7 @@ pub mod queries {
                 }
             }
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
         pub struct EverythingArrayNull {
             pub bool_: Option<Vec<bool>>,
             pub boolean_: Option<Vec<bool>>,
@@ -6552,15 +6588,15 @@ FROM
             pub r#async: super::super::types::public::SyntaxComposite,
             pub r#enum: super::super::types::public::SyntaxEnum,
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
+        #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Copy)]
         pub struct Row {
             pub id: i32,
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq, Copy)]
+        #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Copy)]
         pub struct RowSpace {
             pub id: i32,
         }
-        #[derive(serde::Serialize, Debug, Clone, PartialEq)]
+        #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
         pub struct Typeof {
             pub trick_y: String,
             pub r#async: super::super::types::public::SyntaxComposite,
