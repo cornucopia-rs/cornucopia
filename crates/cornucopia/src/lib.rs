@@ -16,6 +16,7 @@ pub mod container;
 
 use std::path::Path;
 
+use container::ContainerOpts;
 use postgres::Client;
 
 use codegen::generate as generate_internal;
@@ -75,7 +76,7 @@ pub fn generate_managed<P: AsRef<Path>>(
     queries_path: P,
     schema_files: &[P],
     destination: Option<P>,
-    podman: bool,
+    container_opts: &ContainerOpts,
     settings: CodegenSettings,
 ) -> Result<String, Error> {
     // Read
@@ -83,12 +84,12 @@ pub fn generate_managed<P: AsRef<Path>>(
         .into_iter()
         .map(parse_query_module)
         .collect::<Result<_, parser::error::Error>>()?;
-    container::setup(podman)?;
-    let mut client = conn::cornucopia_conn()?;
+    container::setup(container_opts)?;
+    let mut client = conn::cornucopia_conn(container_opts)?;
     load_schema(&mut client, schema_files)?;
     let prepared_modules = prepare(&mut client, modules)?;
     let generated_code = generate_internal(prepared_modules, settings);
-    container::cleanup(podman)?;
+    container::cleanup(container_opts)?;
 
     if let Some(destination) = destination {
         write_generated_code(destination.as_ref(), &generated_code)?;

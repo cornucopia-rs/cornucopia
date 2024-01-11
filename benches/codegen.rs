@@ -1,10 +1,11 @@
-use cornucopia::{conn::cornucopia_conn, CodegenSettings};
+use cornucopia::{conn::cornucopia_conn, container::ContainerOpts, CodegenSettings};
 use criterion::Criterion;
 
 fn bench(c: &mut Criterion) {
-    cornucopia::container::cleanup(false).ok();
-    cornucopia::container::setup(false).unwrap();
-    let client = &mut cornucopia_conn().unwrap();
+    let container_opts = ContainerOpts::default();
+    cornucopia::container::cleanup(&container_opts).ok();
+    cornucopia::container::setup(&container_opts).unwrap();
+    let client = &mut cornucopia_conn(&container_opts).unwrap();
 
     cornucopia::load_schema(client, &["../codegen_test/schema.sql"]).unwrap();
     c.bench_function("codegen_sync", |b| {
@@ -37,7 +38,7 @@ fn bench(c: &mut Criterion) {
             .unwrap()
         })
     });
-    cornucopia::container::cleanup(false).unwrap();
+    cornucopia::container::cleanup(&container_opts).unwrap();
 }
 criterion::criterion_group!(benches, bench);
 criterion::criterion_main!(benches);

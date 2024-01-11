@@ -2,7 +2,7 @@ use std::{fmt::Display, process::ExitCode};
 
 use crate::{codegen::run_codegen_test, errors::run_errors_test};
 use clap::Parser;
-use cornucopia::container;
+use cornucopia::container::{self, ContainerOpts};
 
 mod codegen;
 mod errors;
@@ -19,9 +19,8 @@ struct Args {
     /// Update the project's generated code
     #[clap(long)]
     apply_codegen: bool,
-    /// Use `podman` instead of `docker`
-    #[clap(short, long)]
-    podman: bool,
+    #[command(flatten)]
+    container_opts: ContainerOpts,
 }
 
 /// Print error to stderr
@@ -37,18 +36,18 @@ fn test(
     Args {
         apply_errors,
         apply_codegen,
-        podman,
+        container_opts,
     }: Args,
 ) -> bool {
     // Start by removing previous container if it was left open
-    container::cleanup(podman).ok();
-    container::setup(podman).unwrap();
+    container::cleanup(&container_opts).ok();
+    container::setup(&container_opts).unwrap();
     let successful = std::panic::catch_unwind(|| {
-        let mut client = cornucopia::conn::cornucopia_conn().unwrap();
+        let mut client = cornucopia::conn::cornucopia_conn(&container_opts).unwrap();
         display(run_errors_test(&mut client, apply_errors)).unwrap()
             && display(run_codegen_test(&mut client, apply_codegen)).unwrap()
     });
-    container::cleanup(podman).unwrap();
+    container::cleanup(&container_opts).unwrap();
     successful.unwrap()
 }
 
@@ -64,6 +63,7 @@ fn main() -> ExitCode {
 
 #[cfg(test)]
 mod test {
+    use crate::container::ContainerOpts;
     use crate::test;
 
     #[test]
@@ -71,7 +71,7 @@ mod test {
         assert!(test(crate::Args {
             apply_errors: false,
             apply_codegen: false,
-            podman: false
+            container_opts: ContainerOpts::default(),
         }))
     }
 }
