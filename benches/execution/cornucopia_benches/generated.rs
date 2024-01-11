@@ -138,11 +138,13 @@ pub mod queries {
             }
         }
         pub mod sync {
-            use postgres::{fallible_iterator::FallibleIterator, GenericClient};
+            use cornucopia_sync::GenericClient;
+            use postgres::fallible_iterator::FallibleIterator;
             pub struct UserQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut cornucopia_sync::private::Stmt,
+                query: &'static str,
+                cached: Option<&'a postgres::Statement>,
                 extractor: fn(&postgres::Row) -> super::UserBorrowed,
                 mapper: fn(super::UserBorrowed) -> T,
             }
@@ -157,43 +159,54 @@ pub mod queries {
                     UserQuery {
                         client: self.client,
                         params: self.params,
-                        stmt: self.stmt,
+                        query: self.query,
+                        cached: self.cached,
                         extractor: self.extractor,
                         mapper,
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.stmt.prepare(self.client)?;
-                    let row = self.client.query_one(stmt, &self.params)?;
+                    let row = cornucopia_sync::private::one(
+                        self.client,
+                        self.query,
+                        &self.params,
+                        self.cached,
+                    )?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.stmt.prepare(self.client)?;
-                    Ok(self
-                        .client
-                        .query_opt(stmt, &self.params)?
-                        .map(|row| (self.mapper)((self.extractor)(&row))))
+                    let opt_row = cornucopia_sync::private::opt(
+                        self.client,
+                        self.query,
+                        &self.params,
+                        self.cached,
+                    )?;
+                    Ok(opt_row.map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.stmt.prepare(self.client)?;
-                    let it = self
-                        .client
-                        .query_raw(stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                    let stream = cornucopia_sync::private::raw(
+                        self.client,
+                        self.query,
+                        cornucopia_sync::private::slice_iter(&self.params),
+                        self.cached,
+                    )?;
+                    let mapped = stream
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
-                    Ok(it)
+                    Ok(mapped)
                 }
             }
             pub struct PostQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut cornucopia_sync::private::Stmt,
+                query: &'static str,
+                cached: Option<&'a postgres::Statement>,
                 extractor: fn(&postgres::Row) -> super::PostBorrowed,
                 mapper: fn(super::PostBorrowed) -> T,
             }
@@ -208,43 +221,54 @@ pub mod queries {
                     PostQuery {
                         client: self.client,
                         params: self.params,
-                        stmt: self.stmt,
+                        query: self.query,
+                        cached: self.cached,
                         extractor: self.extractor,
                         mapper,
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.stmt.prepare(self.client)?;
-                    let row = self.client.query_one(stmt, &self.params)?;
+                    let row = cornucopia_sync::private::one(
+                        self.client,
+                        self.query,
+                        &self.params,
+                        self.cached,
+                    )?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.stmt.prepare(self.client)?;
-                    Ok(self
-                        .client
-                        .query_opt(stmt, &self.params)?
-                        .map(|row| (self.mapper)((self.extractor)(&row))))
+                    let opt_row = cornucopia_sync::private::opt(
+                        self.client,
+                        self.query,
+                        &self.params,
+                        self.cached,
+                    )?;
+                    Ok(opt_row.map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.stmt.prepare(self.client)?;
-                    let it = self
-                        .client
-                        .query_raw(stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                    let stream = cornucopia_sync::private::raw(
+                        self.client,
+                        self.query,
+                        cornucopia_sync::private::slice_iter(&self.params),
+                        self.cached,
+                    )?;
+                    let mapped = stream
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
-                    Ok(it)
+                    Ok(mapped)
                 }
             }
             pub struct CommentQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut cornucopia_sync::private::Stmt,
+                query: &'static str,
+                cached: Option<&'a postgres::Statement>,
                 extractor: fn(&postgres::Row) -> super::CommentBorrowed,
                 mapper: fn(super::CommentBorrowed) -> T,
             }
@@ -259,43 +283,54 @@ pub mod queries {
                     CommentQuery {
                         client: self.client,
                         params: self.params,
-                        stmt: self.stmt,
+                        query: self.query,
+                        cached: self.cached,
                         extractor: self.extractor,
                         mapper,
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.stmt.prepare(self.client)?;
-                    let row = self.client.query_one(stmt, &self.params)?;
+                    let row = cornucopia_sync::private::one(
+                        self.client,
+                        self.query,
+                        &self.params,
+                        self.cached,
+                    )?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.stmt.prepare(self.client)?;
-                    Ok(self
-                        .client
-                        .query_opt(stmt, &self.params)?
-                        .map(|row| (self.mapper)((self.extractor)(&row))))
+                    let opt_row = cornucopia_sync::private::opt(
+                        self.client,
+                        self.query,
+                        &self.params,
+                        self.cached,
+                    )?;
+                    Ok(opt_row.map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.stmt.prepare(self.client)?;
-                    let it = self
-                        .client
-                        .query_raw(stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                    let stream = cornucopia_sync::private::raw(
+                        self.client,
+                        self.query,
+                        cornucopia_sync::private::slice_iter(&self.params),
+                        self.cached,
+                    )?;
+                    let mapped = stream
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
-                    Ok(it)
+                    Ok(mapped)
                 }
             }
             pub struct SelectComplexQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a mut C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut cornucopia_sync::private::Stmt,
+                query: &'static str,
+                cached: Option<&'a postgres::Statement>,
                 extractor: fn(&postgres::Row) -> super::SelectComplexBorrowed,
                 mapper: fn(super::SelectComplexBorrowed) -> T,
             }
@@ -310,52 +345,70 @@ pub mod queries {
                     SelectComplexQuery {
                         client: self.client,
                         params: self.params,
-                        stmt: self.stmt,
+                        query: self.query,
+                        cached: self.cached,
                         extractor: self.extractor,
                         mapper,
                     }
                 }
                 pub fn one(self) -> Result<T, postgres::Error> {
-                    let stmt = self.stmt.prepare(self.client)?;
-                    let row = self.client.query_one(stmt, &self.params)?;
+                    let row = cornucopia_sync::private::one(
+                        self.client,
+                        self.query,
+                        &self.params,
+                        self.cached,
+                    )?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub fn all(self) -> Result<Vec<T>, postgres::Error> {
                     self.iter()?.collect()
                 }
                 pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-                    let stmt = self.stmt.prepare(self.client)?;
-                    Ok(self
-                        .client
-                        .query_opt(stmt, &self.params)?
-                        .map(|row| (self.mapper)((self.extractor)(&row))))
+                    let opt_row = cornucopia_sync::private::opt(
+                        self.client,
+                        self.query,
+                        &self.params,
+                        self.cached,
+                    )?;
+                    Ok(opt_row.map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub fn iter(
                     self,
                 ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'a, postgres::Error>
                 {
-                    let stmt = self.stmt.prepare(self.client)?;
-                    let it = self
-                        .client
-                        .query_raw(stmt, cornucopia_sync::private::slice_iter(&self.params))?
+                    let stream = cornucopia_sync::private::raw(
+                        self.client,
+                        self.query,
+                        cornucopia_sync::private::slice_iter(&self.params),
+                        self.cached,
+                    )?;
+                    let mapped = stream
                         .iterator()
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))));
-                    Ok(it)
+                    Ok(mapped)
                 }
             }
             pub fn users() -> UsersStmt {
-                UsersStmt(cornucopia_sync::private::Stmt::new("SELECT * FROM users"))
+                UsersStmt("SELECT * FROM users", None)
             }
-            pub struct UsersStmt(cornucopia_sync::private::Stmt);
+            pub struct UsersStmt(&'static str, Option<postgres::Statement>);
             impl UsersStmt {
+                pub fn prepare<'a, C: GenericClient>(
+                    mut self,
+                    client: &'a mut C,
+                ) -> Result<Self, postgres::Error> {
+                    self.1 = Some(client.prepare(self.0)?);
+                    Ok(self)
+                }
                 pub fn bind<'a, C: GenericClient>(
-                    &'a mut self,
+                    &'a self,
                     client: &'a mut C,
                 ) -> UserQuery<'a, C, super::User, 0> {
                     UserQuery {
                         client,
                         params: [],
-                        stmt: &mut self.0,
+                        query: self.0,
+                        cached: self.1.as_ref(),
                         extractor: |row| super::UserBorrowed {
                             id: row.get(0),
                             name: row.get(1),
@@ -366,25 +419,29 @@ pub mod queries {
                 }
             }
             pub fn insert_user() -> InsertUserStmt {
-                InsertUserStmt(cornucopia_sync::private::Stmt::new(
-                    "INSERT INTO users (name, hair_color) VALUES ($1, $2)",
-                ))
+                InsertUserStmt("INSERT INTO users (name, hair_color) VALUES ($1, $2)", None)
             }
-            pub struct InsertUserStmt(cornucopia_sync::private::Stmt);
+            pub struct InsertUserStmt(&'static str, Option<postgres::Statement>);
             impl InsertUserStmt {
+                pub fn prepare<'a, C: GenericClient>(
+                    mut self,
+                    client: &'a mut C,
+                ) -> Result<Self, postgres::Error> {
+                    self.1 = Some(client.prepare(self.0)?);
+                    Ok(self)
+                }
                 pub fn bind<
                     'a,
                     C: GenericClient,
                     T1: cornucopia_sync::StringSql,
                     T2: cornucopia_sync::StringSql,
                 >(
-                    &'a mut self,
+                    &'a self,
                     client: &'a mut C,
                     name: &'a T1,
                     hair_color: &'a Option<T2>,
                 ) -> Result<u64, postgres::Error> {
-                    let stmt = self.0.prepare(client)?;
-                    client.execute(stmt, &[name, hair_color])
+                    client.execute(self.0, &[name, hair_color])
                 }
             }
             impl<
@@ -401,7 +458,7 @@ pub mod queries {
                 > for InsertUserStmt
             {
                 fn params(
-                    &'a mut self,
+                    &'a self,
                     client: &'a mut C,
                     params: &'a super::InsertUserParams<T1, T2>,
                 ) -> Result<u64, postgres::Error> {
@@ -409,18 +466,26 @@ pub mod queries {
                 }
             }
             pub fn posts() -> PostsStmt {
-                PostsStmt(cornucopia_sync::private::Stmt::new("SELECT * FROM posts"))
+                PostsStmt("SELECT * FROM posts", None)
             }
-            pub struct PostsStmt(cornucopia_sync::private::Stmt);
+            pub struct PostsStmt(&'static str, Option<postgres::Statement>);
             impl PostsStmt {
+                pub fn prepare<'a, C: GenericClient>(
+                    mut self,
+                    client: &'a mut C,
+                ) -> Result<Self, postgres::Error> {
+                    self.1 = Some(client.prepare(self.0)?);
+                    Ok(self)
+                }
                 pub fn bind<'a, C: GenericClient>(
-                    &'a mut self,
+                    &'a self,
                     client: &'a mut C,
                 ) -> PostQuery<'a, C, super::Post, 0> {
                     PostQuery {
                         client,
                         params: [],
-                        stmt: &mut self.0,
+                        query: self.0,
+                        cached: self.1.as_ref(),
                         extractor: |row| super::PostBorrowed {
                             id: row.get(0),
                             user_id: row.get(1),
@@ -432,21 +497,27 @@ pub mod queries {
                 }
             }
             pub fn post_by_user_ids() -> PostByUserIdsStmt {
-                PostByUserIdsStmt(cornucopia_sync::private::Stmt::new(
-                    "SELECT * FROM posts WHERE user_id = ANY($1)",
-                ))
+                PostByUserIdsStmt("SELECT * FROM posts WHERE user_id = ANY($1)", None)
             }
-            pub struct PostByUserIdsStmt(cornucopia_sync::private::Stmt);
+            pub struct PostByUserIdsStmt(&'static str, Option<postgres::Statement>);
             impl PostByUserIdsStmt {
+                pub fn prepare<'a, C: GenericClient>(
+                    mut self,
+                    client: &'a mut C,
+                ) -> Result<Self, postgres::Error> {
+                    self.1 = Some(client.prepare(self.0)?);
+                    Ok(self)
+                }
                 pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::ArraySql<Item = i32>>(
-                    &'a mut self,
+                    &'a self,
                     client: &'a mut C,
                     ids: &'a T1,
                 ) -> PostQuery<'a, C, super::Post, 1> {
                     PostQuery {
                         client,
                         params: [ids],
-                        stmt: &mut self.0,
+                        query: self.0,
+                        cached: self.1.as_ref(),
                         extractor: |row| super::PostBorrowed {
                             id: row.get(0),
                             user_id: row.get(1),
@@ -458,20 +529,26 @@ pub mod queries {
                 }
             }
             pub fn comments() -> CommentsStmt {
-                CommentsStmt(cornucopia_sync::private::Stmt::new(
-                    "SELECT * FROM comments",
-                ))
+                CommentsStmt("SELECT * FROM comments", None)
             }
-            pub struct CommentsStmt(cornucopia_sync::private::Stmt);
+            pub struct CommentsStmt(&'static str, Option<postgres::Statement>);
             impl CommentsStmt {
+                pub fn prepare<'a, C: GenericClient>(
+                    mut self,
+                    client: &'a mut C,
+                ) -> Result<Self, postgres::Error> {
+                    self.1 = Some(client.prepare(self.0)?);
+                    Ok(self)
+                }
                 pub fn bind<'a, C: GenericClient>(
-                    &'a mut self,
+                    &'a self,
                     client: &'a mut C,
                 ) -> CommentQuery<'a, C, super::Comment, 0> {
                     CommentQuery {
                         client,
                         params: [],
-                        stmt: &mut self.0,
+                        query: self.0,
+                        cached: self.1.as_ref(),
                         extractor: |row| super::CommentBorrowed {
                             id: row.get(0),
                             post_id: row.get(1),
@@ -482,21 +559,27 @@ pub mod queries {
                 }
             }
             pub fn comments_by_post_id() -> CommentsByPostIdStmt {
-                CommentsByPostIdStmt(cornucopia_sync::private::Stmt::new(
-                    "SELECT * FROM comments WHERE post_id = ANY($1)",
-                ))
+                CommentsByPostIdStmt("SELECT * FROM comments WHERE post_id = ANY($1)", None)
             }
-            pub struct CommentsByPostIdStmt(cornucopia_sync::private::Stmt);
+            pub struct CommentsByPostIdStmt(&'static str, Option<postgres::Statement>);
             impl CommentsByPostIdStmt {
+                pub fn prepare<'a, C: GenericClient>(
+                    mut self,
+                    client: &'a mut C,
+                ) -> Result<Self, postgres::Error> {
+                    self.1 = Some(client.prepare(self.0)?);
+                    Ok(self)
+                }
                 pub fn bind<'a, C: GenericClient, T1: cornucopia_sync::ArraySql<Item = i32>>(
-                    &'a mut self,
+                    &'a self,
                     client: &'a mut C,
                     ids: &'a T1,
                 ) -> CommentQuery<'a, C, super::Comment, 1> {
                     CommentQuery {
                         client,
                         params: [ids],
-                        stmt: &mut self.0,
+                        query: self.0,
+                        cached: self.1.as_ref(),
                         extractor: |row| super::CommentBorrowed {
                             id: row.get(0),
                             post_id: row.get(1),
@@ -507,18 +590,26 @@ pub mod queries {
                 }
             }
             pub fn select_complex() -> SelectComplexStmt {
-                SelectComplexStmt(cornucopia_sync :: private :: Stmt :: new("SELECT u.id as myuser_id, u.name, u.hair_color, p.id as post_id, p.user_id, p.title, p.body FROM users as u LEFT JOIN posts as p on u.id = p.user_id"))
+                SelectComplexStmt("SELECT u.id as myuser_id, u.name, u.hair_color, p.id as post_id, p.user_id, p.title, p.body FROM users as u LEFT JOIN posts as p on u.id = p.user_id", None)
             }
-            pub struct SelectComplexStmt(cornucopia_sync::private::Stmt);
+            pub struct SelectComplexStmt(&'static str, Option<postgres::Statement>);
             impl SelectComplexStmt {
+                pub fn prepare<'a, C: GenericClient>(
+                    mut self,
+                    client: &'a mut C,
+                ) -> Result<Self, postgres::Error> {
+                    self.1 = Some(client.prepare(self.0)?);
+                    Ok(self)
+                }
                 pub fn bind<'a, C: GenericClient>(
-                    &'a mut self,
+                    &'a self,
                     client: &'a mut C,
                 ) -> SelectComplexQuery<'a, C, super::SelectComplex, 0> {
                     SelectComplexQuery {
                         client,
                         params: [],
-                        stmt: &mut self.0,
+                        query: self.0,
+                        cached: self.1.as_ref(),
                         extractor: |row| super::SelectComplexBorrowed {
                             myuser_id: row.get(0),
                             name: row.get(1),
@@ -540,7 +631,8 @@ pub mod queries {
             pub struct UserQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut cornucopia_async::private::Stmt,
+                query: &'static str,
+                cached: Option<&'a tokio_postgres::Statement>,
                 extractor: fn(&tokio_postgres::Row) -> super::UserBorrowed,
                 mapper: fn(super::UserBorrowed) -> T,
             }
@@ -555,26 +647,34 @@ pub mod queries {
                     UserQuery {
                         client: self.client,
                         params: self.params,
-                        stmt: self.stmt,
+                        query: self.query,
+                        cached: self.cached,
                         extractor: self.extractor,
                         mapper,
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.stmt.prepare(self.client).await?;
-                    let row = self.client.query_one(stmt, &self.params).await?;
+                    let row = cornucopia_async::private::one(
+                        self.client,
+                        self.query,
+                        &self.params,
+                        self.cached,
+                    )
+                    .await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.stmt.prepare(self.client).await?;
-                    Ok(self
-                        .client
-                        .query_opt(stmt, &self.params)
-                        .await?
-                        .map(|row| (self.mapper)((self.extractor)(&row))))
+                    let opt_row = cornucopia_async::private::opt(
+                        self.client,
+                        self.query,
+                        &self.params,
+                        self.cached,
+                    )
+                    .await?;
+                    Ok(opt_row.map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub async fn iter(
                     self,
@@ -582,20 +682,24 @@ pub mod queries {
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.stmt.prepare(self.client).await?;
-                    let it = self
-                        .client
-                        .query_raw(stmt, cornucopia_async::private::slice_iter(&self.params))
-                        .await?
+                    let stream = cornucopia_async::private::raw(
+                        self.client,
+                        self.query,
+                        cornucopia_async::private::slice_iter(&self.params),
+                        self.cached,
+                    )
+                    .await?;
+                    let mapped = stream
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
-                    Ok(it)
+                    Ok(mapped)
                 }
             }
             pub struct PostQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut cornucopia_async::private::Stmt,
+                query: &'static str,
+                cached: Option<&'a tokio_postgres::Statement>,
                 extractor: fn(&tokio_postgres::Row) -> super::PostBorrowed,
                 mapper: fn(super::PostBorrowed) -> T,
             }
@@ -610,26 +714,34 @@ pub mod queries {
                     PostQuery {
                         client: self.client,
                         params: self.params,
-                        stmt: self.stmt,
+                        query: self.query,
+                        cached: self.cached,
                         extractor: self.extractor,
                         mapper,
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.stmt.prepare(self.client).await?;
-                    let row = self.client.query_one(stmt, &self.params).await?;
+                    let row = cornucopia_async::private::one(
+                        self.client,
+                        self.query,
+                        &self.params,
+                        self.cached,
+                    )
+                    .await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.stmt.prepare(self.client).await?;
-                    Ok(self
-                        .client
-                        .query_opt(stmt, &self.params)
-                        .await?
-                        .map(|row| (self.mapper)((self.extractor)(&row))))
+                    let opt_row = cornucopia_async::private::opt(
+                        self.client,
+                        self.query,
+                        &self.params,
+                        self.cached,
+                    )
+                    .await?;
+                    Ok(opt_row.map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub async fn iter(
                     self,
@@ -637,20 +749,24 @@ pub mod queries {
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.stmt.prepare(self.client).await?;
-                    let it = self
-                        .client
-                        .query_raw(stmt, cornucopia_async::private::slice_iter(&self.params))
-                        .await?
+                    let stream = cornucopia_async::private::raw(
+                        self.client,
+                        self.query,
+                        cornucopia_async::private::slice_iter(&self.params),
+                        self.cached,
+                    )
+                    .await?;
+                    let mapped = stream
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
-                    Ok(it)
+                    Ok(mapped)
                 }
             }
             pub struct CommentQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut cornucopia_async::private::Stmt,
+                query: &'static str,
+                cached: Option<&'a tokio_postgres::Statement>,
                 extractor: fn(&tokio_postgres::Row) -> super::CommentBorrowed,
                 mapper: fn(super::CommentBorrowed) -> T,
             }
@@ -665,26 +781,34 @@ pub mod queries {
                     CommentQuery {
                         client: self.client,
                         params: self.params,
-                        stmt: self.stmt,
+                        query: self.query,
+                        cached: self.cached,
                         extractor: self.extractor,
                         mapper,
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.stmt.prepare(self.client).await?;
-                    let row = self.client.query_one(stmt, &self.params).await?;
+                    let row = cornucopia_async::private::one(
+                        self.client,
+                        self.query,
+                        &self.params,
+                        self.cached,
+                    )
+                    .await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.stmt.prepare(self.client).await?;
-                    Ok(self
-                        .client
-                        .query_opt(stmt, &self.params)
-                        .await?
-                        .map(|row| (self.mapper)((self.extractor)(&row))))
+                    let opt_row = cornucopia_async::private::opt(
+                        self.client,
+                        self.query,
+                        &self.params,
+                        self.cached,
+                    )
+                    .await?;
+                    Ok(opt_row.map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub async fn iter(
                     self,
@@ -692,20 +816,24 @@ pub mod queries {
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.stmt.prepare(self.client).await?;
-                    let it = self
-                        .client
-                        .query_raw(stmt, cornucopia_async::private::slice_iter(&self.params))
-                        .await?
+                    let stream = cornucopia_async::private::raw(
+                        self.client,
+                        self.query,
+                        cornucopia_async::private::slice_iter(&self.params),
+                        self.cached,
+                    )
+                    .await?;
+                    let mapped = stream
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
-                    Ok(it)
+                    Ok(mapped)
                 }
             }
             pub struct SelectComplexQuery<'a, C: GenericClient, T, const N: usize> {
                 client: &'a C,
                 params: [&'a (dyn postgres_types::ToSql + Sync); N],
-                stmt: &'a mut cornucopia_async::private::Stmt,
+                query: &'static str,
+                cached: Option<&'a tokio_postgres::Statement>,
                 extractor: fn(&tokio_postgres::Row) -> super::SelectComplexBorrowed,
                 mapper: fn(super::SelectComplexBorrowed) -> T,
             }
@@ -720,26 +848,34 @@ pub mod queries {
                     SelectComplexQuery {
                         client: self.client,
                         params: self.params,
-                        stmt: self.stmt,
+                        query: self.query,
+                        cached: self.cached,
                         extractor: self.extractor,
                         mapper,
                     }
                 }
                 pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                    let stmt = self.stmt.prepare(self.client).await?;
-                    let row = self.client.query_one(stmt, &self.params).await?;
+                    let row = cornucopia_async::private::one(
+                        self.client,
+                        self.query,
+                        &self.params,
+                        self.cached,
+                    )
+                    .await?;
                     Ok((self.mapper)((self.extractor)(&row)))
                 }
                 pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                     self.iter().await?.try_collect().await
                 }
                 pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                    let stmt = self.stmt.prepare(self.client).await?;
-                    Ok(self
-                        .client
-                        .query_opt(stmt, &self.params)
-                        .await?
-                        .map(|row| (self.mapper)((self.extractor)(&row))))
+                    let opt_row = cornucopia_async::private::opt(
+                        self.client,
+                        self.query,
+                        &self.params,
+                        self.cached,
+                    )
+                    .await?;
+                    Ok(opt_row.map(|row| (self.mapper)((self.extractor)(&row))))
                 }
                 pub async fn iter(
                     self,
@@ -747,29 +883,40 @@ pub mod queries {
                     impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                     tokio_postgres::Error,
                 > {
-                    let stmt = self.stmt.prepare(self.client).await?;
-                    let it = self
-                        .client
-                        .query_raw(stmt, cornucopia_async::private::slice_iter(&self.params))
-                        .await?
+                    let stream = cornucopia_async::private::raw(
+                        self.client,
+                        self.query,
+                        cornucopia_async::private::slice_iter(&self.params),
+                        self.cached,
+                    )
+                    .await?;
+                    let mapped = stream
                         .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                         .into_stream();
-                    Ok(it)
+                    Ok(mapped)
                 }
             }
             pub fn users() -> UsersStmt {
-                UsersStmt(cornucopia_async::private::Stmt::new("SELECT * FROM users"))
+                UsersStmt("SELECT * FROM users", None)
             }
-            pub struct UsersStmt(cornucopia_async::private::Stmt);
+            pub struct UsersStmt(&'static str, Option<tokio_postgres::Statement>);
             impl UsersStmt {
+                pub async fn prepare<'a, C: GenericClient>(
+                    mut self,
+                    client: &'a C,
+                ) -> Result<Self, tokio_postgres::Error> {
+                    self.1 = Some(client.prepare(self.0).await?);
+                    Ok(self)
+                }
                 pub fn bind<'a, C: GenericClient>(
-                    &'a mut self,
+                    &'a self,
                     client: &'a C,
                 ) -> UserQuery<'a, C, super::User, 0> {
                     UserQuery {
                         client,
                         params: [],
-                        stmt: &mut self.0,
+                        query: self.0,
+                        cached: self.1.as_ref(),
                         extractor: |row| super::UserBorrowed {
                             id: row.get(0),
                             name: row.get(1),
@@ -780,25 +927,29 @@ pub mod queries {
                 }
             }
             pub fn insert_user() -> InsertUserStmt {
-                InsertUserStmt(cornucopia_async::private::Stmt::new(
-                    "INSERT INTO users (name, hair_color) VALUES ($1, $2)",
-                ))
+                InsertUserStmt("INSERT INTO users (name, hair_color) VALUES ($1, $2)", None)
             }
-            pub struct InsertUserStmt(cornucopia_async::private::Stmt);
+            pub struct InsertUserStmt(&'static str, Option<tokio_postgres::Statement>);
             impl InsertUserStmt {
+                pub async fn prepare<'a, C: GenericClient>(
+                    mut self,
+                    client: &'a C,
+                ) -> Result<Self, tokio_postgres::Error> {
+                    self.1 = Some(client.prepare(self.0).await?);
+                    Ok(self)
+                }
                 pub async fn bind<
                     'a,
                     C: GenericClient,
                     T1: cornucopia_async::StringSql,
                     T2: cornucopia_async::StringSql,
                 >(
-                    &'a mut self,
+                    &'a self,
                     client: &'a C,
                     name: &'a T1,
                     hair_color: &'a Option<T2>,
                 ) -> Result<u64, tokio_postgres::Error> {
-                    let stmt = self.0.prepare(client).await?;
-                    client.execute(stmt, &[name, hair_color]).await
+                    client.execute(self.0, &[name, hair_color]).await
                 }
             }
             impl<
@@ -821,7 +972,7 @@ pub mod queries {
                 > for InsertUserStmt
             {
                 fn params(
-                    &'a mut self,
+                    &'a self,
                     client: &'a C,
                     params: &'a super::InsertUserParams<T1, T2>,
                 ) -> std::pin::Pin<
@@ -835,18 +986,26 @@ pub mod queries {
                 }
             }
             pub fn posts() -> PostsStmt {
-                PostsStmt(cornucopia_async::private::Stmt::new("SELECT * FROM posts"))
+                PostsStmt("SELECT * FROM posts", None)
             }
-            pub struct PostsStmt(cornucopia_async::private::Stmt);
+            pub struct PostsStmt(&'static str, Option<tokio_postgres::Statement>);
             impl PostsStmt {
+                pub async fn prepare<'a, C: GenericClient>(
+                    mut self,
+                    client: &'a C,
+                ) -> Result<Self, tokio_postgres::Error> {
+                    self.1 = Some(client.prepare(self.0).await?);
+                    Ok(self)
+                }
                 pub fn bind<'a, C: GenericClient>(
-                    &'a mut self,
+                    &'a self,
                     client: &'a C,
                 ) -> PostQuery<'a, C, super::Post, 0> {
                     PostQuery {
                         client,
                         params: [],
-                        stmt: &mut self.0,
+                        query: self.0,
+                        cached: self.1.as_ref(),
                         extractor: |row| super::PostBorrowed {
                             id: row.get(0),
                             user_id: row.get(1),
@@ -858,21 +1017,27 @@ pub mod queries {
                 }
             }
             pub fn post_by_user_ids() -> PostByUserIdsStmt {
-                PostByUserIdsStmt(cornucopia_async::private::Stmt::new(
-                    "SELECT * FROM posts WHERE user_id = ANY($1)",
-                ))
+                PostByUserIdsStmt("SELECT * FROM posts WHERE user_id = ANY($1)", None)
             }
-            pub struct PostByUserIdsStmt(cornucopia_async::private::Stmt);
+            pub struct PostByUserIdsStmt(&'static str, Option<tokio_postgres::Statement>);
             impl PostByUserIdsStmt {
+                pub async fn prepare<'a, C: GenericClient>(
+                    mut self,
+                    client: &'a C,
+                ) -> Result<Self, tokio_postgres::Error> {
+                    self.1 = Some(client.prepare(self.0).await?);
+                    Ok(self)
+                }
                 pub fn bind<'a, C: GenericClient, T1: cornucopia_async::ArraySql<Item = i32>>(
-                    &'a mut self,
+                    &'a self,
                     client: &'a C,
                     ids: &'a T1,
                 ) -> PostQuery<'a, C, super::Post, 1> {
                     PostQuery {
                         client,
                         params: [ids],
-                        stmt: &mut self.0,
+                        query: self.0,
+                        cached: self.1.as_ref(),
                         extractor: |row| super::PostBorrowed {
                             id: row.get(0),
                             user_id: row.get(1),
@@ -884,20 +1049,26 @@ pub mod queries {
                 }
             }
             pub fn comments() -> CommentsStmt {
-                CommentsStmt(cornucopia_async::private::Stmt::new(
-                    "SELECT * FROM comments",
-                ))
+                CommentsStmt("SELECT * FROM comments", None)
             }
-            pub struct CommentsStmt(cornucopia_async::private::Stmt);
+            pub struct CommentsStmt(&'static str, Option<tokio_postgres::Statement>);
             impl CommentsStmt {
+                pub async fn prepare<'a, C: GenericClient>(
+                    mut self,
+                    client: &'a C,
+                ) -> Result<Self, tokio_postgres::Error> {
+                    self.1 = Some(client.prepare(self.0).await?);
+                    Ok(self)
+                }
                 pub fn bind<'a, C: GenericClient>(
-                    &'a mut self,
+                    &'a self,
                     client: &'a C,
                 ) -> CommentQuery<'a, C, super::Comment, 0> {
                     CommentQuery {
                         client,
                         params: [],
-                        stmt: &mut self.0,
+                        query: self.0,
+                        cached: self.1.as_ref(),
                         extractor: |row| super::CommentBorrowed {
                             id: row.get(0),
                             post_id: row.get(1),
@@ -908,21 +1079,27 @@ pub mod queries {
                 }
             }
             pub fn comments_by_post_id() -> CommentsByPostIdStmt {
-                CommentsByPostIdStmt(cornucopia_async::private::Stmt::new(
-                    "SELECT * FROM comments WHERE post_id = ANY($1)",
-                ))
+                CommentsByPostIdStmt("SELECT * FROM comments WHERE post_id = ANY($1)", None)
             }
-            pub struct CommentsByPostIdStmt(cornucopia_async::private::Stmt);
+            pub struct CommentsByPostIdStmt(&'static str, Option<tokio_postgres::Statement>);
             impl CommentsByPostIdStmt {
+                pub async fn prepare<'a, C: GenericClient>(
+                    mut self,
+                    client: &'a C,
+                ) -> Result<Self, tokio_postgres::Error> {
+                    self.1 = Some(client.prepare(self.0).await?);
+                    Ok(self)
+                }
                 pub fn bind<'a, C: GenericClient, T1: cornucopia_async::ArraySql<Item = i32>>(
-                    &'a mut self,
+                    &'a self,
                     client: &'a C,
                     ids: &'a T1,
                 ) -> CommentQuery<'a, C, super::Comment, 1> {
                     CommentQuery {
                         client,
                         params: [ids],
-                        stmt: &mut self.0,
+                        query: self.0,
+                        cached: self.1.as_ref(),
                         extractor: |row| super::CommentBorrowed {
                             id: row.get(0),
                             post_id: row.get(1),
@@ -933,18 +1110,26 @@ pub mod queries {
                 }
             }
             pub fn select_complex() -> SelectComplexStmt {
-                SelectComplexStmt(cornucopia_async :: private :: Stmt :: new("SELECT u.id as myuser_id, u.name, u.hair_color, p.id as post_id, p.user_id, p.title, p.body FROM users as u LEFT JOIN posts as p on u.id = p.user_id"))
+                SelectComplexStmt("SELECT u.id as myuser_id, u.name, u.hair_color, p.id as post_id, p.user_id, p.title, p.body FROM users as u LEFT JOIN posts as p on u.id = p.user_id", None)
             }
-            pub struct SelectComplexStmt(cornucopia_async::private::Stmt);
+            pub struct SelectComplexStmt(&'static str, Option<tokio_postgres::Statement>);
             impl SelectComplexStmt {
+                pub async fn prepare<'a, C: GenericClient>(
+                    mut self,
+                    client: &'a C,
+                ) -> Result<Self, tokio_postgres::Error> {
+                    self.1 = Some(client.prepare(self.0).await?);
+                    Ok(self)
+                }
                 pub fn bind<'a, C: GenericClient>(
-                    &'a mut self,
+                    &'a self,
                     client: &'a C,
                 ) -> SelectComplexQuery<'a, C, super::SelectComplex, 0> {
                     SelectComplexQuery {
                         client,
                         params: [],
-                        stmt: &mut self.0,
+                        query: self.0,
+                        cached: self.1.as_ref(),
                         extractor: |row| super::SelectComplexBorrowed {
                             myuser_id: row.get(0),
                             name: row.get(1),

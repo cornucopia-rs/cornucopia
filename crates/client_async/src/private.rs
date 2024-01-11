@@ -1,32 +1,60 @@
 pub use cornucopia_client_core::{slice_iter, Domain, DomainArray};
+use tokio_postgres::{
+    types::{BorrowToSql, ToSql},
+    Error, Row, RowStream, Statement,
+};
 
-use crate::generic_client::GenericClient;
-use tokio_postgres::{Error, Statement};
+use crate::GenericClient;
 
-/// Cached statement
-pub struct Stmt {
-    query: &'static str,
-    cached: Option<Statement>,
+pub async fn one<C: GenericClient>(
+    client: &C,
+    query: &str,
+    params: &[&(dyn ToSql + Sync)],
+    cached: Option<&Statement>,
+) -> Result<Row, Error> {
+    if let Some(cached) = cached {
+        client.query_one(cached, params).await
+    } else if C::stmt_cache() {
+        let cached = client.prepare(query).await?;
+        client.query_one(&cached, params).await
+    } else {
+        client.query_one(query, params).await
+    }
 }
 
-impl Stmt {
-    #[must_use]
-    pub fn new(query: &'static str) -> Self {
-        Self {
-            query,
-            cached: None,
-        }
+pub async fn opt<C: GenericClient>(
+    client: &C,
+    query: &str,
+    params: &[&(dyn ToSql + Sync)],
+    cached: Option<&Statement>,
+) -> Result<Option<Row>, Error> {
+    if let Some(cached) = cached {
+        client.query_opt(cached, params).await
+    } else if C::stmt_cache() {
+        let cached = client.prepare(query).await?;
+        client.query_opt(&cached, params).await
+    } else {
+        client.query_opt(query, params).await
     }
+}
 
-    pub async fn prepare<'a, C: GenericClient>(
-        &'a mut self,
-        client: &C,
-    ) -> Result<&'a Statement, Error> {
-        if self.cached.is_none() {
-            let stmt = client.prepare(self.query).await?;
-            self.cached = Some(stmt);
-        }
-        // the statement is always prepared at this point
-        Ok(unsafe { self.cached.as_ref().unwrap_unchecked() })
+pub async fn raw<C: GenericClient, P, I>(
+    client: &C,
+    query: &str,
+    params: I,
+    cached: Option<&Statement>,
+) -> Result<RowStream, Error>
+where
+    P: BorrowToSql,
+    I: IntoIterator<Item = P> + Sync + Send,
+    I::IntoIter: ExactSizeIterator,
+{
+    if let Some(cached) = cached {
+        client.query_raw(cached, params).await
+    } else if C::stmt_cache() {
+        let cached = client.prepare(query).await?;
+        client.query_raw(&cached, params).await
+    } else {
+        client.query_raw(query, params).await
     }
 }

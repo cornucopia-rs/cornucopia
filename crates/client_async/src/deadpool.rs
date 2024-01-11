@@ -15,6 +15,10 @@ impl GenericClient for DeadpoolClient {
         ClientWrapper::prepare_cached(self, query).await
     }
 
+    fn stmt_cache() -> bool {
+        true
+    }
+
     async fn execute<T>(
         &self,
         query: &T,
@@ -74,6 +78,10 @@ impl GenericClient for DeadpoolClient {
 impl GenericClient for DeadpoolTransaction<'_> {
     async fn prepare(&self, query: &str) -> Result<Statement, Error> {
         DeadpoolTransaction::prepare_cached(self, query).await
+    }
+
+    fn stmt_cache() -> bool {
+        true
     }
 
     async fn execute<T>(

@@ -17,7 +17,8 @@ pub mod queries {
         pub struct StringQuery<'a, C: GenericClient, T, const N: usize> {
             client: &'a C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
-            stmt: &'a mut cornucopia_async::private::Stmt,
+            query: &'static str,
+            cached: Option<&'a tokio_postgres::Statement>,
             extractor: fn(&tokio_postgres::Row) -> &str,
             mapper: fn(&str) -> T,
         }
@@ -29,26 +30,34 @@ pub mod queries {
                 StringQuery {
                     client: self.client,
                     params: self.params,
-                    stmt: self.stmt,
+                    query: self.query,
+                    cached: self.cached,
                     extractor: self.extractor,
                     mapper,
                 }
             }
             pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-                let stmt = self.stmt.prepare(self.client).await?;
-                let row = self.client.query_one(stmt, &self.params).await?;
+                let row = cornucopia_async::private::one(
+                    self.client,
+                    self.query,
+                    &self.params,
+                    self.cached,
+                )
+                .await?;
                 Ok((self.mapper)((self.extractor)(&row)))
             }
             pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
                 self.iter().await?.try_collect().await
             }
             pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-                let stmt = self.stmt.prepare(self.client).await?;
-                Ok(self
-                    .client
-                    .query_opt(stmt, &self.params)
-                    .await?
-                    .map(|row| (self.mapper)((self.extractor)(&row))))
+                let opt_row = cornucopia_async::private::opt(
+                    self.client,
+                    self.query,
+                    &self.params,
+                    self.cached,
+                )
+                .await?;
+                Ok(opt_row.map(|row| (self.mapper)((self.extractor)(&row))))
             }
             pub async fn iter(
                 self,
@@ -56,34 +65,46 @@ pub mod queries {
                 impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'a,
                 tokio_postgres::Error,
             > {
-                let stmt = self.stmt.prepare(self.client).await?;
-                let it = self
-                    .client
-                    .query_raw(stmt, cornucopia_async::private::slice_iter(&self.params))
-                    .await?
+                let stream = cornucopia_async::private::raw(
+                    self.client,
+                    self.query,
+                    cornucopia_async::private::slice_iter(&self.params),
+                    self.cached,
+                )
+                .await?;
+                let mapped = stream
                     .map(move |res| res.map(|row| (self.mapper)((self.extractor)(&row))))
                     .into_stream();
-                Ok(it)
+                Ok(mapped)
             }
         }
         pub fn example_query() -> ExampleQueryStmt {
-            ExampleQueryStmt(cornucopia_async::private::Stmt::new(
+            ExampleQueryStmt(
                 "SELECT
     *
 FROM
     example_table",
-            ))
+                None,
+            )
         }
-        pub struct ExampleQueryStmt(cornucopia_async::private::Stmt);
+        pub struct ExampleQueryStmt(&'static str, Option<tokio_postgres::Statement>);
         impl ExampleQueryStmt {
+            pub async fn prepare<'a, C: GenericClient>(
+                mut self,
+                client: &'a C,
+            ) -> Result<Self, tokio_postgres::Error> {
+                self.1 = Some(client.prepare(self.0).await?);
+                Ok(self)
+            }
             pub fn bind<'a, C: GenericClient>(
-                &'a mut self,
+                &'a self,
                 client: &'a C,
             ) -> StringQuery<'a, C, String, 0> {
                 StringQuery {
                     client,
                     params: [],
-                    stmt: &mut self.0,
+                    query: self.0,
+                    cached: self.1.as_ref(),
                     extractor: |row| row.get(0),
                     mapper: |it| it.into(),
                 }

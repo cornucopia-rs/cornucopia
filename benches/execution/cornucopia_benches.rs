@@ -12,12 +12,12 @@ use self::generated::queries::bench::{
 mod generated;
 
 pub fn bench_trivial_query(b: &mut Bencher, client: &Client) {
-    let mut stmt = users();
+    let stmt = block_on(async { users().prepare(client).await.unwrap() });
     b.iter(|| block_on(async { stmt.bind(client).all().await.unwrap() }))
 }
 
 pub fn bench_medium_complex_query(b: &mut Bencher, client: &Client) {
-    let mut stmt = select_complex();
+    let stmt = block_on(async { select_complex().prepare(client).await.unwrap() });
     b.iter(|| {
         block_on(async {
             stmt.bind(client)
@@ -44,7 +44,7 @@ pub fn bench_medium_complex_query(b: &mut Bencher, client: &Client) {
 }
 
 pub fn bench_insert(b: &mut Bencher, client: &mut Client, size: usize) {
-    let mut stmt = insert_user();
+    let stmt = block_on(async { insert_user().prepare(client).await.unwrap() });
     b.iter(|| {
         block_on(async {
             let tx = client.transaction().await.unwrap();
@@ -59,9 +59,9 @@ pub fn bench_insert(b: &mut Bencher, client: &mut Client, size: usize) {
 }
 
 pub fn loading_associations_sequentially(b: &mut Bencher, client: &Client) {
-    let mut user_stmt = users();
-    let mut post_stmt = post_by_user_ids();
-    let mut comment_stmt = comments_by_post_id();
+    let user_stmt = block_on(async { users().prepare(client).await.unwrap() });
+    let post_stmt = block_on(async { post_by_user_ids().prepare(client).await.unwrap() });
+    let comment_stmt = block_on(async { comments_by_post_id().prepare(client).await.unwrap() });
     b.iter(|| {
         block_on(async {
             let users = user_stmt.bind(client).all().await.unwrap();
@@ -118,12 +118,12 @@ pub mod sync {
         Comment, Post, User,
     };
     pub fn bench_trivial_query(b: &mut Bencher, client: &mut Client) {
-        let mut stmt = users();
+        let stmt = users().prepare(client).unwrap();
         b.iter(|| stmt.bind(client).all().unwrap())
     }
 
     pub fn bench_medium_complex_query(b: &mut Bencher, client: &mut Client) {
-        let mut stmt = select_complex();
+        let stmt = select_complex().prepare(client).unwrap();
         b.iter(|| {
             stmt.bind(client)
                 .map(|it| {
@@ -147,7 +147,7 @@ pub mod sync {
     }
 
     pub fn bench_insert(b: &mut Bencher, client: &mut Client, size: usize) {
-        let mut stmt = insert_user();
+        let stmt = insert_user().prepare(client).unwrap();
         b.iter(|| {
             let mut tx = client.transaction().unwrap();
             for x in 0..size {
@@ -159,9 +159,9 @@ pub mod sync {
     }
 
     pub fn loading_associations_sequentially(b: &mut Bencher, client: &mut Client) {
-        let mut user_stmt = users();
-        let mut post_stmt = post_by_user_ids();
-        let mut comment_stmt = comments_by_post_id();
+        let user_stmt = users().prepare(client).unwrap();
+        let post_stmt = post_by_user_ids().prepare(client).unwrap();
+        let comment_stmt = comments_by_post_id().prepare(client).unwrap();
 
         b.iter(|| {
             let users = user_stmt.bind(client).all().unwrap();
