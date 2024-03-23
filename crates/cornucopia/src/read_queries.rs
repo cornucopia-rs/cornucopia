@@ -14,13 +14,13 @@ pub(crate) struct ModuleInfo {
     pub(crate) content: Arc<String>,
 }
 
-impl From<ModuleInfo> for NamedSource {
+impl From<ModuleInfo> for NamedSource<Arc<String>> {
     fn from(m: ModuleInfo) -> Self {
         Self::new(m.path.to_string_lossy(), m.content)
     }
 }
 
-impl From<&ModuleInfo> for NamedSource {
+impl From<&ModuleInfo> for NamedSource<Arc<String>> {
     fn from(m: &ModuleInfo) -> Self {
         Self::new(m.path.to_string_lossy(), m.content.clone())
     }

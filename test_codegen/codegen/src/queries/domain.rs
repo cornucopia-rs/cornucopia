@@ -210,7 +210,7 @@ pub mod sync {
         }
     }
     pub fn insert_nightmare_domain() -> InsertNightmareDomainStmt {
-        InsertNightmareDomainStmt(crate::client::sync :: Stmt :: new("INSERT INTO nightmare_domain (txt, json, nb, arr, composite) VALUES ($1, $2, $3, $4, $5)"))
+        InsertNightmareDomainStmt(crate::client::sync::Stmt::new("INSERT INTO nightmare_domain (txt, json, nb, arr, composite) VALUES ($1, $2, $3, $4, $5)"))
     }
     pub struct InsertNightmareDomainStmt(crate::client::sync::Stmt);
     impl InsertNightmareDomainStmt {
@@ -439,7 +439,7 @@ pub mod async_ {
         }
     }
     pub fn insert_nightmare_domain() -> InsertNightmareDomainStmt {
-        InsertNightmareDomainStmt(crate::client::async_ :: Stmt :: new("INSERT INTO nightmare_domain (txt, json, nb, arr, composite) VALUES ($1, $2, $3, $4, $5)"))
+        InsertNightmareDomainStmt(crate::client::async_::Stmt::new("INSERT INTO nightmare_domain (txt, json, nb, arr, composite) VALUES ($1, $2, $3, $4, $5)"))
     }
     pub struct InsertNightmareDomainStmt(crate::client::async_::Stmt);
     impl InsertNightmareDomainStmt {

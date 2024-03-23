@@ -52,7 +52,7 @@ pub(crate) mod error {
         Postgres {
             msg: String,
             #[source_code]
-            src: NamedSource,
+            src: NamedSource<String>,
             #[help]
             help: Option<String>,
             #[label("error occurs near this location")]

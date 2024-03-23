@@ -456,6 +456,8 @@ fn prepare_query(
 }
 
 pub(crate) mod error {
+    use std::sync::Arc;
+
     use miette::{Diagnostic, NamedSource, SourceSpan};
     use thiserror::Error as ThisError;
 
@@ -472,7 +474,7 @@ pub(crate) mod error {
             #[help]
             help: Option<String>,
             #[source_code]
-            src: NamedSource,
+            src: NamedSource<Arc<String>>,
             #[label("error occurs near this location")]
             err_span: Option<SourceSpan>,
         },

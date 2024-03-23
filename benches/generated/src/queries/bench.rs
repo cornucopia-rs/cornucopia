@@ -472,7 +472,7 @@ pub mod sync {
         }
     }
     pub fn select_complex() -> SelectComplexStmt {
-        SelectComplexStmt(crate::client::sync :: Stmt :: new("SELECT u.id as myuser_id, u.name, u.hair_color, p.id as post_id, p.user_id, p.title, p.body FROM users as u LEFT JOIN posts as p on u.id = p.user_id"))
+        SelectComplexStmt(crate::client::sync::Stmt::new("SELECT u.id as myuser_id, u.name, u.hair_color, p.id as post_id, p.user_id, p.title, p.body FROM users as u LEFT JOIN posts as p on u.id = p.user_id"))
     }
     pub struct SelectComplexStmt(crate::client::sync::Stmt);
     impl SelectComplexStmt {
@@ -868,7 +868,7 @@ pub mod async_ {
         }
     }
     pub fn select_complex() -> SelectComplexStmt {
-        SelectComplexStmt(crate::client::async_ :: Stmt :: new("SELECT u.id as myuser_id, u.name, u.hair_color, p.id as post_id, p.user_id, p.title, p.body FROM users as u LEFT JOIN posts as p on u.id = p.user_id"))
+        SelectComplexStmt(crate::client::async_::Stmt::new("SELECT u.id as myuser_id, u.name, u.hair_color, p.id as post_id, p.user_id, p.title, p.body FROM users as u LEFT JOIN posts as p on u.id = p.user_id"))
     }
     pub struct SelectComplexStmt(crate::client::async_::Stmt);
     impl SelectComplexStmt {

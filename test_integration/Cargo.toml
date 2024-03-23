@@ -16,7 +16,7 @@ tempfile = "3.5.0"
 dir-diff = "0.3.2"
 
 # Colored output
-owo-colors = "3.5.0"
+owo-colors = "4.0.0"
 
 # CLI handling
 clap = { version = "4.3.5", features = ["derive"] }

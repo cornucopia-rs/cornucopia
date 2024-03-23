@@ -430,6 +430,8 @@ impl std::ops::Index<&Type> for TypeRegistrar {
 }
 
 pub(crate) mod error {
+    use std::sync::Arc;
+
     use miette::{Diagnostic, NamedSource, SourceSpan};
     use thiserror::Error as ThisError;
 
@@ -439,7 +441,7 @@ pub(crate) mod error {
         Db(#[from] postgres::Error),
         UnsupportedPostgresType {
             #[source_code]
-            src: NamedSource,
+            src: NamedSource<Arc<String>>,
             #[label("this query contains an unsupported type (name: {col_name}, type: {col_ty})")]
             query: SourceSpan,
             col_name: String,

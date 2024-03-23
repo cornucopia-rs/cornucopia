@@ -402,13 +402,14 @@ pub(crate) fn parse_query_module(info: ModuleInfo) -> Result<Module, Error> {
 
 pub(crate) mod error {
     use miette::{Diagnostic, NamedSource, SourceSpan};
+    use std::sync::Arc;
     use thiserror::Error as ThisError;
 
     #[derive(Debug, ThisError, Diagnostic)]
     #[error("Couldn't parse queries")]
     pub struct Error {
         #[source_code]
-        pub src: NamedSource,
+        pub src: NamedSource<Arc<String>>,
 
         #[help]
         pub help: String,

@@ -355,7 +355,7 @@ pub(crate) fn validate_module(
 }
 
 pub mod error {
-    use std::fmt::Debug;
+    use std::{fmt::Debug, sync::Arc};
 
     use miette::{Diagnostic, NamedSource, SourceSpan};
     use thiserror::Error as ThisError;
@@ -366,7 +366,7 @@ pub mod error {
         #[diagnostic(help("disambiguate column names in your SQL using an `AS` clause"))]
         DuplicateSqlColName {
             #[source_code]
-            src: NamedSource,
+            src: NamedSource<Arc<String>>,
             name: String,
             #[label("query returns one or more columns with the same name")]
             pos: SourceSpan,
@@ -375,7 +375,7 @@ pub mod error {
         #[diagnostic(help("remove one of the two declaration"))]
         DuplicateFieldNullity {
             #[source_code]
-            src: NamedSource,
+            src: NamedSource<Arc<String>>,
             name: String,
             #[label("previous nullity declaration")]
             first: SourceSpan,
@@ -386,7 +386,7 @@ pub mod error {
         #[diagnostic(help("use a different name for one of those"))]
         DuplicateType {
             #[source_code]
-            src: NamedSource,
+            src: NamedSource<Arc<String>>,
             name: String,
             ty: &'static str,
             #[label("previous definition here")]
@@ -398,7 +398,7 @@ pub mod error {
         #[diagnostic(help("declare an inline named type using `()`: {name}()"))]
         UnknownNamedType {
             #[source_code]
-            src: NamedSource,
+            src: NamedSource<Arc<String>>,
             name: String,
             ty: &'static str,
             #[label("unknown named {ty}")]
@@ -408,7 +408,7 @@ pub mod error {
         #[diagnostic(help("use one of those names: {known}"))]
         UnknownFieldName {
             #[source_code]
-            src: NamedSource,
+            src: NamedSource<Arc<String>>,
             #[label("no field with this name was found")]
             pos: SourceSpan,
             known: String,
@@ -417,7 +417,7 @@ pub mod error {
         #[diagnostic(help("use a different named type for each query"))]
         IncompatibleNamedType {
             #[source_code]
-            src: NamedSource,
+            src: NamedSource<Arc<String>>,
             name: String,
             first_label: String,
             #[label("{first_label}")]
@@ -430,7 +430,7 @@ pub mod error {
         #[diagnostic(help("remove row declaration"))]
         RowOnExecute {
             #[source_code]
-            src: NamedSource,
+            src: NamedSource<Arc<String>>,
             name: String,
             #[label("row declared here")]
             row: SourceSpan,
@@ -441,7 +441,7 @@ pub mod error {
         #[diagnostic(help("remove parameter declaration"))]
         ParamsOnSimpleQuery {
             #[source_code]
-            src: NamedSource,
+            src: NamedSource<Arc<String>>,
             name: String,
             #[label("parameter declared here")]
             param: SourceSpan,
@@ -452,7 +452,7 @@ pub mod error {
         #[diagnostic(help("use a different name for one of those"))]
         DuplicateName {
             #[source_code]
-            src: NamedSource,
+            src: NamedSource<Arc<String>>,
             name: String,
             first_ty: &'static str,
             #[label("previous definition as {first_ty} here")]
@@ -465,7 +465,7 @@ pub mod error {
         #[diagnostic(help("use a different name"))]
         TypeRustKeyword {
             #[source_code]
-            src: NamedSource,
+            src: NamedSource<Arc<String>>,
             name: &'static str,
             #[label("reserved rust keyword")]
             pos: SourceSpan,
@@ -474,7 +474,7 @@ pub mod error {
         #[diagnostic(help("use a different name"))]
         NameRustKeyword {
             #[source_code]
-            src: NamedSource,
+            src: NamedSource<Arc<String>>,
             name: &'static str,
             ty: &'static str,
             #[label("from {ty} declared here")]

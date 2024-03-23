@@ -71,9 +71,9 @@ pub fn gen_cargo_file(
         [dependencies]
         ## Core dependencies
         # Postgres types
-        postgres-types = {{ version = "0.2.5", features = ["derive"] }}
+        postgres-types = {{ version = "0.2.6", features = ["derive"] }}
         # Postgres interaction
-        postgres-protocol = "0.6.5"
+        postgres-protocol = "0.6.6"
         # Iterator utils required for working with `postgres_protocol::types::ArrayValues`
         fallible-iterator = "0.2.0"
     "#}
@@ -86,8 +86,8 @@ pub fn gen_cargo_file(
         if dependency_analysis.json {
             writedoc! { buf, r#"
                 # JSON or JSONB
-                serde_json = {{ version = "1.0.96", features = ["raw_value"] }}
-                serde = {{ version = "1.0.163", features = ["derive"] }}
+                serde_json = {{ version = "1.0.113", features = ["raw_value"] }}
+                serde = {{ version = "1.0.197", features = ["derive"] }}
             "#}
             .unwrap();
             write!(client_features, r#""with-serde_json-1","#).unwrap();
@@ -95,7 +95,7 @@ pub fn gen_cargo_file(
         if dependency_analysis.time {
             writedoc! { buf, r#"
                 # TIME, DATE, TIMESTAMP or TIMESTAMPZ
-                time = "0.3.21"
+                time = "0.3.34"
             "#}
             .unwrap();
             write!(client_features, r#""with-time-0_3","#).unwrap();
@@ -103,7 +103,7 @@ pub fn gen_cargo_file(
         if dependency_analysis.uuid {
             writedoc! { buf, r#"
                 # UUID
-                uuid = "1.3.2"
+                uuid = "1.8.0"
             "#}
             .unwrap();
             write!(client_features, r#""with-uuid-1","#).unwrap();
@@ -130,7 +130,7 @@ pub fn gen_cargo_file(
 
             ## Sync client dependencies
             # Postgres sync client
-            postgres = {{ version = "0.19.5", features = [{client_features}] }}
+            postgres = {{ version = "0.19.7", features = [{client_features}] }}
         "#}
         .unwrap();
     }
@@ -140,14 +140,14 @@ pub fn gen_cargo_file(
 
             ## Async client dependencies
             # Postgres async client
-            tokio-postgres = {{ version = "0.7.8", features = [{client_features}] }}
+            tokio-postgres = {{ version = "0.7.10", features = [{client_features}] }}
             # Async utils
-            async-trait = "0.1.68"
-            futures = "0.3.28"
+            async-trait = "0.1.78"
+            futures = "0.3.30"
 
             ## Async features dependencies
             # Async connection pooling
-            deadpool-postgres = {{ version = "0.11.0", optional = true }}
+            deadpool-postgres = {{ version = "0.12.1", optional = true }}
         "#}
         .unwrap();
     }

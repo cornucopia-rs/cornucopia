@@ -6,7 +6,7 @@ INSERT INTO Author (id, name) VALUES (:id, :id);
 """
 error = """
 × the field `id` is declared null multiple time
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:1:16]
  1 │ --! new_author(id?, id?)
    ·                ─┬   ─┬
    ·                 │    ╰── redeclared here
@@ -23,7 +23,7 @@ SELECT * FROM author;
 """
 error = """
 × the field `id` is declared null multiple time
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:1:14]
  1 │ --! author: (id?, name?, id?)
    ·              ─┬          ─┬
    ·               │           ╰── redeclared here
@@ -40,7 +40,7 @@ SELECT * FROM author;
 """
 error = """
 × unknown field
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:1:14]
  1 │ --! author: (age?)
    ·              ─┬─
    ·               ╰── no field with this name was found
@@ -56,7 +56,7 @@ INSERT INTO Author (id, name) VALUES (:id, :name);
 """
 error = """
 × unknown field
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:1:17]
  1 │ --! new_author (age?)
    ·                 ─┬─
    ·                  ╰── no field with this name was found
@@ -74,7 +74,7 @@ SELECT id FROM Author;
 """
 error = """
 × the query `author_id` is defined multiple time
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:1:5]
  1 │ --! author_id
    ·     ────┬────
    ·         ╰── previous definition here
@@ -94,7 +94,7 @@ query = """
 """
 error = """
 × the type `Row` is defined multiple time
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:1:5]
  1 │ --: Row()
    ·     ─┬─
    ·      ╰── previous definition here
@@ -115,7 +115,7 @@ SELECT name FROM Author;
 """
 error = """
 × the row `Row` is defined multiple time
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:1:5]
  1 │ --: Row()
    ·     ─┬─
    ·      ╰── previous definition here
@@ -137,7 +137,7 @@ INSERT INTO Author (id, name) VALUES (:id, :name);
 """
 error = """
 × the param `Param` is defined multiple time
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:1:5]
  1 │ --: Param()
    ·     ──┬──
    ·       ╰── previous definition here
@@ -156,7 +156,7 @@ SELECT * FROM author;
 """
 error = """
 × reference to an unknown named row `Author`
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:1:13]
  1 │ --! author: Author
    ·             ───┬──
    ·                ╰── unknown named row
@@ -172,7 +172,7 @@ INSERT INTO Author (id, name) VALUES (:id, :name);
 """
 error = """
 × reference to an unknown named param `Param`
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:1:16]
  1 │ --! new_author Param
    ·                ──┬──
    ·                  ╰── unknown named param
@@ -191,7 +191,7 @@ SELECT id FROM Author;
 """
 error = """
 × conflicting uses of named type `Row`
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:2:19]
  1 │ --: Row()
  2 │ --! author_names: Row
    ·                   ─┬─
@@ -215,7 +215,7 @@ SELECT name, id FROM Author;
 """
 error = """
 × conflicting uses of named type `Row`
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:2:19]
  1 │ --: Row()
  2 │ --! author_names: Row
    ·                   ─┬─
@@ -239,7 +239,7 @@ SELECT id as name FROM Author;
 """
 error = """
 × conflicting uses of named type `Row`
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:2:19]
  1 │ --: Row()
  2 │ --! author_names: Row
    ·                   ─┬─
@@ -260,7 +260,7 @@ DELETE FROM author;
 """
 error = """
 × the query `delete` declare a row but return nothing
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:1:13]
  1 │ --! delete: (name?)
    ·             ───┬───
    ·                ╰── row declared here
@@ -278,7 +278,7 @@ DELETE FROM author;
 """
 error = """
 × the query `delete` declare a row but return nothing
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:1:13]
  1 │ --! delete: Row()
    ·             ──┬──
    ·               ╰── row declared here
@@ -296,7 +296,7 @@ DELETE FROM author;
 """
 error = """
 × the query `delete` declares a parameter but has no binding
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:1:12]
  1 │ --! delete Param()
    ·            ───┬───
    ·               ╰── parameter declared here
@@ -314,7 +314,7 @@ SELECT * FROM author;
 """
 error = """
 × `crate` is a reserved rust keyword that cannot be escaped
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:1:5]
  1 │ --! crate
    ·     ──┬──
    ·       ╰── reserved rust keyword
@@ -330,7 +330,7 @@ SELECT * FROM author;
 """
 error = """
 × `Self` is a reserved rust keyword that cannot be escaped
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:1:13]
  1 │ --! select: Self()
    ·             ──┬─
    ·               ╰── reserved rust keyword
@@ -346,7 +346,7 @@ SELECT id, name as _ FROM author;
 """
 error = """
 × `_` is a reserved rust keyword that cannot be escaped
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:1:5]
  1 │ --! query
    ·     ──┬──
    ·       ╰── from row declared here
