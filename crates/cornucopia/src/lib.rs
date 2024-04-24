@@ -83,7 +83,10 @@ pub fn generate_managed<P: AsRef<Path>>(
         .into_iter()
         .map(parse_query_module)
         .collect::<Result<_, parser::error::Error>>()?;
-    container::setup(podman)?;
+    if let Err(e) = container::setup(podman) {
+        let _ = container::cleanup(podman);
+        return Err(Error::Container(e));
+    }
     let mut client = conn::cornucopia_conn()?;
     load_schema(&mut client, schema_files)?;
     let prepared_modules = prepare(&mut client, modules)?;

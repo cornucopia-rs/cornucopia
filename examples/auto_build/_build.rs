@@ -9,8 +9,9 @@ fn main() -> Result<(), Error> {
     let schema_file = "schema.sql";
     let destination = "src/cornucopia.rs";
     let settings = CodegenSettings {
-        is_async: true,
-        derive_ser: false,
+        gen_async: true,
+        gen_sync: false,
+        derive_ser: true,
     };
 
     println!("cargo:rerun-if-changed={queries_path}");

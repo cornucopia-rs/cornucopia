@@ -5,7 +5,7 @@ use self::error::Error;
 /// Starts Cornucopia's database container and wait until it reports healthy.
 pub fn setup(podman: bool) -> Result<(), Error> {
     spawn_container(podman)?;
-    healthcheck(podman, 120, 50)?;
+    healthcheck(podman, 120, 500)?;
     Ok(())
 }
 
