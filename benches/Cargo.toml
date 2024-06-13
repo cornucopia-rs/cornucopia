@@ -15,16 +15,16 @@ cornucopia_async = { path = "../crates/client_async" }
 criterion = { version = "0.5.1", features = ["html_reports"] }
 
 # async
-tokio = { version = "1.24.2", features = ["full"] }
-futures = "0.3.25"
+tokio = { version = "1.38.0", features = ["full"] }
+futures = "0.3.30"
 
 # rust-postgres interaction
-postgres = "0.19.4"
-tokio-postgres = "0.7.7"
-postgres-types = "0.2.4"
+postgres = "0.19.7"
+tokio-postgres = "0.7.10"
+postgres-types = "0.2.6"
 
 # diesel
-diesel = { version = "2.0.2", features = ["postgres"] }
+diesel = { version = "2.2.1", features = ["postgres"] }
 
 [[bench]]
 name = "execution"

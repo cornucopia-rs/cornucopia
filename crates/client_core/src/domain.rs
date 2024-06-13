@@ -71,7 +71,7 @@ impl<'a, T: ToSql + Sync + 'a, A: ArraySql<Item = T>> ToSql for DomainArray<'a, 
 pub fn escape_domain_to_sql<T: ToSql>(
     ty: &Type,
     w: &mut BytesMut,
-    iter: impl Iterator<Item = T> + ExactSizeIterator,
+    iter: impl ExactSizeIterator<Item = T>,
 ) -> Result<IsNull, Box<dyn Error + Sync + Send>> {
     let member_type = match *ty.kind() {
         Kind::Array(ref member) => escape_domain(member),
