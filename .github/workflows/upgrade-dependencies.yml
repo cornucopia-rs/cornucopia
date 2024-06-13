@@ -1,0 +1,26 @@
+name: Upgrade dependencies
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: 0 2 * * *
+
+jobs:
+  upgrade-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo install cargo-edit
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo upgrade
+      - run: cargo test
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "fix: Upgrade dependencies"
+          title: "Upgrade dependencies to their latest compatible version"
+          body: |
+            Upgrade to compatible dependencies. This was automatically done using cargo-edit.
+            ```
+          branch: create-pull-request/upgrade-dependencies
