@@ -8,7 +8,7 @@ SELECT * FROM author;
 """
 error = """
 × `SelectBorrowed` is used multiple time
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:1:5]
  1 │ --! select
    ·     ───┬──
    ·        ╰── previous definition as borrowed row here
@@ -30,7 +30,7 @@ SELECT * FROM author;
 """
 error = """
 × `NewAuthorParams` is used multiple time
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:1:5]
  1 │ --! new_author
    ·     ─────┬────
    ·          ╰── previous definition as params here
@@ -52,7 +52,7 @@ SELECT * FROM author;
 """
 error = """
 × `SelectQuery` is used multiple time
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:1:5]
  1 │ --! select
    ·     ───┬──
    ·        ╰── previous definition as query here
@@ -73,7 +73,7 @@ INSERT INTO Author (id, name) VALUES (:id, :name) RETURNING *;
 """
 error = """
 × `AuthorParams` is used multiple time
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:2:5]
  1 │ --: AuthorParams()
  2 │ --! author: AuthorParams
    ·     ───┬──  ──────┬─────
@@ -91,7 +91,7 @@ INSERT INTO Author (id, name) VALUES (:id, :name) RETURNING *;
 """
 error = """
 × `Author` is used multiple time
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:1:12]
  1 │ --! author Author(): Author()
    ·            ───┬──    ───┬──
    ·               │         ╰── redefined as row here
@@ -108,7 +108,7 @@ INSERT INTO Author (id, name) VALUES (:id, :name) RETURNING *;
 """
 error = """
 × `AuthorParams` is used multiple time
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:1:5]
  1 │ --! author: AuthorParams(id?)
    ·     ───┬──  ──────┬─────
    ·        │          ╰── redefined as row here

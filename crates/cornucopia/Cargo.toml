@@ -20,7 +20,7 @@ postgres-types = "0.2.4"
 
 # Error handling and reporting
 thiserror = "1.0.38"
-miette = { version = "5.5.0", features = ["fancy"] }
+miette = { version = "7.4.0", features = ["fancy"] }
 
 # Parser
 chumsky = "0.9.0"

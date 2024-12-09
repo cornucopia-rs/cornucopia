@@ -463,7 +463,7 @@ pub(crate) mod error {
             #[help]
             help: Option<String>,
             #[source_code]
-            src: NamedSource,
+            src: NamedSource<std::sync::Arc<String>>,
             #[label("error occurs near this location")]
             err_span: Option<SourceSpan>,
         },

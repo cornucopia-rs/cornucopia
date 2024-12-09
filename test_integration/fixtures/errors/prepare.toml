@@ -6,7 +6,7 @@ SELECT id, name AS id FROM author;
 """
 error = """
 × column `id` appear multiple time
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:1:5]
  1 │ --! authors
    ·     ───┬───
    ·        ╰── query returns one or more columns with the same name
@@ -22,7 +22,7 @@ INSERT INTO Author (id, name) VALUES (:name, :name);
 """
 error = """
 × Couldn't prepare query: inconsistent types deduced for parameter $1
-   ╭─[queries/test.sql:1:1]
+   ╭─[queries/test.sql:2:43]
  1 │ --! insert_author
  2 │ INSERT INTO Author (id, name) VALUES (:name, :name);
    ·                                           ▲
