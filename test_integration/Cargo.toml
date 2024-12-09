@@ -13,7 +13,7 @@ cornucopia = { path = "../crates/cornucopia" }
 tempfile = "3.3.0"
 
 # Colored output
-owo-colors = "3.5.0"
+owo-colors = "4.1.0"
 
 # CLI handling
 clap = { version = "4.0.29", features = ["derive"] }
