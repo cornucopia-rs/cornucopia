@@ -563,9 +563,12 @@ impl Query {
 
                     if param_end > param_start {
                         let param: String = s.chars[param_start..param_end].iter().collect();
+                        let byte_start: usize =
+                            s.chars[..param_start].iter().map(|c| c.len_utf8()).sum();
+                        let byte_end: usize = byte_start + param.len();
                         params.push(Span {
                             value: param,
-                            span: (param_start..param_end).into(),
+                            span: (byte_start..byte_end).into(),
                         });
                         s.i = param_end;
                     } else {
@@ -899,7 +902,10 @@ pub(crate) mod error {
 
 #[cfg(test)]
 mod tests {
-    use super::Query;
+    use std::sync::Arc;
+
+    use super::{Query, parse_query_module};
+    use crate::read_queries::ModuleInfo;
 
     #[test]
     fn find_statement_end_simple() {
@@ -958,5 +964,26 @@ mod tests {
             Query::find_statement_end("SELECT 'it''s ; here';"),
             Some(21)
         );
+    }
+
+    fn module_from(sql: &str) -> ModuleInfo {
+        ModuleInfo {
+            path: "test.sql".into(),
+            name: "test".to_string(),
+            full_module_path: "test".to_string(),
+            content: Arc::new(sql.to_string()),
+        }
+    }
+
+    #[test]
+    fn parse_query_bind_param_after_utf8_quoted_identifier() {
+        let sql = "--! q\nSELECT \"à\" FROM t WHERE \"à\" = :v;";
+        let module = parse_query_module(module_from(sql))
+            .expect("query with UTF-8 quoted identifier should parse successfully");
+        assert_eq!(module.queries.len(), 1);
+        let query = &module.queries[0];
+        assert_eq!(query.bind_params.len(), 1);
+        assert_eq!(query.bind_params[0].value, "v");
+        assert_eq!(query.sql_str, "SELECT \"à\" FROM t WHERE \"à\" = $1");
     }
 }
