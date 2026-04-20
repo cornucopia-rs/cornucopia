@@ -1,6 +1,6 @@
 [package]
 name = "clorinde"
-version = "1.4.0"
+version = "1.4.1"
 edition = "2021"
 license = "MIT/Apache-2.0"
 description = "Generate type-checked Rust from your PostgreSQL queries."
