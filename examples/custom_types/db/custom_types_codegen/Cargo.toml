@@ -25,10 +25,10 @@ version = "0.19"
 features = ["with-time-0_3", "with-serde_json-1"]
 
 [dependencies.postgres-protocol]
-version = "0.6.10"
+version = "0.6.11"
 
 [dependencies.postgres-types]
-version = "0.2.12"
+version = "0.2.13"
 features = ["derive"]
 
 [dependencies.serde]

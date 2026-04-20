@@ -17,19 +17,19 @@ optional = true
 version = "0.3.32"
 
 [dependencies.postgres]
-version = "0.19.12"
+version = "0.19.13"
 features = ["with-chrono-0_4"]
 optional = true
 
 [dependencies.postgres-protocol]
-version = "0.6.10"
+version = "0.6.11"
 
 [dependencies.postgres-types]
-version = "0.2.12"
+version = "0.2.13"
 features = ["derive"]
 
 [dependencies.tokio-postgres]
-version = "0.7.16"
+version = "0.7.17"
 features = ["with-chrono-0_4"]
 default-features = false
 
