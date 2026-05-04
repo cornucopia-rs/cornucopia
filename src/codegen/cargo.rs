@@ -150,7 +150,7 @@ impl DependencyContext<'_> {
 fn get_workspace_deps(manifest_path: &Path) -> HashSet<String> {
     let mut deps = HashSet::new();
     if let Ok(contents) = fs::read_to_string(manifest_path) {
-        if let Ok(manifest) = contents.parse::<cargo_toml::Value>() {
+        if let Ok(manifest) = toml::from_str::<cargo_toml::Value>(&contents) {
             if let Some(workspace) = manifest
                 .get("workspace")
                 .and_then(|w| w.get("dependencies"))
@@ -372,4 +372,63 @@ pub fn gen_cargo_file(dependency_analysis: &DependencyAnalysis, config: &Config)
     let mut output = String::from("# This file was generated with `clorinde`. Do not modify.\n\n");
     output.push_str(&toml::to_string(&manifest).expect("Failed to serialize manifest"));
     output
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    // Regression test for https://github.com/halcyonnouveau/clorinde/issues/248:
+    // `cargo_toml::Value` re-exports `toml::Value`, whose `FromStr` impl parses
+    // a single TOML value rather than a document, so `.parse::<Value>()` on a
+    // full Cargo.toml fails. `toml::from_str` uses the document deserialiser.
+    #[test]
+    fn get_workspace_deps_parses_full_manifest() {
+        let manifest = r#"
+[workspace]
+
+[package]
+name = "clorinde-test"
+version = "0.1.0"
+edition = "2024"
+
+[workspace.dependencies]
+chrono = { version = "0.4.44", features = [] }
+serde = "1"
+
+[dependencies]
+codegen = { path = "codegen" }
+
+[build-dependencies]
+clorinde = { version = "1.4.1", features = [] }
+"#;
+
+        let mut tmpfile = tempfile::NamedTempFile::new().unwrap();
+        tmpfile.write_all(manifest.as_bytes()).unwrap();
+
+        let deps = get_workspace_deps(tmpfile.path());
+        assert!(deps.contains("chrono"));
+        assert!(deps.contains("serde"));
+        assert_eq!(deps.len(), 2);
+    }
+
+    #[test]
+    fn get_workspace_deps_empty_when_no_workspace_section() {
+        let manifest = r#"
+[package]
+name = "no-workspace"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = "1"
+"#;
+
+        let mut tmpfile = tempfile::NamedTempFile::new().unwrap();
+        tmpfile.write_all(manifest.as_bytes()).unwrap();
+
+        let deps = get_workspace_deps(tmpfile.path());
+        assert!(deps.is_empty());
+    }
 }
