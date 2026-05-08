@@ -79,6 +79,19 @@ The available options are:
 - **`is-copy`**: Whether the type implements `Copy` (default: `true`)
 - **`attributes`**: Rust attributes to apply to fields in owned structs
 - **`attributes-borrowed`**: Rust attributes to apply to fields in borrowed structs
+- **`attributes-nullable`**: Rust attributes to apply to fields in owned structs when the column is nullable (i.e., the field is `Option<T>`). When unset or empty, falls back to `attributes`.
+- **`attributes-borrowed-nullable`**: Rust attributes to apply to fields in borrowed structs when the column is nullable. When unset or empty, falls back to `attributes-borrowed`.
+
+### Nullable field attributes
+
+Some serde adapters need a different `with =` path depending on whether a field is `T` or `Option<T>`. For example, `time::serde::rfc3339` works on `OffsetDateTime` and `time::serde::rfc3339::option` works on `Option<OffsetDateTime>`. Use `attributes-nullable` to override the attributes applied when the column is nullable:
+
+```toml
+[types.mapping."pg_catalog.timestamptz"]
+rust-type = "time::OffsetDateTime"
+attributes = ['serde(with = "time::serde::rfc3339")']
+attributes-nullable = ['serde(with = "time::serde::rfc3339::option")']
+```
 
 ### Borrowed type mappings
 

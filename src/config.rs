@@ -206,24 +206,54 @@ pub enum TypeMapping {
         /// Whether this type implements the `Copy` trait
         #[serde(default = "default_true", rename = "is-copy")]
         is_copy: bool,
-        /// Rust attributes to apply to fields on owned structs
+        /// Rust attributes to apply to fields on owned structs (non-nullable variant)
         #[serde(default)]
         attributes: Vec<String>,
-        /// Rust attributes to apply to fields on borrowed structs
+        /// Rust attributes to apply to fields on borrowed structs (non-nullable variant)
         #[serde(default, rename = "attributes-borrowed")]
         attributes_borrowed: Vec<String>,
+        /// Rust attributes to apply to fields on owned structs when the column is nullable
+        /// (i.e., the field is `Option<T>`). Falls back to `attributes` when empty.
+        #[serde(default, rename = "attributes-nullable")]
+        attributes_nullable: Vec<String>,
+        /// Rust attributes to apply to fields on borrowed structs when the column is nullable.
+        /// Falls back to `attributes-borrowed` when empty.
+        #[serde(default, rename = "attributes-borrowed-nullable")]
+        attributes_borrowed_nullable: Vec<String>,
     },
 }
 
 impl TypeMapping {
-    pub fn get_attributes(&self) -> (Vec<String>, Vec<String>) {
+    /// Returns the `(owned, borrowed)` field attributes for this mapping, picking the
+    /// nullable variants when `is_nullable` is true and they are explicitly populated.
+    /// An empty nullable list falls back to the non-nullable list, preserving the
+    /// previous behaviour for mappings that do not configure nullable variants.
+    pub fn get_attributes(&self, is_nullable: bool) -> (Vec<String>, Vec<String>) {
         match self {
             TypeMapping::Simple(_) => (Vec::new(), Vec::new()),
             TypeMapping::Detailed {
                 attributes,
                 attributes_borrowed,
+                attributes_nullable,
+                attributes_borrowed_nullable,
                 ..
-            } => (attributes.to_owned(), attributes_borrowed.to_owned()),
+            } => {
+                if is_nullable {
+                    let owned = if attributes_nullable.is_empty() {
+                        attributes.clone()
+                    } else {
+                        attributes_nullable.clone()
+                    };
+                    let borrowed = if attributes_borrowed_nullable.is_empty() {
+                        attributes_borrowed.clone()
+                    } else {
+                        attributes_borrowed_nullable.clone()
+                    };
+                    (owned, borrowed)
+                } else {
+                    (attributes.clone(), attributes_borrowed.clone())
+                }
+            }
         }
     }
 
@@ -482,6 +512,41 @@ version = "0.2"
         assert_eq!(
             package.publish,
             cargo_toml::Inheritable::Set(cargo_toml::Publish::Flag(false))
+        );
+    }
+
+    #[test]
+    fn type_mapping_attributes_select_nullable_variant() {
+        let detailed = TypeMapping::Detailed {
+            rust_type: "time::OffsetDateTime".into(),
+            borrowed_type: None,
+            is_copy: true,
+            attributes: vec![r#"serde(with = "time::serde::rfc3339")"#.into()],
+            attributes_borrowed: vec!["doc(hidden)".into()],
+            attributes_nullable: vec![r#"serde(with = "time::serde::rfc3339::option")"#.into()],
+            attributes_borrowed_nullable: Vec::new(),
+        };
+
+        let (owned, borrowed) = detailed.get_attributes(false);
+        assert_eq!(owned, vec![r#"serde(with = "time::serde::rfc3339")"#]);
+        assert_eq!(borrowed, vec!["doc(hidden)"]);
+
+        let (owned_n, borrowed_n) = detailed.get_attributes(true);
+        assert_eq!(
+            owned_n,
+            vec![r#"serde(with = "time::serde::rfc3339::option")"#],
+            "nullable variant should be picked when populated"
+        );
+        assert_eq!(
+            borrowed_n,
+            vec!["doc(hidden)"],
+            "empty nullable list should fall back to the non-nullable list"
+        );
+
+        let simple = TypeMapping::Simple("i32".into());
+        assert_eq!(
+            simple.get_attributes(true),
+            (Vec::<String>::new(), Vec::<String>::new())
         );
     }
 

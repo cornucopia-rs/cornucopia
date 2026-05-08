@@ -441,9 +441,10 @@ fn prepare_type(
 
                         let ty = registrar.ref_of(field.type_());
 
+                        let is_nullable = nullity.as_ref().is_some_and(|n| n.nullable);
                         let attributes =
                             if let Some(mapping) = registrar.get_type_mapping(field.type_()) {
-                                mapping.get_attributes()
+                                mapping.get_attributes(is_nullable)
                             } else {
                                 (Vec::new(), Vec::new())
                             };
@@ -591,8 +592,9 @@ fn prepare_query(
                 .register(&col_name.value, &col_ty, &name, module_info)?
                 .clone();
 
+            let is_nullable = nullity.is_some_and(|n| n.nullable);
             let attributes = if let Some(mapping) = registrar.get_type_mapping(&col_ty) {
-                mapping.get_attributes()
+                mapping.get_attributes(is_nullable)
             } else {
                 (Vec::new(), Vec::new())
             };
@@ -654,8 +656,9 @@ fn prepare_query(
                 .register(&col_name, col_ty, &name, module_info)?
                 .clone();
 
+            let is_nullable = nullity.is_some_and(|n| n.nullable);
             let attributes = if let Some(mapping) = registrar.get_type_mapping(col_ty) {
-                mapping.get_attributes()
+                mapping.get_attributes(is_nullable)
             } else {
                 (Vec::new(), Vec::new())
             };
