@@ -1,4 +1,4 @@
-// This file was generated with `clorinde`. Do not modify.
+// This file was generated with `cornucopia`. Do not modify.
 
 use postgres_types::{Kind, ToSql, Type};
 pub fn escape_domain(ty: &Type) -> &Type {

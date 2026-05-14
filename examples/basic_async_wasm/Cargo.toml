@@ -5,8 +5,8 @@ version = "0.1.0"
 publish = false
 
 [dependencies]
-# Clorinde with wasm feature
-clorinde = { path = "basic_async_wasm_codegen", package = "basic_async_wasm_codegen", default-features = false, features = [
+# Cornucopia with wasm feature
+cornucopia = { path = "basic_async_wasm_codegen", package = "basic_async_wasm_codegen", default-features = false, features = [
     "wasm-async",
 ] }
 tokio = { version = "1.45", default-features = false, features = [

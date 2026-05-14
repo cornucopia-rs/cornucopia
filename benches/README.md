@@ -1,4 +1,4 @@
-# Clorinde Benchmarks
+# Cornucopia Benchmarks
 Benchmarking suite for code generation and code execution, heavily based on [the diesel benchmarking suite](https://github.com/diesel-rs/diesel/tree/master/diesel_bench).
 
 Note that the benchmarks use the `diesel` crate which links directly against `libpq`, so you will need to install it.
@@ -25,7 +25,7 @@ These results are from benchmarks run locally on `2025-06-20` and may not reflec
   - tokio-postgres: 0.7.12
   - diesel: 2.2.10
   - sqlx: 0.8.6
-  - clorinde: 1.0.0
+  - cornucopia: 1.0.0
 
 ### `bench_trivial_query`
 Measures performance of `SELECT * FROM users`.

@@ -8,7 +8,7 @@ publish = false
 
 [dependencies]
 # Path dependencies
-clorinde = { path = "../.." }
+cornucopia = { path = "../.." }
 
 # Create temporary projects for error tests.
 tempfile = "3.27"

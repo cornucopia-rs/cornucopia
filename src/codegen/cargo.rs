@@ -369,7 +369,8 @@ pub fn gen_cargo_file(dependency_analysis: &DependencyAnalysis, config: &Config)
         );
     }
 
-    let mut output = String::from("# This file was generated with `clorinde`. Do not modify.\n\n");
+    let mut output =
+        String::from("# This file was generated with `cornucopia`. Do not modify.\n\n");
     output.push_str(&toml::to_string(&manifest).expect("Failed to serialize manifest"));
     output
 }
@@ -389,7 +390,7 @@ mod tests {
 [workspace]
 
 [package]
-name = "clorinde-test"
+name = "cornucopia-test"
 version = "0.1.0"
 edition = "2024"
 
@@ -401,7 +402,7 @@ serde = "1"
 codegen = { path = "codegen" }
 
 [build-dependencies]
-clorinde = { version = "1.4.1", features = [] }
+cornucopia = { version = "1.0.0", features = [] }
 "#;
 
         let mut tmpfile = tempfile::NamedTempFile::new().unwrap();

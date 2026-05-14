@@ -1,13 +1,13 @@
 use std::fmt::Write;
 
-use clorinde::conn::clorinde_conn;
+use cornucopia::conn::cornucopia_conn;
 use criterion::{BenchmarkId, Criterion};
 use diesel::{Connection, PgConnection};
 use postgres::{Client, fallible_iterator::FallibleIterator};
 use sqlx::postgres::PgPoolOptions;
 use tokio::runtime::Runtime;
 
-mod clorinde_benches;
+mod cornucopia_benches;
 mod diesel_benches;
 mod postgres_benches;
 mod sqlx_benches;
@@ -128,9 +128,9 @@ fn prepare_full(client: &mut Client) {
 }
 
 fn bench(c: &mut Criterion) {
-    clorinde::container::setup(false, "docker.io/library/postgres:latest", 250).unwrap();
+    cornucopia::container::setup(false, "docker.io/library/postgres:latest", 250).unwrap();
 
-    let clorinde_client = &mut clorinde_conn().unwrap();
+    let cornucopia_client = &mut cornucopia_conn().unwrap();
     let rt: &'static Runtime = Box::leak(Box::new(Runtime::new().unwrap()));
 
     let sync_client = &mut postgres::Client::connect(
@@ -162,7 +162,7 @@ fn bench(c: &mut Criterion) {
             .unwrap()
     });
 
-    clorinde::load_schema(clorinde_client, &["benches/schema.sql"]).unwrap();
+    cornucopia::load_schema(cornucopia_client, &["benches/schema.sql"]).unwrap();
 
     {
         let mut group = c.benchmark_group("bench_trivial_query");
@@ -180,11 +180,11 @@ fn bench(c: &mut Criterion) {
             group.bench_function(BenchmarkId::new("tokio_postgres", size), |b| {
                 tokio_postgres_benches::bench_trivial_query(b, async_client);
             });
-            group.bench_function(BenchmarkId::new("clorinde", size), |b| {
-                clorinde_benches::sync::bench_trivial_query(b, sync_client);
+            group.bench_function(BenchmarkId::new("cornucopia", size), |b| {
+                cornucopia_benches::sync::bench_trivial_query(b, sync_client);
             });
-            group.bench_function(BenchmarkId::new("clorinde_async", size), |b| {
-                clorinde_benches::bench_trivial_query(b, clorinde_client);
+            group.bench_function(BenchmarkId::new("cornucopia_async", size), |b| {
+                cornucopia_benches::bench_trivial_query(b, cornucopia_client);
             });
         }
         group.finish();
@@ -207,11 +207,11 @@ fn bench(c: &mut Criterion) {
             group.bench_function(BenchmarkId::new("tokio_postgres", size), |b| {
                 tokio_postgres_benches::bench_medium_complex_query(b, async_client);
             });
-            group.bench_function(BenchmarkId::new("clorinde", size), |b| {
-                clorinde_benches::sync::bench_medium_complex_query(b, sync_client);
+            group.bench_function(BenchmarkId::new("cornucopia", size), |b| {
+                cornucopia_benches::sync::bench_medium_complex_query(b, sync_client);
             });
-            group.bench_function(BenchmarkId::new("clorinde_async", size), |b| {
-                clorinde_benches::bench_medium_complex_query(b, clorinde_client);
+            group.bench_function(BenchmarkId::new("cornucopia_async", size), |b| {
+                cornucopia_benches::bench_medium_complex_query(b, cornucopia_client);
             });
         }
         group.finish();
@@ -231,11 +231,11 @@ fn bench(c: &mut Criterion) {
         group.bench_function("tokio_postgres", |b| {
             tokio_postgres_benches::loading_associations_sequentially(b, async_client);
         });
-        group.bench_function("clorinde", |b| {
-            clorinde_benches::sync::loading_associations_sequentially(b, sync_client)
+        group.bench_function("cornucopia", |b| {
+            cornucopia_benches::sync::loading_associations_sequentially(b, sync_client)
         });
-        group.bench_function("clorinde_async", |b| {
-            clorinde_benches::loading_associations_sequentially(b, clorinde_client)
+        group.bench_function("cornucopia_async", |b| {
+            cornucopia_benches::loading_associations_sequentially(b, cornucopia_client)
         });
         group.finish();
     }
@@ -257,19 +257,19 @@ fn bench(c: &mut Criterion) {
             group.bench_with_input(BenchmarkId::new("tokio_postgres", size), size, |b, i| {
                 tokio_postgres_benches::bench_insert(b, async_client, *i);
             });
-            group.bench_with_input(BenchmarkId::new("clorinde", size), size, |b, i| {
+            group.bench_with_input(BenchmarkId::new("cornucopia", size), size, |b, i| {
                 clear(sync_client);
-                clorinde_benches::sync::bench_insert(b, sync_client, *i);
+                cornucopia_benches::sync::bench_insert(b, sync_client, *i);
             });
-            group.bench_with_input(BenchmarkId::new("clorinde_async", size), size, |b, i| {
+            group.bench_with_input(BenchmarkId::new("cornucopia_async", size), size, |b, i| {
                 clear(sync_client);
-                clorinde_benches::bench_insert(b, clorinde_client, *i);
+                cornucopia_benches::bench_insert(b, cornucopia_client, *i);
             });
         }
         group.finish();
     }
 
-    clorinde::container::cleanup(false).unwrap();
+    cornucopia::container::cleanup(false).unwrap();
 }
 
 criterion::criterion_group!(benches, bench);

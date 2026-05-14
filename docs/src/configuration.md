@@ -1,5 +1,5 @@
 # Configuration
-Clorinde can be configured using a configuration file (`clorinde.toml` by default) in your project. This file allows you to customise generated code behaviour, specify static files, manage dependencies, and override type mappings.
+Cornucopia can be configured using a configuration file (`cornucopia.toml` by default) in your project. This file allows you to customise generated code behaviour, specify static files, manage dependencies, and override type mappings.
 
 ## Manifest configuration
 The `[manifest]` section allows you to configure the entire Cargo.toml for the generated crate:
@@ -17,10 +17,10 @@ serde = { version = "1.0", features = ["derive"] }
 my_custom_types = { path = "../types" }
 ```
 
-This gives you complete control over the generated Cargo.toml. Clorinde will automatically merge your configuration with the required PostgreSQL dependencies based on the types found in your SQL queries.
+This gives you complete control over the generated Cargo.toml. Cornucopia will automatically merge your configuration with the required PostgreSQL dependencies based on the types found in your SQL queries.
 
 ### Dependency merging
-Clorinde automatically adds dependencies based on your PostgreSQL schema:
+Cornucopia automatically adds dependencies based on your PostgreSQL schema:
 - Core dependencies: `postgres-types`, `postgres-protocol`, `postgres`
 - Type-specific dependencies: `chrono`, `uuid`, `serde_json`, etc. (based on column types)
 - Async dependencies: `tokio-postgres`, `futures`, `deadpool-postgres` (when async enabled)
@@ -38,7 +38,7 @@ use-workspace-deps = true
 use-workspace-deps = "../../Cargo.toml"
 ```
 
-When this option is set, Clorinde will:
+When this option is set, Cornucopia will:
 1. Look for dependencies in the specified Cargo.toml file (or `./Cargo.toml` if set to `true`)
 2. Set `workspace = true` for any dependencies that exist in the workspace manifest
 3. Fall back to regular dependency declarations for packages not found in the workspace
@@ -60,7 +60,7 @@ postgres_range = { version = "0.11.1", features = ["with-chrono-0_4"] }
 
 Dependencies needed for your custom type mappings should be specified in `[manifest.dependencies]`.
 
-The `types.mapping` table allows you to map PostgreSQL types to Rust types. You can use this to either override Clorinde's default mappings or add support for PostgreSQL types that aren't supported by default, such as types from extensions.
+The `types.mapping` table allows you to map PostgreSQL types to Rust types. You can use this to either override Cornucopia's default mappings or add support for PostgreSQL types that aren't supported by default, such as types from extensions.
 
 ### Detailed mapping syntax
 
@@ -113,7 +113,7 @@ Both the owned type and borrowed type must implement [`FromSql`](https://docs.rs
 
 Additionally, the borrowed type should implement `Into<OwnedType>` so the generated `From` implementation can convert borrowed structs to owned structs.
 
-See the [custom_types](https://github.com/halcyonnouveau/clorinde/blob/main/examples/custom_types) example for a reference implementation.
+See the [custom_types](https://github.com/cornucopia-rs/cornucopia/blob/main/examples/custom_types) example for a reference implementation.
 ~~~
 
 ## Derive traits
@@ -166,7 +166,7 @@ You can combine global and type-specific derive traits - the traits will be merg
 This is an opt-in feature that generates lightweight metadata about each result-row struct.
 
 ### Enable via configuration
-Add the following to your project's `clorinde.toml`:
+Add the following to your project's `cornucopia.toml`:
 
 ```toml
 generate-field-metadata = true
@@ -188,15 +188,15 @@ pub fn field_metadata() -> &'static [FieldMetadata]
 For example, a row struct like `queries::lock_info::LockInfo` exposes:
 
 ```rust
-let meta: &'static [clorinde::types::FieldMetadata] =
-    clorinde::queries::lock_info::LockInfo::field_metadata();
+let meta: &'static [cornucopia::types::FieldMetadata] =
+    cornucopia::queries::lock_info::LockInfo::field_metadata();
 ```
 
 ### Example: derive column names at runtime
 You can map metadata to user-facing headers or diagnostics:
 
 ```rust
-let headers: Vec<&str> = clorinde::queries::lock_info::LockInfo::field_metadata()
+let headers: Vec<&str> = cornucopia::queries::lock_info::LockInfo::field_metadata()
     .iter()
     .map(|m| m.name)
     .collect();
@@ -257,4 +257,4 @@ static = [
 ]
 ```
 
-When using the detailed configuration format, Clorinde will automatically create any necessary parent directories for the destination path.
+When using the detailed configuration format, Cornucopia will automatically create any necessary parent directories for the destination path.

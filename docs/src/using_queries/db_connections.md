@@ -18,5 +18,5 @@ The following list details supported connections for each configuration.
 * `deadpool_postgres::Transaction`
 
 ```admonish note
-Clorinde generated crate re-exports all these modules. There is no need to add additional crates to your `Cargo.toml`.
+Cornucopia generated crate re-exports all these modules. There is no need to add additional crates to your `Cargo.toml`.
 ```

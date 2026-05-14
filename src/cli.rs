@@ -6,7 +6,7 @@ use rand::{RngExt, distr::Alphanumeric};
 
 use crate::{config::Config, conn, error::Error, gen_fresh, gen_live, gen_managed};
 
-/// Command line interface to interact with Clorinde SQL.
+/// Command line interface to interact with Cornucopia SQL.
 #[derive(Parser, Debug)]
 #[clap(version)]
 struct Args {
@@ -64,7 +64,7 @@ enum Action {
         #[clap(long)]
         search_path: Option<String>,
 
-        /// Name for the temporary database (defaults to clorinde_temp_<random>)
+        /// Name for the temporary database (defaults to cornucopia_temp_<random>)
         #[clap(long)]
         db_name: Option<String>,
 
@@ -91,7 +91,7 @@ impl Action {
 #[derive(Parser, Debug, Clone)]
 struct CommonArgs {
     /// Config file path
-    #[clap(short, long, default_value = "clorinde.toml")]
+    #[clap(short, long, default_value = "cornucopia.toml")]
     config: PathBuf,
 
     /// Folder containing the queries
@@ -133,11 +133,11 @@ pub fn run() -> Result<(), Error> {
     cfg.sync = sync.unwrap_or(cfg.sync);
     cfg.r#async = r#async.unwrap_or(false) || !cfg.sync;
     // Prevent wrong directory being accidentally deleted
-    if !cfg.destination.ends_with("clorinde")
+    if !cfg.destination.ends_with("cornucopia")
         && (cfg.destination.exists() && !cfg.destination.join("Cargo.toml").exists())
     {
         println!(
-            "The directory '{}' already exists. Running `clorinde` on this directory will delete all files contained within it.",
+            "The directory '{}' already exists. Running `cornucopia` on this directory will delete all files contained within it.",
             cfg.destination.display()
         );
         println!("Do you want to continue? [y/N]");
@@ -193,7 +193,7 @@ pub fn run() -> Result<(), Error> {
                     .take(8)
                     .map(char::from)
                     .collect();
-                format!("clorinde_temp_{}", random_suffix.to_lowercase())
+                format!("cornucopia_temp_{}", random_suffix.to_lowercase())
             });
 
             gen_fresh(

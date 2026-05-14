@@ -7,9 +7,9 @@ body:
     attributes:
       value: |
         ## First of all
-        1. Please search for [existing issues](https://github.com/halcyonnouveau/clorinde/issues?q=is%3Aissue) about this problem first.
-        2. Make sure `rustc` and `clorinde` is up to date.
-        3. Make sure it's an issue with Clorinde and not something else you are using.
+        1. Please search for [existing issues](https://github.com/cornucopia-rs/cornucopia/issues?q=is%3Aissue) about this problem first.
+        2. Make sure `rustc` and `cornucopia` is up to date.
+        3. Make sure it's an issue with Cornucopia and not something else you are using.
         4. Remember to follow our community guidelines and be friendly.
 
   - type: textarea
@@ -59,6 +59,6 @@ body:
       options:
         - Annoyance
         - Blocking an upgrade
-        - Blocking all usage of Clorinde
+        - Blocking all usage of Cornucopia
     validations:
       required: true

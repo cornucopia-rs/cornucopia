@@ -9,8 +9,8 @@ pub(crate) fn from_url(url: &str) -> Result<Client, Error> {
     connect(url.parse()?)
 }
 
-/// Create a non-TLS connection to the container managed by Clorinde.
-pub fn clorinde_conn() -> Result<Client, Error> {
+/// Create a non-TLS connection to the container managed by Cornucopia.
+pub fn cornucopia_conn() -> Result<Client, Error> {
     connect(
         Config::new()
             .user("postgres")

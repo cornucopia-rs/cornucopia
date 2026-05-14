@@ -3,10 +3,10 @@
     - [Migration from Cornucopia](./introduction/migration_from_cornucopia.md)
     - [Supported types](./introduction/types.md)
 
-- [Using Clorinde](./using_clorinde/using_clorinde.md)
-    - [CLI](./using_clorinde/cli.md)
-    - [API](./using_clorinde/api.md)
-    - [Error reporting](./using_clorinde/error_reporting.md)
+- [Using Cornucopia](./using_cornucopia/using_cornucopia.md)
+    - [CLI](./using_cornucopia/cli.md)
+    - [API](./using_cornucopia/api.md)
+    - [Error reporting](./using_cornucopia/error_reporting.md)
 
 - [Configuration](./configuration.md)
 

@@ -16,7 +16,7 @@ use self::error::Error;
 
 /// A struct containing a postgres type and its Rust-equivalent.
 #[derive(PartialEq, Eq, Debug, Clone)]
-pub(crate) enum ClorindeType {
+pub(crate) enum CornucopiaType {
     Simple {
         pg_ty: Type,
         rust_name: String,
@@ -25,11 +25,11 @@ pub(crate) enum ClorindeType {
         is_copy: bool,
     },
     Array {
-        inner: Rc<ClorindeType>,
+        inner: Rc<CornucopiaType>,
     },
     Domain {
         pg_ty: Type,
-        inner: Rc<ClorindeType>,
+        inner: Rc<CornucopiaType>,
     },
     Custom {
         pg_ty: Type,
@@ -39,16 +39,16 @@ pub(crate) enum ClorindeType {
     },
 }
 
-impl ClorindeType {
+impl CornucopiaType {
     /// Is this type need a generic lifetime
     pub fn is_ref(&self) -> bool {
         match self {
-            ClorindeType::Simple {
+            CornucopiaType::Simple {
                 pg_ty:
                     Type::BYTEA | Type::TEXT | Type::VARCHAR | Type::BPCHAR | Type::JSON | Type::JSONB,
                 ..
             } => false,
-            ClorindeType::Simple { pg_ty: ty, .. }
+            CornucopiaType::Simple { pg_ty: ty, .. }
                 if (ty.name() == "citext"
                     || ty.name() == "ltree"
                     || ty.name() == "lquery"
@@ -56,12 +56,14 @@ impl ClorindeType {
             {
                 false
             }
-            ClorindeType::Simple {
+            CornucopiaType::Simple {
                 borrowed_name: Some(_),
                 ..
             } => true,
-            ClorindeType::Simple { .. } => !self.is_copy(),
-            ClorindeType::Domain { inner, .. } | ClorindeType::Array { inner } => inner.is_ref(),
+            CornucopiaType::Simple { .. } => !self.is_copy(),
+            CornucopiaType::Domain { inner, .. } | CornucopiaType::Array { inner } => {
+                inner.is_ref()
+            }
             _ => !self.is_copy(),
         }
     }
@@ -69,30 +71,32 @@ impl ClorindeType {
     /// Is this type copyable
     pub fn is_copy(&self) -> bool {
         match self {
-            ClorindeType::Simple { is_copy, .. } | ClorindeType::Custom { is_copy, .. } => *is_copy,
-            ClorindeType::Domain { inner, .. } => inner.is_copy(),
-            ClorindeType::Array { .. } => false,
+            CornucopiaType::Simple { is_copy, .. } | CornucopiaType::Custom { is_copy, .. } => {
+                *is_copy
+            }
+            CornucopiaType::Domain { inner, .. } => inner.is_copy(),
+            CornucopiaType::Array { .. } => false,
         }
     }
 
     /// Can this used in parameters as it is
     pub fn is_params(&self) -> bool {
         match self {
-            ClorindeType::Simple { .. } => true,
-            ClorindeType::Array { .. } => false,
-            ClorindeType::Domain { inner, .. } => inner.is_params(),
-            ClorindeType::Custom { is_params, .. } => *is_params,
+            CornucopiaType::Simple { .. } => true,
+            CornucopiaType::Array { .. } => false,
+            CornucopiaType::Domain { inner, .. } => inner.is_params(),
+            CornucopiaType::Custom { is_params, .. } => *is_params,
         }
     }
 
     /// Wrap type to escape domains in parameters
     pub(crate) fn sql_wrapped(&self, name: &str) -> String {
         match self {
-            ClorindeType::Domain { inner, .. } => {
+            CornucopiaType::Domain { inner, .. } => {
                 format!("&crate::Domain({})", inner.sql_wrapped(name))
             }
-            ClorindeType::Array { inner } => match inner.as_ref() {
-                ClorindeType::Domain { inner, .. } => {
+            CornucopiaType::Array { inner } => match inner.as_ref() {
+                CornucopiaType::Domain { inner, .. } => {
                     format!("&crate::DomainArray({})", inner.sql_wrapped(name))
                 }
                 _ => name.to_string(),
@@ -104,11 +108,11 @@ impl ClorindeType {
     /// Wrap type to escape domains when writing to sql
     pub(crate) fn accept_to_sql(&self, ctx: &GenCtx) -> String {
         match self {
-            ClorindeType::Domain { inner, .. } => {
+            CornucopiaType::Domain { inner, .. } => {
                 format!("crate::Domain::<{}>", inner.accept_to_sql(ctx))
             }
-            ClorindeType::Array { inner } => match inner.as_ref() {
-                ClorindeType::Domain { inner, .. } => {
+            CornucopiaType::Array { inner } => match inner.as_ref() {
+                CornucopiaType::Domain { inner, .. } => {
                     let ty = inner.accept_to_sql(ctx);
                     format!("crate::DomainArray::<{ty}, &[{ty}]>")
                 }
@@ -121,10 +125,10 @@ impl ClorindeType {
     /// Corresponding postgres type
     pub(crate) fn pg_ty(&self) -> &Type {
         match self {
-            ClorindeType::Simple { pg_ty, .. }
-            | ClorindeType::Custom { pg_ty, .. }
-            | ClorindeType::Domain { pg_ty, .. } => pg_ty,
-            ClorindeType::Array { inner } => inner.pg_ty(),
+            CornucopiaType::Simple { pg_ty, .. }
+            | CornucopiaType::Custom { pg_ty, .. }
+            | CornucopiaType::Domain { pg_ty, .. } => pg_ty,
+            CornucopiaType::Array { inner } => inner.pg_ty(),
         }
     }
 
@@ -145,14 +149,14 @@ impl ClorindeType {
         }
 
         match self {
-            ClorindeType::Simple { pg_ty, .. } if matches!(*pg_ty, Type::JSON | Type::JSONB) => {
+            CornucopiaType::Simple { pg_ty, .. } if matches!(*pg_ty, Type::JSON | Type::JSONB) => {
                 format!("serde_json::from_str({name}.0.get()).unwrap()")
             }
-            ClorindeType::Array { inner, .. } => {
+            CornucopiaType::Array { inner, .. } => {
                 let inner = inner.owning_call("v", is_inner_nullable, false);
                 format!("{name}.map(|v| {inner}).collect()")
             }
-            ClorindeType::Domain { inner, .. } => inner.owning_call(name, is_nullable, false),
+            CornucopiaType::Domain { inner, .. } => inner.owning_call(name, is_nullable, false),
             _ => {
                 format!("{name}.into()")
             }
@@ -162,8 +166,8 @@ impl ClorindeType {
     /// Corresponding owned type
     pub(crate) fn own_ty(&self, is_inner_nullable: bool, ctx: &GenCtx) -> String {
         match self {
-            ClorindeType::Simple { rust_name, .. } => (*rust_name).to_string(),
-            ClorindeType::Array { inner, .. } => {
+            CornucopiaType::Simple { rust_name, .. } => (*rust_name).to_string(),
+            CornucopiaType::Array { inner, .. } => {
                 let own_inner = inner.own_ty(false, ctx);
                 if is_inner_nullable {
                     format!("Vec<Option<{own_inner}>>")
@@ -171,8 +175,8 @@ impl ClorindeType {
                     format!("Vec<{own_inner}>")
                 }
             }
-            ClorindeType::Domain { inner, .. } => inner.own_ty(false, ctx),
-            ClorindeType::Custom {
+            CornucopiaType::Domain { inner, .. } => inner.own_ty(false, ctx),
+            CornucopiaType::Custom {
                 struct_name, pg_ty, ..
             } => ctx.custom_ty_path(pg_ty.schema(), struct_name),
         }
@@ -186,7 +190,7 @@ impl ClorindeType {
         ctx: &GenCtx,
     ) -> String {
         match self {
-            ClorindeType::Simple { pg_ty, .. } => match *pg_ty {
+            CornucopiaType::Simple { pg_ty, .. } => match *pg_ty {
                 Type::BYTEA => {
                     traits.push("crate::BytesSql".to_string());
                     idx_char(traits.len())
@@ -210,7 +214,7 @@ impl ClorindeType {
                 }
                 _ => self.param_ty(is_inner_nullable, ctx),
             },
-            ClorindeType::Array { inner, .. } => {
+            CornucopiaType::Array { inner, .. } => {
                 let inner = inner.param_ergo_ty(is_inner_nullable, traits, ctx);
                 let inner = if is_inner_nullable {
                     format!("Option<{inner}>")
@@ -220,17 +224,17 @@ impl ClorindeType {
                 traits.push(format!("crate::ArraySql<Item = {inner}>"));
                 idx_char(traits.len())
             }
-            ClorindeType::Domain { inner, .. } => {
+            CornucopiaType::Domain { inner, .. } => {
                 inner.param_ergo_ty(is_inner_nullable, traits, ctx)
             }
-            ClorindeType::Custom { .. } => self.param_ty(is_inner_nullable, ctx),
+            CornucopiaType::Custom { .. } => self.param_ty(is_inner_nullable, ctx),
         }
     }
 
     /// Corresponding borrowed parameter type
     pub(crate) fn param_ty(&self, is_inner_nullable: bool, ctx: &GenCtx) -> String {
         match self {
-            ClorindeType::Simple {
+            CornucopiaType::Simple {
                 pg_ty,
                 borrowed_name,
                 ..
@@ -245,7 +249,7 @@ impl ClorindeType {
                     _ => self.brw_ty(is_inner_nullable, true, ctx),
                 }
             }
-            ClorindeType::Array { inner, .. } => {
+            CornucopiaType::Array { inner, .. } => {
                 let inner = inner.param_ty(is_inner_nullable, ctx);
                 let inner = if is_inner_nullable {
                     format!("Option<{inner}>")
@@ -255,8 +259,8 @@ impl ClorindeType {
                 // Its more practical for users to use a slice
                 format!("&'a [{inner}]")
             }
-            ClorindeType::Domain { inner, .. } => inner.param_ty(false, ctx),
-            ClorindeType::Custom {
+            CornucopiaType::Domain { inner, .. } => inner.param_ty(false, ctx),
+            CornucopiaType::Custom {
                 is_params,
                 is_copy,
                 pg_ty,
@@ -283,7 +287,7 @@ impl ClorindeType {
     ) -> String {
         let lifetime = if has_lifetime { "'a" } else { "" };
         match self {
-            ClorindeType::Simple {
+            CornucopiaType::Simple {
                 pg_ty,
                 rust_name,
                 borrowed_name,
@@ -315,7 +319,7 @@ impl ClorindeType {
                     },
                 }
             }
-            ClorindeType::Array { inner, .. } => {
+            CornucopiaType::Array { inner, .. } => {
                 let inner = inner.brw_ty(is_inner_nullable, has_lifetime, ctx);
                 let inner = if is_inner_nullable {
                     format!("Option<{inner}>")
@@ -326,8 +330,8 @@ impl ClorindeType {
                 let lifetime = if has_lifetime { lifetime } else { "'_" };
                 format!("crate::ArrayIterator<{lifetime}, {inner}>")
             }
-            ClorindeType::Domain { inner, .. } => inner.brw_ty(false, has_lifetime, ctx),
-            ClorindeType::Custom {
+            CornucopiaType::Domain { inner, .. } => inner.brw_ty(false, has_lifetime, ctx),
+            CornucopiaType::Custom {
                 is_copy,
                 pg_ty,
                 struct_name,
@@ -344,10 +348,10 @@ impl ClorindeType {
     }
 }
 
-/// Data structure holding all types known to this particular run of Clorinde.
+/// Data structure holding all types known to this particular run of Cornucopia.
 #[derive(Debug, Clone)]
 pub(crate) struct TypeRegistrar {
-    pub types: IndexMap<(String, String), Rc<ClorindeType>>,
+    pub types: IndexMap<(String, String), Rc<CornucopiaType>>,
     pub dependency_analysis: DependencyAnalysis,
     config: Config,
 }
@@ -374,10 +378,10 @@ impl TypeRegistrar {
         module_info: &ModuleInfo,
         default_is_copy: bool,
         default_is_params: bool,
-    ) -> Result<&Rc<ClorindeType>, Error> {
-        fn custom(ty: &Type, is_copy: bool, is_params: bool) -> ClorindeType {
+    ) -> Result<&Rc<CornucopiaType>, Error> {
+        fn custom(ty: &Type, is_copy: bool, is_params: bool) -> CornucopiaType {
             let rust_ty_name = ty.name().to_upper_camel_case();
-            ClorindeType::Custom {
+            CornucopiaType::Custom {
                 pg_ty: ty.clone(),
                 struct_name: rust_ty_name,
                 is_copy,
@@ -385,8 +389,8 @@ impl TypeRegistrar {
             }
         }
 
-        fn domain(ty: &Type, inner: Rc<ClorindeType>) -> ClorindeType {
-            ClorindeType::Domain {
+        fn domain(ty: &Type, inner: Rc<CornucopiaType>) -> CornucopiaType {
+            CornucopiaType::Domain {
                 pg_ty: ty.clone(),
                 inner,
             }
@@ -398,7 +402,7 @@ impl TypeRegistrar {
                 let inner = self
                     .register(name, inner_ty, query_name, module_info)?
                     .clone();
-                self.insert(ty, || ClorindeType::Array {
+                self.insert(ty, || CornucopiaType::Array {
                     inner: inner.clone(),
                 })
             }
@@ -455,7 +459,7 @@ impl TypeRegistrar {
                         });
                     }
                 };
-                self.insert(ty, || ClorindeType::Simple {
+                self.insert(ty, || CornucopiaType::Simple {
                     pg_ty: ty.clone(),
                     rust_name: rust_name.to_string(),
                     borrowed_name: None,
@@ -479,7 +483,7 @@ impl TypeRegistrar {
         ty: &Type,
         query_name: &Span<String>,
         module_info: &ModuleInfo,
-    ) -> Result<&Rc<ClorindeType>, Error> {
+    ) -> Result<&Rc<CornucopiaType>, Error> {
         self.dependency_analysis.analyse(ty);
 
         if let Some(idx) = self.types.get_index_of(&SchemaKey::from(ty)) {
@@ -502,7 +506,7 @@ impl TypeRegistrar {
         };
 
         if let Some((rust_name, borrowed_name, is_copy)) = mapping_result {
-            return Ok(self.insert(ty, || ClorindeType::Simple {
+            return Ok(self.insert(ty, || CornucopiaType::Simple {
                 pg_ty: ty.clone(),
                 rust_name,
                 borrowed_name,
@@ -513,14 +517,14 @@ impl TypeRegistrar {
         self.resolve_type(ty, name, query_name, module_info, true, true)
     }
 
-    pub(crate) fn ref_of(&self, ty: &Type) -> Rc<ClorindeType> {
+    pub(crate) fn ref_of(&self, ty: &Type) -> Rc<CornucopiaType> {
         self.types
             .get(&SchemaKey::from(ty))
             .expect("type must already be registered")
             .clone()
     }
 
-    fn insert(&mut self, ty: &Type, call: impl FnOnce() -> ClorindeType) -> &Rc<ClorindeType> {
+    fn insert(&mut self, ty: &Type, call: impl FnOnce() -> CornucopiaType) -> &Rc<CornucopiaType> {
         let index = match self
             .types
             .entry((ty.schema().to_owned(), ty.name().to_owned()))
@@ -537,7 +541,7 @@ impl TypeRegistrar {
 }
 
 impl std::ops::Index<&Type> for TypeRegistrar {
-    type Output = Rc<ClorindeType>;
+    type Output = Rc<CornucopiaType>;
 
     fn index(&self, index: &Type) -> &Self::Output {
         &self.types[&SchemaKey::from(index)]

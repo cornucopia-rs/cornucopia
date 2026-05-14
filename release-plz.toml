@@ -12,5 +12,5 @@ commit_parsers = [
 ]
 
 [[package]]
-name = "clorinde"
+name = "cornucopia"
 changelog_path = "CHANGELOG.md"

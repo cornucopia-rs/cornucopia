@@ -3,7 +3,7 @@ authors = ["Justin Duch"]
 language = "en"
 multilingual = false
 src = "src"
-title = "Clorinde"
+title = "Cornucopia"
 
 [preprocessor]
 

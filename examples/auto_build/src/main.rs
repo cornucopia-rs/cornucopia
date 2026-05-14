@@ -1,16 +1,16 @@
 use codegen::deadpool_postgres::{Config, Runtime};
 use codegen::tokio_postgres::NoTls;
 
-// Take a look at the generated `clorinde` (codegen) crate if you want to
+// Take a look at the generated `cornucopia` (codegen) crate if you want to
 // see what it looks like under the hood.
 use codegen::queries::module_1::example_query;
 
 // Add more schema files and queries, rebuild the crate,
-// and observe how your clorinde modules are regenerated!
+// and observe how your cornucopia modules are regenerated!
 #[tokio::main]
 async fn main() {
     // Connection pool configuration
-    // This has nothing to do with clorinde, please look at
+    // This has nothing to do with cornucopia, please look at
     // `tokio_postgres` and `deadpool_postgres` for details
     let mut cfg = Config::new();
     cfg.user = Some(String::from("postgres"));

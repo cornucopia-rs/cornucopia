@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use miette::{Diagnostic, GraphicalReportHandler, GraphicalTheme};
 use thiserror::Error as ThisError;
 
-/// Enumeration of all the errors reported by Clorinde.
+/// Enumeration of all the errors reported by Cornucopia.
 #[derive(Debug, ThisError, Diagnostic)]
 #[error(transparent)]
 #[diagnostic(transparent)]
@@ -16,7 +16,7 @@ pub enum Error {
     ParseQueries(#[from] Box<crate::parser::error::Error>),
     /// An error while trying to validate PostgreSQL query files.
     ValidateQueries(#[from] Box<crate::validation::error::Error>),
-    /// An error while manipulating a container managed by Clorinde.
+    /// An error while manipulating a container managed by Cornucopia.
     Container(#[from] crate::container::error::Error),
     /// An error while trying to prepare PostgreSQL queries.
     PrepareQueries(#[from] Box<crate::prepare_queries::error::Error>),

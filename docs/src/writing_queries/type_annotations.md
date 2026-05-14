@@ -1,5 +1,5 @@
 # Type annotations
-Type annotations allow you to customise the structs that Clorinde generates for your rows (and parameters, see [the section below](#parameter-structs)). Furthermore, this allows you to share these types between multiple queries.
+Type annotations allow you to customise the structs that Cornucopia generates for your rows (and parameters, see [the section below](#parameter-structs)). Furthermore, this allows you to share these types between multiple queries.
 
 To create type annotations, declare them using the `--:` syntax. Type annotations only need to declare the nullable columns. Here's how it looks:
 
@@ -34,7 +34,7 @@ SELECT name, age FROM authors;
 ## Custom attributes
 You can add custom attributes to generated structs using the `--#` and `--&` syntax. This allows you to add documentation, conditional compilation directives, or any other Rust attributes.
 
-When types contain non-`Copy` fields (like `String`), Clorinde generates both an owned struct and a borrowed variant. You can specify attributes for each:
+When types contain non-`Copy` fields (like `String`), Cornucopia generates both an owned struct and a borrowed variant. You can specify attributes for each:
 - `--#` applies attributes to the owned struct
 - `--&` applies attributes to the borrowed struct
 
@@ -89,6 +89,6 @@ WHERE authors.nationality = :country;
 Notice how inline types **must** have a set of parenthesis describing their nullable columns. This syntax is often more compact for simple cases. It doesn't have any other special meaning otherwise.
 
 ## Parameter structs
-Clorinde will **automatically** generate a parameter struct **if it has more than one column**. The name of the parameter struct is based on the name of the query. You can still manually generate a parameter struct using a type annotation or an inline type.
+Cornucopia will **automatically** generate a parameter struct **if it has more than one column**. The name of the parameter struct is based on the name of the query. You can still manually generate a parameter struct using a type annotation or an inline type.
 
 In any case, note that you don't *need* a parameter struct, you can always work directly with the query function (see the section [query usage](./../using_queries/using_queries.md#building-the-query-object)).

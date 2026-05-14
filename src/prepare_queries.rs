@@ -11,7 +11,7 @@ use crate::{
     config::Config,
     parser::{Module, NullableIdent, Query, Span, TypeAnnotation},
     read_queries::ModuleInfo,
-    type_registrar::{ClorindeType, TypeRegistrar},
+    type_registrar::{CornucopiaType, TypeRegistrar},
     utils::KEYWORD,
     validation,
 };
@@ -20,7 +20,7 @@ use self::error::Error;
 
 type ModuleNestedSpecs = std::collections::HashMap<String, std::collections::HashMap<String, bool>>;
 
-/// This data structure is used by Clorinde to generate
+/// This data structure is used by Cornucopia to generate
 /// all constructs related to this particular query.
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedQuery {
@@ -71,7 +71,7 @@ impl Ident {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PreparedField {
     pub(crate) ident: Ident,
-    pub(crate) ty: Rc<ClorindeType>,
+    pub(crate) ty: Rc<CornucopiaType>,
     pub(crate) is_nullable: bool,
     pub(crate) is_inner_nullable: bool,          // Vec only
     pub(crate) attributes: Vec<String>,          // Custom field attributes
@@ -82,7 +82,7 @@ pub struct PreparedField {
 impl PreparedField {
     pub(crate) fn new(
         db_ident: String,
-        ty: Rc<ClorindeType>,
+        ty: Rc<CornucopiaType>,
         nullity: Option<&NullableIdent>,
     ) -> Self {
         let mut nested_nullability = std::collections::HashMap::new();
@@ -391,11 +391,11 @@ fn normalize_rust_name(name: &str) -> String {
 fn prepare_type(
     registrar: &TypeRegistrar,
     name: &str,
-    ty: &ClorindeType,
+    ty: &CornucopiaType,
     types: &[TypeAnnotation],
     nested_specs: &std::collections::HashMap<String, bool>,
 ) -> Option<PreparedType> {
-    if let ClorindeType::Custom {
+    if let CornucopiaType::Custom {
         pg_ty,
         struct_name,
         is_copy,

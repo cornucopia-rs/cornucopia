@@ -42,7 +42,7 @@ impl Vfs {
     /// Add a new file
     pub fn add(&mut self, path: impl Into<PathBuf>, content: proc_macro2::TokenStream) {
         let path_buf = path.into();
-        let warning = "// This file was generated with `clorinde`. Do not modify.\n\n";
+        let warning = "// This file was generated with `cornucopia`. Do not modify.\n\n";
 
         let syntax_tree = syn::parse2(content).unwrap_or_else(|_| {
             panic!(

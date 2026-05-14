@@ -5,7 +5,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
-# Clorinde
+# Cornucopia
 codegen = { path = "codegen" }
 # rust-postgres interaction
 postgres = "0.19.9"

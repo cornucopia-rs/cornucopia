@@ -2,7 +2,7 @@ use std::{fmt::Display, process::ExitCode};
 
 use crate::{codegen::run_codegen_test, errors::run_errors_test};
 use clap::Parser;
-use clorinde::container;
+use cornucopia::container;
 
 mod codegen;
 mod errors;
@@ -42,7 +42,7 @@ fn test(
 ) -> bool {
     container::setup(podman, "docker.io/library/postgres:latest", 250).unwrap();
     let successful = std::panic::catch_unwind(|| {
-        let client = clorinde::conn::clorinde_conn().unwrap();
+        let client = cornucopia::conn::cornucopia_conn().unwrap();
         display(run_errors_test(&client, apply_errors)).unwrap()
             && display(run_codegen_test(&client, apply_codegen)).unwrap()
     });

@@ -41,6 +41,6 @@ body:
       options:
         - Nice to have
         - Would make my life easier
-        - I cannot use Clorinde without it
+        - I cannot use Cornucopia without it
     validations:
       required: true

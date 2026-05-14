@@ -5,8 +5,8 @@ version = "0.1.0"
 publish = false
 
 [dependencies]
-# Clorinde
-clorinde = { path = "db/custom_types_codegen", package = "custom_types_codegen" }
+# Cornucopia
+cornucopia = { path = "db/custom_types_codegen", package = "custom_types_codegen" }
 # Custom types
 db_types = { path = "db/db_types" }
 # Async

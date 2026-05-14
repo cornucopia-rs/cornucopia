@@ -10,9 +10,9 @@ FROM authors
 WHERE authors.nationality = :country;
 ```
 
-The `--!` token indicates a Clorinde query annotation, and `authors_from_country` is the name of the query.
+The `--!` token indicates a Cornucopia query annotation, and `authors_from_country` is the name of the query.
 
-Clorinde will actually prepare your queries against your schema, automatically finding the parameters, row columns and their respective types. That is why in most simple queries, you don't have to specify the parameters or row columns: only the query name is required.
+Cornucopia will actually prepare your queries against your schema, automatically finding the parameters, row columns and their respective types. That is why in most simple queries, you don't have to specify the parameters or row columns: only the query name is required.
 
 That said, you can also go further than this simple syntax in order to customise your queries, as you will learn in the next sections
 

@@ -1,11 +1,11 @@
-// Take a look at the generated `clorinde` crate if you want to
+// Take a look at the generated `cornucopia` crate if you want to
 // see what it looks like under the hood.
-use clorinde::queries::module_1::{characters, select_character_by_element};
+use cornucopia::queries::module_1::{characters, select_character_by_element};
 
 #[tokio::main]
 pub async fn main() {
-    // You can learn which database connection types are compatible with Clorinde in the book
-    // https://halcyonnouveau.github.io/clorinde/using_queries/db_connections.html
+    // You can learn which database connection types are compatible with Cornucopia in the book
+    // https://cornucopia-rs.github.io/cornucopia/using_queries/db_connections.html
     let pool = create_pool().await.unwrap();
     let client = pool.get().await.unwrap();
 
@@ -25,8 +25,8 @@ pub async fn main() {
 ///
 /// This is just a simple example config, please look at
 /// `tokio_postgres` and `deadpool_postgres` for details.
-use clorinde::deadpool_postgres::{Config, CreatePoolError, Pool, Runtime};
-use clorinde::tokio_postgres::NoTls;
+use cornucopia::deadpool_postgres::{Config, CreatePoolError, Pool, Runtime};
+use cornucopia::tokio_postgres::NoTls;
 
 async fn create_pool() -> Result<Pool, CreatePoolError> {
     let mut cfg = Config::new();

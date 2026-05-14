@@ -1,7 +1,7 @@
-# Adding custom types through `clorinde.toml`
+# Adding custom types through `cornucopia.toml`
 This example shows how you can add custom types to be used. You need to create a new crate which implements the `FromSql` and `ToSql` traits from `postgres-types` for your custom types.
 
-The custom type crates are imported into the generated Clorinde crate through the manifest configuration.
+The custom type crates are imported into the generated Cornucopia crate through the manifest configuration.
 
 ## Adding custom type dependencies
 
@@ -36,7 +36,7 @@ You can specify multiple crates, and each one can use any of the standard Cargo 
 - Optional dependencies
 - Any combination of these options
 
-The configuration follows the same format as dependencies in `Cargo.toml`, and these dependencies will be merged with the PostgreSQL dependencies that Clorinde automatically generates based on your SQL queries.
+The configuration follows the same format as dependencies in `Cargo.toml`, and these dependencies will be merged with the PostgreSQL dependencies that Cornucopia automatically generates based on your SQL queries.
 
 ## Mapping PostgreSQL types to Rust types
 

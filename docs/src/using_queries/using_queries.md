@@ -1,9 +1,9 @@
 # Using your generated queries
-Once you have written your queries and generated your Rust code with Clorinde, it's time to use them. Hurray 🎉!
+Once you have written your queries and generated your Rust code with Cornucopia, it's time to use them. Hurray 🎉!
 
-Let's say you have generated your Rust crate into `./clorinde` and added it to your `Cargo.toml`, then this is as simple as importing the items you need from it, like so:
+Let's say you have generated your Rust crate into `./cornucopia` and added it to your `Cargo.toml`, then this is as simple as importing the items you need from it, like so:
 ```rust
-use clorinde::queries::authors;
+use cornucopia::queries::authors;
 ```
 
 ## Building the query object
@@ -14,7 +14,7 @@ authors().bind(&client, Some("Greece"));
 
 or the generated parameter struct:
 ```rust
-use clorinde::{
+use cornucopia::{
     client::Params,
     queries::{authors, AuthorsParams}
 };
@@ -28,7 +28,7 @@ authors().params(
 ```
 The query function is useful when you have a few obvious parameters, while the parameter struct is more explicit.
 
-Note that in order to use the `params` method, you need to import the `clorinde::client::Params` trait.
+Note that in order to use the `params` method, you need to import the `cornucopia::client::Params` trait.
 
 ```admonish note
 Queries that don't have a return value (simple insertions, for example) don't generate a query object. Instead, when calling `bind` or `params` they execute and return the number of rows affected.
@@ -36,7 +36,7 @@ Queries that don't have a return value (simple insertions, for example) don't ge
 
 ### Query preparation
 
-Clorinde provides two ways to execute queries, optimised for different use cases:
+Cornucopia provides two ways to execute queries, optimised for different use cases:
 
 #### Default behaviour with `bind()`
 The standard way to execute a query is to call `bind()` directly:

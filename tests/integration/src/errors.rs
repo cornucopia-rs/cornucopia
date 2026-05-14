@@ -1,6 +1,6 @@
 use std::{path::PathBuf, str::FromStr};
 
-use clorinde::{Error, config::Config};
+use cornucopia::{Error, config::Config};
 use owo_colors::OwoColorize;
 
 use crate::{
@@ -53,9 +53,9 @@ pub(crate) fn run_errors_test(
             cfg.destination = tmp.clone();
 
             // Run codegen
-            let result = clorinde::load_schema(client, &["schema.sql"])
+            let result = cornucopia::load_schema(client, &["schema.sql"])
                 .map_err(|e| Error::from(Box::new(e)))
-                .and_then(|_| clorinde::gen_live(client, cfg));
+                .and_then(|_| cornucopia::gen_live(client, cfg));
 
             let err = result.unwrap_err().report();
             let err_trimmed = err.trim();

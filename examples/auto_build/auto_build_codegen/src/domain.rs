@@ -1,4 +1,4 @@
-// This file was generated with `clorinde`. Do not modify.
+// This file was generated with `cornucopia`. Do not modify.
 
 use super::{type_traits::ArraySql, utils::escape_domain};
 use postgres_protocol::types::{ArrayDimension, array_to_sql};

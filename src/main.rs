@@ -1,4 +1,4 @@
-use clorinde::run;
+use cornucopia::run;
 use miette::Result;
 
 fn main() -> Result<()> {

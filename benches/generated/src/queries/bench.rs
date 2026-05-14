@@ -1,4 +1,4 @@
-// This file was generated with `clorinde`. Do not modify.
+// This file was generated with `cornucopia`. Do not modify.
 
 #[derive(Debug)]
 pub struct InsertUserParams<
@@ -410,7 +410,7 @@ pub mod sync {
     pub struct InsertUserStmt(&'static str, Option<postgres::Statement>);
     /// Performs a bulk insert of multiple users.
     ///
-    /// Clorinde doesn't support multi-value inserts, so we use `unnest` to transform two arrays
+    /// Cornucopia doesn't support multi-value inserts, so we use `unnest` to transform two arrays
     /// (names and hair_colors) into rows of values that can be inserted together.
     pub fn insert_user() -> InsertUserStmt {
         InsertUserStmt(
@@ -964,7 +964,7 @@ pub mod async_ {
     pub struct InsertUserStmt(&'static str, Option<tokio_postgres::Statement>);
     /// Performs a bulk insert of multiple users.
     ///
-    /// Clorinde doesn't support multi-value inserts, so we use `unnest` to transform two arrays
+    /// Cornucopia doesn't support multi-value inserts, so we use `unnest` to transform two arrays
     /// (names and hair_colors) into rows of values that can be inserted together.
     pub fn insert_user() -> InsertUserStmt {
         InsertUserStmt(

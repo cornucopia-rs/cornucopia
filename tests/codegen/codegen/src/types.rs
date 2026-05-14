@@ -1,4 +1,4 @@
-// This file was generated with `clorinde`. Do not modify.
+// This file was generated with `cornucopia`. Do not modify.
 
 #[derive(Debug, postgres_types::FromSql, Clone, PartialEq)]
 #[postgres(name = "clone_composite")]

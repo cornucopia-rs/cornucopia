@@ -110,7 +110,7 @@ impl Default for Config {
             generate_field_metadata: false,
             container_wait: 250,
             queries: PathBuf::from_str("queries/").unwrap(),
-            destination: PathBuf::from_str("clorinde").unwrap(),
+            destination: PathBuf::from_str("cornucopia").unwrap(),
             sync: false,
             r#async: true,
             ignore_underscore_files: false,
@@ -267,7 +267,7 @@ impl TypeMapping {
 
 #[allow(deprecated)]
 fn default_manifest() -> cargo_toml::Manifest {
-    let mut package = cargo_toml::Package::new("clorinde", "0.0.0");
+    let mut package = cargo_toml::Package::new("cornucopia", "0.0.0");
     package.edition = cargo_toml::Inheritable::Set(cargo_toml::Edition::E2021);
     package.publish = cargo_toml::Inheritable::Set(cargo_toml::Publish::Flag(false));
 
@@ -508,7 +508,7 @@ version = "0.2"
             .manifest
             .package
             .expect("package section should be preserved when only dependencies are specified");
-        assert_eq!(package.name, "clorinde");
+        assert_eq!(package.name, "cornucopia");
         assert_eq!(
             package.publish,
             cargo_toml::Inheritable::Set(cargo_toml::Publish::Flag(false))

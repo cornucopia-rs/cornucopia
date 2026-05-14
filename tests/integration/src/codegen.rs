@@ -3,7 +3,7 @@ use crate::{
     utils::reset_db,
 };
 
-use clorinde::{Error, config::Config};
+use cornucopia::{Error, config::Config};
 use owo_colors::OwoColorize;
 use std::{env::set_current_dir, path::PathBuf, process::Command};
 use tempfile::tempdir;
@@ -31,24 +31,26 @@ pub(crate) fn run_codegen_test(
             )?;
 
             // Load schema
-            clorinde::load_schema(client, &["schema.sql"])?;
+            cornucopia::load_schema(client, &["schema.sql"])?;
 
             // If `--apply`, then the code will be regenerated.
             // Otherwise, it is only checked.
             if apply {
                 // Generate
-                clorinde::gen_live(client, Config::from(&test)).map_err(Error::report)?;
+                cornucopia::gen_live(client, Config::from(&test)).map_err(Error::report)?;
             } else {
-                let tmp_path = tmp_dir
-                    .path()
-                    .join(test.destination.file_name().unwrap_or("clorinde".as_ref()));
+                let tmp_path = tmp_dir.path().join(
+                    test.destination
+                        .file_name()
+                        .unwrap_or("cornucopia".as_ref()),
+                );
 
                 std::fs::create_dir(&tmp_path)?;
 
                 let mut cfg = Config::from(&test);
                 cfg.destination = tmp_path.clone();
 
-                clorinde::gen_live(client, cfg).map_err(Error::report)?;
+                cornucopia::gen_live(client, cfg).map_err(Error::report)?;
             }
 
             println!("(generate) {} {}", test.name, "OK".green());

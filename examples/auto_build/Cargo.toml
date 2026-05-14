@@ -5,7 +5,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
-# Clorinde (codegen)
+# Cornucopia (codegen)
 codegen = { path = "auto_build_codegen", package = "auto_build_codegen" }
 
 # Async
@@ -13,5 +13,5 @@ tokio = { version = "1.50", features = ["macros", "rt-multi-thread"] }
 futures = "0.3.31"
 
 [build-dependencies]
-# Clorinde (cli/api)
-clorinde = { path = "../..", package = "clorinde" }
+# Cornucopia (cli/api)
+cornucopia = { path = "../..", package = "cornucopia" }

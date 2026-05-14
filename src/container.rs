@@ -13,9 +13,9 @@ fn is_installed(tool: &str) -> bool {
     status.is_ok_and(|s| s.success())
 }
 
-/// Starts Clorinde's database container and wait until it reports healthy.
+/// Starts Cornucopia's database container and wait until it reports healthy.
 ///
-/// Any existing `clorinde_postgres` container is removed first to avoid
+/// Any existing `cornucopia_postgres` container is removed first to avoid
 /// name conflicts left over from a previous failed run.
 pub fn setup(podman: bool, container_image: &str, container_wait: u64) -> Result<(), Error> {
     let command = if podman { "podman" } else { "docker" };
@@ -43,13 +43,13 @@ pub fn cleanup(podman: bool) -> Result<(), Error> {
     Ok(())
 }
 
-/// Starts Clorinde's database container.
+/// Starts Cornucopia's database container.
 fn spawn_container(podman: bool, container_image: &str) -> Result<(), Error> {
     let args = vec![
         "run",
         "-d",
         "--name",
-        "clorinde_postgres",
+        "cornucopia_postgres",
         "-p",
         "5435:5432",
         "-e",
@@ -59,9 +59,9 @@ fn spawn_container(podman: bool, container_image: &str) -> Result<(), Error> {
     cmd(podman, &args, "spawn container")
 }
 
-/// Checks if Clorinde's container reports healthy
+/// Checks if Cornucopia's container reports healthy
 fn is_postgres_healthy(podman: bool) -> Result<bool, Error> {
-    let args = ["exec", "clorinde_postgres", "pg_isready"];
+    let args = ["exec", "cornucopia_postgres", "pg_isready"];
     Ok(cmd(podman, &args, "check container health").is_ok())
 }
 
@@ -78,7 +78,7 @@ fn healthcheck(
     while !is_postgres_healthy(podman)? {
         if nb_retries >= max_retries {
             return Err(Error::new(
-                String::from("Clorinde reached the max number of connection retries"),
+                String::from("Cornucopia reached the max number of connection retries"),
                 podman,
             ));
         };
@@ -98,15 +98,15 @@ fn healthcheck(
     Ok(())
 }
 
-/// Stops Clorinde's container.
+/// Stops Cornucopia's container.
 fn stop_container(podman: bool) -> Result<(), Error> {
-    let args = ["stop", "clorinde_postgres"];
+    let args = ["stop", "cornucopia_postgres"];
     cmd(podman, &args, "stop container")
 }
 
-/// Removes Clorinde's container and its volume.
+/// Removes Cornucopia's container and its volume.
 fn remove_container(podman: bool) -> Result<(), Error> {
-    let args = ["rm", "-v", "clorinde_postgres"];
+    let args = ["rm", "-v", "cornucopia_postgres"];
     cmd(podman, &args, "remove container")
 }
 
@@ -146,9 +146,9 @@ pub(crate) mod error {
     impl Error {
         pub fn new(msg: String, podman: bool) -> Self {
             let help = if podman {
-                "Make sure that port 5435 is usable and that no container named `clorinde_postgres` already exists."
+                "Make sure that port 5435 is usable and that no container named `cornucopia_postgres` already exists."
             } else {
-                "First, check that the docker daemon is up-and-running. Then, make sure that port 5435 is usable and that no container named `clorinde_postgres` already exists."
+                "First, check that the docker daemon is up-and-running. Then, make sure that port 5435 is usable and that no container named `cornucopia_postgres` already exists."
             };
             Error {
                 msg,

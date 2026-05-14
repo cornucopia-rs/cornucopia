@@ -1,11 +1,11 @@
 [package]
-name = "clorinde"
+name = "cornucopia"
 version = "1.4.1"
 edition = "2021"
 license = "MIT/Apache-2.0"
 description = "Generate type-checked Rust from your PostgreSQL queries."
-homepage = "https://github.com/halcyonnouveau/clorinde"
-repository = "https://github.com/halcyonnouveau/clorinde"
+homepage = "https://github.com/cornucopia-rs/cornucopia"
+repository = "https://github.com/cornucopia-rs/cornucopia"
 readme = "README.md"
 categories = ["database"]
 keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]

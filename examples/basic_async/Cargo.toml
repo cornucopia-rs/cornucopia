@@ -5,7 +5,7 @@ version = "0.1.0"
 publish = false
 
 [dependencies]
-# Clorinde
-clorinde = { path = "basic_async_codegen", package = "basic_async_codegen" }
+# Cornucopia
+cornucopia = { path = "basic_async_codegen", package = "basic_async_codegen" }
 # Async
 tokio = { version = "1.50", features = ["macros", "rt-multi-thread"] }
