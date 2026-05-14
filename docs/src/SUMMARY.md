@@ -1,6 +1,6 @@
 - [Introduction](./introduction.md)
     - [Installation](./introduction/installation.md)
-    - [Migration from Cornucopia](./introduction/migration_from_cornucopia.md)
+    - [Migration to 1.0](./introduction/migration_to_1_0.md)
     - [Supported types](./introduction/types.md)
 
 - [Using Cornucopia](./using_cornucopia/using_cornucopia.md)
