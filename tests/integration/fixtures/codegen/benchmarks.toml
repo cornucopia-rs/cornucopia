@@ -1,0 +1,6 @@
+[[test]]
+name = "Execution benchmark"
+base_path = "benches"
+destination = "generated"
+sync = true
+async = true

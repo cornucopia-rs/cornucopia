@@ -4,20 +4,18 @@ use criterion::Bencher;
 use futures::executor::block_on;
 use tokio_postgres::Client;
 
-use self::generated::queries::bench::{
-    async_::{comments_by_post_id, insert_user, post_by_user_ids, select_complex, users},
+use generated::queries::bench::{
     Comment, Post, User,
+    async_::{comments_by_post_id, insert_user, post_by_user_ids, select_complex, users},
 };
 
-mod generated;
-
 pub fn bench_trivial_query(b: &mut Bencher, client: &Client) {
-    let mut stmt = users();
+    let stmt = block_on(async { users().prepare(client).await.unwrap() });
     b.iter(|| block_on(async { stmt.bind(client).all().await.unwrap() }))
 }
 
 pub fn bench_medium_complex_query(b: &mut Bencher, client: &Client) {
-    let mut stmt = select_complex();
+    let stmt = block_on(async { select_complex().prepare(client).await.unwrap() });
     b.iter(|| {
         block_on(async {
             stmt.bind(client)
@@ -44,24 +42,22 @@ pub fn bench_medium_complex_query(b: &mut Bencher, client: &Client) {
 }
 
 pub fn bench_insert(b: &mut Bencher, client: &mut Client, size: usize) {
-    let mut stmt = insert_user();
+    let stmt = block_on(async { insert_user().prepare(client).await.unwrap() });
+
     b.iter(|| {
         block_on(async {
-            let tx = client.transaction().await.unwrap();
-            for x in 0..size {
-                stmt.bind(&tx, &format!("User {x}").as_str(), &Some("hair_color"))
-                    .await
-                    .unwrap();
-            }
-            tx.commit().await.unwrap();
+            let names: Vec<String> = (0..size).map(|x| format!("User {x}")).collect();
+            let hair_colors: Vec<String> = (0..size).map(|_| "hair_color".to_string()).collect();
+
+            stmt.bind(client, &names, &hair_colors).await.unwrap();
         })
     })
 }
 
 pub fn loading_associations_sequentially(b: &mut Bencher, client: &Client) {
-    let mut user_stmt = users();
-    let mut post_stmt = post_by_user_ids();
-    let mut comment_stmt = comments_by_post_id();
+    let user_stmt = block_on(async { users().prepare(client).await.unwrap() });
+    let post_stmt = block_on(async { post_by_user_ids().prepare(client).await.unwrap() });
+    let comment_stmt = block_on(async { comments_by_post_id().prepare(client).await.unwrap() });
     b.iter(|| {
         block_on(async {
             let users = user_stmt.bind(client).all().await.unwrap();
@@ -113,17 +109,17 @@ pub mod sync {
     use criterion::Bencher;
     use postgres::Client;
 
-    use super::generated::queries::bench::{
-        sync::{comments_by_post_id, insert_user, post_by_user_ids, select_complex, users},
+    use generated::queries::bench::{
         Comment, Post, User,
+        sync::{comments_by_post_id, insert_user, post_by_user_ids, select_complex, users},
     };
     pub fn bench_trivial_query(b: &mut Bencher, client: &mut Client) {
-        let mut stmt = users();
+        let stmt = users().prepare(client).unwrap();
         b.iter(|| stmt.bind(client).all().unwrap())
     }
 
     pub fn bench_medium_complex_query(b: &mut Bencher, client: &mut Client) {
-        let mut stmt = select_complex();
+        let stmt = select_complex().prepare(client).unwrap();
         b.iter(|| {
             stmt.bind(client)
                 .map(|it| {
@@ -147,21 +143,18 @@ pub mod sync {
     }
 
     pub fn bench_insert(b: &mut Bencher, client: &mut Client, size: usize) {
-        let mut stmt = insert_user();
+        let stmt = insert_user().prepare(client).unwrap();
         b.iter(|| {
-            let mut tx = client.transaction().unwrap();
-            for x in 0..size {
-                stmt.bind(&mut tx, &format!("User {x}").as_str(), &Some("hair_color"))
-                    .unwrap();
-            }
-            tx.commit().unwrap();
+            let names: Vec<String> = (0..size).map(|x| format!("User {x}")).collect();
+            let hair_colors: Vec<String> = (0..size).map(|_| "hair_color".to_string()).collect();
+            stmt.bind(client, &names, &hair_colors).unwrap();
         })
     }
 
     pub fn loading_associations_sequentially(b: &mut Bencher, client: &mut Client) {
-        let mut user_stmt = users();
-        let mut post_stmt = post_by_user_ids();
-        let mut comment_stmt = comments_by_post_id();
+        let user_stmt = users().prepare(client).unwrap();
+        let post_stmt = post_by_user_ids().prepare(client).unwrap();
+        let comment_stmt = comments_by_post_id().prepare(client).unwrap();
 
         b.iter(|| {
             let users = user_stmt.bind(client).all().unwrap();

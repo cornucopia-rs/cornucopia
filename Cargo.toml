@@ -1,9 +1,87 @@
+[package]
+name = "cornucopia"
+version = "0.9.0"
+edition = "2021"
+rust-version = "1.88.0"
+license = "MIT/Apache-2.0"
+description = "Generate type-checked Rust from your PostgreSQL queries."
+homepage = "https://github.com/cornucopia-rs/cornucopia"
+repository = "https://github.com/cornucopia-rs/cornucopia"
+readme = "README.md"
+categories = ["database"]
+keywords = ["postgresql", "query", "generator", "sql", "tokio-postgres"]
+include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE-*"]
+publish = true
+
+[dependencies]
+# Codegen tools
+quote = "1.0"
+prettyplease = "0.2"
+syn = { version = "2.0", features = ["full"] }
+proc-macro2 = "1.0"
+
+# Postgres interaction
+tokio-postgres = "0.7"
+postgres-types = "0.2"
+
+# Async
+tokio = { version = "1.50", features = ["rt-multi-thread"] }
+futures = "0.3"
+
+# Error handling and reporting
+thiserror = "2.0"
+miette = { version = "7.6", features = ["fancy"] }
+
+# Parser
+chumsky = "0.13"
+
+# CLI handling
+clap = { version = "4.6", features = ["derive", "env"] }
+
+# Word case
+heck = "0.5"
+
+# Order-preserving map to work around borrowing issues
+indexmap = "2.13"
+
+# Generate temporary files
+tempfile = "3.27"
+
+# Random generation
+rand = "0.10"
+
+# Config handling
+serde = { version = "1.0", features = ["derive"] }
+toml = "1.1"
+cargo_toml = "0.22"
+
+[dev-dependencies]
+# Benchmarking
+criterion = { version = "0.8", features = ["html_reports"] }
+postgres = "0.19"
+diesel = { version = "2.3", features = ["postgres"] }
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres"] }
+tempfile = "3.27"
+generated = { path = "benches/generated" }
+
+[[bench]]
+name = "execution"
+harness = false
+path = "benches/execution/main.rs"
+
+[[bench]]
+name = "codegen"
+harness = false
+path = "benches/codegen.rs"
+
 [workspace]
 resolver = "2"
-members = [
-    "examples/*",
-    "test_integration",
-    "test_codegen",
-    "benches",
-    "crates/*",
-]
+members = ["examples/*", "tests/*"]
+exclude = ["examples/basic_async_wasm"]
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = "symbols"
+panic = "abort"

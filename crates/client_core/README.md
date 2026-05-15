@@ -1,1 +1,0 @@
-Private abstractions for Cornucopia clients. You should not depend on this whatsoever. The clients are available [here](https://crates.io/crates/cornucopia_sync) (sync version) and [here](https://crates.io/crates/cornucopia_async) (async version).

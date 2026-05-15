@@ -1,6 +1,0 @@
-[[test]]
-name = "Execution benchmark"
-base_path = "benches/execution/cornucopia_benches"
-destination = "generated.rs"
-sync = true
-async = true

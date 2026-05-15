@@ -1,0 +1,7 @@
+benches/generated/** linguist-generated=true
+examples/auto_build/auto_build_codegen/** linguist-generated=true
+examples/basic_async/basic_async_codegen/** linguist-generated=true
+examples/basic_async_wasm/basic_async_wasm_codegen/** linguist-generated=true
+examples/basic_sync/basic_sync_codegen/** linguist-generated=true
+examples/custom_types/db/custom_types_codegen/** linguist-generated=true
+tests/codegen/codegen/** linguist-generated=true

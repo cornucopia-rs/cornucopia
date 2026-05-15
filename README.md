@@ -1,139 +1,105 @@
-<div align="center"> <img src="https://raw.githubusercontent.com/cornucopia-rs/cornucopia/main/assets/logo.svg" width=200 /> </div>
-<h1 align="center">Cornucopia</h1>
+<!-- markdownlint-disable MD041 MD033 -->
 <div align="center">
- <strong>
-   Generate type-checked  Rust from your SQL
- </strong>
+  <img src="https://raw.githubusercontent.com/cornucopia-rs/cornucopia/main/assets/logo.svg" alt="Cornucopia logo" width=150 />
+
+  <h1>Cornucopia</h1>
+
+  <strong>Generate type-checked Rust from your SQL</strong>
+
+  [![Crates.io](https://img.shields.io/crates/v/cornucopia.svg?style=flat-square)](https://crates.io/crates/cornucopia)
+  [![Book](https://img.shields.io/badge/book-latest-blue?logo=mdbook&style=flat-square)](https://cornucopia-rs.github.io/cornucopia/)
+  [![License](https://img.shields.io/badge/license-APACHE--2.0%2FMIT-blue?style=flat-square)](https://github.com/cornucopia-rs/cornucopia#license)
+  [![Dependencies](https://deps.rs/repo/github/cornucopia-rs/cornucopia/status.svg?style=flat-square)](https://deps.rs/repo/github/cornucopia-rs/cornucopia)
 </div>
+<!-- markdownlint-enable MD041 MD033 -->
 
-<br />
+> [!NOTE]
+> Cornucopia 1.0 merged the [Clorinde](https://github.com/halcyonnouveau/clorinde) fork back into the original project, adopting its rewritten codegen, expanded capabilities, and accumulated fixes. Huge thanks to [@beanpuppy](https://github.com/beanpuppy) and the Clorinde contributors for their work. If you are upgrading from Cornucopia `0.9.x`, see the [migration guide](https://cornucopia-rs.github.io/cornucopia/introduction/migration_to_1_0.html).
 
-<div align="center">
-  <!-- Downloads -->
-  <a href="https://crates.io/crates/cornucopia">
-    <img src="https://img.shields.io/crates/d/cornucopia.svg?style=flat-square"
-      alt="Download" />
-  </a>
-  <!-- Version -->
-  <a href="https://crates.io/crates/cornucopia">
-    <img src="https://img.shields.io/crates/v/cornucopia.svg?style=flat-square"
-    alt="Crates.io version" />
-  </a>
-
-  <!-- Book -->
-  <a href="https://cornucopia-rs.netlify.app/book/index.html">
-  <img src="https://img.shields.io/badge/book-latest-blue?logo=mdbook&style=flat-square" alt="book">
-  </a>
-
-  <!-- Docs -->
-  <a href="https://docs.rs/cornucopia/latest/cornucopia/">
-    <img alt="docs.rs" src="https://img.shields.io/docsrs/cornucopia?style=flat-square">
-  </a>
-  
-  <!-- Dependencies -->
-  <a href="https://deps.rs/repo/github/cornucopia-rs/cornucopia">
-    <img src="https://deps.rs/repo/github/cornucopia-rs/cornucopia/status.svg?style=flat-square"
-    alt="Crates.io version" />
-  </a>
- 
-  <br/>
-
-  <!-- License -->
-  <a href="https://github.com/cornucopia-rs/cornucopia#License">
-    <img src="https://img.shields.io/badge/License-APACHE--2.0%2FMIT-blue?style=flat-square" alt="License">
-  </a>
-
-  <!-- Chat -->
-  <a href="https://discord.gg/nYwUmQDHBZ">
-    <img src="https://img.shields.io/discord/987088069280825401?label=chat&logo=discord&style=flat-square" alt="Chat">
-  </a>
-</div>
-
-<div align="center">
-  <h4>
-    <a href="https://cornucopia-rs.netlify.app/">
-      Homepage
-    </a>
-    <span> | </span>
-    <a href="examples/basic_async/README.md">
-      Example
-    </a>
-  </h4>
-</div>
-
-<br />
-
-Cornucopia is a tool powered by [`rust-postgres`](https://github.com/sfackler/rust-postgres) designed to generate type-checked Rust interfaces from your PostgreSQL queries. It works by preparing your queries against an actual database and then running an extensive validation suite on them. Once the queries are prepared and validated, Rust code is generated into a module, which can be imported and used in your project. 
+Cornucopia generates type-checked Rust interfaces from PostgreSQL queries, with an emphasis on compile-time safety and high performance. It works by preparing your queries against an actual database and then running an extensive validation suite on them. Rust code is then generated into a separate crate, which can be imported and used in your project.
 
 The basic premise is thus to:
+
 1. Write your PostgreSQL queries.
-2. Use Cornucopia to generate Rust code.
-3. Use the generated code in your project.
+2. Use Cornucopia to generate a crate with type-safe interfaces to those queries.
+3. Import and use the generated code in your project.
 
-Compared to other Rust database interfaces, Cornucopia's approach has the benefits of being simple to understand while also generating code that is both ergonomic and free of heavy macros or complex generics. Since Cornucopia generates plain Rust structs, you can also easily build upon the generated items.
+You can learn more about Cornucopia by reading the [book](https://cornucopia-rs.github.io/cornucopia/), or you can get a quickstart by looking at the [examples](https://cornucopia-rs.github.io/cornucopia/examples.html).
 
-Here are some defining features:
-* SQL-first. Your SQL is the only source of truth. No intricate ORM.
-* Powerful query validation. Catch errors before runtime, with powerful (and pretty) diagnostics.
-* Supports custom user types (composites, domains, and enums) and one-dimensional arrays.
-* Sync and async driver support, with optional pooling.
-* Ergonomic non-allocating row mapping.
-* Granular type nullity control.
-* Available as a library and a CLI.
-* As close to native `rust-postgres` performance as we can make it.
+## Key Features
 
-You can learn more about using Cornucopia by reading our [book](https://cornucopia-rs.netlify.app/book/index.html), or you can get a quickstart by looking at our [examples](https://cornucopia-rs.netlify.app/book/examples.html).
+- **Type Safety** - Catch SQL errors at compile time with powerful diagnostics.
+- **SQL-First** - Write plain SQL queries, get generated Rust code. No ORMs or query builders, just the SQL you know and love.
+- **Fast** - Performance close to hand-written `rust-postgres` code.
+- **Flexible** - Works with sync/async code and connection pools.
+- **PostgreSQL Native** - Full support for custom types, enums, and arrays. Leverage PostgreSQL's advanced features without compromise.
+- **Custom Types** - Map database types to your own Rust structs.
 
-## A quick taste of Cornucopia
-The [book](https://cornucopia-rs.netlify.app/book/index.html) is the place to go to get more in-depth explanations, but here is the simplest of tasters to give you an idea.
+## Installation
 
-Let's say you have the following PostgreSQL queries
+Install with:
+
+```bash
+cargo install cornucopia
+```
+
+## Quick Example
+Write your PostgreSQL queries with annotations and named parameters:
 ```sql
--- queries/some_query_file.sql
-
---! authors
-SELECT first_name, last_name, country FROM Authors;
+-- queries/authors.sql
 
 --! insert_author
-INSERT INTO Authors(first_name, last_name, country) 
-VALUES (:first_name, :last_name, :country)
-```
-Notice the query annotations (`--! authors`, `--! insert_authors`) and the named bind parameters (`:first_name`, etc.).
+INSERT INTO authors
+    (first_name, last_name, country)
+VALUES
+    (:first_name, :last_name, :country);
 
-Then, after generating the Rust code with Cornucopia's CLI, you can import it into your project like so:
-```rust
-mod cornucopia;
-use cornucopia::{authors, insert_author};
+--! authors
+SELECT first_name, last_name, country FROM authors;
 ```
 
-Finally here is an example usage of these queries:
-```rust
-insert_author.bind(&client, "Agatha", "Christie", "England");
+Generate the crate with `cornucopia`, then you can import it into your project after adding it to your `Cargo.toml`:
+```toml
+cornucopia = { path = "./cornucopia" }
+```
 
-let all_authors = authors().bind(&client).all();
+And use the generated crate in your code:
+```rust
+use cornucopia::queries::authors::{authors, insert_author};
+
+insert_author()
+    .bind(&mut client, &"Agatha", &"Christie", &"England")
+    .unwrap();
+
+let all_authors = authors().bind(&mut client).all().unwrap();
 
 for author in all_authors {
-  println!("[{}] {}, {}", 
-    author.country, 
-    author.last_name.to_uppercase(), 
-    author.first_name
-  )
+    println!(
+        "[{}] {}, {}",
+        author.country,
+        author.last_name.to_uppercase(),
+        author.first_name,
+    );
 }
 ```
-You can customize pretty much every aspect of your queries easily with Cornucopia (custom parameters and row structs, renaming, nullity control, etc.), so please head over to the [book](https://cornucopia-rs.netlify.app/book/index.html) if you're interested to learn more.
 
-## MSRV
-This crate uses Rust 2021 edition, which requires at least version 1.62.1.
+For more examples go to the [examples](https://github.com/cornucopia-rs/cornucopia/tree/main/examples) directory, or head over to the [book](https://cornucopia-rs.github.io/cornucopia/) to learn more.
+
+## Prior Art
+
+- [sqlc](https://github.com/sqlc-dev/sqlc) (Go) - Generate type-safe code from SQL
+- [Kanel](https://github.com/kristiandupont/kanel) (TypeScript) - Generate TypeScript types from Postgres
+- [jOOQ](https://github.com/jOOQ/jOOQ) (Java) - Generate typesafe SQL from your database schema
 
 ## License
 
 Licensed under either of
- * Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
- * MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
 at your option.
 
 ### Contribution
 
-Unless you explicitly state otherwise, any contribution intentionally submitted
-for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any
-additional terms or conditions.
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.

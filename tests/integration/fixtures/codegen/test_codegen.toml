@@ -1,0 +1,6 @@
+[[test]]
+name = "Codegen"
+base_path = "tests/codegen"
+destination = "codegen"
+run = true
+config = true

@@ -1,17 +1,19 @@
 use criterion::Bencher;
 use postgres::types::ToSql;
-use postgres::{fallible_iterator::FallibleIterator, Client};
+use postgres::{Client, fallible_iterator::FallibleIterator};
 use std::collections::HashMap;
 use std::fmt::Write;
 
 const NO_PARAMS: Vec<&dyn ToSql> = Vec::new();
 
+#[allow(dead_code)]
 pub struct User {
     pub id: i32,
     pub name: String,
     pub hair_color: Option<String>,
 }
 
+#[allow(dead_code)]
 pub struct Post {
     pub id: i32,
     pub user_id: i32,
@@ -19,6 +21,7 @@ pub struct Post {
     pub body: Option<String>,
 }
 
+#[allow(dead_code)]
 pub struct Comment {
     pub id: i32,
     pub post_id: i32,

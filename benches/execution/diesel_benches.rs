@@ -162,12 +162,8 @@ pub fn bench_insert(b: &mut Bencher, conn: &mut PgConnection, size: usize) {
         1000 => |conn| insert_users::<_, 1000>(conn, hair_color_callback),
         _ => unimplemented!(),
     };
-    let insert = &insert;
 
-    b.iter(|| {
-        let insert = insert;
-        insert(conn)
-    })
+    b.iter(|| insert(conn))
 }
 
 pub fn loading_associations_sequentially(b: &mut Bencher, conn: &mut PgConnection) {

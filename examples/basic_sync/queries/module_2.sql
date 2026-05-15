@@ -2,47 +2,46 @@
 SELECT
     *
 FROM
-    Author;
+    authors;
 
 --! books
 SELECT
-    Title
+    title
 FROM
-    Book;
+    books;
 
 --! author_name_by_id
 SELECT
-    Author.Name
+    authors.name
 FROM
-    Author
+    authors
 WHERE
-    Author.Id = :id;
+    authors.id = :id;
 
 --! author_name_starting_with AuthorNameStartingWithParams()
 SELECT
-    BookAuthor.AuthorId,
-    Author.Name,
-    BookAuthor.BookId,
-    Book.Title
+    book_authors.author_id,
+    authors.name,
+    book_authors.book_id,
+    books.title
 FROM
-    BookAuthor
-    INNER JOIN Author ON Author.id = BookAuthor.AuthorId
-    INNER JOIN Book ON Book.Id = BookAuthor.BookId
+    book_authors
+    INNER JOIN authors ON authors.id = book_authors.author_id
+    INNER JOIN books ON books.id = book_authors.book_id
 WHERE
-    Author.Name LIKE CONCAT(:start_str::text, '%');
+    authors.name LIKE CONCAT(:start_str::text, '%');
 
 --! select_voice_actor_with_character
 SELECT
     voice_actor
 FROM
-    SpongeBobVoiceActor
+    spongebob_voice_actors
 WHERE
     character = :spongebob_character;
 
 --! select_translations
 SELECT
-    Title,
-    Translations
+    title,
+    translations
 FROM
-    Book;
-
+    books;

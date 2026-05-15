@@ -1,22 +1,20 @@
 // Take a look at the generated `cornucopia.rs` file if you want to
 // see what it looks like under the hood.
-mod cornucopia;
-
-use crate::cornucopia::{
+use cornucopia::{
+    client::Params,
     queries::{
         module_1::insert_book,
         module_2::{
-            author_name_by_id, author_name_starting_with, authors, books, select_translations,
-            select_voice_actor_with_character, AuthorNameStartingWithParams,
+            AuthorNameStartingWithParams, author_name_by_id, author_name_starting_with, authors,
+            books, select_translations, select_voice_actor_with_character,
         },
     },
-    types::public::SpongeBobCharacter,
+    types::SpongebobCharacter,
 };
-use cornucopia_sync::Params;
 
 pub fn main() {
     // You can learn which database connection types are compatible with Cornucopia in the book
-    // https://cornucopia-rs.netlify.app/book/using_queries/db_connections.html
+    // https://cornucopia-rs.github.io/cornucopia/using_queries/db_connections.html
     let mut client = get_client().unwrap();
 
     // The `all` method returns queried rows collected into a `Vec`
@@ -37,7 +35,7 @@ pub fn main() {
             .unwrap();
 
         // Bind parameters are "smart". A query that expects a `&str` will also accept other
-        // "string-like" types like `String`. See https://cornucopia-rs.netlify.app/book/using_queries/ergonomic_parameters.html
+        // "string-like" types like `String`. See https://cornucopia-rs.github.io/cornucopia/using_queries/ergonomic_parameters.html
         // for more details.
         insert_book()
             .bind(&mut transaction, &String::from("Moby Dick"))
@@ -66,7 +64,7 @@ pub fn main() {
     // This query doesn't benefit much, but is still shown for demonstration purposes.
     // ! Note: To use this feature you need to:
     // ! 1. Have a struct generated for your parameters
-    // !    (see https://cornucopia-rs.netlify.app/book/writing_queries/type_annotations.html for
+    // !    (see https://cornucopia-rs.github.io/cornucopia/writing_queries/type_annotations.html for
     // !    general information and the `queries/module_2.sql` file to see how this particular
     // !    parameter type was created).
     // ! 2. Import the `Params` trait.
@@ -85,7 +83,7 @@ pub fn main() {
     // You can use them as bind parameters (as shown here)
     // or receive them in returned rows.
     let patrick_voice_actor = select_voice_actor_with_character()
-        .bind(&mut client, &SpongeBobCharacter::Patrick)
+        .bind(&mut client, &SpongebobCharacter::Patrick)
         .one()
         .unwrap();
     dbg!(patrick_voice_actor);
@@ -104,8 +102,9 @@ pub fn main() {
 ///
 /// This is just a simple example config, please look at
 /// `postgres` for details.
-use postgres::{Config, NoTls};
-fn get_client() -> Result<postgres::Client, postgres::Error> {
+use cornucopia::postgres::{Client, Config, Error, NoTls};
+
+fn get_client() -> Result<Client, Error> {
     Config::new()
         .user("postgres")
         .password("postgres")

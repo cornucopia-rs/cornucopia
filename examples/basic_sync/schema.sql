@@ -1,49 +1,49 @@
-CREATE TABLE Author (
-    Id serial NOT NULL,
-    Name varchar(70) NOT NULL,
-    Country varchar(100) NOT NULL,
-    PRIMARY KEY (Id)
+CREATE TABLE authors (
+    id serial NOT NULL,
+    name varchar(70) NOT NULL,
+    country varchar(100) NOT NULL,
+    dob date NOT NULL,
+    PRIMARY KEY (id)
 );
 
-INSERT INTO Author (Name, Country)
-    VALUES ('Agatha Christie', 'United Kingdom'), ('John Ronald Reuel Tolkien', 'United Kingdom');
+INSERT INTO authors (name, country, dob)
+    VALUES ('Agatha Christie', 'United Kingdom', '1999-01-02'), ('John Ronald Reuel Tolkien', 'United Kingdom', '2003-02-1');
 
-CREATE TABLE Book (
-    Id serial NOT NULL,
-    Title varchar(50) NOT NULL,
-    Translations text[] NOT NULL DEFAULT ARRAY['french', 'english'],
-    PRIMARY KEY (Id)
+CREATE TABLE books (
+    id serial NOT NULL,
+    title varchar(50) NOT NULL,
+    translations text[] NOT NULL DEFAULT ARRAY['french', 'english'],
+    PRIMARY KEY (id)
 );
 
-INSERT INTO Book (Title)
+INSERT INTO books (title)
     VALUES ('Murder on the Orient Express'), ('Death on the Nile'), ('The Hobbit'), ('The Silmarillion');
 
-CREATE TABLE BookAuthor (
-    AuthorId int NOT NULL,
-    BookId int NOT NULL,
-    FOREIGN KEY (AuthorId) REFERENCES Author (Id),
-    FOREIGN KEY (BookId) REFERENCES Book (Id)
+CREATE TABLE book_authors (
+    author_id int NOT NULL,
+    book_id int NOT NULL,
+    FOREIGN KEY (author_id) REFERENCES authors (id),
+    FOREIGN KEY (book_id) REFERENCES books (id)
 );
 
-INSERT INTO BookAuthor (AuthorId, BookId)
+INSERT INTO book_authors (author_id, book_id)
     VALUES (1, 1), (1, 2), (2, 3), (2, 4);
 
-CREATE TYPE Sponge_Bob_Character AS enum (
+CREATE TYPE spongebob_character AS enum (
     'Bob',
     'Patrick',
     'Squidward'
 );
 
-CREATE TYPE VoiceActor AS (
+CREATE TYPE voice_actor AS (
     name text,
     age integer
 );
 
-CREATE TABLE SpongeBobVoiceActor (
-    voice_actor VoiceActor,
-    character Sponge_Bob_Character
+CREATE TABLE spongebob_voice_actors (
+    voice_actor voice_actor,
+    character spongebob_character
 );
 
-INSERT INTO SpongeBobVoiceActor (voice_actor, character)
+INSERT INTO spongebob_voice_actors (voice_actor, character)
     VALUES (ROW ('Bill Fagerbakke', 65), 'Patrick');
-

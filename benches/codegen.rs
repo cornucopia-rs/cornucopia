@@ -1,42 +1,31 @@
-use cornucopia::{conn::cornucopia_conn, CodegenSettings};
+use std::{path::PathBuf, str::FromStr};
+
+use cornucopia::{config::Config, conn::cornucopia_conn};
 use criterion::Criterion;
 
 fn bench(c: &mut Criterion) {
-    cornucopia::container::cleanup(false).ok();
-    cornucopia::container::setup(false).unwrap();
-    let client = &mut cornucopia_conn().unwrap();
+    cornucopia::container::setup(false, "docker.io/library/postgres:latest", 250).unwrap();
+    let client = &cornucopia_conn().unwrap();
+    let tmp = tempfile::tempdir().unwrap();
+    cornucopia::load_schema(client, &["tests/codegen/schema.sql"]).unwrap();
 
-    cornucopia::load_schema(client, &["../codegen_test/schema.sql"]).unwrap();
+    let cfg = Config::builder()
+        .queries(PathBuf::from_str("tests/codegen/queries").unwrap())
+        .destination(tmp.keep())
+        .sync(true)
+        .r#async(true)
+        .derive_traits(vec!["serde::Serialize".to_string()]);
+
     c.bench_function("codegen_sync", |b| {
-        b.iter(|| {
-            cornucopia::generate_live(
-                client,
-                "../test_codegen/queries",
-                None,
-                CodegenSettings {
-                    gen_sync: true,
-                    gen_async: false,
-                    derive_ser: true,
-                },
-            )
-            .unwrap()
-        })
+        b.iter(|| cornucopia::gen_live(client, cfg.clone().build()).unwrap())
     });
+
+    let cfg = cfg.sync(false).r#async(false);
+
     c.bench_function("codegen_async", |b| {
-        b.iter(|| {
-            cornucopia::generate_live(
-                client,
-                "../test_codegen/queries",
-                None,
-                CodegenSettings {
-                    gen_sync: true,
-                    gen_async: false,
-                    derive_ser: true,
-                },
-            )
-            .unwrap()
-        })
+        b.iter(|| cornucopia::gen_live(client, cfg.clone().build()).unwrap())
     });
+
     cornucopia::container::cleanup(false).unwrap();
 }
 criterion::criterion_group!(benches, bench);

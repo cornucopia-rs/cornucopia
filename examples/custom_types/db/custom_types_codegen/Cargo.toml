@@ -1,0 +1,53 @@
+# This file was generated with `cornucopia`. Do not modify.
+
+[package]
+name = "custom_types_codegen"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies.chrono]
+version = "0.4.44"
+features = ["serde"]
+
+[dependencies.db_types]
+path = "../db_types"
+
+[dependencies.deadpool-postgres]
+version = "0.14.1"
+optional = true
+
+[dependencies.futures]
+version = "0.3.32"
+
+[dependencies.postgres]
+version = "0.19"
+features = ["with-time-0_3", "with-serde_json-1"]
+
+[dependencies.postgres-protocol]
+version = "0.6.11"
+
+[dependencies.postgres-types]
+version = "0.2.13"
+features = ["derive"]
+
+[dependencies.serde]
+version = "1.0.228"
+features = ["derive"]
+
+[dependencies.time]
+version = "0.3"
+features = ["serde"]
+
+[dependencies.tokio-postgres]
+version = "0.7"
+features = ["with-time-0_3", "with-serde_json-1"]
+
+[features]
+deadpool = ["dep:deadpool-postgres", "tokio-postgres/default"]
+default = ["deadpool"]
+wasm-async = ["tokio-postgres/js", "chrono/wasmbind"]
+
+[lints.rust]
+dead_code = "allow"
+unused_imports = "allow"

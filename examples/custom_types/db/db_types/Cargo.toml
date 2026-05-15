@@ -1,0 +1,11 @@
+[package]
+name = "db_types"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+postgres-protocol = "0.6.7"
+postgres-types = "0.2.8"
+bytes = "1.10.1"
+serde = { version = "1.0.217", features = ["derive"] }

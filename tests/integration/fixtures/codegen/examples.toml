@@ -1,0 +1,34 @@
+[[test]]
+name = "Auto build"
+base_path = "examples/auto_build"
+destination = "auto_build_codegen"
+async = true
+run = true
+
+[[test]]
+name = "Basic sync"
+base_path = "examples/basic_sync"
+destination = "basic_sync_codegen"
+sync = true
+run = true
+
+[[test]]
+name = "Basic async"
+base_path = "examples/basic_async"
+destination = "basic_async_codegen"
+async = true
+run = true
+
+[[test]]
+name = "Basic async wasm"
+base_path = "examples/basic_async_wasm"
+destination = "basic_async_wasm_codegen"
+async = true
+run = true
+
+[[test]]
+name = "Custom types"
+base_path = "examples/custom_types"
+destination = "db/custom_types_codegen"
+run = true
+config = true

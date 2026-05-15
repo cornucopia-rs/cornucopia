@@ -1,0 +1,49 @@
+destination = "db/custom_types_codegen"
+static = ["kafstel.txt"]
+use-workspace-deps = "../../Cargo.toml"
+# container-image = "timescale/timescaledb-ha:pg17"
+# container-wait = 1000
+
+[style]
+enum-variant-camel-case = true
+
+[types]
+derive-traits = ["serde::Serialize", "Hash"]
+
+[types.custom.quality]
+derive-traits = ["serde::Deserialize"]
+attributes = ["repr(u8)"]
+
+[types.mapping]
+"public.element" = "db_types::element::Element"
+"pg_catalog.timestamp" = "time::PrimitiveDateTime"
+"pg_catalog.timestamptz" = "time::OffsetDateTime"
+"pg_catalog.time" = "time::Time"
+"pg_catalog.date" = { rust-type = "db_types::date::Date", attributes = [
+    'serde(skip_serializing_if = "Option::is_none")',
+] }
+# Example of borrowed-type: maps varchar to separate owned and borrowed Rust types
+[types.mapping."pg_catalog.varchar"]
+rust-type = "db_types::string::CustomString"
+borrowed-type = "db_types::string::CustomStringRef<'a>"
+is-copy = false
+
+[manifest.package]
+name = "custom_types_codegen"
+publish = false
+
+[manifest.dependencies]
+db_types = { path = "../db_types" }
+time = { version = "0.3", features = ["serde"] }
+tokio-postgres = { version = "0.7", features = [
+    "with-time-0_3",
+    "with-serde_json-1",
+] }
+postgres = { version = "0.19", features = [
+    "with-time-0_3",
+    "with-serde_json-1",
+] }
+
+[manifest.lints.rust]
+dead_code = "allow"
+unused_imports = "allow"

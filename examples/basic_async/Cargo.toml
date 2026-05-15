@@ -2,19 +2,10 @@
 edition = "2021"
 name = "basic-async"
 version = "0.1.0"
+publish = false
 
 [dependencies]
-# Cornucopia async client
-## If you're trying this example as a standalone crate, 
-## replace the path with the latest current version
-cornucopia_async = { path = "../../crates/client_async" }
-
+# Cornucopia
+cornucopia = { path = "basic_async_codegen", package = "basic_async_codegen" }
 # Async
-tokio = { version = "1.24.2", features = ["full"] }
-futures = "0.3.25"
-
-# Postgres interaction
-tokio-postgres = "0.7.7"
-postgres-types = { version = "0.2.4", features = ["derive"] }
-## Connection pooling
-deadpool-postgres = "0.12.1"
+tokio = { version = "1.50", features = ["macros", "rt-multi-thread"] }

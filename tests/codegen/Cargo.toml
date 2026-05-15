@@ -1,0 +1,17 @@
+[package]
+name = "test_codegen"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+# Cornucopia
+codegen = { path = "codegen" }
+# rust-postgres interaction
+postgres = "0.19.9"
+# extra types
+serde_json = { version = "1.0.135", features = ["raw_value"] }
+chrono = { version = "0.4.44", features = ["serde"] }
+uuid = { version = "1.23", features = ["serde"] }
+eui48 = { version = "1.1.0", features = ["serde"] }
+rust_decimal = { version = "1.42.0", features = ["db-postgres"] }

@@ -1,4 +1,3 @@
 --! insert_book
-INSERT INTO Book (title)
+INSERT INTO books (title)
   VALUES (:title);
-
