@@ -7,6 +7,186 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0](https://github.com/cornucopia-rs/cornucopia/compare/cornucopia-v0.9.0...cornucopia-v0.10.0) - 2026-05-15
+
+### Added
+
+- add nullable-variant field attributes to type mappings
+- [**breaking**] remove deprecated `--serialize` CLI flag and config field
+- *(#214)* consolidate custom type config into types.custom section
+- *(#213)* add type-attributes-mapping to support attrs on generated type definitions
+- add borrowed-type support for custom type mappings
+- [**breaking**] add custom attrs for borrowed structs ([#177](https://github.com/cornucopia-rs/cornucopia/pull/177))
+- Add metadata ([#145](https://github.com/cornucopia-rs/cornucopia/pull/145))
+- add custom attributes syntax for structs and queries ([#151](https://github.com/cornucopia-rs/cornucopia/pull/151))
+- [**breaking**] add safer/better use of prepare and immutable bind ([#143](https://github.com/cornucopia-rs/cornucopia/pull/143))
+- Allow configuring the output location of static files ([#141](https://github.com/cornucopia-rs/cornucopia/pull/141))
+- [**breaking**] split custom field attributes into `attributes` and `attributes-borrowed`
+- optimise codegen with async client and pipelining
+- [**breaking**] remove ignore_underscore_files from cli args
+- [**breaking**] make Config #[non_exhaustive]
+- deprecate serialize config, update docs to replacement
+- better cli validation
+- *(breaking)* remove time feature flag ([#120](https://github.com/cornucopia-rs/cornucopia/pull/120))
+- *(breaking)* allow config to specify entire generated cargo manifest ([#119](https://github.com/cornucopia-rs/cornucopia/pull/119))
+- add params-only mode to make bind() private ([#118](https://github.com/cornucopia-rs/cornucopia/pull/118))
+- fresh command for temporary databases ([#115](https://github.com/cornucopia-rs/cornucopia/pull/115))
+- support nullity composite arrays ([#116](https://github.com/cornucopia-rs/cornucopia/pull/116))
+- ability to change container image for schema command
+- add style setting to configure enum variant style
+- add search_path option to Live action and set in Postgres client ([#110](https://github.com/cornucopia-rs/cornucopia/pull/110))
+- allow user custom rust types for all pg types ([#109](https://github.com/cornucopia-rs/cornucopia/pull/109))
+- add lto to release build
+- directory based query modules ([#99](https://github.com/cornucopia-rs/cornucopia/pull/99))
+- allow custom field attributes in type mappings ([#96](https://github.com/cornucopia-rs/cornucopia/pull/96))
+- Ignore files with names prefixed with `_` ([#90](https://github.com/cornucopia-rs/cornucopia/pull/90))
+- improve error handling with `try_get` in query extractors
+- overwrite generated dep from config
+- better error message when docker not installed
+- add builder pattern for config
+- add `types.type-traits-mapping` to set traits on specific postgres types
+- add derive traits ([#58](https://github.com/cornucopia-rs/cornucopia/pull/58))
+- add query doc strings ([#55](https://github.com/cornucopia-rs/cornucopia/pull/55))
+- Some CLI improvements ([#54](https://github.com/cornucopia-rs/cornucopia/pull/54))
+- feat; add `use-workspace-deps` option ([#50](https://github.com/cornucopia-rs/cornucopia/pull/50))
+- feat; add static files config ([#49](https://github.com/cornucopia-rs/cornucopia/pull/49))
+- feat; add prompt for generating on a non-default directory
+- add citext and other extension friends ([#44](https://github.com/cornucopia-rs/cornucopia/pull/44))
+- add documentation book
+- add bpchar to string types ([#14](https://github.com/cornucopia-rs/cornucopia/pull/14))
+- clorinde.toml adds to generated crate package ([#11](https://github.com/cornucopia-rs/cornucopia/pull/11))
+- add optional time feature
+
+### Changed
+
+- updated deps and removed fallible_iterator from generated cargo - now relying on reexported fallible_iterator from postgres/tokio-postgres
+
+### Fixed
+
+- detect workspace dependencies in Cargo.toml parsing ([#248](https://github.com/cornucopia-rs/cornucopia/pull/248))
+- Parsing of utf8 quoted identifiers ([#245](https://github.com/cornucopia-rs/cornucopia/pull/245))
+- clean up stale container on setup and box large error variants
+- restore default package section when manifest dependencies are specified without explicit package config
+- context-aware semicolon parsing in SQL queries ([#91](https://github.com/cornucopia-rs/cornucopia/pull/91))
+- strip Default trait from enums
+- replace unstable features for stable rust compatibility
+- use default type arg for cargo_toml::Manifest ([#167](https://github.com/cornucopia-rs/cornucopia/pull/167))
+- specify concrete type for cargo_toml::Package ([#165](https://github.com/cornucopia-rs/cornucopia/pull/165))
+- running without config file
+- feature for WASM compilation ([#137](https://github.com/cornucopia-rs/cornucopia/pull/137))
+- dont publish example codegen
+- style config serialize from toml
+- codegen directory rename on windows
+- ensure generated crate is only deleted when new generation succeeds ([#95](https://github.com/cornucopia-rs/cornucopia/pull/95))
+- *(codegen)* make "chrono" and "time" features mutually exclusive ([#88](https://github.com/cornucopia-rs/cornucopia/pull/88))
+- context aware bind parsing
+- `time` feature defined multiple times
+- add serde to chrono and uuid features
+- adding custom deps without type mapping ([#61](https://github.com/cornucopia-rs/cornucopia/pull/61))
+- fix; config defaults
+- fix; rename hard-link
+- fix; workflow run codegen
+- update test path in benches
+- publish to specific repo wasn't supported in clorinde.toml ([#40](https://github.com/cornucopia-rs/cornucopia/pull/40))
+- lifetimes and generics ([#36](https://github.com/cornucopia-rs/cornucopia/pull/36))
+- add serde for serialize without json ([#27](https://github.com/cornucopia-rs/cornucopia/pull/27))
+- Don't force enable optional dependencies if wasm-async is enabled ([#19](https://github.com/cornucopia-rs/cornucopia/pull/19))
+- fix features
+- Don't generate imports specific to async for the sync client
+- Clippy warnings in generated code
+- *(bench)* CodegenSettings was missing config (this doesn't seem to be used?)
+- fix warning placment
+- fix code! macro usage
+- fix path
+- fix persist
+
+### Other
+
+- update README for the cornucopia/clorinde merge
+- move introduction page to root dir
+- Fix broken link to examples page ([#102](https://github.com/cornucopia-rs/cornucopia/pull/102))
+- remove deprecation warning for `--serialize`
+- deprecate `--serialize` and update time flag
+- add section for `types.derive-traits-mapping`
+- fix links
+- fix link
+- add query comments
+- docs; fix bench docs
+- docs; yet another re-pass of the book
+- docs; add note for ToSql/FromSql for custom types
+- Detect borrowed type based on std Rust types ([#17](https://github.com/cornucopia-rs/cornucopia/pull/17))
+- Only depend on "ctypes" crate if it is referenced ([#18](https://github.com/cornucopia-rs/cornucopia/pull/18))
+- rename settings parameter to config ([#24](https://github.com/cornucopia-rs/cornucopia/pull/24))
+- bump version
+- allow no config file
+- run cargo fmt
+- update cargo.toml
+- update readme
+- update config file
+- update workflows
+- book init
+- cool hat
+- get_type_mapping pub crate
+- add custom type mapping
+- cleanup
+- rename to clorinde
+- Merge remote-tracking branch 'fork/crate_codegen'
+- update auto_build example
+- move tests to single dir
+- re export postgres for sync
+- add more wasm support
+- time to chrono
+- re export tokio-pg and deadpool
+- add wasm feature
+- Clippy fix
+- Update deadpool
+- Update deadpool
+- Revert "Update deadpool and remove async_trait"
+- Update deadpool and remove async_trait
+- Update dependencies
+- Add retrocompatible import paths
+- Merge branch 'main' into crate_codegen
+- Clippy fix
+- Update dependencies
+- Change name of benchmark in fixture.
+- Add minor comments.
+- Update lockfile.
+- Remove dependencies that were added by mistake.
+- For some reason, `toml` now uses double quotes for multiline.
+- Fix integration test.
+- Minor aesthetic change.
+- Fix merge typo.
+- Adapt `test_integration` to dual sync-async support.
+- Merge branch 'main' into workspace_improvements
+- Docker should be the default for integration tests.
+- Upgrade toml.
+- Upgrade dependencies.
+- Improve `test_integration` internal organization.
+- clippy fixes
+- Allow drop copy in our copy test.
+- Slightly simplify `run` feature in integration tests.
+- Rename `codegen_test` to `test_codegen` and `integration` to `test_integration` for better visibility.
+- Add `integration` documentation.
+- Add `codegen_test` documentation.
+- Renamed `usage` bench to `execution`
+- Reword error message.
+- Copy documentation into a README file.
+- Move published crates into a dedicated `crates/` folder.
+- Document dependencies.
+- Prevent running sync `codegen_test` twice (until we add a real async `codegen_test`)
+- Add optional podman support to integration test.
+- Remove unused lock file.
+- Add some documentation for benchmarks.
+- Remove ad-hoc `moving` function and replcace with `std::drop`, which is exactly the same.
+- Rename `bench` crate to `benches`.
+- Remove unused asset.
+
+### Refactor
+
+- refactor; type register for better custom type support
+- use quote crate instead of codegen_template and run `cargo fmt` after generation ([#35](https://github.com/cornucopia-rs/cornucopia/pull/35))
+- remove async-trait dependency ([#28](https://github.com/cornucopia-rs/cornucopia/pull/28))
+
 <!--
 Entries below this point are from the upstream clorinde fork at the time of merging, preserved for
 historical reference. Cornucopia changes resume above starting with v1.0.
