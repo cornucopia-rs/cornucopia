@@ -514,7 +514,7 @@ fn gen_query_fn(
                 client: &'c #client_mut C,
                 #(#params_name: &'a #params_ty,)*
             ) -> Result<u64, #backend::Error> {
-                client.execute(self.0, &[#(#params_wrap,)*])#fn_await
+                client.execute_typed(self.0, &[#((#params_wrap, #params_ty_val),)*])#fn_await
             }
         }
     };

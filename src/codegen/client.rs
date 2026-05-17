@@ -663,6 +663,8 @@ pub fn sync_generic_client() -> proc_macro2::TokenStream {
             where
                 T: ?Sized + ToStatement;
 
+            fn execute_typed(&mut self, query: &str, typed_params: &[(&(dyn ToSql + Sync), postgres_types::Type)]) -> Result<u64, Error>;
+
             fn query_one<T>(&mut self, statement: &T, params: &[&(dyn ToSql + Sync)]) -> Result<Row, Error>
             where
                 T: ?Sized + ToStatement;
@@ -715,6 +717,11 @@ pub fn sync_generic_client() -> proc_macro2::TokenStream {
                 T: ?Sized + ToStatement,
             {
                 Transaction::execute(self, query, params)
+            }
+
+            fn execute_typed(&mut self, query: &str, typed_params: &[(&(dyn ToSql + Sync), postgres_types::Type)]) -> Result<u64, Error>
+            {
+                Transaction::execute_typed(self, query, typed_params)
             }
 
             fn query_one<T>(&mut self, statement: &T, params: &[&(dyn ToSql + Sync)]) -> Result<Row, Error>
@@ -787,6 +794,11 @@ pub fn sync_generic_client() -> proc_macro2::TokenStream {
                 T: ?Sized + ToStatement,
             {
                 Client::execute(self, query, params)
+            }
+
+            fn execute_typed(&mut self, query: &str, typed_params: &[(&(dyn ToSql + Sync), postgres_types::Type)]) -> Result<u64, Error>
+            {
+                Client::execute_typed(self, query, typed_params)
             }
 
             fn query_one<T>(&mut self, statement: &T, params: &[&(dyn ToSql + Sync)]) -> Result<Row, Error>
@@ -879,6 +891,12 @@ pub fn async_generic_client() -> proc_macro2::TokenStream {
             where
                 T: ?Sized + ToStatement + Sync + Send;
 
+            fn execute_typed(
+                &self,
+                query: &str,
+                typed_params: &[(&(dyn ToSql + Sync), postgres_types::Type)],
+            ) -> impl Future<Output = Result<u64, Error>> + Send;
+
             fn query_one<T>(
                 &self,
                 statement: &T,
@@ -947,6 +965,15 @@ pub fn async_generic_client() -> proc_macro2::TokenStream {
                 T: ?Sized + ToStatement + Sync + Send,
             {
                 Transaction::execute(self, query, params).await
+            }
+
+            async fn execute_typed(
+                &self,
+                query: &str,
+                typed_params: &[(&(dyn ToSql + Sync), postgres_types::Type)],
+            ) -> Result<u64, Error>
+            {
+                Transaction::execute_typed(self, query, typed_params).await
             }
 
             async fn query_one<T>(
@@ -1031,6 +1058,15 @@ pub fn async_generic_client() -> proc_macro2::TokenStream {
                 T: ?Sized + ToStatement + Sync + Send,
             {
                 Client::execute(self, query, params).await
+            }
+
+            async fn execute_typed(
+                &self,
+                query: &str,
+                typed_params: &[(&(dyn ToSql + Sync), postgres_types::Type)],
+            ) -> Result<u64, Error>
+            {
+                Client::execute_typed(self, query, typed_params).await
             }
 
             async fn query_one<T>(
@@ -1135,6 +1171,15 @@ pub fn async_deadpool() -> proc_macro2::TokenStream {
                 PgClient::execute(self, query, params).await
             }
 
+            async fn execute_typed(
+                &self,
+                query: &str,
+                typed_params: &[(&(dyn tokio_postgres::types::ToSql + Sync), postgres_types::Type)],
+            ) -> Result<u64, Error>
+            {
+                PgClient::execute_typed(self, query, typed_params).await
+            }
+
             async fn query_one<T>(
                 &self,
                 statement: &T,
@@ -1221,6 +1266,15 @@ pub fn async_deadpool() -> proc_macro2::TokenStream {
                 T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
             {
                 PgTransaction::execute(self, query, params).await
+            }
+
+            async fn execute_typed(
+                &self,
+                query: &str,
+                typed_params: &[(&(dyn tokio_postgres::types::ToSql + Sync), postgres_types::Type)],
+            ) -> Result<u64, Error>
+            {
+                PgTransaction::execute_typed(self, query, typed_params).await
             }
 
             async fn query_one<T>(
