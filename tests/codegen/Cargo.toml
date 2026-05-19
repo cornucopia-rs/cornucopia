@@ -13,5 +13,5 @@ postgres = "0.19.9"
 serde_json = { version = "1.0.135", features = ["raw_value"] }
 chrono = { version = "0.4.44", features = ["serde"] }
 uuid = { version = "1.23", features = ["serde"] }
-eui48 = { version = "1.1.0", features = ["serde"] }
+eui48 = { version = "1.1.0", default-features = false, features = ["serde"] }
 rust_decimal = { version = "1.42.0", features = ["db-postgres"] }
