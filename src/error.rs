@@ -1,7 +1,47 @@
-use std::path::PathBuf;
+use std::{io::IsTerminal, path::PathBuf};
 
 use miette::{Diagnostic, GraphicalReportHandler, GraphicalTheme};
 use thiserror::Error as ThisError;
+
+/// Enumeration of all the warnings reported by Cornucopia.
+#[derive(Debug, ThisError, Diagnostic)]
+pub(crate) enum Warning {
+    /// No annotated queries were found in the queries directory.
+    #[error("no queries were found")]
+    #[diagnostic(
+        severity(Warning),
+        help(
+            "Cornucopia only generates code from annotated SQL queries. Make sure your queries directory path is correct and contains annotated queries. See https://cornucopia-rs.github.io/cornucopia/writing_queries/writing_queries.html for more."
+        )
+    )]
+    NoQueries,
+}
+
+impl Warning {
+    fn render(&self, theme: GraphicalTheme) -> String {
+        let mut buff = String::new();
+        if GraphicalReportHandler::new()
+            .with_theme(theme)
+            .render_report(&mut buff, self)
+            .is_err()
+        {
+            format!("Warning: {self}")
+        } else {
+            buff
+        }
+    }
+
+    /// Render this warning and write it to stderr, using ANSI colors when
+    /// stderr is a terminal and `NO_COLOR` is not set.
+    pub(crate) fn emit(&self) {
+        let theme = if std::io::stderr().is_terminal() && std::env::var_os("NO_COLOR").is_none() {
+            GraphicalTheme::unicode()
+        } else {
+            GraphicalTheme::unicode_nocolor()
+        };
+        eprintln!("{}", self.render(theme));
+    }
+}
 
 /// Enumeration of all the errors reported by Cornucopia.
 #[derive(Debug, ThisError, Diagnostic)]
@@ -57,5 +97,19 @@ impl PersistError {
             file_path: path.into(),
             err,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use miette::GraphicalTheme;
+
+    use super::Warning;
+
+    #[test]
+    fn no_queries_warning_renders() {
+        let rendered = Warning::NoQueries.render(GraphicalTheme::unicode_nocolor());
+        assert!(rendered.contains("no queries were found"));
+        assert!(rendered.contains("annotated SQL queries"));
     }
 }

@@ -24,7 +24,7 @@ use std::path::Path;
 use tokio_postgres::Client;
 
 use config::Config;
-use parser::parse_query_module;
+use parser::{Module, parse_query_module};
 use prepare_queries::prepare;
 use read_queries::read_query_modules;
 
@@ -32,7 +32,15 @@ use read_queries::read_query_modules;
 pub use cli::run;
 
 pub use error::Error;
+use error::Warning;
+
 pub use load_schema::load_schema;
+
+fn warn_if_no_queries(modules: &[Module]) {
+    if modules.iter().all(|m| m.queries.is_empty()) {
+        Warning::NoQueries.emit();
+    }
+}
 
 /// Generates Rust queries from PostgreSQL queries located at `queries_path`,
 /// using a live database managed by you. Code generation settings are
@@ -42,8 +50,10 @@ pub fn gen_live(client: &Client, config: Config) -> Result<(), Error> {
     let modules = read_query_modules(config.queries.as_ref(), &config)?
         .into_iter()
         .map(parse_query_module)
-        .collect::<Result<_, parser::error::Error>>()
+        .collect::<Result<Vec<_>, parser::error::Error>>()
         .map_err(Box::new)?;
+
+    warn_if_no_queries(&modules);
 
     // Generate
     let prepared_modules = prepare(client, modules, &config).map_err(Box::new)?;
@@ -66,8 +76,10 @@ pub fn gen_managed<P: AsRef<Path>>(schema_files: &[P], config: Config) -> Result
     let modules = read_query_modules(config.queries.as_ref(), &config)?
         .into_iter()
         .map(parse_query_module)
-        .collect::<Result<_, parser::error::Error>>()
+        .collect::<Result<Vec<_>, parser::error::Error>>()
         .map_err(Box::new)?;
+
+    warn_if_no_queries(&modules);
 
     container::setup(
         config.podman,
@@ -104,8 +116,10 @@ pub fn gen_fresh<P: AsRef<Path>>(
     let modules = read_query_modules(config.queries.as_ref(), &config)?
         .into_iter()
         .map(parse_query_module)
-        .collect::<Result<_, parser::error::Error>>()
+        .collect::<Result<Vec<_>, parser::error::Error>>()
         .map_err(Box::new)?;
+
+    warn_if_no_queries(&modules);
 
     let server_client = conn::from_url(url)?;
 
