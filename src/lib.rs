@@ -1,5 +1,3 @@
-#![allow(unused_assignments)] // TODO: remove when rustc fixed (thiserror)
-
 mod cli;
 mod codegen;
 mod error;
