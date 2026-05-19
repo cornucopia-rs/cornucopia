@@ -41,3 +41,20 @@ This is a wrapper type that allows you to treat an iterator as an `ArraySql` for
 ```admonish note
 Ergonomic parameters are not supported in composite types yet. This means that composite types fields will only accept concrete types. It should be possible to lift this restriction in the future.
 ```
+
+## Passing `None` for a nullable parameter
+
+When an ergonomic parameter is declared nullable (e.g. `--! insert_book (author?)`), the generated `bind` signature accepts an `&Option<T>` where `T` is constrained by one of the umbrella traits above. Because the trait abstracts over several concrete types, the compiler cannot infer `T` from a bare `None`:
+
+```rust
+insert_book().bind(&client, &None, &"Necronomicon"); // Error: type annotations needed
+```
+
+To pass `None`, specify a concrete type (any type that implements the umbrella trait works):
+
+```rust
+insert_book().bind(&client, &None::<&str>, &"Necronomicon");   // OK
+insert_book().bind(&client, &None::<String>, &"Necronomicon"); // Also OK
+```
+
+This isn't specific to `StringSql`; the same applies to `BytesSql`, `JsonSql`, and `ArraySql` whenever the parameter is nullable.
