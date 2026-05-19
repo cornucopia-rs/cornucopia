@@ -45,7 +45,13 @@ impl CornucopiaType {
         match self {
             CornucopiaType::Simple {
                 pg_ty:
-                    Type::BYTEA | Type::TEXT | Type::VARCHAR | Type::BPCHAR | Type::JSON | Type::JSONB,
+                    Type::BYTEA
+                    | Type::TEXT
+                    | Type::VARCHAR
+                    | Type::BPCHAR
+                    | Type::NAME
+                    | Type::JSON
+                    | Type::JSONB,
                 ..
             } => false,
             CornucopiaType::Simple { pg_ty: ty, .. }
@@ -195,7 +201,7 @@ impl CornucopiaType {
                     traits.push("crate::BytesSql".to_string());
                     idx_char(traits.len())
                 }
-                Type::TEXT | Type::VARCHAR | Type::BPCHAR => {
+                Type::TEXT | Type::VARCHAR | Type::BPCHAR | Type::NAME => {
                     traits.push("crate::StringSql".to_string());
                     idx_char(traits.len())
                 }
@@ -300,7 +306,9 @@ impl CornucopiaType {
                 // Otherwise use default borrowed type based on pg_ty
                 match *pg_ty {
                     Type::BYTEA => format!("&{lifetime} [u8]"),
-                    Type::TEXT | Type::VARCHAR | Type::BPCHAR => format!("&{lifetime} str"),
+                    Type::TEXT | Type::VARCHAR | Type::BPCHAR | Type::NAME => {
+                        format!("&{lifetime} str")
+                    }
                     Type::JSON | Type::JSONB => {
                         format!("postgres_types::Json<&{lifetime} serde_json::value::RawValue>")
                     }
@@ -431,7 +439,7 @@ impl TypeRegistrar {
                     Type::INT8 => ("i64", true),
                     Type::FLOAT4 => ("f32", true),
                     Type::FLOAT8 => ("f64", true),
-                    Type::TEXT | Type::VARCHAR | Type::BPCHAR => ("String", false),
+                    Type::TEXT | Type::VARCHAR | Type::BPCHAR | Type::NAME => ("String", false),
                     Type::BYTEA => ("Vec<u8>", false),
                     Type::TIMESTAMP => ("chrono::NaiveDateTime", true),
                     Type::TIMESTAMPTZ => ("chrono::DateTime<chrono::FixedOffset>", true),
