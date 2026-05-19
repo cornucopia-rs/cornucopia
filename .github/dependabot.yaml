@@ -9,6 +9,18 @@ updates:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch"]
 
+  # The wasm example is its own workspace (excluded from the root) because it
+  # needs a cwd-scoped .cargo/config.toml and is built via wasm-pack, so it
+  # needs a separate Dependabot entry to keep its dependencies fresh.
+  - package-ecosystem: cargo
+    directory: "/examples/basic_async_wasm"
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch"]
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
