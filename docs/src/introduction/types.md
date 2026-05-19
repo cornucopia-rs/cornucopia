@@ -12,6 +12,7 @@
 | `text`                                            | `String`                  |
 | `varchar`                                         | `String`                  |
 | `bpchar`                                          | `String`                  |
+| `name`                                            | `String`                  |
 | `bytea`                                           | `Vec<u8>`                 |
 | `timestamp without time zone`, `timestamp`        | `chrono::NaiveDateTime`   |
 | `timestamp with time zone`, `timestamptz`         | `chrono::DateTime<chrono::FixedOffset>` |
