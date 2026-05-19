@@ -3,7 +3,9 @@
 Cornucopia `1.0` is a major release that adopts the work from the [Clorinde](https://github.com/halcyonnouveau/clorinde) fork (which was itself derived from Cornucopia `0.9`). The two codebases have rejoined under the `cornucopia` name. This page describes the breaking changes you'll encounter when upgrading from Cornucopia `0.9.x`.
 
 ## Crate-based code generation
-Cornucopia generates a *crate* instead of a single file which allows it to automatically generate a `Cargo.toml` file customised to support all the necessary dependencies and features required by your queries, without polluting your manifest. For example, Cornucopia's ["Full dependencies"](https://cornucopia-rs.netlify.app/book/introduction/dependencies#full-dependencies) example:
+Cornucopia `1.0` generates a *crate* instead of a single file. The crate has its own `Cargo.toml` listing the dependencies and features your queries need, so you don't have to add them to your project's manifest.
+
+For example, Cornucopia `0.9`'s ["Full dependencies"](https://github.com/cornucopia-rs/website/blob/main/book/introduction/dependencies.md#full-dependencies) example:
 
 ```toml
 [dependencies]
@@ -34,7 +36,7 @@ eui48 = "*"
 rust_decimal = { version = "*", features = ["db-postgres"] }
 ```
 
-Could be replaced with:
+Can be replaced with:
 
 ```toml
 [dependencies]
@@ -43,9 +45,9 @@ cornucopia = { path = "cornucopia" }
 
 Cornucopia also re-exports the dependencies: `postgres`, `tokio-postgres`, and `deadpool-postgres`.
 
-A drawback to crate-based code generation is that `cargo` won't publish crates with path dependencies meaning you either can't publish a crate that depends on Cornucopia or you will need to publish the Cornucopia crate separately.
+A drawback of this approach is that `cargo publish` rejects crates with path-only dependencies. If you want to publish a crate that depends on Cornucopia, you need to publish the generated crate separately first.
 
-If doing the latter, you can use a `cornucopia.toml` to specify the `[manifest.package]` section of the `Cargo.toml` in the generated crate. For example, a `cornucopia.toml` that includes:
+To do that, use a [`cornucopia.toml`](../configuration.md) file to set the `[manifest.package]` section of the generated `Cargo.toml`. For example, a `cornucopia.toml` containing:
 
 ```toml
 [manifest.package]
@@ -60,7 +62,7 @@ publish = true
 Will generate `cornucopia/Cargo.toml` with the specified `[package]` where you can then publish the crate as `my-cornucopia-queries`.
 
 ## `chrono` instead of `time`
-Cornucopia uses the `chrono` crate instead of `time`. If you want to keep using `time`, use ["Custom Type Mappings"](../configuration.html#custom-type-mappings) to map the Postgres types to the `time` crate.
+Cornucopia `1.0` uses the `chrono` crate instead of `time`. If you want to keep using `time`, use ["Custom Type Mappings"](../configuration.md#custom-type-mappings) to map the Postgres types to the `time` crate.
 
 ```toml
 [types.mapping]
