@@ -5,6 +5,8 @@ The CLI exposes three main commands: `schema`, `live`, and `fresh`.
 This is only an overview of the CLI. You should read the help message for more complete information (`cornucopia --help`)
 ```
 
+Long-term configurations should live in the [`cornucopia.toml`](../configuration.md) config file, but the CLI exposes flags for one-off overrides. In case of conflict, the CLI parameters take precedence.
+
 ## Generating code
 The code generation can be made either against a database that you manage or by letting Cornucopia manage an ephemeral database container for you.
 
@@ -38,8 +40,14 @@ cornucopia fresh schema.sql --url postgresql://user:pass@localhost \
 ```
 
 ## Useful flags
-### `sync`
-By default, Cornucopia will generate asynchronous code, but it can also generate synchronous code using the `--sync` flag.
+### `--config`
+By default, Cornucopia looks for `cornucopia.toml` in the current directory. Pass `--config <path>` (or `-c <path>`) to use a different file.
 
-### `podman`
-You can use `podman` as a container manager by passing the `-p` or `--podman` flag.
+### `--sync` / `--async`
+By default, Cornucopia generates asynchronous code. Pass `--sync` to generate synchronous code, or set both flags to generate both flavours.
+
+### `--queries-path` / `--destination`
+Override the queries directory and the generated-crate destination from the command line.
+
+### `--podman`
+Use `podman` as the container manager (only relevant for the `schema` subcommand).

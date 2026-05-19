@@ -1,6 +1,76 @@
 # Configuration
 Cornucopia can be configured using a configuration file (`cornucopia.toml` by default) in your project. This file allows you to customise generated code behaviour, specify static files, manage dependencies, and override type mappings.
 
+## How the config file is loaded
+When invoking the CLI, Cornucopia looks for `cornucopia.toml` in the current directory. You can point at a different file with the `--config` flag:
+
+```bash
+cornucopia --config path/to/my-cornucopia.toml schema schema.sql
+```
+
+Note that CLI flags override config file values when set. This lets you keep a stable, checked-in `cornucopia.toml` for reproducible builds while still allowing one-off overrides from the command line.
+
+## Code generation
+These options control where Cornucopia reads queries from, where it writes generated code to, and what flavour of code it produces.
+
+```toml
+# Directory containing your `.sql` query files (default: "queries/")
+queries = "queries/"
+
+# Directory where the generated crate will be written (default: "cornucopia")
+destination = "cornucopia"
+
+# Generate asynchronous code (default: true)
+async = true
+
+# Generate synchronous code (default: false)
+# Both `sync` and `async` may be enabled at the same time.
+sync = false
+
+# For queries that declare a named parameter struct, make the generated
+# `bind()` function private so callers must construct the named params
+# struct (default: false).
+params-only = false
+
+# Skip query files whose name starts with `_` (default: false).
+ignore-underscore-files = false
+```
+
+~~~admonish warning
+Cornucopia will delete and re-create the `destination` directory on every run. As a safety check, if the destination already exists, does not end with the name `cornucopia`, and does not contain a `Cargo.toml`, the CLI will prompt before continuing. Point `destination` at a directory dedicated to Cornucopia's output to avoid overwrites.
+~~~
+
+## Container management
+When using `cornucopia schema`, Cornucopia starts a temporary database container, applies your schema, and tears it down once generation is complete. These settings control how that container is managed:
+
+```toml
+# Container image to launch (default: "docker.io/library/postgres:latest")
+container-image = "docker.io/library/postgres:latest"
+
+# Milliseconds to wait after the container reports healthy before
+# attempting to connect (default: 250). Bump this if you see flaky
+# "connection refused" errors on slower machines.
+container-wait = 250
+
+# Use `podman` instead of `docker` to manage the container (default: false)
+podman = false
+```
+
+These options have no effect on the `live` and `fresh` subcommands, which connect to a database you manage yourself.
+
+## Style
+The `[style]` section configures cosmetic aspects of the generated code:
+
+```toml
+[style]
+# Render enum variants in CamelCase regardless of how they are spelled in
+# PostgreSQL (default: false). The PostgreSQL value used at the wire level
+# is left untouched, only the Rust identifier is reformatted.
+enum-variant-camel-case = true
+```
+
+For example, with `enum-variant-camel-case = true`, a PostgreSQL enum value `north_west` will be exposed as the Rust variant `NorthWest` while still serialising as `north_west` on the wire.
+
 ## Manifest configuration
 The `[manifest]` section allows you to configure the entire Cargo.toml for the generated crate:
 
