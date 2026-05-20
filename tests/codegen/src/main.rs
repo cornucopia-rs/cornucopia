@@ -673,7 +673,10 @@ pub fn test_stress(client: &mut Client) {
 // Test keyword escaping
 pub fn test_keyword_escaping(client: &mut Client) {
     let params = TrickySql10Params {
-        r#async: SyntaxComposite { r#async: 34 },
+        r#async: SyntaxComposite {
+            r#async: 34,
+            r#gen: 42,
+        },
         r#enum: SyntaxEnum::r#box,
     };
     tricky_sql10().params(client, &params).unwrap();

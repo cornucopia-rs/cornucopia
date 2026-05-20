@@ -224,7 +224,8 @@ CREATE TABLE schema.nightmare (
 -- Syntax
 
 CREATE TYPE syntax_composite AS (
-    async INT
+    async INT,
+    gen INT
 );
 CREATE TYPE syntax_enum AS Enum('async', 'box', 'I Love Chocolate');
 CREATE TABLE Syntax (

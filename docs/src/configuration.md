@@ -80,7 +80,6 @@ name = "furinapp-queries"
 version = "1.0.0"
 description = "Today I wanted to eat a *quaso*."
 license = "MIT"
-edition = "2021"
 
 [manifest.dependencies]
 serde = { version = "1.0", features = ["derive"] }
@@ -88,6 +87,9 @@ my_custom_types = { path = "../types" }
 ```
 
 This gives you complete control over the generated Cargo.toml. Cornucopia will automatically merge your configuration with the required PostgreSQL dependencies based on the types found in your SQL queries.
+
+### Rust edition and version
+The `edition` and `rust-version` values on the generated crate are fixed by Cornucopia since they depend on the generated code itself. Setting these values in `[manifest.package]` has no effect.
 
 ### Dependency merging
 Cornucopia automatically adds dependencies based on your PostgreSQL schema:

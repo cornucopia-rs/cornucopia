@@ -8,6 +8,8 @@ use std::{
     str::FromStr,
 };
 
+use crate::error::Warning;
+
 #[derive(Debug, Deserialize, Clone)]
 #[serde(default, deny_unknown_fields)]
 #[non_exhaustive]
@@ -57,15 +59,10 @@ impl Config {
         let contents = fs::read_to_string(path)?;
         let mut config: Config = toml::from_str(&contents)?;
 
-        if config.manifest.package.is_none() {
-            config.manifest.package = default_manifest().package;
-        }
+        warn_on_ignored_package_fields(&contents);
 
-        if let Some(manifest) = &mut config.manifest.package
-            && manifest.edition == cargo_toml::Inheritable::Set(cargo_toml::Edition::E2015)
-        {
-            manifest.edition = cargo_toml::Inheritable::Set(cargo_toml::Edition::E2021);
-        }
+        let package = config.manifest.package.get_or_insert_with(default_package);
+        enforce_cornucopia_controlled_fields(package);
 
         config.check_deprecated_fields();
 
@@ -265,14 +262,42 @@ impl TypeMapping {
     }
 }
 
+/// Overwrite the fields on the generated crate's `[package]` that are
+/// determined by cornucopia rather than the user.
+fn enforce_cornucopia_controlled_fields(package: &mut cargo_toml::Package) {
+    package.edition = cargo_toml::Inheritable::Set(cargo_toml::Edition::E2024);
+    package.rust_version = Some(cargo_toml::Inheritable::Set("1.85".into()));
+}
+
+/// Warn when the user has set fields in `[manifest.package]` that cornucopia
+/// will silently override. We re-parse the raw TOML because the deserialized
+/// `cargo_toml` types fill in defaults that look identical to explicit values.
+fn warn_on_ignored_package_fields(contents: &str) {
+    let Ok(raw) = toml::from_str::<toml::Value>(contents) else {
+        return;
+    };
+    let Some(package) = raw.get("manifest").and_then(|m| m.get("package")) else {
+        return;
+    };
+    if package.get("edition").is_some() {
+        Warning::IgnoredManifestEdition.emit();
+    }
+    if package.get("rust-version").is_some() {
+        Warning::IgnoredManifestRustVersion.emit();
+    }
+}
+
+fn default_package() -> cargo_toml::Package {
+    let mut package = cargo_toml::Package::new("cornucopia", "0.0.0");
+    enforce_cornucopia_controlled_fields(&mut package);
+    package.publish = cargo_toml::Inheritable::Set(cargo_toml::Publish::Flag(false));
+    package
+}
+
 #[allow(deprecated)]
 fn default_manifest() -> cargo_toml::Manifest {
-    let mut package = cargo_toml::Package::new("cornucopia", "0.0.0");
-    package.edition = cargo_toml::Inheritable::Set(cargo_toml::Edition::E2021);
-    package.publish = cargo_toml::Inheritable::Set(cargo_toml::Publish::Flag(false));
-
     cargo_toml::Manifest {
-        package: Some(package),
+        package: Some(default_package()),
         workspace: None,
         dependencies: Default::default(),
         dev_dependencies: Default::default(),
@@ -333,14 +358,12 @@ impl ConfigBuilder {
 
     /// Set just the package name, keeping other package defaults
     pub fn name(mut self, name: impl Into<String>) -> Self {
-        if let Some(package) = &mut self.config.manifest.package {
-            package.name = name.into();
-        } else {
-            let mut package = cargo_toml::Package::new(name.into(), "0.1.0");
-            package.edition = cargo_toml::Inheritable::Set(cargo_toml::Edition::E2021);
-            package.publish = cargo_toml::Inheritable::Set(cargo_toml::Publish::Flag(false));
-            self.config.manifest.package = Some(package);
-        }
+        let package = self.config.manifest.package.get_or_insert_with(|| {
+            let mut package = default_package();
+            package.version = cargo_toml::Inheritable::Set("0.1.0".to_string());
+            package
+        });
+        package.name = name.into();
         self
     }
 
@@ -551,14 +574,13 @@ version = "0.2"
     }
 
     #[test]
-    fn explicit_manifest_package_is_respected() {
+    fn user_controlled_package_fields_are_respected() {
         let toml_content = r#"
 queries = "db/queries"
 
 [manifest.package]
 name = "custom-name"
 version = "1.0.0"
-edition = "2021"
 publish = false
 "#;
 
@@ -573,5 +595,32 @@ publish = false
             .expect("package section should exist");
         assert_eq!(package.name, "custom-name");
         assert_eq!(package.version(), "1.0.0");
+    }
+
+    #[test]
+    fn cornucopia_controlled_package_fields_are_overridden() {
+        let toml_content = r#"
+queries = "db/queries"
+
+[manifest.package]
+name = "custom-name"
+edition = "2021"
+rust-version = "1.70"
+"#;
+
+        let mut tmpfile = tempfile::NamedTempFile::new().unwrap();
+        tmpfile.write_all(toml_content.as_bytes()).unwrap();
+
+        let config = Config::from_file(tmpfile.path()).unwrap();
+
+        let package = config
+            .manifest
+            .package
+            .expect("package section should exist");
+        assert_eq!(
+            package.edition,
+            cargo_toml::Inheritable::Set(cargo_toml::Edition::E2024)
+        );
+        assert_eq!(package.rust_version(), Some("1.85"));
     }
 }
