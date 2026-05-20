@@ -3,7 +3,8 @@
 [package]
 name = "auto_build_codegen"
 version = "0.0.0"
-edition = "2021"
+edition = "2024"
+rust-version = "1.85"
 publish = false
 
 [dependencies.deadpool-postgres]

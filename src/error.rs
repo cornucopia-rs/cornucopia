@@ -15,6 +15,24 @@ pub(crate) enum Warning {
         )
     )]
     NoQueries,
+    /// User set `manifest.package.edition`, which cornucopia controls.
+    #[error("`manifest.package.edition` is ignored")]
+    #[diagnostic(
+        severity(Warning),
+        help(
+            "Cornucopia controls the edition of the generated crate because the emitted code's syntax is tied to it. Remove this key from your config."
+        )
+    )]
+    IgnoredManifestEdition,
+    /// User set `manifest.package.rust-version`, which cornucopia controls.
+    #[error("`manifest.package.rust-version` is ignored")]
+    #[diagnostic(
+        severity(Warning),
+        help(
+            "Cornucopia controls the MSRV of the generated crate because it is tied to the edition cornucopia emits for. Remove this key from your config."
+        )
+    )]
+    IgnoredManifestRustVersion,
 }
 
 impl Warning {

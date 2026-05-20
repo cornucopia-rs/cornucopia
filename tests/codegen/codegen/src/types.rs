@@ -1079,6 +1079,8 @@ impl<'a> postgres_types::ToSql for NightmareCompositeParams<'a> {
 pub struct SyntaxComposite {
     #[postgres(name = "async")]
     pub r#async: i32,
+    #[postgres(name = "gen")]
+    pub r#gen: i32,
 }
 impl<'a> postgres_types::ToSql for SyntaxComposite {
     fn to_sql(
@@ -1086,7 +1088,7 @@ impl<'a> postgres_types::ToSql for SyntaxComposite {
         ty: &postgres_types::Type,
         out: &mut postgres_types::private::BytesMut,
     ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {
-        let SyntaxComposite { r#async } = self;
+        let SyntaxComposite { r#async, r#gen } = self;
         let fields = match *ty.kind() {
             postgres_types::Kind::Composite(ref fields) => fields,
             _ => unreachable!(),
@@ -1098,6 +1100,7 @@ impl<'a> postgres_types::ToSql for SyntaxComposite {
             out.extend_from_slice(&[0; 4]);
             let r = match field.name() {
                 "async" => postgres_types::ToSql::to_sql(r#async, field.type_(), out),
+                "gen" => postgres_types::ToSql::to_sql(r#gen, field.type_(), out),
                 _ => unreachable!(),
             };
             let count = match r? {
@@ -1120,11 +1123,12 @@ impl<'a> postgres_types::ToSql for SyntaxComposite {
         }
         match *ty.kind() {
             postgres_types::Kind::Composite(ref fields) => {
-                if fields.len() != 1 {
+                if fields.len() != 2 {
                     return false;
                 }
                 fields.iter().all(|f| match f.name() {
                     "async" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+                    "gen" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
                     _ => false,
                 })
             }

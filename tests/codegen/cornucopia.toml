@@ -5,7 +5,6 @@ async = true
 [manifest.package]
 name = "codegen"
 version = "0.0.0"
-edition = "2021"
 publish = false
 
 [manifest.dependencies]
