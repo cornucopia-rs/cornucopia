@@ -1,7 +1,7 @@
 [package]
 name = "cornucopia"
 version = "0.9.0"
-edition = "2021"
+edition = "2024"
 rust-version = "1.88.0"
 license = "MIT/Apache-2.0"
 description = "Generate type-checked Rust from your PostgreSQL queries."
@@ -75,7 +75,7 @@ harness = false
 path = "benches/codegen.rs"
 
 [workspace]
-resolver = "2"
+resolver = "3"
 members = ["examples/*", "tests/*"]
 exclude = ["examples/basic_async_wasm"]
 

@@ -703,7 +703,7 @@ fn gen_specific(
 
 pub(crate) fn gen_queries(vfs: &mut Vfs, preparation: &Preparation, config: &Config) {
     for module in &preparation.modules {
-        let gen = gen_query_module(module, config);
+        let module_tokens = gen_query_module(module, config);
 
         let path_components: Vec<&str> = module.info.full_module_path.split("::").collect();
         let file_name = &module.info.name;
@@ -717,7 +717,7 @@ pub(crate) fn gen_queries(vfs: &mut Vfs, preparation: &Preparation, config: &Con
 
         let file_path = format!("{dir_path}/{file_name}.rs");
 
-        vfs.add(file_path, gen);
+        vfs.add(file_path, module_tokens);
     }
 
     let module_tree = crate::read_queries::build_module_hierarchy(

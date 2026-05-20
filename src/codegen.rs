@@ -130,7 +130,7 @@ pub fn idx_char(idx: usize) -> String {
     format!("T{idx}")
 }
 
-pub(crate) fn gen(preparation: Preparation, config: &Config) -> Vfs {
+pub(crate) fn generate(preparation: Preparation, config: &Config) -> Vfs {
     let mut vfs = Vfs::empty();
     let cargo = cargo::gen_cargo_file(&preparation.dependency_analysis, config);
     vfs.add_string("Cargo.toml", cargo);
