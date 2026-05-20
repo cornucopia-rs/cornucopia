@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0](https://github.com/cornucopia-rs/cornucopia/compare/cornucopia-v0.9.0...cornucopia-v1.0.0) - 2026-05-20
+
+This release merges the [Clorinde](https://github.com/halcyonnouveau/clorinde) fork back into Cornucopia. The historical Clorinde changelog is preserved below for reference. See the [migration guide](https://cornucopia-rs.github.io/migration.html) for upgrading from 0.9.
+
+### Added
+
+- enforce edition and rust-version on the generated crate ([#301](https://github.com/cornucopia-rs/cornucopia/pull/301))
+- bump cornucopia and workspace to Rust edition 2024 ([#300](https://github.com/cornucopia-rs/cornucopia/pull/300))
+- warn when no queries are found ([#275](https://github.com/cornucopia-rs/cornucopia/pull/275))
+- support PostgreSQL `name` type as String ([#274](https://github.com/cornucopia-rs/cornucopia/pull/274))
+
+### Fixed
+
+- avoid pulling in deprecated `rustc-serialize` via `eui48` in tests ([#276](https://github.com/cornucopia-rs/cornucopia/pull/276))
+
+### Refactor
+
+- route config deprecation warnings through `Warning` enum ([#303](https://github.com/cornucopia-rs/cornucopia/pull/303))
+
 <!--
 Entries below this point are from the upstream clorinde fork at the time of merging, preserved for
 historical reference. Cornucopia changes resume above starting with v1.0.
