@@ -149,21 +149,19 @@ impl DependencyContext<'_> {
 
 fn get_workspace_deps(manifest_path: &Path) -> HashSet<String> {
     let mut deps = HashSet::new();
-    if let Ok(contents) = fs::read_to_string(manifest_path) {
-        if let Ok(manifest) = toml::from_str::<cargo_toml::Value>(&contents) {
-            if let Some(workspace) = manifest
-                .get("workspace")
-                .and_then(|w| w.get("dependencies"))
-            {
-                deps.extend(
-                    workspace
-                        .as_table()
-                        .into_iter()
-                        .flat_map(|t| t.keys())
-                        .map(|s| s.to_string()),
-                );
-            }
-        }
+    if let Ok(contents) = fs::read_to_string(manifest_path)
+        && let Ok(manifest) = toml::from_str::<cargo_toml::Value>(&contents)
+        && let Some(workspace) = manifest
+            .get("workspace")
+            .and_then(|w| w.get("dependencies"))
+    {
+        deps.extend(
+            workspace
+                .as_table()
+                .into_iter()
+                .flat_map(|t| t.keys())
+                .map(|s| s.to_string()),
+        );
     }
     deps
 }

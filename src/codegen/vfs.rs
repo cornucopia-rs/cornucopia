@@ -192,23 +192,23 @@ impl Vfs {
         };
 
         // If something went wrong and we have a backup, restore it
-        if result.is_err() {
-            if let Some(backup_dir) = backup_dir {
-                // Clean the destination directory if it exists after a failed operation
-                if destination.exists() {
-                    let _ = std::fs::remove_dir_all(destination);
-                }
+        if result.is_err()
+            && let Some(backup_dir) = backup_dir
+        {
+            // Clean the destination directory if it exists after a failed operation
+            if destination.exists() {
+                let _ = std::fs::remove_dir_all(destination);
+            }
 
-                // Ensure the destination directory exists for restoration
-                let _ = std::fs::create_dir_all(destination);
+            // Ensure the destination directory exists for restoration
+            let _ = std::fs::create_dir_all(destination);
 
-                // Restore from backup
-                if let Err(restore_err) = copy_dir_recursive(backup_dir.path(), destination) {
-                    // If restoration also fails, return a compound error
-                    return Err(PersistError::wrap(
-                        "failed to restore backup after generation error",
-                    )(restore_err));
-                }
+            // Restore from backup
+            if let Err(restore_err) = copy_dir_recursive(backup_dir.path(), destination) {
+                // If restoration also fails, return a compound error
+                return Err(PersistError::wrap(
+                    "failed to restore backup after generation error",
+                )(restore_err));
             }
         }
 

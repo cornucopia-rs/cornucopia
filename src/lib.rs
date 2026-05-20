@@ -55,7 +55,7 @@ pub fn gen_live(client: &Client, config: Config) -> Result<(), Error> {
 
     // Generate
     let prepared_modules = prepare(client, modules, &config).map_err(Box::new)?;
-    let generated = codegen::gen(prepared_modules, &config);
+    let generated = codegen::generate(prepared_modules, &config);
 
     // Write
     generated.persist(config.destination, config.static_files)?;
@@ -88,7 +88,7 @@ pub fn gen_managed<P: AsRef<Path>>(schema_files: &[P], config: Config) -> Result
     let client = conn::cornucopia_conn()?;
     load_schema(&client, schema_files).map_err(Box::new)?;
     let prepared_modules = prepare(&client, modules, &config).map_err(Box::new)?;
-    let generated = codegen::gen(prepared_modules, &config);
+    let generated = codegen::generate(prepared_modules, &config);
     container::cleanup(config.podman)?;
 
     // Write
@@ -143,7 +143,7 @@ pub fn gen_fresh<P: AsRef<Path>>(
         load_schema(&db_client, schema_files).map_err(Box::new)?;
 
         let prepared_modules = prepare(&db_client, modules, &config).map_err(Box::new)?;
-        let generated = codegen::gen(prepared_modules, &config);
+        let generated = codegen::generate(prepared_modules, &config);
 
         generated.persist(config.destination, config.static_files)?;
 

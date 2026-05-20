@@ -61,10 +61,10 @@ impl Config {
             config.manifest.package = default_manifest().package;
         }
 
-        if let Some(manifest) = &mut config.manifest.package {
-            if manifest.edition == cargo_toml::Inheritable::Set(cargo_toml::Edition::E2015) {
-                manifest.edition = cargo_toml::Inheritable::Set(cargo_toml::Edition::E2021);
-            }
+        if let Some(manifest) = &mut config.manifest.package
+            && manifest.edition == cargo_toml::Inheritable::Set(cargo_toml::Edition::E2015)
+        {
+            manifest.edition = cargo_toml::Inheritable::Set(cargo_toml::Edition::E2021);
         }
 
         config.check_deprecated_fields();

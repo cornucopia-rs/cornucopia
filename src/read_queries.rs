@@ -75,12 +75,12 @@ fn read_query_modules_recursive(
 
         if path_buf.is_dir() {
             // Skip directories starting with underscore if configured to do so
-            if let Some(dir_name) = path_buf.file_name() {
-                if let Some(dir_name_str) = dir_name.to_str() {
-                    if config.ignore_underscore_files && dir_name_str.starts_with('_') {
-                        continue;
-                    }
-                }
+            if let Some(dir_name) = path_buf.file_name()
+                && let Some(dir_name_str) = dir_name.to_str()
+                && config.ignore_underscore_files
+                && dir_name_str.starts_with('_')
+            {
+                continue;
             }
 
             // Recursively process subdirectory
