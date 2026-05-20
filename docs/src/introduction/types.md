@@ -13,6 +13,10 @@
 | `varchar`                                         | `String`                  |
 | `bpchar`                                          | `String`                  |
 | `name`                                            | `String`                  |
+| `citext`                                          | `String`                  |
+| `ltree`                                           | `String`                  |
+| `lquery`                                          | `String`                  |
+| `ltxtquery`                                       | `String`                  |
 | `bytea`                                           | `Vec<u8>`                 |
 | `timestamp without time zone`, `timestamp`        | `chrono::NaiveDateTime`   |
 | `timestamp with time zone`, `timestamptz`         | `chrono::DateTime<chrono::FixedOffset>` |

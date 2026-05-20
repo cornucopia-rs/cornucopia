@@ -9,7 +9,7 @@ use cornucopia::queries::authors;
 ## Building the query object
 Building a query object starts with either the query function:
 ```rust
-authors().bind(&client, Some("Greece"));
+authors().bind(&client, &Some("Greece"));
 ```
 
 or the generated parameter struct:
@@ -21,7 +21,7 @@ use cornucopia::{
 
 authors().params(
     &client,
-    AuthorsParams {
+    &AuthorsParams {
         country: Some("Greece")
     }
 );

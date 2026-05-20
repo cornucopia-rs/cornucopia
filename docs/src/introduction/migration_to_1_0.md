@@ -43,7 +43,7 @@ Can be replaced with:
 cornucopia = { path = "cornucopia" }
 ```
 
-Cornucopia also re-exports the dependencies: `postgres`, `tokio-postgres`, and `deadpool-postgres`.
+The generated crate also re-exports the relevant drivers (`postgres`, `tokio-postgres`, `deadpool-postgres`) based on whether you generated sync, async, or deadpool-enabled code, so you don't need to add them to your own `Cargo.toml`.
 
 A drawback of this approach is that `cargo publish` rejects crates with path-only dependencies. If you want to publish a crate that depends on Cornucopia, you need to publish the generated crate separately first.
 

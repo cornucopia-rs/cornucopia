@@ -50,16 +50,14 @@ SELECT name, age, bio FROM authors;
 This will generate:
 
 ```rust
-#[derive(Default, serde::Deserialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Deserialize)]
 #[doc = "Represents an author in the system"]
-#[derive(Clone)]
 pub struct Author {
     pub name: String,
     pub age: Option<i32>,
     pub bio: String,
 }
 
-#[derive(Debug)]
 #[cfg_attr(feature = "graphql", derive(async_graphql::SimpleObject))]
 pub struct AuthorBorrowed<'a> {
     pub name: &'a str,
@@ -67,6 +65,8 @@ pub struct AuthorBorrowed<'a> {
     pub bio: &'a str,
 }
 ```
+
+Note that owned structs get `Debug, Clone, PartialEq` automatically (plus `Copy` when all fields are `Copy`), while borrowed structs get no automatic derives.
 
 ```admonish note
 Custom attributes are declared with these tokens:
