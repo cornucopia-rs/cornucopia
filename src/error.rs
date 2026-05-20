@@ -33,6 +33,24 @@ pub(crate) enum Warning {
         )
     )]
     IgnoredManifestRustVersion,
+    /// User set the deprecated `types.type-traits-mapping` field.
+    #[error("`types.type-traits-mapping` is deprecated")]
+    #[diagnostic(
+        severity(Warning),
+        help(
+            "Use `types.custom` instead. See https://cornucopia-rs.github.io/cornucopia/configuration.html#custom-type-mappings for more."
+        )
+    )]
+    DeprecatedTypeTraitsMapping,
+    /// User set the deprecated `types.type-attributes-mapping` field.
+    #[error("`types.type-attributes-mapping` is deprecated")]
+    #[diagnostic(
+        severity(Warning),
+        help(
+            "Use `types.custom` instead. See https://cornucopia-rs.github.io/cornucopia/configuration.html#custom-type-mappings for more."
+        )
+    )]
+    DeprecatedTypeAttributesMapping,
 }
 
 impl Warning {

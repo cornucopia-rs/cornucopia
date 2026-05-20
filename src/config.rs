@@ -71,14 +71,10 @@ impl Config {
 
     fn check_deprecated_fields(&self) {
         if !self.types.type_traits_mapping.is_empty() {
-            eprintln!(
-                "warning: `types.type-traits-mapping` is deprecated, use `types.custom` instead"
-            );
+            Warning::DeprecatedTypeTraitsMapping.emit();
         }
         if !self.types.type_attributes_mapping.is_empty() {
-            eprintln!(
-                "warning: `types.type-attributes-mapping` is deprecated, use `types.custom` instead"
-            );
+            Warning::DeprecatedTypeAttributesMapping.emit();
         }
     }
 
