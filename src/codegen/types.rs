@@ -135,11 +135,7 @@ fn gen_custom_type(
                 .map(|v| {
                     format_ident!(
                         "{}",
-                        if config.style.enum_variant_camel_case {
-                            v.rs.to_upper_camel_case()
-                        } else {
-                            v.rs.clone()
-                        }
+                        enum_variant_ident_name(v, config.style.enum_variant_camel_case)
                     )
                 })
                 .collect();
@@ -360,16 +356,7 @@ fn enum_sql(
 
     let rs_variants: Vec<_> = variants
         .iter()
-        .map(|v| {
-            format_ident!(
-                "{}",
-                if variant_camel_case {
-                    v.rs.to_upper_camel_case()
-                } else {
-                    v.rs.clone()
-                }
-            )
-        })
+        .map(|v| format_ident!("{}", enum_variant_ident_name(v, variant_camel_case)))
         .collect();
 
     let db_variants: Vec<_> = variants
@@ -450,6 +437,20 @@ fn enum_sql(
                 }
             }
         }
+    }
+}
+
+fn enum_variant_ident_name(variant: &Ident, variant_camel_case: bool) -> String {
+    if variant.rs.is_empty() {
+        if variant_camel_case {
+            "Empty".to_string()
+        } else {
+            "__empty".to_string()
+        }
+    } else if variant_camel_case {
+        variant.rs.to_upper_camel_case()
+    } else {
+        variant.rs.clone()
     }
 }
 
@@ -582,6 +583,45 @@ fn struct_tosql(
                 postgres_types::__to_sql_checked(self, ty, out)
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn enum_variant_ident_name_falls_back_for_empty_postgres_variant() {
+        let variant = Ident::new(String::new());
+
+        assert_eq!(enum_variant_ident_name(&variant, false), "__empty");
+        assert_eq!(enum_variant_ident_name(&variant, true), "Empty");
+    }
+
+    #[test]
+    fn gen_custom_type_supports_empty_postgres_enum_variant() {
+        let prepared = PreparedType {
+            name: "badge".to_string(),
+            struct_name: "Badge".to_string(),
+            content: PreparedContent::Enum(vec![
+                Ident::new("staff".to_string()),
+                Ident::new(String::new()),
+            ]),
+            is_copy: true,
+            is_params: false,
+            traits: Vec::new(),
+        };
+
+        let tokens = gen_custom_type(
+            "public",
+            &prepared,
+            &Config::default(),
+            &GenCtx::new(ModCtx::Types, true),
+        )
+        .to_string();
+
+        assert!(tokens.contains("__empty"));
+        assert!(tokens.contains("=> \"\""));
     }
 }
 
