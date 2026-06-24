@@ -53,7 +53,7 @@ rand = "0.10"
 # Config handling
 serde = { version = "1.0", features = ["derive"] }
 toml = "1.1"
-cargo_toml = "0.22"
+cargo_toml = "1.0"
 
 [dev-dependencies]
 # Benchmarking
