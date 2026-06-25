@@ -104,7 +104,10 @@ impl DependencyBuilder {
 
     fn into_detail(self) -> DependencyDetail {
         DependencyDetail {
-            version: self.version,
+            version: self.version.map(|v| {
+                v.parse()
+                    .expect("dependency version should be a valid semver requirement")
+            }),
             features: self.features,
             optional: self.optional,
             default_features: self.default_features,

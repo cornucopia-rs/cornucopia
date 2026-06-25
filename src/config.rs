@@ -284,7 +284,7 @@ fn warn_on_ignored_package_fields(contents: &str) {
 }
 
 fn default_package() -> cargo_toml::Package {
-    let mut package = cargo_toml::Package::new("cornucopia", "0.0.0");
+    let mut package = cargo_toml::Package::new("cornucopia", cargo_toml::SemVer::new(0, 0, 0));
     enforce_cornucopia_controlled_fields(&mut package);
     package.publish = cargo_toml::Inheritable::Set(cargo_toml::Publish::Flag(false));
     package
@@ -356,7 +356,7 @@ impl ConfigBuilder {
     pub fn name(mut self, name: impl Into<String>) -> Self {
         let package = self.config.manifest.package.get_or_insert_with(|| {
             let mut package = default_package();
-            package.version = cargo_toml::Inheritable::Set("0.1.0".to_string());
+            package.version = cargo_toml::Inheritable::Set(cargo_toml::SemVer::new(0, 1, 0));
             package
         });
         package.name = name.into();
@@ -590,7 +590,7 @@ publish = false
             .package
             .expect("package section should exist");
         assert_eq!(package.name, "custom-name");
-        assert_eq!(package.version(), "1.0.0");
+        assert_eq!(package.version().to_string(), "1.0.0");
     }
 
     #[test]

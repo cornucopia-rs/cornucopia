@@ -8,18 +8,18 @@ rust-version = "1.85"
 publish = false
 
 [dependencies.chrono]
-version = "0.4.44"
+version = "^0.4.44"
 
 [dependencies.postgres]
-version = "0.19.13"
+version = "^0.19.13"
 features = ["with-chrono-0_4"]
 optional = true
 
 [dependencies.postgres-protocol]
-version = "0.6.11"
+version = "^0.6.11"
 
 [dependencies.postgres-types]
-version = "0.2.13"
+version = "^0.2.13"
 features = ["derive"]
 
 [features]
