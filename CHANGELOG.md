@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1](https://github.com/cornucopia-rs/cornucopia/compare/cornucopia-v1.0.0...cornucopia-v1.0.1) - 2026-06-25
+
+### Fixed
+
+- adapt to cargo_toml 1.0 typed version requirements
+
 ## [1.0.0](https://github.com/cornucopia-rs/cornucopia/compare/cornucopia-v0.9.0...cornucopia-v1.0.0) - 2026-05-20
 
 This release merges the [Clorinde](https://github.com/halcyonnouveau/clorinde) fork back into Cornucopia. The historical Clorinde changelog is preserved below for reference. See the [migration guide](https://cornucopia-rs.github.io/migration.html) for upgrading from 0.9.
