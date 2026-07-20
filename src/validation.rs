@@ -252,9 +252,9 @@ pub(crate) fn named_struct_field(
         return Err(Box::new(Error::IncompatibleNamedType {
             src: info.into(),
             name: name.value.clone(),
-            second_label: format!("column `{}` expected here", &field.ident.db),
+            second_label: format!("column `{}` expected here", field.ident.db),
             second: name.span,
-            first_label: format!("column `{}` not found", &field.ident.db),
+            first_label: format!("column `{}` not found", field.ident.db),
             first: prev_name.span,
         }));
     }
@@ -263,9 +263,9 @@ pub(crate) fn named_struct_field(
         return Err(Box::new(Error::IncompatibleNamedType {
             src: info.into(),
             name: name.value.clone(),
-            second_label: format!("column `{}` expected here", &prev_field.ident.db),
+            second_label: format!("column `{}` expected here", prev_field.ident.db),
             second: prev_name.span,
-            first_label: format!("column `{}` not found", &prev_field.ident.db),
+            first_label: format!("column `{}` not found", prev_field.ident.db),
             first: name.span,
         }));
     }
