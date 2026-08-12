@@ -31,8 +31,8 @@ use codegen::{
         nullity::{
             Nullity, NullityParams,
             sync::{
-                new_nullity, nullity, test_direct_nullity, test_named_direct, test_named_nested,
-                test_nested_nullity, test_single_direct, test_single_nested,
+                new_nullity, new_param_nullity, nullity, test_direct_nullity, test_named_direct,
+                test_named_nested, test_nested_nullity, test_single_direct, test_single_nested,
             },
         },
         params::{
@@ -56,8 +56,8 @@ use codegen::{
         CloneCompositeBorrowed, CopyComposite, CustomComposite, CustomCompositeBorrowed,
         DomainComposite, DomainCompositeParams, EnumWithDot, NamedComposite,
         NamedCompositeBorrowed, NamedCompositeWithDot, NightmareComposite,
-        NightmareCompositeParams, NullityComposite, NullityCompositeParams, SpongebobCharacter,
-        SyntaxComposite, SyntaxEnum, schema,
+        NightmareCompositeParams, NullityComposite, NullityCompositeParams, ParamNullityComposite,
+        SpongebobCharacter, SyntaxComposite, SyntaxEnum, schema,
     },
 };
 
@@ -229,6 +229,12 @@ pub fn test_nullity(client: &mut Client) {
     if let Some(composite) = &null_test_record.composite {
         assert!(composite.jsons.is_none());
     }
+
+    // `param_nullity_composite` only ever appears in parameter position, so this
+    // only compiles if the nested `composite.b?` annotation was honored there.
+    new_param_nullity()
+        .bind(client, &ParamNullityComposite { a: 1, b: Some(2) })
+        .unwrap();
 }
 
 pub fn test_named(client: &mut Client) {

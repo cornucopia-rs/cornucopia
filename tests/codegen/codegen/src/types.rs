@@ -714,6 +714,75 @@ impl<'a> postgres_types::ToSql for NullityCompositeParams<'a> {
         postgres_types::__to_sql_checked(self, ty, out)
     }
 }
+#[derive(Debug, postgres_types::FromSql, Copy, Clone, PartialEq)]
+#[postgres(name = "param_nullity_composite")]
+pub struct ParamNullityComposite {
+    #[postgres(name = "a")]
+    pub a: i32,
+    #[postgres(name = "b")]
+    pub b: Option<i32>,
+}
+impl<'a> postgres_types::ToSql for ParamNullityComposite {
+    fn to_sql(
+        &self,
+        ty: &postgres_types::Type,
+        out: &mut postgres_types::private::BytesMut,
+    ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {
+        let ParamNullityComposite { a, b } = self;
+        let fields = match *ty.kind() {
+            postgres_types::Kind::Composite(ref fields) => fields,
+            _ => unreachable!(),
+        };
+        out.extend_from_slice(&(fields.len() as i32).to_be_bytes());
+        for field in fields {
+            out.extend_from_slice(&field.type_().oid().to_be_bytes());
+            let base = out.len();
+            out.extend_from_slice(&[0; 4]);
+            let r = match field.name() {
+                "a" => postgres_types::ToSql::to_sql(a, field.type_(), out),
+                "b" => postgres_types::ToSql::to_sql(b, field.type_(), out),
+                _ => unreachable!(),
+            };
+            let count = match r? {
+                postgres_types::IsNull::Yes => -1,
+                postgres_types::IsNull::No => {
+                    let len = out.len() - base - 4;
+                    if len > i32::MAX as usize {
+                        return Err(Into::into("value too large to transmit"));
+                    }
+                    len as i32
+                }
+            };
+            out[base..base + 4].copy_from_slice(&count.to_be_bytes());
+        }
+        Ok(postgres_types::IsNull::No)
+    }
+    fn accepts(ty: &postgres_types::Type) -> bool {
+        if ty.name() != "param_nullity_composite" {
+            return false;
+        }
+        match *ty.kind() {
+            postgres_types::Kind::Composite(ref fields) => {
+                if fields.len() != 2 {
+                    return false;
+                }
+                fields.iter().all(|f| match f.name() {
+                    "a" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+                    "b" => <i32 as postgres_types::ToSql>::accepts(f.type_()),
+                    _ => false,
+                })
+            }
+            _ => false,
+        }
+    }
+    fn to_sql_checked(
+        &self,
+        ty: &postgres_types::Type,
+        out: &mut postgres_types::private::BytesMut,
+    ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {
+        postgres_types::__to_sql_checked(self, ty, out)
+    }
+}
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum SpongebobCharacter {

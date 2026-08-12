@@ -755,6 +755,26 @@ pub mod sync {
             }
         }
     }
+    pub struct NewParamNullityStmt(&'static str, Option<postgres::Statement>);
+    pub fn new_param_nullity() -> NewParamNullityStmt {
+        NewParamNullityStmt("INSERT INTO param_nullity (composite) VALUES ($1)", None)
+    }
+    impl NewParamNullityStmt {
+        pub fn prepare<'a, C: GenericClient>(
+            mut self,
+            client: &'a mut C,
+        ) -> Result<Self, postgres::Error> {
+            self.1 = Some(client.prepare(self.0)?);
+            Ok(self)
+        }
+        pub fn bind<'c, 'a, 's, C: GenericClient>(
+            &'s self,
+            client: &'c mut C,
+            composite: &'a crate::types::ParamNullityComposite,
+        ) -> Result<u64, postgres::Error> {
+            client.execute(self.0, &[composite])
+        }
+    }
 }
 pub mod async_ {
     use crate::client::async_::GenericClient;
@@ -1503,6 +1523,26 @@ pub mod async_ {
                 },
                 mapper: |it| super::TestDirectComposite::from(it),
             }
+        }
+    }
+    pub struct NewParamNullityStmt(&'static str, Option<tokio_postgres::Statement>);
+    pub fn new_param_nullity() -> NewParamNullityStmt {
+        NewParamNullityStmt("INSERT INTO param_nullity (composite) VALUES ($1)", None)
+    }
+    impl NewParamNullityStmt {
+        pub async fn prepare<'a, C: GenericClient>(
+            mut self,
+            client: &'a C,
+        ) -> Result<Self, tokio_postgres::Error> {
+            self.1 = Some(client.prepare(self.0).await?);
+            Ok(self)
+        }
+        pub async fn bind<'c, 'a, 's, C: GenericClient>(
+            &'s self,
+            client: &'c C,
+            composite: &'a crate::types::ParamNullityComposite,
+        ) -> Result<u64, tokio_postgres::Error> {
+            client.execute(self.0, &[composite]).await
         }
     }
 }

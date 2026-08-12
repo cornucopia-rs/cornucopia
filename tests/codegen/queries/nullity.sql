@@ -30,3 +30,6 @@ SELECT composite FROM nullity WHERE composite IS NOT NULL LIMIT 1;
 
 --! test_named_direct: TestDirectComposite
 SELECT composite FROM nullity WHERE composite IS NOT NULL LIMIT 1;
+
+--! new_param_nullity (composite.b?):
+INSERT INTO param_nullity (composite) VALUES (:composite);
