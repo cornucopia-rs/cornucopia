@@ -89,6 +89,17 @@ CREATE TABLE nullity (
     composite nullity_composite
 );
 
+-- A composite type only ever used in parameter position, to check that nested
+-- nullity annotations are honored there too.
+CREATE TYPE param_nullity_composite AS (
+    a INT,
+    b INT
+);
+
+CREATE TABLE param_nullity (
+    composite param_nullity_composite
+);
+
 -- Params
 
 CREATE TABLE Book (

@@ -583,9 +583,16 @@ fn prepare_query(
 
         let mut param_fields = Vec::new();
         for (col_name, col_ty) in params {
-            let nullity = nullable_params_fields
+            // Find ALL matching nullity entries (there may be multiple for the same field with different nested specs)
+            let matching_nullities: Vec<&NullableIdent> = nullable_params_fields
                 .iter()
-                .find(|x| x.name.value == col_name.value);
+                .filter(|x| x.name.value == col_name.value)
+                .collect();
+
+            let nullity = matching_nullities.first().copied();
+
+            // Collect nested nullability specifications from ALL matching entries
+            collect_nested_specs(&matching_nullities, &col_ty, &mut nested_specs);
 
             // Register type
             let ty = registrar
@@ -626,30 +633,10 @@ fn prepare_query(
                 .filter(|x| x.name.value == col_name)
                 .collect();
 
-            let nullity = matching_nullities.first();
+            let nullity = matching_nullities.first().copied();
 
             // Collect nested nullability specifications from ALL matching entries
-            let mut all_nested_specs = std::collections::HashMap::new();
-
-            for nullity_entry in &matching_nullities {
-                if !nullity_entry.nested_fields.is_empty()
-                    && extract_composite_type_name(col_ty).is_some()
-                {
-                    // Collect field specifications
-                    let field_specs: std::collections::HashMap<String, bool> = nullity_entry
-                        .get_field_nullability()
-                        .map(|(k, v)| (k.to_string(), v))
-                        .collect();
-                    all_nested_specs.extend(field_specs);
-                }
-            }
-
-            if !all_nested_specs.is_empty() {
-                let type_key = extract_composite_type_name(col_ty);
-                if let Some(type_name) = type_key {
-                    nested_specs.insert(type_name, all_nested_specs);
-                }
-            }
+            collect_nested_specs(&matching_nullities, col_ty, &mut nested_specs);
 
             // Register type
             let ty = registrar
@@ -664,7 +651,7 @@ fn prepare_query(
             };
 
             row_fields.push(
-                PreparedField::new(normalize_rust_name(&col_name), ty, nullity.copied())
+                PreparedField::new(normalize_rust_name(&col_name), ty, nullity)
                     .with_attributes(attributes),
             );
         }
@@ -700,6 +687,34 @@ fn prepare_query(
     );
 
     Ok(nested_specs)
+}
+
+/// Collect the nested nullity declarations (e.g. `composite.field?`) of a single column or
+/// parameter into `nested_specs`, keyed by the name of the composite type they apply to.
+///
+/// This is shared by rows and params so that a nullity annotation on a composite type is
+/// honored the same way in both positions.
+fn collect_nested_specs(
+    matching_nullities: &[&NullableIdent],
+    ty: &Type,
+    nested_specs: &mut ModuleNestedSpecs,
+) {
+    let Some(type_name) = extract_composite_type_name(ty) else {
+        return;
+    };
+
+    let field_specs: std::collections::HashMap<String, bool> = matching_nullities
+        .iter()
+        .flat_map(|nullity| nullity.get_field_nullability())
+        .map(|(k, v)| (k.to_string(), v))
+        .collect();
+
+    if !field_specs.is_empty() {
+        nested_specs
+            .entry(type_name)
+            .or_default()
+            .extend(field_specs);
+    }
 }
 
 fn extract_composite_type_name(col_ty: &postgres_types::Type) -> Option<String> {
