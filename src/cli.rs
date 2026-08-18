@@ -115,7 +115,7 @@ struct CommonArgs {
 // Main entrypoint of the CLI. Parses the args and calls the appropriate routines.
 pub fn run() -> Result<(), Error> {
     dotenvy::dotenv().ok();
-    
+
     let Args { action } = Args::parse();
     let CommonArgs {
         config,
