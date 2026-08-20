@@ -692,6 +692,7 @@ dependencies = [
  "clap",
  "criterion",
  "diesel",
+ "dotenvy",
  "futures",
  "generated",
  "heck",
