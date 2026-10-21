@@ -1,5 +1,5 @@
 use criterion::Bencher;
-use sqlx::{Row, postgres::PgPool, query, query_as};
+use sqlx::{AssertSqlSafe, Row, postgres::PgPool, query, query_as};
 use tokio::runtime::Runtime;
 
 #[derive(sqlx::FromRow, Debug, Clone)]
@@ -82,7 +82,7 @@ pub fn bench_insert(b: &mut Bencher, pool: &PgPool, rt: &Runtime, size: usize) {
                 bindings.push("hair_color".to_string());
             }
 
-            let mut q = query(&query_str);
+            let mut q = query(AssertSqlSafe(query_str));
             for binding in bindings {
                 q = q.bind(binding);
             }

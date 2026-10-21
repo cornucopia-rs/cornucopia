@@ -62,7 +62,7 @@ dotenvy = "0.15"
 criterion = { version = "0.8", features = ["html_reports"] }
 postgres = "0.19"
 diesel = { version = "2.3", features = ["postgres"] }
-sqlx = { version = "0.8", features = ["runtime-tokio", "postgres"] }
+sqlx = { version = "0.9", features = ["runtime-tokio", "postgres"] }
 tempfile = "3.27"
 generated = { path = "benches/generated" }
 
