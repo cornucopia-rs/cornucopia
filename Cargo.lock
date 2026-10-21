@@ -619,7 +619,7 @@ checksum = "7f8f80099a98041a3d1622845c271458a2d73e688351bf3cb999266764b81d48"
 
 [[package]]
 name = "cornucopia"
-version = "1.0.1"
+version = "1.1.0"
 dependencies = [
  "cargo_toml",
  "chumsky",
