@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0](https://github.com/cornucopia-rs/cornucopia/compare/cornucopia-v1.0.1...cornucopia-v1.1.0) - 2026-10-21
+
+### Added
+
+- Source the `.env` file for environment variables ([#318](https://github.com/cornucopia-rs/cornucopia/pull/318))
+
+### Other
+
+- update deps
+
 ## [1.0.1](https://github.com/cornucopia-rs/cornucopia/compare/cornucopia-v1.0.0...cornucopia-v1.0.1) - 2026-08-12
 
 ### Fixed
