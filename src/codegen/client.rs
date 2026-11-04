@@ -1,3 +1,4 @@
+use proc_macro2::TokenStream;
 use quote::quote;
 
 use super::{DependencyAnalysis, vfs::Vfs};
@@ -631,7 +632,138 @@ pub fn async_() -> proc_macro2::TokenStream {
     }
 }
 
+/// Emits one shared set of method signatures as trait declarations or as
+/// forwarding methods for a concrete client type.
+fn backend_methods(
+    is_async: bool,
+    target: Option<TokenStream>,
+    prepare: TokenStream,
+) -> TokenStream {
+    let (receiver, extra_query_bounds, raw_type, raw_generics, raw_bounds) = if is_async {
+        (
+            quote!(&self),
+            quote!(+ Sync + Send),
+            quote!(RowStream),
+            quote!(<T, I>),
+            quote! {
+                T: ?Sized + ToStatement + Sync + Send,
+                I: IntoIterator + Sync + Send,
+                I::IntoIter: ExactSizeIterator,
+                I::Item: BorrowToSql
+            },
+        )
+    } else {
+        (
+            quote!(&mut self),
+            quote!(),
+            quote!(RowIter<'_>),
+            quote!(<T, P, I>),
+            quote! {
+                T: ?Sized + ToStatement,
+                P: BorrowToSql,
+                I: IntoIterator<Item = P>,
+                I::IntoIter: ExactSizeIterator
+            },
+        )
+    };
+
+    let async_impl = is_async && target.is_some();
+    let asyncness = if async_impl { quote!(async) } else { quote!() };
+
+    let ret = |ty: TokenStream| {
+        if is_async && target.is_none() {
+            quote!(impl Future<Output = Result<#ty, Error>> + Send)
+        } else {
+            quote!(Result<#ty, Error>)
+        }
+    };
+    let body = |call: TokenStream| match target.as_ref() {
+        None => quote!(;),
+        Some(_) if is_async => quote!({ #call.await }),
+        Some(_) => quote!({ #call }),
+    };
+    let forward = |method: TokenStream, args: TokenStream| match target.as_ref() {
+        Some(target) => quote!(#target::#method(self, #args)),
+        None => quote!(),
+    };
+
+    let prepare_body = body(prepare);
+    let execute_body = body(forward(quote!(execute), quote!(query, params)));
+    let query_one_body = body(forward(quote!(query_one), quote!(statement, params)));
+    let query_opt_body = body(forward(quote!(query_opt), quote!(statement, params)));
+    let query_body = body(forward(quote!(query), quote!(query, params)));
+    let query_raw_body = body(forward(quote!(query_raw), quote!(statement, params)));
+
+    let ret_statement = ret(quote!(Statement));
+    let ret_u64 = ret(quote!(u64));
+    let ret_row = ret(quote!(Row));
+    let ret_opt_row = ret(quote!(Option<Row>));
+    let ret_rows = ret(quote!(Vec<Row>));
+    let ret_raw = ret(raw_type.clone());
+
+    quote! {
+        #asyncness fn prepare(#receiver, query: &str) -> #ret_statement #prepare_body
+
+        #asyncness fn execute<T>(
+            #receiver,
+            query: &T,
+            params: &[&(dyn ToSql + Sync)],
+        ) -> #ret_u64
+        where
+            T: ?Sized + ToStatement #extra_query_bounds
+        #execute_body
+
+        #asyncness fn query_one<T>(
+            #receiver,
+            statement: &T,
+            params: &[&(dyn ToSql + Sync)],
+        ) -> #ret_row
+        where
+            T: ?Sized + ToStatement #extra_query_bounds
+        #query_one_body
+
+        #asyncness fn query_opt<T>(
+            #receiver,
+            statement: &T,
+            params: &[&(dyn ToSql + Sync)],
+        ) -> #ret_opt_row
+        where
+            T: ?Sized + ToStatement #extra_query_bounds
+        #query_opt_body
+
+        #asyncness fn query<T>(
+            #receiver,
+            query: &T,
+            params: &[&(dyn ToSql + Sync)],
+        ) -> #ret_rows
+        where
+            T: ?Sized + ToStatement #extra_query_bounds
+        #query_body
+
+        #asyncness fn query_raw #raw_generics(
+            #receiver,
+            statement: &T,
+            params: I,
+        ) -> #ret_raw
+        where
+            #raw_bounds
+        #query_raw_body
+    }
+}
+
 pub fn sync_generic_client() -> proc_macro2::TokenStream {
+    let trait_methods = backend_methods(false, None, quote!());
+    let transaction_methods = backend_methods(
+        false,
+        Some(quote!(Transaction)),
+        quote!(Transaction::prepare(self, query)),
+    );
+    let client_methods = backend_methods(
+        false,
+        Some(quote!(Client)),
+        quote!(Client::prepare(self, query)),
+    );
+
     quote! {
         use postgres::{
             types::{BorrowToSql, ToSql},
@@ -645,135 +777,32 @@ pub fn sync_generic_client() -> proc_macro2::TokenStream {
                 false
             }
 
-            fn prepare(&mut self, query: &str) -> Result<Statement, Error>;
-
-            fn execute<T>(&mut self, query: &T, params: &[&(dyn ToSql + Sync)]) -> Result<u64, Error>
-            where
-                T: ?Sized + ToStatement;
-
-            fn query_one<T>(&mut self, statement: &T, params: &[&(dyn ToSql + Sync)]) -> Result<Row, Error>
-            where
-                T: ?Sized + ToStatement;
-
-            fn query_opt<T>(
-                &mut self,
-                statement: &T,
-                params: &[&(dyn ToSql + Sync)],
-            ) -> Result<Option<Row>, Error>
-            where
-                T: ?Sized + ToStatement;
-
-            fn query<T>(&mut self, query: &T, params: &[&(dyn ToSql + Sync)]) -> Result<Vec<Row>, Error>
-            where
-                T: ?Sized + ToStatement;
-
-            fn query_raw<T, P, I>(&mut self, statement: &T, params: I) -> Result<RowIter<'_>, Error>
-            where
-                T: ?Sized + ToStatement,
-                P: BorrowToSql,
-                I: IntoIterator<Item = P>,
-                I::IntoIter: ExactSizeIterator;
+            #trait_methods
         }
 
         impl GenericClient for Transaction<'_> {
-            fn prepare(&mut self, query: &str) -> Result<Statement, Error> {
-                Transaction::prepare(self, query)
-            }
-
-            fn execute<T>(&mut self, query: &T, params: &[&(dyn ToSql + Sync)]) -> Result<u64, Error>
-            where
-                T: ?Sized + ToStatement,
-            {
-                Transaction::execute(self, query, params)
-            }
-
-            fn query_one<T>(&mut self, statement: &T, params: &[&(dyn ToSql + Sync)]) -> Result<Row, Error>
-            where
-                T: ?Sized + ToStatement,
-            {
-                Transaction::query_one(self, statement, params)
-            }
-
-            fn query_opt<T>(
-                &mut self,
-                statement: &T,
-                params: &[&(dyn ToSql + Sync)],
-            ) -> Result<Option<Row>, Error>
-            where
-                T: ?Sized + ToStatement,
-            {
-                Transaction::query_opt(self, statement, params)
-            }
-
-            fn query<T>(&mut self, query: &T, params: &[&(dyn ToSql + Sync)]) -> Result<Vec<Row>, Error>
-            where
-                T: ?Sized + ToStatement,
-            {
-                Transaction::query(self, query, params)
-            }
-
-            fn query_raw<T, P, I>(&mut self, statement: &T, params: I) -> Result<RowIter<'_>, Error>
-            where
-                T: ?Sized + ToStatement,
-                P: BorrowToSql,
-                I: IntoIterator<Item = P>,
-                I::IntoIter: ExactSizeIterator,
-            {
-                Transaction::query_raw(self, statement, params)
-            }
+            #transaction_methods
         }
 
         impl GenericClient for Client {
-            fn prepare(&mut self, query: &str) -> Result<Statement, Error> {
-                Client::prepare(self, query)
-            }
-
-            fn execute<T>(&mut self, query: &T, params: &[&(dyn ToSql + Sync)]) -> Result<u64, Error>
-            where
-                T: ?Sized + ToStatement,
-            {
-                Client::execute(self, query, params)
-            }
-
-            fn query_one<T>(&mut self, statement: &T, params: &[&(dyn ToSql + Sync)]) -> Result<Row, Error>
-            where
-                T: ?Sized + ToStatement,
-            {
-                Client::query_one(self, statement, params)
-            }
-
-            fn query_opt<T>(
-                &mut self,
-                statement: &T,
-                params: &[&(dyn ToSql + Sync)],
-            ) -> Result<Option<Row>, Error>
-            where
-                T: ?Sized + ToStatement,
-            {
-                Client::query_opt(self, statement, params)
-            }
-
-            fn query<T>(&mut self, query: &T, params: &[&(dyn ToSql + Sync)]) -> Result<Vec<Row>, Error>
-            where
-                T: ?Sized + ToStatement,
-            {
-                Client::query(self, query, params)
-            }
-
-            fn query_raw<T, P, I>(&mut self, statement: &T, params: I) -> Result<RowIter<'_>, Error>
-            where
-                T: ?Sized + ToStatement,
-                P: BorrowToSql,
-                I: IntoIterator<Item = P>,
-                I::IntoIter: ExactSizeIterator,
-            {
-                Client::query_raw(self, statement, params)
-            }
+            #client_methods
         }
     }
 }
 
 pub fn async_generic_client() -> proc_macro2::TokenStream {
+    let trait_methods = backend_methods(true, None, quote!());
+    let transaction_methods = backend_methods(
+        true,
+        Some(quote!(Transaction)),
+        quote!(Transaction::prepare(self, query)),
+    );
+    let client_methods = backend_methods(
+        true,
+        Some(quote!(Client)),
+        quote!(Client::prepare(self, query)),
+    );
+
     quote! {
         use std::future::Future;
         use tokio_postgres::{
@@ -791,181 +820,38 @@ pub fn async_generic_client() -> proc_macro2::TokenStream {
                 false
             }
 
-            fn prepare(&self, query: &str) -> impl Future<Output = Result<Statement, Error>> + Send;
-
-            fn execute<T>(
-                &self,
-                query: &T,
-                params: &[&(dyn ToSql + Sync)],
-            ) -> impl Future<Output = Result<u64, Error>> + Send
-            where
-                T: ?Sized + ToStatement + Sync + Send;
-
-            fn query_one<T>(
-                &self,
-                statement: &T,
-                params: &[&(dyn ToSql + Sync)],
-            ) -> impl Future<Output = Result<Row, Error>> + Send
-            where
-                T: ?Sized + ToStatement + Sync + Send;
-
-            fn query_opt<T>(
-                &self,
-                statement: &T,
-                params: &[&(dyn ToSql + Sync)],
-            ) -> impl Future<Output = Result<Option<Row>, Error>> + Send
-            where
-                T: ?Sized + ToStatement + Sync + Send;
-
-            fn query<T>(
-                &self,
-                query: &T,
-                params: &[&(dyn ToSql + Sync)],
-            ) -> impl Future<Output = Result<Vec<Row>, Error>> + Send
-            where
-                T: ?Sized + ToStatement + Sync + Send;
-
-            fn query_raw<T, I>(
-                &self,
-                statement: &T,
-                params: I,
-            ) -> impl Future<Output = Result<RowStream, Error>> + Send
-            where
-                T: ?Sized + ToStatement + Sync + Send,
-                I: IntoIterator + Sync + Send,
-                I::IntoIter: ExactSizeIterator,
-                I::Item: BorrowToSql;
+            #trait_methods
         }
 
         impl GenericClient for Transaction<'_> {
-            async fn prepare(&self, query: &str) -> Result<Statement, Error> {
-                Transaction::prepare(self, query).await
-            }
-
-            async fn execute<T>(
-                &self,
-                query: &T,
-                params: &[&(dyn ToSql + Sync)],
-            ) -> Result<u64, Error>
-            where
-                T: ?Sized + ToStatement + Sync + Send,
-            {
-                Transaction::execute(self, query, params).await
-            }
-
-            async fn query_one<T>(
-                &self,
-                statement: &T,
-                params: &[&(dyn ToSql + Sync)],
-            ) -> Result<Row, Error>
-            where
-                T: ?Sized + ToStatement + Sync + Send,
-            {
-                Transaction::query_one(self, statement, params).await
-            }
-
-            async fn query_opt<T>(
-                &self,
-                statement: &T,
-                params: &[&(dyn ToSql + Sync)],
-            ) -> Result<Option<Row>, Error>
-            where
-                T: ?Sized + ToStatement + Sync + Send,
-            {
-                Transaction::query_opt(self, statement, params).await
-            }
-
-            async fn query<T>(
-                &self,
-                query: &T,
-                params: &[&(dyn ToSql + Sync)],
-            ) -> Result<Vec<Row>, Error>
-            where
-                T: ?Sized + ToStatement + Sync + Send,
-            {
-                Transaction::query(self, query, params).await
-            }
-
-            async fn query_raw<T, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
-            where
-                T: ?Sized + ToStatement + Sync + Send,
-                I: IntoIterator + Sync + Send,
-                I::IntoIter: ExactSizeIterator,
-                I::Item: BorrowToSql,
-            {
-                Transaction::query_raw(self, statement, params).await
-            }
+            #transaction_methods
         }
 
         impl GenericClient for Client {
-            async fn prepare(&self, query: &str) -> Result<Statement, Error> {
-                Client::prepare(self, query).await
-            }
-
-            async fn execute<T>(
-                &self,
-                query: &T,
-                params: &[&(dyn ToSql + Sync)],
-            ) -> Result<u64, Error>
-            where
-                T: ?Sized + ToStatement + Sync + Send,
-            {
-                Client::execute(self, query, params).await
-            }
-
-            async fn query_one<T>(
-                &self,
-                statement: &T,
-                params: &[&(dyn ToSql + Sync)],
-            ) -> Result<Row, Error>
-            where
-                T: ?Sized + ToStatement + Sync + Send,
-            {
-                Client::query_one(self, statement, params).await
-            }
-
-            async fn query_opt<T>(
-                &self,
-                statement: &T,
-                params: &[&(dyn ToSql + Sync)],
-            ) -> Result<Option<Row>, Error>
-            where
-                T: ?Sized + ToStatement + Sync + Send,
-            {
-                Client::query_opt(self, statement, params).await
-            }
-
-            async fn query<T>(
-                &self,
-                query: &T,
-                params: &[&(dyn ToSql + Sync)],
-            ) -> Result<Vec<Row>, Error>
-            where
-                T: ?Sized + ToStatement + Sync + Send,
-            {
-                Client::query(self, query, params).await
-            }
-
-            async fn query_raw<T, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
-            where
-                T: ?Sized + ToStatement + Sync + Send,
-                I: IntoIterator + Sync + Send,
-                I::IntoIter: ExactSizeIterator,
-                I::Item: BorrowToSql,
-            {
-                Client::query_raw(self, statement, params).await
-            }
+            #client_methods
         }
     }
 }
 
 pub fn async_deadpool() -> proc_macro2::TokenStream {
+    let client_methods = backend_methods(
+        true,
+        Some(quote!(PgClient)),
+        quote!(ClientWrapper::prepare_cached(self, query)),
+    );
+    let transaction_methods = backend_methods(
+        true,
+        Some(quote!(PgTransaction)),
+        quote!(DeadpoolTransaction::prepare_cached(self, query)),
+    );
+
     quote! {
         use deadpool_postgres::{
             Client as DeadpoolClient, ClientWrapper, Transaction as DeadpoolTransaction,
         };
         use tokio_postgres::{
-            types::BorrowToSql, Client as PgClient, Error, RowStream, Statement, ToStatement,
+            types::{BorrowToSql, ToSql},
+            Client as PgClient, Error, Row, RowStream, Statement, ToStatement,
             Transaction as PgTransaction,
         };
 
@@ -976,63 +862,7 @@ pub fn async_deadpool() -> proc_macro2::TokenStream {
                 true
             }
 
-            async fn prepare(&self, query: &str) -> Result<Statement, Error> {
-                ClientWrapper::prepare_cached(self, query).await
-            }
-
-            async fn execute<T>(
-                &self,
-                query: &T,
-                params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-            ) -> Result<u64, Error>
-            where
-                T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
-            {
-                PgClient::execute(self, query, params).await
-            }
-
-            async fn query_one<T>(
-                &self,
-                statement: &T,
-                params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-            ) -> Result<tokio_postgres::Row, Error>
-            where
-                T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
-            {
-                PgClient::query_one(self, statement, params).await
-            }
-
-            async fn query_opt<T>(
-                &self,
-                statement: &T,
-                params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-            ) -> Result<Option<tokio_postgres::Row>, Error>
-            where
-                T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
-            {
-                PgClient::query_opt(self, statement, params).await
-            }
-
-            async fn query<T>(
-                &self,
-                query: &T,
-                params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-            ) -> Result<Vec<tokio_postgres::Row>, Error>
-            where
-                T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
-            {
-                PgClient::query(self, query, params).await
-            }
-
-            async fn query_raw<T, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
-            where
-                T: ?Sized + ToStatement + Sync + Send,
-                I: IntoIterator + Sync + Send,
-                I::IntoIter: ExactSizeIterator,
-                I::Item: BorrowToSql,
-            {
-                PgClient::query_raw(self, statement, params).await
-            }
+            #client_methods
         }
 
         impl GenericClient for DeadpoolTransaction<'_> {
@@ -1040,63 +870,7 @@ pub fn async_deadpool() -> proc_macro2::TokenStream {
                 false
             }
 
-            async fn prepare(&self, query: &str) -> Result<Statement, Error> {
-                DeadpoolTransaction::prepare_cached(self, query).await
-            }
-
-            async fn execute<T>(
-                &self,
-                query: &T,
-                params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-            ) -> Result<u64, Error>
-            where
-                T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
-            {
-                PgTransaction::execute(self, query, params).await
-            }
-
-            async fn query_one<T>(
-                &self,
-                statement: &T,
-                params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-            ) -> Result<tokio_postgres::Row, Error>
-            where
-                T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
-            {
-                PgTransaction::query_one(self, statement, params).await
-            }
-
-            async fn query_opt<T>(
-                &self,
-                statement: &T,
-                params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-            ) -> Result<Option<tokio_postgres::Row>, Error>
-            where
-                T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
-            {
-                PgTransaction::query_opt(self, statement, params).await
-            }
-
-            async fn query<T>(
-                &self,
-                query: &T,
-                params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
-            ) -> Result<Vec<tokio_postgres::Row>, Error>
-            where
-                T: ?Sized + tokio_postgres::ToStatement + Sync + Send,
-            {
-                PgTransaction::query(self, query, params).await
-            }
-
-            async fn query_raw<T, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
-            where
-                T: ?Sized + ToStatement + Sync + Send,
-                I: IntoIterator + Sync + Send,
-                I::IntoIter: ExactSizeIterator,
-                I::Item: BorrowToSql,
-            {
-                PgTransaction::query_raw(self, statement, params).await
-            }
+            #transaction_methods
         }
     }
 }
