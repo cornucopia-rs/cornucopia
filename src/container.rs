@@ -59,9 +59,21 @@ fn spawn_container(podman: bool, container_image: &str) -> Result<(), Error> {
     cmd(podman, &args, "spawn container")
 }
 
-/// Checks if Cornucopia's container reports healthy
+/// Checks if Cornucopia's container reports healthy.
+///
+/// The probe must go over TCP: the `postgres` image runs a temporary bootstrap
+/// server during `initdb` that listens on the Unix socket only, so a socket
+/// probe reports ready while the published port still resets connections.
 fn is_postgres_healthy(podman: bool) -> Result<bool, Error> {
-    let args = ["exec", "cornucopia_postgres", "pg_isready"];
+    let args = [
+        "exec",
+        "cornucopia_postgres",
+        "pg_isready",
+        "-h",
+        "127.0.0.1",
+        "-p",
+        "5432",
+    ];
     Ok(cmd(podman, &args, "check container health").is_ok())
 }
 
