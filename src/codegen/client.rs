@@ -28,8 +28,6 @@ pub(crate) fn gen_lib(
         mod type_traits;
         mod utils;
 
-        pub(crate) use utils::slice_iter;
-
         pub use array_iterator::ArrayIterator;
         pub use domain::{Domain, DomainArray};
         pub use type_traits::{ArraySql, BytesSql, IterSql, StringSql};
@@ -115,19 +113,13 @@ pub fn client(config: &Config) -> proc_macro2::TokenStream {
 
 pub fn core_utils() -> proc_macro2::TokenStream {
     quote! {
-        use postgres_types::{Kind, ToSql, Type};
+        use postgres_types::{Kind, Type};
 
         pub fn escape_domain(ty: &Type) -> &Type {
             match ty.kind() {
                 Kind::Domain(ty) => ty,
                 _ => ty,
             }
-        }
-
-        pub fn slice_iter<'a>(
-            s: &'a [&'a (dyn ToSql + Sync)],
-        ) -> impl ExactSizeIterator<Item = &'a dyn ToSql> + 'a {
-            s.iter().map(|s| *s as _)
         }
     }
 }
@@ -493,7 +485,7 @@ pub fn sync() -> proc_macro2::TokenStream {
         mod generic_client;
 
         use postgres::{
-            types::{BorrowToSql, ToSql},
+            types::ToSql,
             Error, Row, RowIter, Statement,
         };
 
@@ -535,17 +527,12 @@ pub fn sync() -> proc_macro2::TokenStream {
             }
         }
 
-        pub fn raw<'a, C: GenericClient, P, I>(
+        pub fn raw<'a, C: GenericClient>(
             client: &'a mut C,
             query: &str,
-            params: I,
+            params: &[&(dyn ToSql + Sync)],
             cached: Option<&Statement>,
-        ) -> Result<RowIter<'a>, Error>
-        where
-            P: BorrowToSql,
-            I: IntoIterator<Item = P>,
-            I::IntoIter: ExactSizeIterator,
-        {
+        ) -> Result<RowIter<'a>, Error> {
             if let Some(cached) = cached {
                 client.query_raw(cached, params)
             } else if C::stmt_cache() {
@@ -567,7 +554,7 @@ pub fn async_() -> proc_macro2::TokenStream {
         mod deadpool;
 
         use tokio_postgres::{
-            types::{BorrowToSql, ToSql},
+            types::ToSql,
             Error, Row, RowStream, Statement,
         };
 
@@ -609,17 +596,12 @@ pub fn async_() -> proc_macro2::TokenStream {
             }
         }
 
-        pub async fn raw<C: GenericClient, P, I>(
+        pub async fn raw<C: GenericClient>(
             client: &C,
             query: &str,
-            params: I,
+            params: &[&(dyn ToSql + Sync)],
             cached: Option<&Statement>,
-        ) -> Result<RowStream, Error>
-        where
-            P: BorrowToSql,
-            I: IntoIterator<Item = P> + Sync + Send,
-            I::IntoIter: ExactSizeIterator,
-        {
+        ) -> Result<RowStream, Error> {
             if let Some(cached) = cached {
                 client.query_raw(cached, params).await
             } else if C::stmt_cache() {
@@ -639,32 +621,10 @@ fn backend_methods(
     target: Option<TokenStream>,
     prepare: TokenStream,
 ) -> TokenStream {
-    let (receiver, extra_query_bounds, raw_type, raw_generics, raw_bounds) = if is_async {
-        (
-            quote!(&self),
-            quote!(+ Sync + Send),
-            quote!(RowStream),
-            quote!(<T, I>),
-            quote! {
-                T: ?Sized + ToStatement + Sync + Send,
-                I: IntoIterator + Sync + Send,
-                I::IntoIter: ExactSizeIterator,
-                I::Item: BorrowToSql
-            },
-        )
+    let (receiver, extra_query_bounds, raw_type) = if is_async {
+        (quote!(&self), quote!(+ Sync + Send), quote!(RowStream))
     } else {
-        (
-            quote!(&mut self),
-            quote!(),
-            quote!(RowIter<'_>),
-            quote!(<T, P, I>),
-            quote! {
-                T: ?Sized + ToStatement,
-                P: BorrowToSql,
-                I: IntoIterator<Item = P>,
-                I::IntoIter: ExactSizeIterator
-            },
-        )
+        (quote!(&mut self), quote!(), quote!(RowIter<'_>))
     };
 
     let async_impl = is_async && target.is_some();
@@ -692,7 +652,10 @@ fn backend_methods(
     let query_one_body = body(forward(quote!(query_one), quote!(statement, params)));
     let query_opt_body = body(forward(quote!(query_opt), quote!(statement, params)));
     let query_body = body(forward(quote!(query), quote!(query, params)));
-    let query_raw_body = body(forward(quote!(query_raw), quote!(statement, params)));
+    let query_raw_body = body(forward(
+        quote!(query_raw),
+        quote!(statement, params.iter().copied()),
+    ));
 
     let ret_statement = ret(quote!(Statement));
     let ret_u64 = ret(quote!(u64));
@@ -740,13 +703,13 @@ fn backend_methods(
             T: ?Sized + ToStatement #extra_query_bounds
         #query_body
 
-        #asyncness fn query_raw #raw_generics(
+        #asyncness fn query_raw<T>(
             #receiver,
             statement: &T,
-            params: I,
+            params: &[&(dyn ToSql + Sync)],
         ) -> #ret_raw
         where
-            #raw_bounds
+            T: ?Sized + ToStatement #extra_query_bounds
         #query_raw_body
     }
 }
@@ -766,7 +729,7 @@ pub fn sync_generic_client() -> proc_macro2::TokenStream {
 
     quote! {
         use postgres::{
-            types::{BorrowToSql, ToSql},
+            types::ToSql,
             Client, Error, Row, RowIter, Statement, ToStatement, Transaction,
         };
 
@@ -806,7 +769,7 @@ pub fn async_generic_client() -> proc_macro2::TokenStream {
     quote! {
         use std::future::Future;
         use tokio_postgres::{
-            types::{BorrowToSql, ToSql},
+            types::ToSql,
             Client, Error, Row, RowStream, Statement, ToStatement, Transaction,
         };
 
@@ -850,7 +813,7 @@ pub fn async_deadpool() -> proc_macro2::TokenStream {
             Client as DeadpoolClient, ClientWrapper, Transaction as DeadpoolTransaction,
         };
         use tokio_postgres::{
-            types::{BorrowToSql, ToSql},
+            types::ToSql,
             Client as PgClient, Error, Row, RowStream, Statement, ToStatement,
             Transaction as PgTransaction,
         };
