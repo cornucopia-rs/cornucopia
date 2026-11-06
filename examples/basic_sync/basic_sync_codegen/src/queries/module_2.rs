@@ -129,12 +129,7 @@ where
     pub fn iter(
         self,
     ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'c, postgres::Error> {
-        let stream = crate::client::sync::raw(
-            self.client,
-            self.query,
-            crate::slice_iter(&self.params),
-            self.cached,
-        )?;
+        let stream = crate::client::sync::raw(self.client, self.query, &self.params, self.cached)?;
         let mapped = stream.iterator().map(move |res| {
             res.and_then(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -185,12 +180,7 @@ where
     pub fn iter(
         self,
     ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'c, postgres::Error> {
-        let stream = crate::client::sync::raw(
-            self.client,
-            self.query,
-            crate::slice_iter(&self.params),
-            self.cached,
-        )?;
+        let stream = crate::client::sync::raw(self.client, self.query, &self.params, self.cached)?;
         let mapped = stream.iterator().map(move |res| {
             res.and_then(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -244,12 +234,7 @@ where
     pub fn iter(
         self,
     ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'c, postgres::Error> {
-        let stream = crate::client::sync::raw(
-            self.client,
-            self.query,
-            crate::slice_iter(&self.params),
-            self.cached,
-        )?;
+        let stream = crate::client::sync::raw(self.client, self.query, &self.params, self.cached)?;
         let mapped = stream.iterator().map(move |res| {
             res.and_then(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -303,12 +288,7 @@ where
     pub fn iter(
         self,
     ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'c, postgres::Error> {
-        let stream = crate::client::sync::raw(
-            self.client,
-            self.query,
-            crate::slice_iter(&self.params),
-            self.cached,
-        )?;
+        let stream = crate::client::sync::raw(self.client, self.query, &self.params, self.cached)?;
         let mapped = stream.iterator().map(move |res| {
             res.and_then(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -362,12 +342,7 @@ where
     pub fn iter(
         self,
     ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'c, postgres::Error> {
-        let stream = crate::client::sync::raw(
-            self.client,
-            self.query,
-            crate::slice_iter(&self.params),
-            self.cached,
-        )?;
+        let stream = crate::client::sync::raw(self.client, self.query, &self.params, self.cached)?;
         let mapped = stream.iterator().map(move |res| {
             res.and_then(|row| {
                 let extracted = (self.extractor)(&row)?;

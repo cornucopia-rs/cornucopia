@@ -6,8 +6,7 @@ use deadpool_postgres::{
 };
 use tokio_postgres::{
     Client as PgClient, Error, Row, RowStream, Statement, ToStatement,
-    Transaction as PgTransaction,
-    types::{BorrowToSql, ToSql},
+    Transaction as PgTransaction, types::ToSql,
 };
 impl GenericClient for DeadpoolClient {
     fn stmt_cache() -> bool {
@@ -48,14 +47,15 @@ impl GenericClient for DeadpoolClient {
     {
         PgClient::query(self, query, params).await
     }
-    async fn query_raw<T, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
+    async fn query_raw<T>(
+        &self,
+        statement: &T,
+        params: &[&(dyn ToSql + Sync)],
+    ) -> Result<RowStream, Error>
     where
         T: ?Sized + ToStatement + Sync + Send,
-        I: IntoIterator + Sync + Send,
-        I::IntoIter: ExactSizeIterator,
-        I::Item: BorrowToSql,
     {
-        PgClient::query_raw(self, statement, params).await
+        PgClient::query_raw(self, statement, params.iter().copied()).await
     }
 }
 impl GenericClient for DeadpoolTransaction<'_> {
@@ -97,13 +97,14 @@ impl GenericClient for DeadpoolTransaction<'_> {
     {
         PgTransaction::query(self, query, params).await
     }
-    async fn query_raw<T, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
+    async fn query_raw<T>(
+        &self,
+        statement: &T,
+        params: &[&(dyn ToSql + Sync)],
+    ) -> Result<RowStream, Error>
     where
         T: ?Sized + ToStatement + Sync + Send,
-        I: IntoIterator + Sync + Send,
-        I::IntoIter: ExactSizeIterator,
-        I::Item: BorrowToSql,
     {
-        PgTransaction::query_raw(self, statement, params).await
+        PgTransaction::query_raw(self, statement, params.iter().copied()).await
     }
 }
