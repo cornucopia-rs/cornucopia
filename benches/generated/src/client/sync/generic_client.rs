@@ -1,9 +1,6 @@
 // This file was generated with `cornucopia`. Do not modify.
 
-use postgres::{
-    Client, Error, Row, RowIter, Statement, ToStatement, Transaction,
-    types::{BorrowToSql, ToSql},
-};
+use postgres::{Client, Error, Row, RowIter, Statement, ToStatement, Transaction, types::ToSql};
 /// Abstraction over multiple types of synchronous clients.
 /// This allows you to use postgres clients and transactions interchangeably.
 pub trait GenericClient {
@@ -27,12 +24,13 @@ pub trait GenericClient {
     fn query<T>(&mut self, query: &T, params: &[&(dyn ToSql + Sync)]) -> Result<Vec<Row>, Error>
     where
         T: ?Sized + ToStatement;
-    fn query_raw<T, P, I>(&mut self, statement: &T, params: I) -> Result<RowIter<'_>, Error>
+    fn query_raw<T>(
+        &mut self,
+        statement: &T,
+        params: &[&(dyn ToSql + Sync)],
+    ) -> Result<RowIter<'_>, Error>
     where
-        T: ?Sized + ToStatement,
-        P: BorrowToSql,
-        I: IntoIterator<Item = P>,
-        I::IntoIter: ExactSizeIterator;
+        T: ?Sized + ToStatement;
 }
 impl GenericClient for Transaction<'_> {
     fn prepare(&mut self, query: &str) -> Result<Statement, Error> {
@@ -66,14 +64,15 @@ impl GenericClient for Transaction<'_> {
     {
         Transaction::query(self, query, params)
     }
-    fn query_raw<T, P, I>(&mut self, statement: &T, params: I) -> Result<RowIter<'_>, Error>
+    fn query_raw<T>(
+        &mut self,
+        statement: &T,
+        params: &[&(dyn ToSql + Sync)],
+    ) -> Result<RowIter<'_>, Error>
     where
         T: ?Sized + ToStatement,
-        P: BorrowToSql,
-        I: IntoIterator<Item = P>,
-        I::IntoIter: ExactSizeIterator,
     {
-        Transaction::query_raw(self, statement, params)
+        Transaction::query_raw(self, statement, params.iter().copied())
     }
 }
 impl GenericClient for Client {
@@ -108,13 +107,14 @@ impl GenericClient for Client {
     {
         Client::query(self, query, params)
     }
-    fn query_raw<T, P, I>(&mut self, statement: &T, params: I) -> Result<RowIter<'_>, Error>
+    fn query_raw<T>(
+        &mut self,
+        statement: &T,
+        params: &[&(dyn ToSql + Sync)],
+    ) -> Result<RowIter<'_>, Error>
     where
         T: ?Sized + ToStatement,
-        P: BorrowToSql,
-        I: IntoIterator<Item = P>,
-        I::IntoIter: ExactSizeIterator,
     {
-        Client::query_raw(self, statement, params)
+        Client::query_raw(self, statement, params.iter().copied())
     }
 }

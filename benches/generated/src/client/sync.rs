@@ -2,10 +2,7 @@
 
 pub use generic_client::GenericClient;
 mod generic_client;
-use postgres::{
-    Error, Row, RowIter, Statement,
-    types::{BorrowToSql, ToSql},
-};
+use postgres::{Error, Row, RowIter, Statement, types::ToSql};
 /// This trait allows you to bind parameters to a query using a single
 /// struct, rather than passing each bind parameter as a function parameter.
 pub trait Params<'c, 'a, 's, P, O, C> {
@@ -41,17 +38,12 @@ pub fn opt<C: GenericClient>(
         client.query_opt(query, params)
     }
 }
-pub fn raw<'a, C: GenericClient, P, I>(
+pub fn raw<'a, C: GenericClient>(
     client: &'a mut C,
     query: &str,
-    params: I,
+    params: &[&(dyn ToSql + Sync)],
     cached: Option<&Statement>,
-) -> Result<RowIter<'a>, Error>
-where
-    P: BorrowToSql,
-    I: IntoIterator<Item = P>,
-    I::IntoIter: ExactSizeIterator,
-{
+) -> Result<RowIter<'a>, Error> {
     if let Some(cached) = cached {
         client.query_raw(cached, params)
     } else if C::stmt_cache() {

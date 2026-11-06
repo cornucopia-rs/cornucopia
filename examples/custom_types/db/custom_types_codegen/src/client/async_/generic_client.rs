@@ -2,8 +2,7 @@
 
 use std::future::Future;
 use tokio_postgres::{
-    Client, Error, Row, RowStream, Statement, ToStatement, Transaction,
-    types::{BorrowToSql, ToSql},
+    Client, Error, Row, RowStream, Statement, ToStatement, Transaction, types::ToSql,
 };
 /// Abstraction over multiple types of asynchronous clients.
 /// This allows you to use tokio_postgres clients and transactions interchangeably.
@@ -43,16 +42,13 @@ pub trait GenericClient: Send + Sync {
     ) -> impl Future<Output = Result<Vec<Row>, Error>> + Send
     where
         T: ?Sized + ToStatement + Sync + Send;
-    fn query_raw<T, I>(
+    fn query_raw<T>(
         &self,
         statement: &T,
-        params: I,
+        params: &[&(dyn ToSql + Sync)],
     ) -> impl Future<Output = Result<RowStream, Error>> + Send
     where
-        T: ?Sized + ToStatement + Sync + Send,
-        I: IntoIterator + Sync + Send,
-        I::IntoIter: ExactSizeIterator,
-        I::Item: BorrowToSql;
+        T: ?Sized + ToStatement + Sync + Send;
 }
 impl GenericClient for Transaction<'_> {
     async fn prepare(&self, query: &str) -> Result<Statement, Error> {
@@ -90,14 +86,15 @@ impl GenericClient for Transaction<'_> {
     {
         Transaction::query(self, query, params).await
     }
-    async fn query_raw<T, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
+    async fn query_raw<T>(
+        &self,
+        statement: &T,
+        params: &[&(dyn ToSql + Sync)],
+    ) -> Result<RowStream, Error>
     where
         T: ?Sized + ToStatement + Sync + Send,
-        I: IntoIterator + Sync + Send,
-        I::IntoIter: ExactSizeIterator,
-        I::Item: BorrowToSql,
     {
-        Transaction::query_raw(self, statement, params).await
+        Transaction::query_raw(self, statement, params.iter().copied()).await
     }
 }
 impl GenericClient for Client {
@@ -136,13 +133,14 @@ impl GenericClient for Client {
     {
         Client::query(self, query, params).await
     }
-    async fn query_raw<T, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
+    async fn query_raw<T>(
+        &self,
+        statement: &T,
+        params: &[&(dyn ToSql + Sync)],
+    ) -> Result<RowStream, Error>
     where
         T: ?Sized + ToStatement + Sync + Send,
-        I: IntoIterator + Sync + Send,
-        I::IntoIter: ExactSizeIterator,
-        I::Item: BorrowToSql,
     {
-        Client::query_raw(self, statement, params).await
+        Client::query_raw(self, statement, params.iter().copied()).await
     }
 }
