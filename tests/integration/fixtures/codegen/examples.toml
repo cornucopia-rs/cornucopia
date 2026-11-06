@@ -25,6 +25,7 @@ base_path = "examples/basic_async_wasm"
 destination = "basic_async_wasm_codegen"
 async = true
 run = true
+config = true
 
 [[test]]
 name = "Custom types"

@@ -27,6 +27,8 @@ pub struct Config {
     pub sync: bool,
     /// Generate asynchronous rust code
     pub r#async: bool,
+    /// Generate deadpool-postgres client support
+    pub deadpool: bool,
     /// Ignore query files prefixed with underscore
     #[serde(rename = "ignore-underscore-files")]
     pub ignore_underscore_files: bool,
@@ -106,6 +108,7 @@ impl Default for Config {
             destination: PathBuf::from_str("cornucopia").unwrap(),
             sync: false,
             r#async: true,
+            deadpool: true,
             ignore_underscore_files: false,
             params_only: false,
             types: Types {
@@ -381,6 +384,12 @@ impl ConfigBuilder {
         self
     }
 
+    /// Generate deadpool-postgres client support
+    pub fn deadpool(mut self, deadpool: bool) -> Self {
+        self.config.deadpool = deadpool;
+        self
+    }
+
     /// Enable or disable generation of field metadata for queries
     pub fn generate_field_metadata(mut self, generate: bool) -> Self {
         self.config.generate_field_metadata = generate;
@@ -532,6 +541,17 @@ version = "0.2"
             package.publish,
             cargo_toml::Inheritable::Set(cargo_toml::Publish::Flag(false))
         );
+    }
+
+    #[test]
+    fn deadpool_defaults_on_and_can_be_disabled() {
+        assert!(Config::default().deadpool);
+
+        let mut tmpfile = tempfile::NamedTempFile::new().unwrap();
+        tmpfile.write_all(b"deadpool = false\n").unwrap();
+
+        assert!(!Config::from_file(tmpfile.path()).unwrap().deadpool);
+        assert!(!Config::builder().deadpool(false).build().deadpool);
     }
 
     #[test]

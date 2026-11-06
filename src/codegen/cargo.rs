@@ -172,11 +172,13 @@ fn get_workspace_deps(manifest_path: &Path) -> HashSet<String> {
 pub fn gen_cargo_file(dependency_analysis: &DependencyAnalysis, config: &Config) -> String {
     let mut manifest = config.manifest.clone();
 
-    let mut default_features = if manifest.dependencies.contains_key("postgres") {
-        vec![]
-    } else {
-        vec!["dep:postgres".to_string()]
-    };
+    let generates_postgres = config.sync || !config.r#async || config.deadpool;
+    let mut default_features =
+        if !generates_postgres || manifest.dependencies.contains_key("postgres") {
+            vec![]
+        } else {
+            vec!["dep:postgres".to_string()]
+        };
 
     let (use_workspace_deps, workspace_deps) = match &config.use_workspace_deps {
         UseWorkspaceDeps::Bool(true) => (true, get_workspace_deps(Path::new("./Cargo.toml"))),
@@ -185,19 +187,16 @@ pub fn gen_cargo_file(dependency_analysis: &DependencyAnalysis, config: &Config)
     };
 
     if config.r#async {
-        default_features.push("deadpool".to_string());
-
-        manifest
-            .features
-            .insert("default".to_string(), default_features);
-
-        manifest.features.insert(
-            "deadpool".to_string(),
-            vec![
-                "dep:deadpool-postgres".to_string(),
-                "tokio-postgres/default".to_string(),
-            ],
-        );
+        if config.deadpool {
+            default_features.push("deadpool".to_string());
+            manifest.features.insert(
+                "deadpool".to_string(),
+                vec![
+                    "dep:deadpool-postgres".to_string(),
+                    "tokio-postgres/default".to_string(),
+                ],
+            );
+        }
 
         let mut wasm_features = vec!["tokio-postgres/js".to_string()];
 
@@ -209,10 +208,6 @@ pub fn gen_cargo_file(dependency_analysis: &DependencyAnalysis, config: &Config)
             .features
             .insert("wasm-async".to_string(), wasm_features);
     } else {
-        manifest
-            .features
-            .insert("default".to_string(), default_features);
-
         let mut wasm_features = vec![];
 
         if dependency_analysis.has_dependency() && dependency_analysis.chrono {
@@ -223,6 +218,9 @@ pub fn gen_cargo_file(dependency_analysis: &DependencyAnalysis, config: &Config)
             .features
             .insert("wasm-sync".to_string(), wasm_features);
     }
+    manifest
+        .features
+        .insert("default".to_string(), default_features);
 
     let mut deps = DependencyContext {
         manifest: &mut manifest,
@@ -339,13 +337,15 @@ pub fn gen_cargo_file(dependency_analysis: &DependencyAnalysis, config: &Config)
     }
 
     // Postgres client
-    deps.add(
-        "postgres",
-        &DependencyBuilder::new(versions::POSTGRES)
-            .features(client_features.clone())
-            .optional()
-            .into_detail(),
-    );
+    if generates_postgres {
+        deps.add(
+            "postgres",
+            &DependencyBuilder::new(versions::POSTGRES)
+                .features(client_features.clone())
+                .optional()
+                .into_detail(),
+        );
+    }
 
     // Async dependencies
     if config.r#async {
@@ -362,12 +362,14 @@ pub fn gen_cargo_file(dependency_analysis: &DependencyAnalysis, config: &Config)
             &DependencyBuilder::new(versions::FUTURES).into_detail(),
         );
 
-        deps.add(
-            "deadpool-postgres",
-            &DependencyBuilder::new(versions::DEADPOOL_POSTGRES)
-                .optional()
-                .into_detail(),
-        );
+        if config.deadpool {
+            deps.add(
+                "deadpool-postgres",
+                &DependencyBuilder::new(versions::DEADPOOL_POSTGRES)
+                    .optional()
+                    .into_detail(),
+            );
+        }
     }
 
     let mut output =
@@ -432,5 +434,30 @@ serde = "1"
 
         let deps = get_workspace_deps(tmpfile.path());
         assert!(deps.is_empty());
+    }
+
+    #[test]
+    fn direct_async_manifest_omits_pool_and_sync_client() {
+        let config = Config::builder()
+            .r#async(true)
+            .sync(false)
+            .deadpool(false)
+            .build();
+        let generated = gen_cargo_file(&DependencyAnalysis::default(), &config);
+
+        assert!(!generated.contains("deadpool"));
+        assert!(!generated.contains("[dependencies.postgres]"));
+        assert!(generated.contains("[dependencies.tokio-postgres]"));
+        assert!(generated.contains("default = []"));
+        assert!(generated.contains("wasm-async = [\"tokio-postgres/js\"]"));
+    }
+
+    #[test]
+    fn default_async_manifest_keeps_deadpool_support() {
+        let generated = gen_cargo_file(&DependencyAnalysis::default(), &Config::default());
+
+        assert!(generated.contains("[dependencies.deadpool-postgres]"));
+        assert!(generated.contains("deadpool = ["));
+        assert!(generated.contains("default = [\"dep:postgres\", \"deadpool\"]"));
     }
 }

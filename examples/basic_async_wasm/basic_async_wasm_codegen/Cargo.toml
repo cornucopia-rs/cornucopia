@@ -10,17 +10,8 @@ publish = false
 [dependencies.chrono]
 version = "^0.4.44"
 
-[dependencies.deadpool-postgres]
-version = "^0.14.1"
-optional = true
-
 [dependencies.futures]
 version = "^0.3.32"
-
-[dependencies.postgres]
-version = "^0.19.13"
-features = ["with-chrono-0_4"]
-optional = true
 
 [dependencies.postgres-protocol]
 version = "^0.6.11"
@@ -35,6 +26,5 @@ features = ["with-chrono-0_4"]
 default-features = false
 
 [features]
-deadpool = ["dep:deadpool-postgres", "tokio-postgres/default"]
-default = ["dep:postgres", "deadpool"]
+default = []
 wasm-async = ["tokio-postgres/js", "chrono/wasmbind"]

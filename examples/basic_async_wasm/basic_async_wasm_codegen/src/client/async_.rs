@@ -1,8 +1,6 @@
 // This file was generated with `cornucopia`. Do not modify.
 
 pub use generic_client::GenericClient;
-#[cfg(feature = "deadpool")]
-mod deadpool;
 mod generic_client;
 use tokio_postgres::{
     Error, Row, RowStream, Statement,

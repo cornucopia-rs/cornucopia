@@ -7,9 +7,6 @@ use tokio_postgres::{
 };
 /// Abstraction over multiple types of asynchronous clients.
 /// This allows you to use tokio_postgres clients and transactions interchangeably.
-///
-/// In addition, when the `deadpool` feature is enabled (default), this trait also
-/// abstracts over deadpool clients and transactions
 pub trait GenericClient: Send + Sync {
     fn stmt_cache() -> bool {
         false

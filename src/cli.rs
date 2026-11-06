@@ -109,6 +109,10 @@ struct CommonArgs {
     /// Generate asynchronous rust code
     #[clap(long)]
     r#async: Option<bool>,
+
+    /// Generate deadpool-postgres client support
+    #[clap(long)]
+    deadpool: Option<bool>,
 }
 
 #[allow(clippy::result_large_err)]
@@ -123,6 +127,7 @@ pub fn run() -> Result<(), Error> {
         destination,
         sync,
         r#async,
+        deadpool,
     } = action.args();
 
     let mut cfg = match config.is_file() {
@@ -134,6 +139,7 @@ pub fn run() -> Result<(), Error> {
     cfg.destination = destination.unwrap_or(cfg.destination);
     cfg.sync = sync.unwrap_or(cfg.sync);
     cfg.r#async = r#async.unwrap_or(false) || !cfg.sync;
+    cfg.deadpool = deadpool.unwrap_or(cfg.deadpool);
     // Prevent wrong directory being accidentally deleted
     if !cfg.destination.ends_with("cornucopia")
         && (cfg.destination.exists() && !cfg.destination.join("Cargo.toml").exists())

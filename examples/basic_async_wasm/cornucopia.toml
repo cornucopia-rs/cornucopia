@@ -1,0 +1,8 @@
+destination = "basic_async_wasm_codegen"
+async = true
+sync = false
+deadpool = false
+
+[manifest.package]
+name = "basic_async_wasm_codegen"
+publish = false

@@ -23,6 +23,10 @@ destination = "cornucopia"
 # Generate asynchronous code (default: true)
 async = true
 
+# Generate deadpool-postgres client support for async code (default: true).
+# Set this to false when using tokio-postgres directly.
+deadpool = true
+
 # Generate synchronous code (default: false)
 # Both `sync` and `async` may be enabled at the same time.
 sync = false
@@ -93,9 +97,12 @@ The `edition` and `rust-version` values on the generated crate are fixed by Corn
 
 ### Dependency merging
 Cornucopia automatically adds dependencies based on your PostgreSQL schema:
-- Core dependencies: `postgres-types`, `postgres-protocol`, `postgres`
+- Core dependencies: `postgres-types`, `postgres-protocol`
+- Sync dependency: `postgres` when synchronous code or the default pooled
+  async client is generated
 - Type-specific dependencies: `chrono`, `uuid`, `serde_json`, etc. (based on column types)
-- Async dependencies: `tokio-postgres`, `futures`, `deadpool-postgres` (when async enabled)
+- Async dependencies: `tokio-postgres`, `futures`, and `deadpool-postgres`
+  when async generation and `deadpool` support are enabled
 
 Your custom dependencies in `[manifest.dependencies]` will be preserved and merged with these auto-generated ones.
 

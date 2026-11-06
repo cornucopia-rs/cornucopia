@@ -35,7 +35,7 @@ pub(crate) fn gen_lib(
         pub use type_traits::{ArraySql, BytesSql, IterSql, StringSql};
     };
 
-    let db_imports = if config.r#async {
+    let db_imports = if config.r#async && config.deadpool {
         quote! {
             #[cfg(feature = "deadpool")]
             pub use deadpool_postgres;
@@ -49,6 +49,11 @@ pub(crate) fn gen_lib(
             pub use postgres;
             #[cfg(not(any(feature = "deadpool", feature = "wasm-async")))]
             pub use postgres::fallible_iterator;
+        }
+    } else if config.r#async {
+        quote! {
+            pub use tokio_postgres;
+            pub use tokio_postgres::fallible_iterator;
         }
     } else {
         quote! {
@@ -86,12 +91,14 @@ pub(crate) fn gen_clients(
         vfs.add("src/client/sync/generic_client.rs", sync_generic_client());
     }
     if config.r#async {
-        vfs.add("src/client/async_.rs", async_());
+        vfs.add("src/client/async_.rs", async_(config.deadpool));
         vfs.add(
             "src/client/async_/generic_client.rs",
-            async_generic_client(),
+            async_generic_client(config.deadpool),
         );
-        vfs.add("src/client/async_/deadpool.rs", async_deadpool());
+        if config.deadpool {
+            vfs.add("src/client/async_/deadpool.rs", async_deadpool());
+        }
     }
     vfs.add("src/client.rs", client(config))
 }
@@ -558,13 +565,19 @@ pub fn sync() -> proc_macro2::TokenStream {
     }
 }
 
-pub fn async_() -> proc_macro2::TokenStream {
+pub fn async_(deadpool: bool) -> proc_macro2::TokenStream {
+    let deadpool_module = deadpool.then(|| {
+        quote! {
+            #[cfg(feature = "deadpool")]
+            mod deadpool;
+        }
+    });
+
     quote! {
         pub use generic_client::GenericClient;
         mod generic_client;
 
-        #[cfg(feature = "deadpool")]
-        mod deadpool;
+        #deadpool_module
 
         use tokio_postgres::{
             types::{BorrowToSql, ToSql},
@@ -790,7 +803,7 @@ pub fn sync_generic_client() -> proc_macro2::TokenStream {
     }
 }
 
-pub fn async_generic_client() -> proc_macro2::TokenStream {
+pub fn async_generic_client(deadpool: bool) -> proc_macro2::TokenStream {
     let trait_methods = backend_methods(true, None, quote!());
     let transaction_methods = backend_methods(
         true,
@@ -802,6 +815,13 @@ pub fn async_generic_client() -> proc_macro2::TokenStream {
         Some(quote!(Client)),
         quote!(Client::prepare(self, query)),
     );
+    let deadpool_docs = deadpool.then(|| {
+        quote! {
+            ///
+            /// In addition, when the `deadpool` feature is enabled (default), this trait also
+            /// abstracts over deadpool clients and transactions
+        }
+    });
 
     quote! {
         use std::future::Future;
@@ -812,9 +832,7 @@ pub fn async_generic_client() -> proc_macro2::TokenStream {
 
         /// Abstraction over multiple types of asynchronous clients.
         /// This allows you to use tokio_postgres clients and transactions interchangeably.
-        ///
-        /// In addition, when the `deadpool` feature is enabled (default), this trait also
-        /// abstracts over deadpool clients and transactions
+        #deadpool_docs
         pub trait GenericClient: Send + Sync {
             fn stmt_cache() -> bool {
                 false
@@ -871,6 +889,32 @@ pub fn async_deadpool() -> proc_macro2::TokenStream {
             }
 
             #transaction_methods
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn async_client_deadpool_code_follows_option() {
+        for deadpool in [true, false] {
+            let config = Config::builder()
+                .r#async(true)
+                .sync(false)
+                .deadpool(deadpool)
+                .build();
+            let lib = gen_lib(&DependencyAnalysis::default(), &config).to_string();
+
+            assert_eq!(lib.contains("deadpool"), deadpool);
+            assert_eq!(async_(deadpool).to_string().contains("deadpool"), deadpool);
+            assert_eq!(
+                async_generic_client(deadpool)
+                    .to_string()
+                    .contains("deadpool"),
+                deadpool
+            );
         }
     }
 }
