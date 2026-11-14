@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0](https://github.com/cornucopia-rs/cornucopia/compare/cornucopia-v1.0.1...cornucopia-v1.1.0) - 2026-11-14
+
+### Added
+
+- Source the `.env` file for environment variables ([#318](https://github.com/cornucopia-rs/cornucopia/pull/318))
+
+### Fixed
+
+- probe container health over TCP ([#336](https://github.com/cornucopia-rs/cornucopia/pull/336))
+
+### Other
+
+- Generate the client trait and impls from one template ([#331](https://github.com/cornucopia-rs/cornucopia/pull/331))
+- update deps
+
+### Refactor
+
+- use slice for params in query_raw ([#335](https://github.com/cornucopia-rs/cornucopia/pull/335))
+
 ## [1.0.1](https://github.com/cornucopia-rs/cornucopia/compare/cornucopia-v1.0.0...cornucopia-v1.0.1) - 2026-08-12
 
 ### Fixed
