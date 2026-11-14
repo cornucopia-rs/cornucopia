@@ -310,7 +310,7 @@ fn gen_row_query(row: &PreparedItem, ctx: &GenCtx) -> proc_macro2::TokenStream {
             pub #fn_async fn iter(
                 self,
             ) -> Result<impl #raw_type<Item = Result<T, #backend::Error>> + 'c, #backend::Error> {
-                let stream = #client::raw(self.client, self.query, crate::slice_iter(&self.params), self.cached)#fn_await?;
+                let stream = #client::raw(self.client, self.query, &self.params, self.cached)#fn_await?;
                 let mapped = stream
                     #raw_pre
                     .map(move |res|

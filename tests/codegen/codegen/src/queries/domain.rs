@@ -130,12 +130,8 @@ pub mod sync {
             self,
         ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'c, postgres::Error>
         {
-            let stream = crate::client::sync::raw(
-                self.client,
-                self.query,
-                crate::slice_iter(&self.params),
-                self.cached,
-            )?;
+            let stream =
+                crate::client::sync::raw(self.client, self.query, &self.params, self.cached)?;
             let mapped = stream.iterator().map(move |res| {
                 res.and_then(|row| {
                     let extracted = (self.extractor)(&row)?;
@@ -192,12 +188,8 @@ pub mod sync {
             self,
         ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'c, postgres::Error>
         {
-            let stream = crate::client::sync::raw(
-                self.client,
-                self.query,
-                crate::slice_iter(&self.params),
-                self.cached,
-            )?;
+            let stream =
+                crate::client::sync::raw(self.client, self.query, &self.params, self.cached)?;
             let mapped = stream.iterator().map(move |res| {
                 res.and_then(|row| {
                     let extracted = (self.extractor)(&row)?;
@@ -417,13 +409,9 @@ pub mod async_ {
             impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'c,
             tokio_postgres::Error,
         > {
-            let stream = crate::client::async_::raw(
-                self.client,
-                self.query,
-                crate::slice_iter(&self.params),
-                self.cached,
-            )
-            .await?;
+            let stream =
+                crate::client::async_::raw(self.client, self.query, &self.params, self.cached)
+                    .await?;
             let mapped = stream
                 .map(move |res| {
                     res.and_then(|row| {
@@ -489,13 +477,9 @@ pub mod async_ {
             impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'c,
             tokio_postgres::Error,
         > {
-            let stream = crate::client::async_::raw(
-                self.client,
-                self.query,
-                crate::slice_iter(&self.params),
-                self.cached,
-            )
-            .await?;
+            let stream =
+                crate::client::async_::raw(self.client, self.query, &self.params, self.cached)
+                    .await?;
             let mapped = stream
                 .map(move |res| {
                     res.and_then(|row| {
