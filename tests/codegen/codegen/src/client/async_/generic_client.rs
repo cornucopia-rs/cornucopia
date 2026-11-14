@@ -2,7 +2,8 @@
 
 use std::future::Future;
 use tokio_postgres::{
-    Client, Error, Row, RowStream, Statement, ToStatement, Transaction, types::ToSql,
+    Client, Error, Row, RowStream, Statement, ToStatement, Transaction,
+    types::{ToSql, Type},
 };
 /// Abstraction over multiple types of asynchronous clients.
 /// This allows you to use tokio_postgres clients and transactions interchangeably.
@@ -21,6 +22,11 @@ pub trait GenericClient: Send + Sync {
     ) -> impl Future<Output = Result<u64, Error>> + Send
     where
         T: ?Sized + ToStatement + Sync + Send;
+    fn execute_typed(
+        &self,
+        statement: &str,
+        typed_params: &[(&(dyn ToSql + Sync), Type)],
+    ) -> impl Future<Output = Result<u64, Error>> + Send;
     fn query_one<T>(
         &self,
         statement: &T,
@@ -28,6 +34,11 @@ pub trait GenericClient: Send + Sync {
     ) -> impl Future<Output = Result<Row, Error>> + Send
     where
         T: ?Sized + ToStatement + Sync + Send;
+    fn query_typed_one(
+        &self,
+        statement: &str,
+        typed_params: &[(&(dyn ToSql + Sync), Type)],
+    ) -> impl Future<Output = Result<Row, Error>> + Send;
     fn query_opt<T>(
         &self,
         statement: &T,
@@ -35,6 +46,11 @@ pub trait GenericClient: Send + Sync {
     ) -> impl Future<Output = Result<Option<Row>, Error>> + Send
     where
         T: ?Sized + ToStatement + Sync + Send;
+    fn query_typed_opt(
+        &self,
+        statement: &str,
+        typed_params: &[(&(dyn ToSql + Sync), Type)],
+    ) -> impl Future<Output = Result<Option<Row>, Error>> + Send;
     fn query<T>(
         &self,
         query: &T,
@@ -49,6 +65,11 @@ pub trait GenericClient: Send + Sync {
     ) -> impl Future<Output = Result<RowStream, Error>> + Send
     where
         T: ?Sized + ToStatement + Sync + Send;
+    fn query_typed_raw(
+        &self,
+        statement: &str,
+        typed_params: &[(&(dyn ToSql + Sync), Type)],
+    ) -> impl Future<Output = Result<RowStream, Error>> + Send;
 }
 impl GenericClient for Transaction<'_> {
     async fn prepare(&self, query: &str) -> Result<Statement, Error> {
@@ -60,6 +81,13 @@ impl GenericClient for Transaction<'_> {
     {
         Transaction::execute(self, query, params).await
     }
+    async fn execute_typed(
+        &self,
+        statement: &str,
+        typed_params: &[(&(dyn ToSql + Sync), Type)],
+    ) -> Result<u64, Error> {
+        Transaction::execute_typed(self, statement, typed_params).await
+    }
     async fn query_one<T>(
         &self,
         statement: &T,
@@ -70,6 +98,13 @@ impl GenericClient for Transaction<'_> {
     {
         Transaction::query_one(self, statement, params).await
     }
+    async fn query_typed_one(
+        &self,
+        statement: &str,
+        typed_params: &[(&(dyn ToSql + Sync), Type)],
+    ) -> Result<Row, Error> {
+        Transaction::query_typed_one(self, statement, typed_params).await
+    }
     async fn query_opt<T>(
         &self,
         statement: &T,
@@ -79,6 +114,13 @@ impl GenericClient for Transaction<'_> {
         T: ?Sized + ToStatement + Sync + Send,
     {
         Transaction::query_opt(self, statement, params).await
+    }
+    async fn query_typed_opt(
+        &self,
+        statement: &str,
+        typed_params: &[(&(dyn ToSql + Sync), Type)],
+    ) -> Result<Option<Row>, Error> {
+        Transaction::query_typed_opt(self, statement, typed_params).await
     }
     async fn query<T>(&self, query: &T, params: &[&(dyn ToSql + Sync)]) -> Result<Vec<Row>, Error>
     where
@@ -96,6 +138,13 @@ impl GenericClient for Transaction<'_> {
     {
         Transaction::query_raw(self, statement, params.iter().copied()).await
     }
+    async fn query_typed_raw(
+        &self,
+        statement: &str,
+        typed_params: &[(&(dyn ToSql + Sync), Type)],
+    ) -> Result<RowStream, Error> {
+        Transaction::query_typed_raw(self, statement, typed_params.iter().cloned()).await
+    }
 }
 impl GenericClient for Client {
     async fn prepare(&self, query: &str) -> Result<Statement, Error> {
@@ -107,6 +156,13 @@ impl GenericClient for Client {
     {
         Client::execute(self, query, params).await
     }
+    async fn execute_typed(
+        &self,
+        statement: &str,
+        typed_params: &[(&(dyn ToSql + Sync), Type)],
+    ) -> Result<u64, Error> {
+        Client::execute_typed(self, statement, typed_params).await
+    }
     async fn query_one<T>(
         &self,
         statement: &T,
@@ -117,6 +173,13 @@ impl GenericClient for Client {
     {
         Client::query_one(self, statement, params).await
     }
+    async fn query_typed_one(
+        &self,
+        statement: &str,
+        typed_params: &[(&(dyn ToSql + Sync), Type)],
+    ) -> Result<Row, Error> {
+        Client::query_typed_one(self, statement, typed_params).await
+    }
     async fn query_opt<T>(
         &self,
         statement: &T,
@@ -126,6 +189,13 @@ impl GenericClient for Client {
         T: ?Sized + ToStatement + Sync + Send,
     {
         Client::query_opt(self, statement, params).await
+    }
+    async fn query_typed_opt(
+        &self,
+        statement: &str,
+        typed_params: &[(&(dyn ToSql + Sync), Type)],
+    ) -> Result<Option<Row>, Error> {
+        Client::query_typed_opt(self, statement, typed_params).await
     }
     async fn query<T>(&self, query: &T, params: &[&(dyn ToSql + Sync)]) -> Result<Vec<Row>, Error>
     where
@@ -142,5 +212,12 @@ impl GenericClient for Client {
         T: ?Sized + ToStatement + Sync + Send,
     {
         Client::query_raw(self, statement, params.iter().copied()).await
+    }
+    async fn query_typed_raw(
+        &self,
+        statement: &str,
+        typed_params: &[(&(dyn ToSql + Sync), Type)],
+    ) -> Result<RowStream, Error> {
+        Client::query_typed_raw(self, statement, typed_params.iter().cloned()).await
     }
 }

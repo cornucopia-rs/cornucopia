@@ -4,6 +4,7 @@ use crate::{
     parser::{Module, NullableIdent, Query, QueryDataStruct, Span, TypeAnnotation},
     prepare_queries::{PreparedField, PreparedModule},
     read_queries::ModuleInfo,
+    type_registrar::CornucopiaType,
     utils::{STRICT_KEYWORD, find_duplicate},
 };
 
@@ -273,6 +274,23 @@ pub(crate) fn named_struct_field(
     Ok(())
 }
 
+pub(crate) fn require_typed_param(
+    ty: &CornucopiaType,
+    info: &ModuleInfo,
+    query: &SourceSpan,
+    name: &str,
+) -> Result<(), Box<Error>> {
+    crate::codegen::gen_param_postgres_type(ty)
+        .ok_or_else(|| {
+            Box::new(Error::UntypedParam {
+                src: info.into(),
+                query: *query,
+                name: name.to_string(),
+            })
+        })
+        .map(|_| ())
+}
+
 pub(crate) fn validate_preparation(module: &PreparedModule) -> Result<(), Box<Error>> {
     // Check generated name clash
     let mut name_registrar = BTreeMap::new();
@@ -486,6 +504,14 @@ pub mod error {
             ty: &'static str,
             #[label("from {ty} declared here")]
             pos: SourceSpan,
+        },
+        #[error("parameter `{name}` cannot be used in typed queries")]
+        UntypedParam {
+            #[source_code]
+            src: NamedSource<Arc<String>>,
+            name: String,
+            #[label("in query declared here")]
+            query: SourceSpan,
         },
     }
 }

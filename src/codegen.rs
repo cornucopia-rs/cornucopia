@@ -14,6 +14,7 @@ mod vfs;
 
 pub use cargo::DependencyAnalysis;
 use quote::{format_ident, quote};
+pub use types::gen_param_postgres_type;
 
 /// Module when codegen is happening
 #[derive(Clone, Copy)]

@@ -50,6 +50,7 @@ pub mod sync {
     pub struct SelectBookQuery<'c, 'a, 's, C: GenericClient, T, const N: usize> {
         client: &'c mut C,
         params: [&'a (dyn postgres_types::ToSql + Sync); N],
+        typed_params: Option<[(&'a (dyn postgres_types::ToSql + Sync), postgres_types::Type); N]>,
         query: &'static str,
         cached: Option<&'s postgres::Statement>,
         extractor: fn(&postgres::Row) -> Result<super::SelectBookBorrowed, postgres::Error>,
@@ -66,6 +67,7 @@ pub mod sync {
             SelectBookQuery {
                 client: self.client,
                 params: self.params,
+                typed_params: self.typed_params,
                 query: self.query,
                 cached: self.cached,
                 extractor: self.extractor,
@@ -73,15 +75,26 @@ pub mod sync {
             }
         }
         pub fn one(self) -> Result<T, postgres::Error> {
-            let row = crate::client::sync::one(self.client, self.query, &self.params, self.cached)?;
+            let row = crate::client::sync::one(
+                self.client,
+                self.query,
+                &self.params,
+                self.typed_params.as_ref().map(|p| p.as_slice()),
+                self.cached,
+            )?;
             Ok((self.mapper)((self.extractor)(&row)?))
         }
         pub fn all(self) -> Result<Vec<T>, postgres::Error> {
             self.iter()?.collect()
         }
         pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-            let opt_row =
-                crate::client::sync::opt(self.client, self.query, &self.params, self.cached)?;
+            let opt_row = crate::client::sync::opt(
+                self.client,
+                self.query,
+                &self.params,
+                self.typed_params.as_ref().map(|p| p.as_slice()),
+                self.cached,
+            )?;
             Ok(opt_row
                 .map(|row| {
                     let extracted = (self.extractor)(&row)?;
@@ -93,8 +106,13 @@ pub mod sync {
             self,
         ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'c, postgres::Error>
         {
-            let stream =
-                crate::client::sync::raw(self.client, self.query, &self.params, self.cached)?;
+            let stream = crate::client::sync::raw(
+                self.client,
+                self.query,
+                &self.params,
+                self.typed_params.as_ref().map(|p| p.as_slice()),
+                self.cached,
+            )?;
             let mapped = stream.iterator().map(move |res| {
                 res.and_then(|row| {
                     let extracted = (self.extractor)(&row)?;
@@ -107,6 +125,7 @@ pub mod sync {
     pub struct FindBooksQuery<'c, 'a, 's, C: GenericClient, T, const N: usize> {
         client: &'c mut C,
         params: [&'a (dyn postgres_types::ToSql + Sync); N],
+        typed_params: Option<[(&'a (dyn postgres_types::ToSql + Sync), postgres_types::Type); N]>,
         query: &'static str,
         cached: Option<&'s postgres::Statement>,
         extractor: fn(&postgres::Row) -> Result<super::FindBooksBorrowed, postgres::Error>,
@@ -123,6 +142,7 @@ pub mod sync {
             FindBooksQuery {
                 client: self.client,
                 params: self.params,
+                typed_params: self.typed_params,
                 query: self.query,
                 cached: self.cached,
                 extractor: self.extractor,
@@ -130,15 +150,26 @@ pub mod sync {
             }
         }
         pub fn one(self) -> Result<T, postgres::Error> {
-            let row = crate::client::sync::one(self.client, self.query, &self.params, self.cached)?;
+            let row = crate::client::sync::one(
+                self.client,
+                self.query,
+                &self.params,
+                self.typed_params.as_ref().map(|p| p.as_slice()),
+                self.cached,
+            )?;
             Ok((self.mapper)((self.extractor)(&row)?))
         }
         pub fn all(self) -> Result<Vec<T>, postgres::Error> {
             self.iter()?.collect()
         }
         pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-            let opt_row =
-                crate::client::sync::opt(self.client, self.query, &self.params, self.cached)?;
+            let opt_row = crate::client::sync::opt(
+                self.client,
+                self.query,
+                &self.params,
+                self.typed_params.as_ref().map(|p| p.as_slice()),
+                self.cached,
+            )?;
             Ok(opt_row
                 .map(|row| {
                     let extracted = (self.extractor)(&row)?;
@@ -150,8 +181,13 @@ pub mod sync {
             self,
         ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'c, postgres::Error>
         {
-            let stream =
-                crate::client::sync::raw(self.client, self.query, &self.params, self.cached)?;
+            let stream = crate::client::sync::raw(
+                self.client,
+                self.query,
+                &self.params,
+                self.typed_params.as_ref().map(|p| p.as_slice()),
+                self.cached,
+            )?;
             let mapped = stream.iterator().map(move |res| {
                 res.and_then(|row| {
                     let extracted = (self.extractor)(&row)?;
@@ -179,7 +215,19 @@ pub mod sync {
             author: &'a Option<T1>,
             name: &'a T2,
         ) -> Result<u64, postgres::Error> {
-            client.execute(self.0, &[author, name])
+            let typed_params: Option<
+                [(&(dyn postgres_types::ToSql + Sync), postgres_types::Type); 2],
+            > = Some([
+                (author, postgres_types::Type::TEXT),
+                (name, postgres_types::Type::TEXT),
+            ]);
+            crate::client::sync::execute(
+                client,
+                self.0,
+                &[author, name],
+                typed_params.as_ref().map(|params| params.as_slice()),
+                self.1.as_ref(),
+            )
         }
     }
     impl<'c, 'a, 's, C: GenericClient, T1: crate::StringSql, T2: crate::StringSql>
@@ -219,6 +267,7 @@ pub mod sync {
             SelectBookQuery {
                 client,
                 params: [],
+                typed_params: Some([]),
                 query: self.0,
                 cached: self.1.as_ref(),
                 extractor:
@@ -259,6 +308,7 @@ pub mod sync {
             FindBooksQuery {
                 client,
                 params: [title],
+                typed_params: Some([(title, postgres_types::Type::TEXT_ARRAY)]),
                 query: self.0,
                 cached: self.1.as_ref(),
                 extractor:
@@ -292,7 +342,16 @@ pub mod sync {
             client: &'c mut C,
             name: &'a T1,
         ) -> Result<u64, postgres::Error> {
-            client.execute(self.0, &[name])
+            let typed_params: Option<
+                [(&(dyn postgres_types::ToSql + Sync), postgres_types::Type); 1],
+            > = Some([(name, postgres_types::Type::TEXT)]);
+            crate::client::sync::execute(
+                client,
+                self.0,
+                &[name],
+                typed_params.as_ref().map(|params| params.as_slice()),
+                self.1.as_ref(),
+            )
         }
     }
     pub struct ParamsOrderStmt(&'static str, Option<postgres::Statement>);
@@ -313,7 +372,19 @@ pub mod sync {
             c: &'a i32,
             a: &'a i32,
         ) -> Result<u64, postgres::Error> {
-            client.execute(self.0, &[c, a])
+            let typed_params: Option<
+                [(&(dyn postgres_types::ToSql + Sync), postgres_types::Type); 2],
+            > = Some([
+                (c, postgres_types::Type::INT4),
+                (a, postgres_types::Type::INT4),
+            ]);
+            crate::client::sync::execute(
+                client,
+                self.0,
+                &[c, a],
+                typed_params.as_ref().map(|params| params.as_slice()),
+                self.1.as_ref(),
+            )
         }
     }
     impl<'c, 'a, 's, C: GenericClient>
@@ -341,6 +412,7 @@ pub mod async_ {
     pub struct SelectBookQuery<'c, 'a, 's, C: GenericClient, T, const N: usize> {
         client: &'c C,
         params: [&'a (dyn postgres_types::ToSql + Sync); N],
+        typed_params: Option<[(&'a (dyn postgres_types::ToSql + Sync), postgres_types::Type); N]>,
         query: &'static str,
         cached: Option<&'s tokio_postgres::Statement>,
         extractor:
@@ -358,6 +430,7 @@ pub mod async_ {
             SelectBookQuery {
                 client: self.client,
                 params: self.params,
+                typed_params: self.typed_params,
                 query: self.query,
                 cached: self.cached,
                 extractor: self.extractor,
@@ -365,18 +438,28 @@ pub mod async_ {
             }
         }
         pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-            let row =
-                crate::client::async_::one(self.client, self.query, &self.params, self.cached)
-                    .await?;
+            let row = crate::client::async_::one(
+                self.client,
+                self.query,
+                &self.params,
+                self.typed_params.as_ref().map(|p| p.as_slice()),
+                self.cached,
+            )
+            .await?;
             Ok((self.mapper)((self.extractor)(&row)?))
         }
         pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
             self.iter().await?.try_collect().await
         }
         pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-            let opt_row =
-                crate::client::async_::opt(self.client, self.query, &self.params, self.cached)
-                    .await?;
+            let opt_row = crate::client::async_::opt(
+                self.client,
+                self.query,
+                &self.params,
+                self.typed_params.as_ref().map(|p| p.as_slice()),
+                self.cached,
+            )
+            .await?;
             Ok(opt_row
                 .map(|row| {
                     let extracted = (self.extractor)(&row)?;
@@ -390,9 +473,14 @@ pub mod async_ {
             impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'c,
             tokio_postgres::Error,
         > {
-            let stream =
-                crate::client::async_::raw(self.client, self.query, &self.params, self.cached)
-                    .await?;
+            let stream = crate::client::async_::raw(
+                self.client,
+                self.query,
+                &self.params,
+                self.typed_params.as_ref().map(|p| p.as_slice()),
+                self.cached,
+            )
+            .await?;
             let mapped = stream
                 .map(move |res| {
                     res.and_then(|row| {
@@ -407,6 +495,7 @@ pub mod async_ {
     pub struct FindBooksQuery<'c, 'a, 's, C: GenericClient, T, const N: usize> {
         client: &'c C,
         params: [&'a (dyn postgres_types::ToSql + Sync); N],
+        typed_params: Option<[(&'a (dyn postgres_types::ToSql + Sync), postgres_types::Type); N]>,
         query: &'static str,
         cached: Option<&'s tokio_postgres::Statement>,
         extractor:
@@ -424,6 +513,7 @@ pub mod async_ {
             FindBooksQuery {
                 client: self.client,
                 params: self.params,
+                typed_params: self.typed_params,
                 query: self.query,
                 cached: self.cached,
                 extractor: self.extractor,
@@ -431,18 +521,28 @@ pub mod async_ {
             }
         }
         pub async fn one(self) -> Result<T, tokio_postgres::Error> {
-            let row =
-                crate::client::async_::one(self.client, self.query, &self.params, self.cached)
-                    .await?;
+            let row = crate::client::async_::one(
+                self.client,
+                self.query,
+                &self.params,
+                self.typed_params.as_ref().map(|p| p.as_slice()),
+                self.cached,
+            )
+            .await?;
             Ok((self.mapper)((self.extractor)(&row)?))
         }
         pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
             self.iter().await?.try_collect().await
         }
         pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
-            let opt_row =
-                crate::client::async_::opt(self.client, self.query, &self.params, self.cached)
-                    .await?;
+            let opt_row = crate::client::async_::opt(
+                self.client,
+                self.query,
+                &self.params,
+                self.typed_params.as_ref().map(|p| p.as_slice()),
+                self.cached,
+            )
+            .await?;
             Ok(opt_row
                 .map(|row| {
                     let extracted = (self.extractor)(&row)?;
@@ -456,9 +556,14 @@ pub mod async_ {
             impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'c,
             tokio_postgres::Error,
         > {
-            let stream =
-                crate::client::async_::raw(self.client, self.query, &self.params, self.cached)
-                    .await?;
+            let stream = crate::client::async_::raw(
+                self.client,
+                self.query,
+                &self.params,
+                self.typed_params.as_ref().map(|p| p.as_slice()),
+                self.cached,
+            )
+            .await?;
             let mapped = stream
                 .map(move |res| {
                     res.and_then(|row| {
@@ -495,7 +600,20 @@ pub mod async_ {
             author: &'a Option<T1>,
             name: &'a T2,
         ) -> Result<u64, tokio_postgres::Error> {
-            client.execute(self.0, &[author, name]).await
+            let typed_params: Option<
+                [(&(dyn postgres_types::ToSql + Sync), postgres_types::Type); 2],
+            > = Some([
+                (author, postgres_types::Type::TEXT),
+                (name, postgres_types::Type::TEXT),
+            ]);
+            crate::client::async_::execute(
+                client,
+                self.0,
+                &[author, name],
+                typed_params.as_ref().map(|params| params.as_slice()),
+                self.1.as_ref(),
+            )
+            .await
         }
     }
     impl<'a, C: GenericClient + Send + Sync, T1: crate::StringSql, T2: crate::StringSql>
@@ -539,6 +657,7 @@ pub mod async_ {
             SelectBookQuery {
                 client,
                 params: [],
+                typed_params: Some([]),
                 query: self.0,
                 cached: self.1.as_ref(),
                 extractor: |
@@ -580,6 +699,7 @@ pub mod async_ {
             FindBooksQuery {
                 client,
                 params: [title],
+                typed_params: Some([(title, postgres_types::Type::TEXT_ARRAY)]),
                 query: self.0,
                 cached: self.1.as_ref(),
                 extractor: |
@@ -614,7 +734,17 @@ pub mod async_ {
             client: &'c C,
             name: &'a T1,
         ) -> Result<u64, tokio_postgres::Error> {
-            client.execute(self.0, &[name]).await
+            let typed_params: Option<
+                [(&(dyn postgres_types::ToSql + Sync), postgres_types::Type); 1],
+            > = Some([(name, postgres_types::Type::TEXT)]);
+            crate::client::async_::execute(
+                client,
+                self.0,
+                &[name],
+                typed_params.as_ref().map(|params| params.as_slice()),
+                self.1.as_ref(),
+            )
+            .await
         }
     }
     pub struct ParamsOrderStmt(&'static str, Option<tokio_postgres::Statement>);
@@ -635,7 +765,20 @@ pub mod async_ {
             c: &'a i32,
             a: &'a i32,
         ) -> Result<u64, tokio_postgres::Error> {
-            client.execute(self.0, &[c, a]).await
+            let typed_params: Option<
+                [(&(dyn postgres_types::ToSql + Sync), postgres_types::Type); 2],
+            > = Some([
+                (c, postgres_types::Type::INT4),
+                (a, postgres_types::Type::INT4),
+            ]);
+            crate::client::async_::execute(
+                client,
+                self.0,
+                &[c, a],
+                typed_params.as_ref().map(|params| params.as_slice()),
+                self.1.as_ref(),
+            )
+            .await
         }
     }
     impl<'a, C: GenericClient + Send + Sync>

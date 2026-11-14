@@ -19,6 +19,15 @@ impl InsertBookStmt {
         client: &'c C,
         title: &'a T1,
     ) -> Result<u64, tokio_postgres::Error> {
-        client.execute(self.0, &[title]).await
+        let typed_params: Option<[(&(dyn postgres_types::ToSql + Sync), postgres_types::Type); 1]> =
+            Some([(title, postgres_types::Type::VARCHAR)]);
+        crate::client::async_::execute(
+            client,
+            self.0,
+            &[title],
+            typed_params.as_ref().map(|params| params.as_slice()),
+            self.1.as_ref(),
+        )
+        .await
     }
 }

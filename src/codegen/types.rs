@@ -1,11 +1,13 @@
 use heck::ToUpperCamelCase;
 use indexmap::IndexMap;
+use postgres_types::Type;
 use quote::{ToTokens, format_ident, quote};
 
 use crate::{
     codegen::ModCtx,
     config::Config,
     prepare_queries::{Ident, PreparedContent, PreparedField, PreparedType},
+    type_registrar::CornucopiaType,
 };
 
 use super::GenCtx;
@@ -626,5 +628,78 @@ fn composite_fromsql(
                 ty.name() == #name && ty.schema() == #schema
             }
         }
+    }
+}
+
+fn builtin_type_name(ty: &Type) -> Option<&'static str> {
+    let name = match *ty {
+        Type::BOOL => "BOOL",
+        Type::BYTEA => "BYTEA",
+        Type::CHAR => "CHAR",
+        Type::NAME => "NAME",
+        Type::INT8 => "INT8",
+        Type::INT2 => "INT2",
+        Type::INT4 => "INT4",
+        Type::TEXT => "TEXT",
+        Type::FLOAT4 => "FLOAT4",
+        Type::FLOAT8 => "FLOAT8",
+        Type::MACADDR => "MACADDR",
+        Type::INET => "INET",
+        Type::BPCHAR => "BPCHAR",
+        Type::VARCHAR => "VARCHAR",
+        Type::DATE => "DATE",
+        Type::TIME => "TIME",
+        Type::TIMESTAMP => "TIMESTAMP",
+        Type::TIMESTAMPTZ => "TIMESTAMPTZ",
+        Type::NUMERIC => "NUMERIC",
+        Type::UUID => "UUID",
+        Type::JSON => "JSON",
+        Type::JSONB => "JSONB",
+        _ => return None,
+    };
+    Some(name)
+}
+
+fn builtin_type_const(ty: &Type) -> Option<proc_macro2::TokenStream> {
+    let ident = format_ident!("{}", builtin_type_name(ty)?);
+    Some(quote!(postgres_types::Type::#ident))
+}
+
+fn builtin_type_array_const(ty: &Type) -> Option<proc_macro2::TokenStream> {
+    let ident = format_ident!("{}_ARRAY", builtin_type_name(ty)?);
+    Some(quote!(postgres_types::Type::#ident))
+}
+
+pub fn gen_param_postgres_type(ty: &CornucopiaType) -> Option<proc_macro2::TokenStream> {
+    match ty {
+        CornucopiaType::Simple {
+            pg_ty,
+            rust_name: _,
+            borrowed_name: _,
+            is_copy: _,
+        } => builtin_type_const(pg_ty),
+        CornucopiaType::Array { inner } => match inner.as_ref() {
+            CornucopiaType::Simple {
+                pg_ty,
+                rust_name: _,
+                borrowed_name: _,
+                is_copy: _,
+            } => builtin_type_array_const(pg_ty),
+            CornucopiaType::Array { inner: _ } => None,
+            CornucopiaType::Domain { pg_ty: _, inner: _ } => None,
+            CornucopiaType::Custom {
+                pg_ty: _,
+                struct_name: _,
+                is_copy: _,
+                is_params: _,
+            } => None,
+        },
+        CornucopiaType::Domain { pg_ty: _, inner: _ } => None,
+        CornucopiaType::Custom {
+            pg_ty: _,
+            struct_name: _,
+            is_copy: _,
+            is_params: _,
+        } => None,
     }
 }

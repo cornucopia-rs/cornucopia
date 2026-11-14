@@ -19,6 +19,14 @@ impl InsertBookStmt {
         client: &'c mut C,
         title: &'a T1,
     ) -> Result<u64, postgres::Error> {
-        client.execute(self.0, &[title])
+        let typed_params: Option<[(&(dyn postgres_types::ToSql + Sync), postgres_types::Type); 1]> =
+            Some([(title, postgres_types::Type::VARCHAR)]);
+        crate::client::sync::execute(
+            client,
+            self.0,
+            &[title],
+            typed_params.as_ref().map(|params| params.as_slice()),
+            self.1.as_ref(),
+        )
     }
 }
