@@ -36,5 +36,5 @@ default-features = false
 
 [features]
 deadpool = ["dep:deadpool-postgres", "tokio-postgres/default"]
-default = ["dep:postgres", "deadpool"]
+default = ["deadpool"]
 wasm-async = ["tokio-postgres/js", "chrono/wasmbind"]

@@ -172,10 +172,10 @@ fn get_workspace_deps(manifest_path: &Path) -> HashSet<String> {
 pub fn gen_cargo_file(dependency_analysis: &DependencyAnalysis, config: &Config) -> String {
     let mut manifest = config.manifest.clone();
 
-    let mut default_features = if manifest.dependencies.contains_key("postgres") {
-        vec![]
-    } else {
+    let mut default_features = if config.sync && !manifest.dependencies.contains_key("postgres") {
         vec!["dep:postgres".to_string()]
+    } else {
+        vec![]
     };
 
     let (use_workspace_deps, workspace_deps) = match &config.use_workspace_deps {
@@ -380,6 +380,45 @@ pub fn gen_cargo_file(dependency_analysis: &DependencyAnalysis, config: &Config)
 mod tests {
     use super::*;
     use std::io::Write;
+
+    #[test]
+    fn default_features_follow_enabled_clients() {
+        for (sync, asynchronous, expected) in [
+            (false, true, vec!["deadpool"]),
+            (true, false, vec!["dep:postgres"]),
+            (true, true, vec!["dep:postgres", "deadpool"]),
+        ] {
+            let config = Config {
+                sync,
+                r#async: asynchronous,
+                ..Config::default()
+            };
+            let generated = gen_cargo_file(&DependencyAnalysis::default(), &config);
+            let manifest: cargo_toml::Manifest = toml::from_str(&generated).unwrap();
+
+            assert_eq!(
+                manifest.features["default"], expected,
+                "unexpected default features for sync={sync}, async={asynchronous}"
+            );
+        }
+    }
+
+    #[test]
+    fn user_supplied_postgres_dependency_is_not_added_to_default_features() {
+        let mut config = Config {
+            sync: true,
+            r#async: true,
+            ..Config::default()
+        };
+        config.manifest.dependencies.insert(
+            "postgres".to_string(),
+            Dependency::Simple("0.19".parse().unwrap()),
+        );
+        let generated = gen_cargo_file(&DependencyAnalysis::default(), &config);
+        let manifest: cargo_toml::Manifest = toml::from_str(&generated).unwrap();
+
+        assert_eq!(manifest.features["default"], vec!["deadpool"]);
+    }
 
     // Regression test for https://github.com/halcyonnouveau/clorinde/issues/248:
     // `cargo_toml::Value` re-exports `toml::Value`, whose `FromStr` impl parses
