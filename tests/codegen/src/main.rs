@@ -40,11 +40,13 @@ use codegen::{
             sync::{find_books, insert_book, params_use_twice, select_book},
         },
         stress::{
-            Everything, EverythingArray, EverythingArrayParams, EverythingParams,
+            Everything, EverythingArray, EverythingArrayBuiltin, EverythingArrayBuiltinParams,
+            EverythingArrayParams, EverythingBuiltin, EverythingBuiltinParams, EverythingParams,
             sync::{
-                insert_everything, insert_everything_array, insert_nightmare,
-                insert_schema_nightmare, select_everything, select_everything_array, select_ltree,
-                select_nightmare, select_schema_nightmare,
+                insert_everything, insert_everything_array, insert_everything_array_builtin,
+                insert_everything_builtin, insert_nightmare, insert_schema_nightmare,
+                select_everything, select_everything_array, select_everything_array_builtin,
+                select_everything_builtin, select_ltree, select_nightmare, select_schema_nightmare,
             },
         },
         syntax::{
@@ -529,6 +531,92 @@ pub fn test_stress(client: &mut Client) {
     let ltree_select = select_ltree().bind(client, &"Teyvat").one().unwrap();
     assert_eq!("Teyvat.Fontaine.Court", ltree_select);
 
+    // Only built-in types, so this exercises `execute_typed`.
+    client.execute("TRUNCATE Everything", &[]).unwrap();
+
+    let expected = EverythingBuiltin {
+        bool_: true,
+        boolean_: false,
+        char_: 42i8,
+        smallint_: 300i16,
+        int2_: 300i16,
+        smallserial_: 300i16,
+        serial2_: 300i16,
+        int_: 100000i32,
+        int4_: 100000i32,
+        serial_: 100000i32,
+        serial4_: 100000i32,
+        bingint_: 10000000000i64,
+        int8_: 10000000000i64,
+        bigserial_: 10000000000i64,
+        serial8_: 10000000000i64,
+        float4_: 1.12f32,
+        real_: 1.12f32,
+        float8_: 1.1231231231f64,
+        double_precision_: 1.1231231231f64,
+        text_: String::from("hello"),
+        varchar_: String::from("hello"),
+        name_: String::from("hello"),
+        bytea_: vec![222u8, 173u8, 190u8, 239u8],
+        timestamp_: naive_datetime,
+        timestamp_without_time_zone_: naive_datetime,
+        timestamptz_: offset_datetime,
+        timestamp_with_time_zone_: offset_datetime,
+        date_: NaiveDate::from_ymd_opt(1999, 1, 8).unwrap(),
+        time_: NaiveTime::from_hms_milli_opt(4, 5, 6, 789).unwrap(),
+        json_: json.clone(),
+        jsonb_: json.clone(),
+        uuid_: Uuid::parse_str("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11").unwrap(),
+        inet_: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+        macaddr_: MacAddress::new([8, 0, 43, 1, 2, 3]),
+        numeric_: Decimal::new(202, 2),
+    };
+
+    let params = EverythingBuiltinParams {
+        bigserial_: expected.bigserial_,
+        bingint_: expected.bingint_,
+        bool_: expected.bool_,
+        boolean_: expected.boolean_,
+        bytea_: expected.bytea_.as_slice(),
+        char_: expected.char_,
+        date_: expected.date_,
+        double_precision_: expected.double_precision_,
+        float4_: expected.float4_,
+        float8_: expected.float8_,
+        inet_: expected.inet_,
+        int2_: expected.int2_,
+        int4_: expected.int4_,
+        int8_: expected.int8_,
+        int_: expected.int_,
+        json_: &json,
+        jsonb_: &json,
+        macaddr_: expected.macaddr_,
+        real_: expected.real_,
+        serial2_: expected.serial2_,
+        serial4_: expected.serial4_,
+        serial8_: expected.serial8_,
+        serial_: expected.serial_,
+        smallint_: expected.smallint_,
+        smallserial_: expected.smallserial_,
+        text_: expected.text_.as_str(),
+        time_: expected.time_,
+        timestamp_: naive_datetime,
+        timestamp_with_time_zone_: offset_datetime,
+        timestamp_without_time_zone_: naive_datetime,
+        timestamptz_: offset_datetime,
+        uuid_: expected.uuid_,
+        varchar_: &expected.varchar_,
+        name_: &expected.name_,
+        numeric_: Decimal::new(202, 2),
+    };
+
+    assert_eq!(
+        1,
+        insert_everything_builtin().params(client, &params).unwrap()
+    );
+    let actual = select_everything_builtin().bind(client).one().unwrap();
+    assert_eq!(expected, actual);
+
     // Every supported array type
     let expected = EverythingArray {
         bool_: vec![true],
@@ -623,6 +711,98 @@ pub fn test_stress(client: &mut Client) {
     );
 
     let actual = select_everything_array().bind(client).one().unwrap();
+    assert_eq!(expected, actual);
+
+    // Only built-in types, so this exercises `execute_typed`.
+    client.execute("TRUNCATE EverythingArray", &[]).unwrap();
+
+    let expected = EverythingArrayBuiltin {
+        bool_: vec![true],
+        boolean_: vec![true],
+        char_: vec![42i8],
+        smallint_: vec![300i16],
+        int2_: vec![300i16],
+        int_: vec![100000i32],
+        int4_: vec![100000i32],
+        bingint_: vec![10000000000i64],
+        int8_: vec![10000000000i64],
+        float4_: vec![1.12f32],
+        real_: vec![1.12f32],
+        float8_: vec![1.1231231231f64],
+        double_precision_: vec![1.1231231231f64],
+        text_: vec![String::from("hello")],
+        varchar_: vec![String::from("hello")],
+        name_: vec![String::from("hello")],
+        bytea_: vec![vec![222u8, 173u8, 190u8, 239u8]],
+        timestamp_: vec![naive_datetime],
+        timestamp_without_time_zone_: vec![naive_datetime],
+        timestamptz_: vec![offset_datetime],
+        timestamp_with_time_zone_: vec![offset_datetime],
+        date_: vec![NaiveDate::from_ymd_opt(1999, 1, 8).unwrap()],
+        time_: vec![NaiveTime::from_hms_milli_opt(4, 5, 6, 789).unwrap()],
+        json_: vec![json.clone()],
+        jsonb_: vec![json.clone()],
+        uuid_: vec![Uuid::parse_str("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11").unwrap()],
+        inet_: vec![IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))],
+        macaddr_: vec![MacAddress::new([8, 0, 43, 1, 2, 3])],
+        numeric_: vec![Decimal::new(202, 2)],
+    };
+
+    let bytea = expected
+        .bytea_
+        .iter()
+        .map(Vec::as_slice)
+        .collect::<Vec<_>>();
+
+    let txt = &expected
+        .text_
+        .iter()
+        .map(String::as_str)
+        .collect::<Vec<_>>();
+
+    let jsons = [&json];
+    let params = EverythingArrayBuiltinParams {
+        bingint_: &expected.bingint_,
+        bool_: &expected.bool_,
+        boolean_: &expected.boolean_,
+        bytea_: &bytea,
+        char_: &expected.char_,
+        date_: &expected.date_,
+        double_precision_: &expected.double_precision_,
+        float4_: &expected.float4_,
+        float8_: &expected.float8_,
+        inet_: &expected.inet_,
+        int2_: &expected.int2_,
+        int4_: &expected.int4_,
+        int8_: &expected.int8_,
+        int_: &expected.int_,
+        json_: jsons.as_slice(),
+        jsonb_: jsons.as_slice(),
+        macaddr_: &expected.macaddr_,
+        real_: &expected.real_,
+        smallint_: &expected.smallint_,
+        text_: &txt,
+        time_: &expected.time_,
+        timestamp_: &expected.timestamp_,
+        timestamp_with_time_zone_: &expected.timestamp_with_time_zone_,
+        timestamp_without_time_zone_: &expected.timestamp_without_time_zone_,
+        timestamptz_: &expected.timestamptz_,
+        uuid_: &expected.uuid_,
+        varchar_: txt,
+        name_: txt,
+        numeric_: &expected.numeric_,
+    };
+
+    assert_eq!(
+        1,
+        insert_everything_array_builtin()
+            .params(client, &params)
+            .unwrap()
+    );
+    let actual = select_everything_array_builtin()
+        .bind(client)
+        .one()
+        .unwrap();
     assert_eq!(expected, actual);
 
     // Complex mix of enum, domain and composite types
