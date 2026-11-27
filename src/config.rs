@@ -51,6 +51,9 @@ pub struct Config {
     pub types: Types,
     /// The Cargo.toml manifest configuration
     pub manifest: cargo_toml::Manifest,
+    /// Requires all queries to be typed, otherwise generation will fail
+    #[serde(rename = "require-typed")]
+    pub require_typed: bool,
 }
 
 impl Config {
@@ -119,6 +122,7 @@ impl Default for Config {
             style: Style::default(),
             static_files: vec![],
             use_workspace_deps: UseWorkspaceDeps::Bool(false),
+            require_typed: false,
         }
     }
 }

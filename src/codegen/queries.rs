@@ -2,7 +2,7 @@ use quote::{format_ident, quote};
 
 use super::{GenCtx, idx_char, vfs::Vfs};
 use crate::{
-    codegen::ModCtx,
+    codegen::{ModCtx, gen_param_postgres_type},
     config::Config,
     prepare_queries::{Preparation, PreparedItem, PreparedModule, PreparedQuery},
 };
@@ -267,6 +267,7 @@ fn gen_row_query(row: &PreparedItem, ctx: &GenCtx) -> proc_macro2::TokenStream {
         pub struct #name_ident<'c, 'a, 's, C: GenericClient, T, const N: usize> {
             client: &'c #client_mut C,
             params: [&'a (dyn postgres_types::ToSql + Sync); N],
+            typed_params: Option<[(&'a (dyn postgres_types::ToSql + Sync), postgres_types::Type); N]>,
             query: &'static str,
             cached: Option<&'s #backend::Statement>,
             extractor: fn(&#backend::Row) -> Result<#row_struct, #backend::Error>,
@@ -281,6 +282,7 @@ fn gen_row_query(row: &PreparedItem, ctx: &GenCtx) -> proc_macro2::TokenStream {
                 #name_ident {
                     client: self.client,
                     params: self.params,
+                    typed_params: self.typed_params,
                     query: self.query,
                     cached: self.cached,
                     extractor: self.extractor,
@@ -289,7 +291,13 @@ fn gen_row_query(row: &PreparedItem, ctx: &GenCtx) -> proc_macro2::TokenStream {
             }
 
             pub #fn_async fn one(self) -> Result<T, #backend::Error> {
-                let row = #client::one(self.client, self.query, &self.params, self.cached)#fn_await?;
+                let row = #client::one(
+                    self.client,
+                    self.query,
+                    &self.params,
+                    self.typed_params.as_ref().map(|p| p.as_slice()),
+                    self.cached
+                )#fn_await?;
                 Ok((self.mapper)((self.extractor)(&row)?))
             }
 
@@ -298,7 +306,13 @@ fn gen_row_query(row: &PreparedItem, ctx: &GenCtx) -> proc_macro2::TokenStream {
             }
 
             pub #fn_async fn opt(self) -> Result<Option<T>, #backend::Error> {
-                let opt_row = #client::opt(self.client, self.query, &self.params, self.cached)#fn_await?;
+                let opt_row = #client::opt(
+                    self.client,
+                    self.query,
+                    &self.params,
+                    self.typed_params.as_ref().map(|p| p.as_slice()),
+                    self.cached
+                )#fn_await?;
                 Ok(opt_row
                     .map(|row| {
                         let extracted = (self.extractor)(&row)?;
@@ -310,7 +324,13 @@ fn gen_row_query(row: &PreparedItem, ctx: &GenCtx) -> proc_macro2::TokenStream {
             pub #fn_async fn iter(
                 self,
             ) -> Result<impl #raw_type<Item = Result<T, #backend::Error>> + 'c, #backend::Error> {
-                let stream = #client::raw(self.client, self.query, &self.params, self.cached)#fn_await?;
+                let stream = #client::raw(
+                    self.client,
+                    self.query,
+                    &self.params,
+                    self.typed_params.as_ref().map(|p| p.as_slice()),
+                    self.cached
+                )#fn_await?;
                 let mapped = stream
                     #raw_pre
                     .map(move |res|
@@ -377,6 +397,19 @@ fn gen_query_fn(
         .iter()
         .map(|idx| format_ident!("{}", param_field[*idx].ident.rs))
         .collect();
+
+    let typed_params = (|| {
+        let mut items = Vec::new();
+        for idx in order {
+            let p = &param_field[*idx];
+            let param_name = format_ident!("{}", p.ident.rs);
+            let Some(ty_val) = gen_param_postgres_type(&p.ty) else {
+                return quote! { None };
+            };
+            items.push(quote! { (#param_name, #ty_val) });
+        }
+        quote! { Some([#(#items),*]) }
+    })();
 
     let traits_bounds: Vec<_> = traits
         .iter()
@@ -446,6 +479,7 @@ fn gen_query_fn(
                     #row_name_query_ident {
                         client,
                         params: [#(#params_name,)*],
+                        typed_params: #typed_params,
                         query: self.0,
                         cached: self.1.as_ref(),
                         extractor: #extractor,
@@ -467,6 +501,7 @@ fn gen_query_fn(
                     #row_name_query_ident {
                         client,
                         params: [#(#params_name,)*],
+                        typed_params: #typed_params,
                         query: self.0,
                         cached: self.1.as_ref(),
                         extractor: |row| Ok(row.try_get(0)?),
@@ -484,13 +519,24 @@ fn gen_query_fn(
             })
             .collect();
 
+        let nb_params = proc_macro2::Literal::usize_unsuffixed(order.len());
         quote! {
             #bind_visibility #fn_async fn bind<'c, 'a, 's, C: GenericClient, #(#traits_idents: #traits_bounds,)*>(
                 &'s self,
                 client: &'c #client_mut C,
                 #(#params_name: &'a #params_ty,)*
             ) -> Result<u64, #backend::Error> {
-                client.execute(self.0, &[#(#params_wrap,)*])#fn_await
+                let typed_params: Option<[
+                    (&(dyn postgres_types::ToSql + Sync), postgres_types::Type);
+                    #nb_params
+                ]> = #typed_params;
+                #client::execute(
+                    client,
+                    self.0,
+                    &[#(#params_wrap,)*],
+                    typed_params.as_ref().map(|params| params.as_slice()),
+                    self.1.as_ref(),
+                )#fn_await
             }
         }
     };

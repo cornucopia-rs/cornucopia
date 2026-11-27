@@ -344,7 +344,7 @@ pub(crate) fn prepare(
 
     for module in modules {
         let (prepared_module, module_nested_specs) =
-            prepare_module(&stmts, module, &mut registrar)?;
+            prepare_module(&stmts, module, &mut registrar, config)?;
 
         prepared_modules.push(prepared_module);
 
@@ -492,6 +492,7 @@ fn prepare_module(
     stmts: &HashMap<String, Result<Statement, tokio_postgres::Error>>,
     module: Module,
     registrar: &mut TypeRegistrar,
+    config: &Config,
 ) -> Result<(PreparedModule, ModuleNestedSpecs), Error> {
     validation::validate_module(&module)?;
 
@@ -515,6 +516,7 @@ fn prepare_module(
             &module.types,
             query,
             &module.info,
+            config,
         )?;
 
         // Merge nested specs from this query
@@ -549,6 +551,7 @@ fn prepare_query(
         attributes,
     }: Query,
     module_info: &ModuleInfo,
+    config: &Config,
 ) -> Result<std::collections::HashMap<String, std::collections::HashMap<String, bool>>, Error> {
     let mut nested_specs: std::collections::HashMap<
         String,
@@ -598,6 +601,10 @@ fn prepare_query(
             let ty = registrar
                 .register(&col_name.value, &col_ty, &name, module_info)?
                 .clone();
+
+            if config.require_typed {
+                validation::require_typed_param(&ty, &module.info, &sql_span, col_ty.name())?;
+            }
 
             let is_nullable = nullity.is_some_and(|n| n.nullable);
             let attributes = if let Some(mapping) = registrar.get_type_mapping(&col_ty) {

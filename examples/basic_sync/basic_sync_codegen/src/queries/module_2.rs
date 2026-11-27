@@ -91,6 +91,7 @@ use postgres::fallible_iterator::FallibleIterator;
 pub struct AuthorsQuery<'c, 'a, 's, C: GenericClient, T, const N: usize> {
     client: &'c mut C,
     params: [&'a (dyn postgres_types::ToSql + Sync); N],
+    typed_params: Option<[(&'a (dyn postgres_types::ToSql + Sync), postgres_types::Type); N]>,
     query: &'static str,
     cached: Option<&'s postgres::Statement>,
     extractor: fn(&postgres::Row) -> Result<AuthorsBorrowed, postgres::Error>,
@@ -104,6 +105,7 @@ where
         AuthorsQuery {
             client: self.client,
             params: self.params,
+            typed_params: self.typed_params,
             query: self.query,
             cached: self.cached,
             extractor: self.extractor,
@@ -111,14 +113,26 @@ where
         }
     }
     pub fn one(self) -> Result<T, postgres::Error> {
-        let row = crate::client::sync::one(self.client, self.query, &self.params, self.cached)?;
+        let row = crate::client::sync::one(
+            self.client,
+            self.query,
+            &self.params,
+            self.typed_params.as_ref().map(|p| p.as_slice()),
+            self.cached,
+        )?;
         Ok((self.mapper)((self.extractor)(&row)?))
     }
     pub fn all(self) -> Result<Vec<T>, postgres::Error> {
         self.iter()?.collect()
     }
     pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-        let opt_row = crate::client::sync::opt(self.client, self.query, &self.params, self.cached)?;
+        let opt_row = crate::client::sync::opt(
+            self.client,
+            self.query,
+            &self.params,
+            self.typed_params.as_ref().map(|p| p.as_slice()),
+            self.cached,
+        )?;
         Ok(opt_row
             .map(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -129,7 +143,13 @@ where
     pub fn iter(
         self,
     ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'c, postgres::Error> {
-        let stream = crate::client::sync::raw(self.client, self.query, &self.params, self.cached)?;
+        let stream = crate::client::sync::raw(
+            self.client,
+            self.query,
+            &self.params,
+            self.typed_params.as_ref().map(|p| p.as_slice()),
+            self.cached,
+        )?;
         let mapped = stream.iterator().map(move |res| {
             res.and_then(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -142,6 +162,7 @@ where
 pub struct StringQuery<'c, 'a, 's, C: GenericClient, T, const N: usize> {
     client: &'c mut C,
     params: [&'a (dyn postgres_types::ToSql + Sync); N],
+    typed_params: Option<[(&'a (dyn postgres_types::ToSql + Sync), postgres_types::Type); N]>,
     query: &'static str,
     cached: Option<&'s postgres::Statement>,
     extractor: fn(&postgres::Row) -> Result<&str, postgres::Error>,
@@ -155,6 +176,7 @@ where
         StringQuery {
             client: self.client,
             params: self.params,
+            typed_params: self.typed_params,
             query: self.query,
             cached: self.cached,
             extractor: self.extractor,
@@ -162,14 +184,26 @@ where
         }
     }
     pub fn one(self) -> Result<T, postgres::Error> {
-        let row = crate::client::sync::one(self.client, self.query, &self.params, self.cached)?;
+        let row = crate::client::sync::one(
+            self.client,
+            self.query,
+            &self.params,
+            self.typed_params.as_ref().map(|p| p.as_slice()),
+            self.cached,
+        )?;
         Ok((self.mapper)((self.extractor)(&row)?))
     }
     pub fn all(self) -> Result<Vec<T>, postgres::Error> {
         self.iter()?.collect()
     }
     pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-        let opt_row = crate::client::sync::opt(self.client, self.query, &self.params, self.cached)?;
+        let opt_row = crate::client::sync::opt(
+            self.client,
+            self.query,
+            &self.params,
+            self.typed_params.as_ref().map(|p| p.as_slice()),
+            self.cached,
+        )?;
         Ok(opt_row
             .map(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -180,7 +214,13 @@ where
     pub fn iter(
         self,
     ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'c, postgres::Error> {
-        let stream = crate::client::sync::raw(self.client, self.query, &self.params, self.cached)?;
+        let stream = crate::client::sync::raw(
+            self.client,
+            self.query,
+            &self.params,
+            self.typed_params.as_ref().map(|p| p.as_slice()),
+            self.cached,
+        )?;
         let mapped = stream.iterator().map(move |res| {
             res.and_then(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -193,6 +233,7 @@ where
 pub struct AuthorNameStartingWithQuery<'c, 'a, 's, C: GenericClient, T, const N: usize> {
     client: &'c mut C,
     params: [&'a (dyn postgres_types::ToSql + Sync); N],
+    typed_params: Option<[(&'a (dyn postgres_types::ToSql + Sync), postgres_types::Type); N]>,
     query: &'static str,
     cached: Option<&'s postgres::Statement>,
     extractor: fn(&postgres::Row) -> Result<AuthorNameStartingWithBorrowed, postgres::Error>,
@@ -209,6 +250,7 @@ where
         AuthorNameStartingWithQuery {
             client: self.client,
             params: self.params,
+            typed_params: self.typed_params,
             query: self.query,
             cached: self.cached,
             extractor: self.extractor,
@@ -216,14 +258,26 @@ where
         }
     }
     pub fn one(self) -> Result<T, postgres::Error> {
-        let row = crate::client::sync::one(self.client, self.query, &self.params, self.cached)?;
+        let row = crate::client::sync::one(
+            self.client,
+            self.query,
+            &self.params,
+            self.typed_params.as_ref().map(|p| p.as_slice()),
+            self.cached,
+        )?;
         Ok((self.mapper)((self.extractor)(&row)?))
     }
     pub fn all(self) -> Result<Vec<T>, postgres::Error> {
         self.iter()?.collect()
     }
     pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-        let opt_row = crate::client::sync::opt(self.client, self.query, &self.params, self.cached)?;
+        let opt_row = crate::client::sync::opt(
+            self.client,
+            self.query,
+            &self.params,
+            self.typed_params.as_ref().map(|p| p.as_slice()),
+            self.cached,
+        )?;
         Ok(opt_row
             .map(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -234,7 +288,13 @@ where
     pub fn iter(
         self,
     ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'c, postgres::Error> {
-        let stream = crate::client::sync::raw(self.client, self.query, &self.params, self.cached)?;
+        let stream = crate::client::sync::raw(
+            self.client,
+            self.query,
+            &self.params,
+            self.typed_params.as_ref().map(|p| p.as_slice()),
+            self.cached,
+        )?;
         let mapped = stream.iterator().map(move |res| {
             res.and_then(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -247,6 +307,7 @@ where
 pub struct VoiceActorQuery<'c, 'a, 's, C: GenericClient, T, const N: usize> {
     client: &'c mut C,
     params: [&'a (dyn postgres_types::ToSql + Sync); N],
+    typed_params: Option<[(&'a (dyn postgres_types::ToSql + Sync), postgres_types::Type); N]>,
     query: &'static str,
     cached: Option<&'s postgres::Statement>,
     extractor: fn(&postgres::Row) -> Result<crate::types::VoiceActorBorrowed, postgres::Error>,
@@ -263,6 +324,7 @@ where
         VoiceActorQuery {
             client: self.client,
             params: self.params,
+            typed_params: self.typed_params,
             query: self.query,
             cached: self.cached,
             extractor: self.extractor,
@@ -270,14 +332,26 @@ where
         }
     }
     pub fn one(self) -> Result<T, postgres::Error> {
-        let row = crate::client::sync::one(self.client, self.query, &self.params, self.cached)?;
+        let row = crate::client::sync::one(
+            self.client,
+            self.query,
+            &self.params,
+            self.typed_params.as_ref().map(|p| p.as_slice()),
+            self.cached,
+        )?;
         Ok((self.mapper)((self.extractor)(&row)?))
     }
     pub fn all(self) -> Result<Vec<T>, postgres::Error> {
         self.iter()?.collect()
     }
     pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-        let opt_row = crate::client::sync::opt(self.client, self.query, &self.params, self.cached)?;
+        let opt_row = crate::client::sync::opt(
+            self.client,
+            self.query,
+            &self.params,
+            self.typed_params.as_ref().map(|p| p.as_slice()),
+            self.cached,
+        )?;
         Ok(opt_row
             .map(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -288,7 +362,13 @@ where
     pub fn iter(
         self,
     ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'c, postgres::Error> {
-        let stream = crate::client::sync::raw(self.client, self.query, &self.params, self.cached)?;
+        let stream = crate::client::sync::raw(
+            self.client,
+            self.query,
+            &self.params,
+            self.typed_params.as_ref().map(|p| p.as_slice()),
+            self.cached,
+        )?;
         let mapped = stream.iterator().map(move |res| {
             res.and_then(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -301,6 +381,7 @@ where
 pub struct SelectTranslationsQuery<'c, 'a, 's, C: GenericClient, T, const N: usize> {
     client: &'c mut C,
     params: [&'a (dyn postgres_types::ToSql + Sync); N],
+    typed_params: Option<[(&'a (dyn postgres_types::ToSql + Sync), postgres_types::Type); N]>,
     query: &'static str,
     cached: Option<&'s postgres::Statement>,
     extractor: fn(&postgres::Row) -> Result<SelectTranslationsBorrowed, postgres::Error>,
@@ -317,6 +398,7 @@ where
         SelectTranslationsQuery {
             client: self.client,
             params: self.params,
+            typed_params: self.typed_params,
             query: self.query,
             cached: self.cached,
             extractor: self.extractor,
@@ -324,14 +406,26 @@ where
         }
     }
     pub fn one(self) -> Result<T, postgres::Error> {
-        let row = crate::client::sync::one(self.client, self.query, &self.params, self.cached)?;
+        let row = crate::client::sync::one(
+            self.client,
+            self.query,
+            &self.params,
+            self.typed_params.as_ref().map(|p| p.as_slice()),
+            self.cached,
+        )?;
         Ok((self.mapper)((self.extractor)(&row)?))
     }
     pub fn all(self) -> Result<Vec<T>, postgres::Error> {
         self.iter()?.collect()
     }
     pub fn opt(self) -> Result<Option<T>, postgres::Error> {
-        let opt_row = crate::client::sync::opt(self.client, self.query, &self.params, self.cached)?;
+        let opt_row = crate::client::sync::opt(
+            self.client,
+            self.query,
+            &self.params,
+            self.typed_params.as_ref().map(|p| p.as_slice()),
+            self.cached,
+        )?;
         Ok(opt_row
             .map(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -342,7 +436,13 @@ where
     pub fn iter(
         self,
     ) -> Result<impl Iterator<Item = Result<T, postgres::Error>> + 'c, postgres::Error> {
-        let stream = crate::client::sync::raw(self.client, self.query, &self.params, self.cached)?;
+        let stream = crate::client::sync::raw(
+            self.client,
+            self.query,
+            &self.params,
+            self.typed_params.as_ref().map(|p| p.as_slice()),
+            self.cached,
+        )?;
         let mapped = stream.iterator().map(move |res| {
             res.and_then(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -371,6 +471,7 @@ impl AuthorsStmt {
         AuthorsQuery {
             client,
             params: [],
+            typed_params: Some([]),
             query: self.0,
             cached: self.1.as_ref(),
             extractor: |row: &postgres::Row| -> Result<AuthorsBorrowed, postgres::Error> {
@@ -404,6 +505,7 @@ impl BooksStmt {
         StringQuery {
             client,
             params: [],
+            typed_params: Some([]),
             query: self.0,
             cached: self.1.as_ref(),
             extractor: |row| Ok(row.try_get(0)?),
@@ -434,6 +536,7 @@ impl AuthorNameByIdStmt {
         StringQuery {
             client,
             params: [id],
+            typed_params: Some([(id, postgres_types::Type::INT4)]),
             query: self.0,
             cached: self.1.as_ref(),
             extractor: |row| Ok(row.try_get(0)?),
@@ -464,6 +567,7 @@ impl AuthorNameStartingWithStmt {
         AuthorNameStartingWithQuery {
             client,
             params: [start_str],
+            typed_params: Some([(start_str, postgres_types::Type::TEXT)]),
             query: self.0,
             cached: self.1.as_ref(),
             extractor:
@@ -520,6 +624,7 @@ impl SelectVoiceActorWithCharacterStmt {
         VoiceActorQuery {
             client,
             params: [spongebob_character],
+            typed_params: None,
             query: self.0,
             cached: self.1.as_ref(),
             extractor: |row| Ok(row.try_get(0)?),
@@ -546,6 +651,7 @@ impl SelectTranslationsStmt {
         SelectTranslationsQuery {
             client,
             params: [],
+            typed_params: Some([]),
             query: self.0,
             cached: self.1.as_ref(),
             extractor:
